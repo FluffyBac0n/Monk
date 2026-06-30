@@ -1,0 +1,36 @@
+[project]
+name = "monk"
+version = "0.1.0"
+description = "Importer for Cyprus E4 trail workbook data into Firestore."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "firebase-admin>=6.5.0",
+    "openpyxl>=3.1.5",
+    "pydantic>=2.8.0",
+    "python-dotenv>=1.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+    "ruff>=0.5.0",
+]
+functions = [
+    "functions-framework>=3.8.0",
+]
+
+[project.scripts]
+monk-import = "monk_importer.cli:main"
+
+[build-system]
+requires = ["setuptools>=69.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
