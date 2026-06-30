@@ -1,0 +1,13 @@
+{
+  "name": "monk-emulator-tools",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local Firebase Emulator tooling for the Monk importer.",
+  "scripts": {
+    "emulators": "firebase emulators:start --only firestore",
+    "emulators:export": "firebase emulators:export ./emulator-data"
+  },
+  "devDependencies": {
+    "firebase-tools": "^13.35.1"
+  }
+}

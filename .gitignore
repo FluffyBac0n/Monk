@@ -7,8 +7,9 @@ __pycache__/
 service-account*.json
 firebase-service-account*.json
 outputs/
+emulator-data/
+node_modules/
 dist/
 build/
 *.egg-info/
 .DS_Store
-

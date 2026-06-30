@@ -33,6 +33,33 @@ def main() -> None:
     parser.add_argument("--service-account", default=os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
     parser.add_argument("--commit", action="store_true", help="Write to Firestore.")
     parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="Build a human-readable validation report before writing.",
+    )
+    parser.add_argument(
+        "--report",
+        type=Path,
+        default=Path("outputs/validation-report.md"),
+        help="Markdown validation report path.",
+    )
+    parser.add_argument(
+        "--report-json",
+        type=Path,
+        default=Path("outputs/validation-report.json"),
+        help="JSON validation report path.",
+    )
+    parser.add_argument(
+        "--emulator",
+        action="store_true",
+        help="Write to the local Firestore Emulator instead of production.",
+    )
+    parser.add_argument(
+        "--emulator-host",
+        default=os.getenv("FIRESTORE_EMULATOR_HOST", "127.0.0.1:8080"),
+        help="Firestore Emulator host used with --emulator.",
+    )
+    parser.add_argument(
         "--replace",
         action="store_true",
         help="Use non-merge writes for generated documents.",
@@ -49,10 +76,13 @@ def main() -> None:
         project_id=args.project_id,
         service_account_path=args.service_account,
         merge=not args.replace,
+        validate=args.validate,
+        validation_report_path=args.report if args.validate else None,
+        validation_json_path=args.report_json if args.validate else None,
+        emulator_host=args.emulator_host if args.emulator else None,
     )
     print(json.dumps(summary, indent=2))
 
 
 if __name__ == "__main__":
     main()
-

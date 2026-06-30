@@ -31,7 +31,7 @@ pip install -e ".[dev,functions]"
 This reads the workbook and writes a JSON import preview without connecting to Firestore.
 
 ```bash
-monk-import --dry-run
+monk-import
 ```
 
 The default workbook path is:
@@ -64,6 +64,52 @@ monk-import --commit
 
 By default, the importer uses `set()` with stable document IDs, so rerunning it updates the same Firestore documents rather than creating duplicates.
 
+## Validation Report
+
+Generate a human-readable report and a JSON report before writing to any database:
+
+```bash
+monk-import --validate
+```
+
+Outputs:
+
+```text
+outputs/validation-report.md
+outputs/validation-report.json
+outputs/import-preview.json
+```
+
+The report checks counts, duplicate IDs, lodging-to-stage links, route chunk continuity, route distance ordering, route marker links, and coverage metrics such as how many lodgings have GPS coordinates.
+
+## Firestore Emulator Test
+
+Install Firebase CLI tooling if it is not already available:
+
+```bash
+npm install
+```
+
+Start the local emulator:
+
+```bash
+npm run emulators
+```
+
+In another terminal, write the transformed workbook data into the emulator:
+
+```bash
+monk-import --commit --emulator --validate
+```
+
+Then open the Emulator UI:
+
+```text
+http://127.0.0.1:4000
+```
+
+This uses the same Firestore write code as production, but targets `127.0.0.1:8080` instead of the real database.
+
 ## Function-Friendly Entry Point
 
 The callable import logic lives in:
@@ -79,4 +125,3 @@ src/monk_importer/function_entry.py
 ```
 
 For production automation, prefer uploading the workbook to Cloud Storage and triggering a Cloud Function or Cloud Run job with the file path.
-

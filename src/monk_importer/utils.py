@@ -28,6 +28,8 @@ def stage_id(sequence: int | None, name: str | None) -> str | None:
 def lodging_id(stage_sequence: int | None, stage_name: str | None, lodging_name: str | None, row_number: int) -> str:
     stage_part = stage_id(stage_sequence, stage_name) or f"row-{row_number}"
     lodging_part = slugify(lodging_name or f"lodging-{row_number}")
+    if lodging_part == "unknown":
+        lodging_part = f"lodging-{row_number}"
     return f"{stage_part}-{lodging_part}"
 
 
@@ -102,4 +104,3 @@ def compact_doc(data: dict[str, Any]) -> dict[str, Any]:
         else:
             result[key] = value
     return result
-

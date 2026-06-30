@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from .validator import build_validation_report, write_validation_report
 from .workbook import build_import_payload
 
 
@@ -22,6 +23,10 @@ def run_import(
     project_id: str | None = None,
     service_account_path: str | None = None,
     merge: bool = True,
+    validate: bool = False,
+    validation_report_path: Path | None = None,
+    validation_json_path: Path | None = None,
+    emulator_host: str | None = None,
 ) -> dict[str, Any]:
     try:
         from dotenv import load_dotenv
@@ -49,6 +54,16 @@ def run_import(
         "dryRun": dry_run,
     }
 
+    if validate or validation_report_path or validation_json_path:
+        report = build_validation_report(payload)
+        summary["validationOk"] = report["ok"]
+        summary["validationIssues"] = report["issues"]
+        if validation_report_path:
+            write_validation_report(report, validation_report_path, validation_json_path)
+            summary["validationReport"] = str(validation_report_path)
+            if validation_json_path:
+                summary["validationJson"] = str(validation_json_path)
+
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(
@@ -64,6 +79,7 @@ def run_import(
     db = get_firestore_client(
         project_id=project_id or os.getenv("FIREBASE_PROJECT_ID") or None,
         service_account_path=service_account_path or os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or None,
+        emulator_host=emulator_host or os.getenv("FIRESTORE_EMULATOR_HOST") or None,
     )
     summary["written"] = write_import_payload(db, payload, merge=merge)
     return summary

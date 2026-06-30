@@ -189,6 +189,7 @@ def parse_route(
 ) -> tuple[RouteMetadata, list[RouteChunk], list[RouteMarker]]:
     points: list[dict[str, float | str | None]] = []
     markers: list[RouteMarker] = []
+    marker_id_counts: dict[str, int] = {}
 
     for point_index, row in enumerate(sheet.iter_rows(min_row=2, values_only=True)):
         lat = to_float(row[0])
@@ -213,6 +214,9 @@ def parse_route(
         if stage_name:
             resolved_stage_id = resolve_stage_id(stage_name, stages_by_name, stages_by_slug)
             marker_id = resolved_stage_id or f"route-marker-{point_index:05d}"
+            marker_id_counts[marker_id] = marker_id_counts.get(marker_id, 0) + 1
+            if marker_id_counts[marker_id] > 1:
+                marker_id = f"{marker_id}-{point_index:05d}"
             markers.append(
                 RouteMarker(
                     id=marker_id,

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import os
 from typing import Any, Iterable
 
 import firebase_admin
 from firebase_admin import credentials, firestore
+from google.auth.credentials import AnonymousCredentials
+from google.cloud import firestore as google_firestore
 from google.cloud.firestore_v1 import Client
 
 from .models import ImportPayload
@@ -15,7 +18,15 @@ def get_firestore_client(
     *,
     project_id: str | None = None,
     service_account_path: str | None = None,
+    emulator_host: str | None = None,
 ) -> Client:
+    if emulator_host:
+        os.environ["FIRESTORE_EMULATOR_HOST"] = emulator_host
+        return google_firestore.Client(
+            project=project_id or "monk-local",
+            credentials=AnonymousCredentials(),
+        )
+
     if not firebase_admin._apps:
         if service_account_path:
             cred = credentials.Certificate(service_account_path)
@@ -86,4 +97,3 @@ def write_collection(collection_ref: Any, models: Iterable[Any], *, merge: bool)
     if pending:
         batch.commit()
     return total
-
