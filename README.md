@@ -16,7 +16,7 @@ trails/cyprus-e4/routeMarkers/{stageId}
 trails/cyprus-e4/imports/{importId}
 ```
 
-Route chunks are only a transport/storage format. The mobile app can fetch all chunks ordered by `chunkIndex`, flatten their `points`, and cache the full route locally for offline map and elevation rendering.
+Route chunks are only a transport/storage format. The mobile app can fetch all chunks ordered by `chunkIndex`, expand each chunk's flat `points` array using `pointStride`, and cache the full route locally for offline map and elevation rendering.
 
 ## Setup
 
@@ -87,13 +87,13 @@ The report checks counts, duplicate IDs, lodging-to-stage links, route chunk con
 Install Firebase CLI tooling if it is not already available:
 
 ```bash
-npm install
+pnpm install
 ```
 
 Start the local emulator:
 
 ```bash
-npm run emulators
+pnpm run emulators
 ```
 
 In another terminal, write the transformed workbook data into the emulator:

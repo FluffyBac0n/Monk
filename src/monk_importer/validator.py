@@ -222,7 +222,7 @@ def duplicates(values: list[str]) -> list[str]:
 def flatten_route_points(chunks: list[RouteChunk]) -> list[list[float]]:
     points: list[list[float]] = []
     for chunk in sorted(chunks, key=lambda item: item.chunkIndex):
-        points.extend(chunk.points)
+        points.extend(group_flat_points(chunk.points))
     return points
 
 
@@ -246,9 +246,16 @@ def route_chunk_issues(chunks: list[RouteChunk], chunk_size: int) -> list[str]:
                 f"Chunk {chunk.id} starts at {chunk.startPointIndex}, expected {expected_start}"
             )
         point_count = len(chunk.points)
+        if point_count % 5 != 0:
+            issues.append(f"Chunk {chunk.id} flat point array is not divisible by stride 5")
+        point_count = point_count // 5
         if point_count > chunk_size:
             issues.append(f"Chunk {chunk.id} has {point_count} points, above chunk size {chunk_size}")
         if chunk.endPointIndex != chunk.startPointIndex + point_count - 1:
             issues.append(f"Chunk {chunk.id} endPointIndex does not match point count")
         expected_start = chunk.endPointIndex + 1
     return issues
+
+
+def group_flat_points(points: list[float], stride: int = 5) -> list[list[float]]:
+    return [points[index : index + stride] for index in range(0, len(points), stride)]

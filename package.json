@@ -4,8 +4,9 @@
   "version": "0.1.0",
   "description": "Local Firebase Emulator tooling for the Monk importer.",
   "scripts": {
-    "emulators": "firebase emulators:start --only firestore",
-    "emulators:export": "firebase emulators:export ./emulator-data"
+    "firebase": "XDG_CONFIG_HOME=.firebase-config firebase",
+    "emulators": "XDG_CONFIG_HOME=.firebase-config firebase emulators:start --only firestore",
+    "emulators:export": "XDG_CONFIG_HOME=.firebase-config firebase emulators:export ./emulator-data"
   },
   "devDependencies": {
     "firebase-tools": "^13.35.1"

@@ -77,7 +77,10 @@ class RouteMetadata(BaseModel):
     minAltitudeM: float
     maxAltitudeM: float
     bounds: dict[str, float]
-    pointFormat: list[str] = Field(default_factory=lambda: ["lat", "lng", "altitudeM", "distanceKm"])
+    pointFormat: list[str] = Field(
+        default_factory=lambda: ["lat", "lng", "altitudeM", "distanceKm", "reverseDistanceKm"]
+    )
+    pointStride: int = 5
     reverseDistanceAvailable: bool = True
 
 
@@ -89,7 +92,7 @@ class RouteChunk(BaseModel):
     startDistanceKm: float
     endDistanceKm: float
     bounds: dict[str, float]
-    points: list[list[float]]
+    points: list[float]
 
 
 class RouteMarker(BaseModel):
@@ -112,4 +115,3 @@ class ImportPayload(BaseModel):
     routeChunks: list[RouteChunk]
     routeMarkers: list[RouteMarker]
     warnings: list[str] = Field(default_factory=list)
-

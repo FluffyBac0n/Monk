@@ -270,18 +270,20 @@ def build_route_chunks(points: list[dict[str, float | str | None]], chunk_size: 
         chunk_points = points[start : start + chunk_size]
         end = start + len(chunk_points) - 1
         compact_points = [
-            [
+            value
+            for point in chunk_points
+            for value in [
                 float(point["lat"]),
                 float(point["lng"]),
                 float(point["altitudeM"]),
                 float(point["distanceKm"]),
                 float(point["reverseDistanceKm"]),
             ]
-            for point in chunk_points
         ]
-        lats = [point[0] for point in compact_points]
-        lngs = [point[1] for point in compact_points]
-        distances = [point[3] for point in compact_points]
+        grouped_points = group_flat_points(compact_points)
+        lats = [point[0] for point in grouped_points]
+        lngs = [point[1] for point in grouped_points]
+        distances = [point[3] for point in grouped_points]
         chunks.append(
             RouteChunk(
                 id=f"{chunk_index:04d}",
@@ -300,3 +302,7 @@ def build_route_chunks(points: list[dict[str, float | str | None]], chunk_size: 
             )
         )
     return chunks
+
+
+def group_flat_points(points: list[float], stride: int = 5) -> list[list[float]]:
+    return [points[index : index + stride] for index in range(0, len(points), stride)]

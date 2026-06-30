@@ -9,6 +9,10 @@ firebase-service-account*.json
 outputs/
 emulator-data/
 node_modules/
+.firebase-config/
+.pnpm-store/
+firebase-debug.log
+firestore-debug.log
 dist/
 build/
 *.egg-info/
