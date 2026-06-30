@@ -49,6 +49,7 @@ def write_import_payload(db: Client, payload: ImportPayload, *, merge: bool = Tr
             trail_ref.collection("routeChunks"),
             payload.routeChunks,
             merge=merge,
+            max_batch_docs=1,
         ),
         "routeMarkers": write_collection(
             trail_ref.collection("routeMarkers"),
@@ -80,7 +81,13 @@ def write_import_payload(db: Client, payload: ImportPayload, *, merge: bool = Tr
     return counts
 
 
-def write_collection(collection_ref: Any, models: Iterable[Any], *, merge: bool) -> int:
+def write_collection(
+    collection_ref: Any,
+    models: Iterable[Any],
+    *,
+    merge: bool,
+    max_batch_docs: int = 450,
+) -> int:
     batch = collection_ref._client.batch()
     pending = 0
     total = 0
@@ -90,7 +97,7 @@ def write_collection(collection_ref: Any, models: Iterable[Any], *, merge: bool)
         batch.set(collection_ref.document(model.id), data, merge=merge)
         pending += 1
         total += 1
-        if pending == 450:
+        if pending == max_batch_docs:
             batch.commit()
             batch = collection_ref._client.batch()
             pending = 0
