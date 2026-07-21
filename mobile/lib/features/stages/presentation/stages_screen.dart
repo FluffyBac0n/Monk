@@ -1,0 +1,1244 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/localization/app_localizations.dart';
+import '../../../core/settings/app_settings_controller.dart';
+import '../../../core/settings/measurement_formatter.dart';
+import '../data/stage_repository.dart';
+import '../domain/stage.dart';
+import '../../elevation/presentation/elevation_screen.dart';
+import '../../map/presentation/map_screen.dart';
+import '../../settings/presentation/settings_screen.dart';
+import '../../trail/domain/trail_direction.dart';
+import '../../trail/presentation/trail_direction_controller.dart';
+import 'stages_controller.dart';
+
+const _ink = Color(0xFF17201B);
+const _green = Color(0xFF277653);
+const _red = Color(0xFFD14B45);
+const _mint = Color(0xFFE1F1E8);
+const _sand = Color(0xFFF4F2EC);
+const _yellow = Color(0xFFF2C94C);
+const _filterServiceKeys = [
+  'lodging',
+  'tent',
+  'food',
+  'grocery',
+  'drinkableWater',
+  'nonDrinkableWater',
+  'toilets',
+  'medical',
+  'pharmacy',
+  'atm',
+  'busStop',
+];
+
+double _trailDistanceKm(List<TrailStage> stages) {
+  var total = 0.0;
+  for (final stage in stages) {
+    final distance = stage.accumulatedDistanceKm;
+    if (distance != null && distance > total) total = distance;
+  }
+  return total;
+}
+
+class StagesScreen extends ConsumerStatefulWidget {
+  const StagesScreen({super.key});
+
+  static const routeName = '/trails/cyprus-e4/stages';
+
+  @override
+  ConsumerState<StagesScreen> createState() => _StagesScreenState();
+}
+
+class _StagesScreenState extends ConsumerState<StagesScreen> {
+  final ScrollController scrollController = ScrollController();
+  Set<String> selectedServices = {};
+
+  @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _scrollTo(double offset) async {
+    if (!scrollController.hasClients) return;
+    await scrollController.animateTo(
+      offset,
+      duration: const Duration(milliseconds: 550),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Future<void> _openServiceFilters() async {
+    final selection = await showModalBottomSheet<Set<String>>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => _ServiceFilterSheet(selected: selectedServices),
+    );
+    if (selection != null && mounted) {
+      setState(() => selectedServices = selection);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final stages = ref.watch(stagesProvider);
+    final direction = ref.watch(trailDirectionProvider);
+    final formatter = MeasurementFormatter(
+      ref.watch(appSettingsProvider).measurementSystem,
+    );
+    final l10n = context.l10n;
+    ref.listen(stagesProvider, (previous, next) {
+      if (!next.hasError || next.isLoading) return;
+      final message = next.error is FirebaseNotConfiguredException
+          ? 'Firebase is not configured for this build.'
+          : 'Could not update the trail. Your offline copy is unchanged.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.l10n.t(message))));
+    });
+
+    return Scaffold(
+      backgroundColor: _sand,
+      floatingActionButton: _StageScrollControls(
+        onTop: () => _scrollTo(scrollController.position.minScrollExtent),
+        onEnd: () => _scrollTo(scrollController.position.maxScrollExtent),
+      ),
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(stagesProvider.notifier).sync(),
+        child: CustomScrollView(
+          controller: scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            _TrailAppBar(
+              direction: direction,
+              onReverse: () =>
+                  ref.read(trailDirectionProvider.notifier).toggle(),
+            ),
+            SliverToBoxAdapter(
+              child: _TrailDashboard(
+                isOffline: stages.hasValue && stages.requireValue.isNotEmpty,
+                selectedServiceCount: selectedServices.length,
+                onFilterServices: _openServiceFilters,
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 14),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.t('Stage by stage'),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      tooltip: l10n.t('Refresh offline trail'),
+                      onPressed: stages.isLoading
+                          ? null
+                          : () => ref.read(stagesProvider.notifier).sync(),
+                      icon: const Icon(Icons.sync_rounded),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            stages.when(
+              skipLoadingOnRefresh: true,
+              data: (items) {
+                final orderedItems = direction.isReversed
+                    ? items.reversed.toList(growable: false)
+                    : items;
+                final filteredItems = selectedServices.isEmpty
+                    ? orderedItems
+                    : orderedItems
+                          .where(
+                            (stage) => selectedServices.every(
+                              (service) => stage.services[service] == true,
+                            ),
+                          )
+                          .toList(growable: false);
+                final totalDistanceKm = _trailDistanceKm(orderedItems);
+                return orderedItems.isEmpty
+                    ? const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _EmptyState(),
+                      )
+                    : filteredItems.isEmpty
+                    ? SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _NoMatchingStages(
+                          onClear: () => setState(selectedServices.clear),
+                        ),
+                      )
+                    : SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(12, 0, 20, 40),
+                        sliver: SliverList.builder(
+                          itemCount: filteredItems.length,
+                          itemBuilder: (context, index) => _StageTimelineRow(
+                            stage: filteredItems[index],
+                            formatter: formatter,
+                            distanceKm:
+                                filteredItems[index].accumulatedDistanceKm ==
+                                    null
+                                ? null
+                                : direction.distanceFromStart(
+                                    filteredItems[index].accumulatedDistanceKm!,
+                                    totalDistanceKm,
+                                  ),
+                            isFirst: index == 0,
+                            isLast: index == filteredItems.length - 1,
+                            isTrailStart:
+                                filteredItems[index].id ==
+                                orderedItems.first.id,
+                            isTrailEnd:
+                                filteredItems[index].id == orderedItems.last.id,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => StageDetailScreen(
+                                  stages: orderedItems,
+                                  initialIndex: orderedItems.indexWhere(
+                                    (stage) =>
+                                        stage.id == filteredItems[index].id,
+                                  ),
+                                  direction: direction,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+              },
+              loading: () => const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (_, _) => const SliverFillRemaining(
+                hasScrollBody: false,
+                child: _EmptyState(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StageScrollControls extends StatelessWidget {
+  const _StageScrollControls({required this.onTop, required this.onEnd});
+
+  final VoidCallback onTop;
+  final VoidCallback onEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FloatingActionButton.small(
+          key: const Key('stage-scroll-top'),
+          heroTag: 'stage-scroll-top',
+          tooltip: l10n.t('Go to top'),
+          backgroundColor: Colors.white,
+          foregroundColor: _ink,
+          onPressed: onTop,
+          child: const Icon(Icons.keyboard_double_arrow_up_rounded),
+        ),
+        const SizedBox(height: 10),
+        FloatingActionButton.small(
+          key: const Key('stage-scroll-end'),
+          heroTag: 'stage-scroll-end',
+          tooltip: l10n.t('Go to end'),
+          backgroundColor: _ink,
+          foregroundColor: Colors.white,
+          onPressed: onEnd,
+          child: const Icon(Icons.keyboard_double_arrow_down_rounded),
+        ),
+      ],
+    );
+  }
+}
+
+class _TrailAppBar extends StatelessWidget {
+  const _TrailAppBar({required this.direction, required this.onReverse});
+
+  final TrailDirection direction;
+  final VoidCallback onReverse;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final start = direction.isReversed
+        ? l10n.larnakaAirport
+        : l10n.pafosAirport;
+    final end = direction.isReversed ? l10n.pafosAirport : l10n.larnakaAirport;
+    return SliverAppBar(
+      expandedHeight: 204,
+      pinned: true,
+      backgroundColor: _ink,
+      foregroundColor: Colors.white,
+      title: const Text(
+        'MONK',
+        style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2.4),
+      ),
+      actions: [
+        IconButton(
+          key: const ValueKey('reverse-trail-direction'),
+          tooltip: l10n.t(
+            direction.isReversed
+                ? 'Walk from Pafos to Larnaka'
+                : 'Walk from Larnaka to Pafos',
+          ),
+          onPressed: onReverse,
+          icon: const Icon(Icons.swap_vert_rounded),
+        ),
+        IconButton(
+          tooltip: l10n.t('Settings'),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+          ),
+          icon: const Icon(Icons.tune_rounded),
+        ),
+        const SizedBox(width: 8),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [_ink, Color(0xFF274B3A)],
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 70, 20, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Row(
+                    children: [
+                      const _RouteBadge(),
+                      const SizedBox(width: 10),
+                      Text(
+                        l10n.t('CYPRUS · LONG DISTANCE TRAIL'),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Cyprus E4',
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    l10n.routeDirection(start, end),
+                    style: TextStyle(color: Colors.white70, fontSize: 15),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RouteBadge extends StatelessWidget {
+  const _RouteBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: _yellow,
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: const Icon(Icons.arrow_upward_rounded, color: _ink, size: 24),
+    );
+  }
+}
+
+class _TrailDashboard extends ConsumerWidget {
+  const _TrailDashboard({
+    required this.isOffline,
+    required this.selectedServiceCount,
+    required this.onFilterServices,
+  });
+
+  final bool isOffline;
+  final int selectedServiceCount;
+  final VoidCallback onFilterServices;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final formatter = MeasurementFormatter(
+      ref.watch(appSettingsProvider).measurementSystem,
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _Stat(
+                value: formatter.distance(558, decimals: 0),
+                unit: '',
+                label: l10n.t('Distance'),
+              ),
+              _Stat(value: '123', unit: '', label: l10n.t('Stages')),
+              _Stat(
+                value: formatter.altitude(1732),
+                unit: '',
+                label: l10n.t('High point'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _DashboardAction(
+                  icon: Icons.route_rounded,
+                  label: l10n.t('Filter'),
+                  color: _ink,
+                  badgeCount: selectedServiceCount,
+                  onTap: onFilterServices,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DashboardAction(
+                  icon: Icons.map_outlined,
+                  label: l10n.t('Map'),
+                  color: _green,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const MapScreen()),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DashboardAction(
+                  icon: Icons.show_chart_rounded,
+                  label: l10n.t('Elevation'),
+                  color: const Color(0xFFB96C31),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ElevationScreen(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(
+              color: isOffline ? _mint : const Color(0xFFFFF4D6),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isOffline ? Icons.offline_pin_rounded : Icons.cloud_download,
+                  color: isOffline ? _green : const Color(0xFF8E681B),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    isOffline
+                        ? l10n.t('Trail guide available offline')
+                        : l10n.t('Download this trail for offline use'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Stat extends StatelessWidget {
+  const _Stat({required this.value, required this.unit, required this.label});
+
+  final String value;
+  final String unit;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text.rich(
+            TextSpan(
+              text: value,
+              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
+              children: [
+                TextSpan(
+                  text: unit.isEmpty ? '' : ' $unit',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardAction extends StatelessWidget {
+  const _DashboardAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.badgeCount = 0,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  final int badgeCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 17),
+          child: Column(
+            children: [
+              Badge(
+                isLabelVisible: badgeCount > 0,
+                label: Text('$badgeCount'),
+                child: Icon(icon, color: Colors.white, size: 27),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StageTimelineRow extends StatelessWidget {
+  const _StageTimelineRow({
+    required this.stage,
+    required this.formatter,
+    required this.distanceKm,
+    required this.isFirst,
+    required this.isLast,
+    required this.isTrailStart,
+    required this.isTrailEnd,
+    required this.onTap,
+  });
+
+  final TrailStage stage;
+  final MeasurementFormatter formatter;
+  final double? distanceKm;
+  final bool isFirst;
+  final bool isLast;
+  final bool isTrailStart;
+  final bool isTrailEnd;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeServices = stage.services.entries
+        .where((entry) => entry.value)
+        .toList();
+    final dotColor = isTrailStart
+        ? _green
+        : isTrailEnd
+        ? _red
+        : stage.services['lodging'] == true
+        ? _green
+        : _ink;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 72,
+            child: Column(
+              children: [
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: isFirst
+                        ? Colors.transparent
+                        : const Color(0xFFB9BDB8),
+                  ),
+                ),
+                Container(
+                  width: 15,
+                  height: 15,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: dotColor,
+                    border: Border.all(color: _sand, width: 3),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black12, blurRadius: 2),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: isLast
+                        ? Colors.transparent
+                        : const Color(0xFFB9BDB8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Material(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(15, 13, 10, 13),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      stage.name,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                  if (distanceKm != null)
+                                    Text(
+                                      formatter.distance(distanceKm!),
+                                      style: const TextStyle(
+                                        color: _green,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: [
+                                  for (final service in activeServices.take(7))
+                                    Tooltip(
+                                      message: context.l10n.t(
+                                        _serviceLabel(service.key),
+                                      ),
+                                      child: Icon(
+                                        _serviceIcon(service.key),
+                                        size: 16,
+                                        color: _serviceColor(service.key),
+                                      ),
+                                    ),
+                                  if (stage.altitudeM case final altitude?)
+                                    _MiniLabel(
+                                      icon: Icons.landscape_outlined,
+                                      label: formatter.altitude(altitude),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Colors.black45,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniLabel extends StatelessWidget {
+  const _MiniLabel({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: Colors.black45),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: Colors.black54),
+        ),
+      ],
+    );
+  }
+}
+
+class StageDetailScreen extends ConsumerStatefulWidget {
+  const StageDetailScreen({
+    required this.stages,
+    required this.initialIndex,
+    this.direction = TrailDirection.pafosToLarnaka,
+    super.key,
+  });
+
+  final List<TrailStage> stages;
+  final int initialIndex;
+  final TrailDirection direction;
+
+  @override
+  ConsumerState<StageDetailScreen> createState() => _StageDetailScreenState();
+}
+
+class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
+  late int index = widget.initialIndex;
+
+  TrailStage get stage => widget.stages[index];
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final formatter = MeasurementFormatter(
+      ref.watch(appSettingsProvider).measurementSystem,
+    );
+    final services = stage.services.entries
+        .where((entry) => entry.value)
+        .toList();
+    final accumulatedDistance = stage.accumulatedDistanceKm;
+    final distanceFromStart = accumulatedDistance == null
+        ? null
+        : widget.direction.distanceFromStart(
+            accumulatedDistance,
+            _trailDistanceKm(widget.stages),
+          );
+    return Scaffold(
+      backgroundColor: _sand,
+      appBar: AppBar(
+        backgroundColor: _ink,
+        foregroundColor: Colors.white,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              stage.name,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            Text(
+              'CYPRUS E4 · ${l10n.stage(stage.sequence).toUpperCase()}',
+              style: const TextStyle(
+                fontSize: 9,
+                color: Colors.white60,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            key: const Key('stage-detail-stages-shortcut'),
+            tooltip: l10n.t('Back to stages'),
+            onPressed: () => Navigator.of(context).popUntil(
+              (route) =>
+                  route.settings.name == StagesScreen.routeName ||
+                  route.isFirst,
+            ),
+            icon: const Icon(Icons.route_rounded),
+          ),
+          IconButton(
+            tooltip: l10n.t('Show on map'),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => MapScreen(initialStageIndex: index),
+              ),
+            ),
+            icon: const Icon(Icons.map_outlined),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _DetailMetric(
+                  icon: Icons.route_rounded,
+                  value: distanceFromStart == null
+                      ? '—'
+                      : formatter.distance(distanceFromStart),
+                  label: l10n.from(
+                    widget.direction.isReversed ? 'Larnaka' : 'Pafos',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DetailMetric(
+                  icon: Icons.straighten_rounded,
+                  value: stage.segmentLengthKm == null
+                      ? '—'
+                      : formatter.distance(stage.segmentLengthKm!),
+                  label: l10n.t('Stage length'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DetailMetric(
+                  icon: Icons.landscape_outlined,
+                  value: stage.altitudeM == null
+                      ? '—'
+                      : formatter.altitude(stage.altitudeM!),
+                  label: l10n.t('Altitude'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _DetailSection(
+            title: l10n.t('Services'),
+            child: services.isEmpty
+                ? Text(l10n.t('No services recorded for this stage.'))
+                : Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final service in services)
+                        Chip(
+                          avatar: Icon(
+                            _serviceIcon(service.key),
+                            size: 17,
+                            color: _serviceColor(service.key),
+                          ),
+                          label: Text(l10n.t(_serviceLabel(service.key))),
+                          backgroundColor: _sand,
+                          side: BorderSide.none,
+                        ),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 12),
+          _DetailSection(
+            title: l10n.t('Trail position'),
+            child: Column(
+              children: [
+                _PositionRow(
+                  icon: Icons.hiking_rounded,
+                  title: l10n.t('Following the Cyprus E4'),
+                  subtitle: l10n.t(
+                    'Route guidance will be available with the offline map.',
+                  ),
+                ),
+                const Divider(height: 24),
+                _PositionRow(
+                  icon: Icons.download_done_rounded,
+                  title: l10n.t('Available offline'),
+                  subtitle: l10n.t(
+                    'Stage information is stored on this device.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: index > 0 ? () => setState(() => index--) : null,
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  label: Text(l10n.t('Previous')),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: index < widget.stages.length - 1
+                      ? () => setState(() => index++)
+                      : null,
+                  icon: const Icon(Icons.arrow_forward_rounded),
+                  label: Text(l10n.t('Next')),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailMetric extends StatelessWidget {
+  const _DetailMetric({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: _green),
+          const SizedBox(height: 7),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailSection extends StatelessWidget {
+  const _DetailSection({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _PositionRow extends StatelessWidget {
+  const _PositionRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: _green),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 2),
+              Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ServiceFilterSheet extends StatefulWidget {
+  const _ServiceFilterSheet({required this.selected});
+
+  final Set<String> selected;
+
+  @override
+  State<_ServiceFilterSheet> createState() => _ServiceFilterSheetState();
+}
+
+class _ServiceFilterSheetState extends State<_ServiceFilterSheet> {
+  late final selected = widget.selected.toSet();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.t('Filter by services'),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              l10n.t('Stages must offer every selected service.'),
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final service in _filterServiceKeys)
+                  FilterChip(
+                    key: ValueKey('service-filter-$service'),
+                    selected: selected.contains(service),
+                    avatar: Icon(
+                      _serviceIcon(service),
+                      size: 18,
+                      color: _serviceColor(service),
+                    ),
+                    label: Text(l10n.t(_serviceLabel(service))),
+                    onSelected: (isSelected) => setState(() {
+                      if (isSelected) {
+                        selected.add(service);
+                      } else {
+                        selected.remove(service);
+                      }
+                    }),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: selected.isEmpty
+                        ? null
+                        : () => setState(selected.clear),
+                    child: Text(l10n.t('Clear')),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 2,
+                  child: FilledButton.icon(
+                    key: const Key('apply-service-filters'),
+                    onPressed: () => Navigator.of(context).pop(selected),
+                    icon: const Icon(Icons.filter_alt_rounded),
+                    label: Text(l10n.t('Apply filters')),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NoMatchingStages extends StatelessWidget {
+  const _NoMatchingStages({required this.onClear});
+
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.filter_alt_off_rounded, size: 54, color: _green),
+            const SizedBox(height: 14),
+            Text(
+              l10n.t('No stages match these services.'),
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              key: const Key('clear-service-filters'),
+              onPressed: onClear,
+              icon: const Icon(Icons.filter_alt_off_rounded),
+              label: Text(l10n.t('Clear filters')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends ConsumerWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.hiking_rounded, size: 58, color: _green),
+            const SizedBox(height: 16),
+            Text(
+              l10n.t('Take the trail offline'),
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.t(
+                'Download Cyprus E4 to browse its stages without a connection.',
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: () => ref.read(stagesProvider.notifier).sync(),
+              icon: const Icon(Icons.download_rounded),
+              label: Text(l10n.t('Download trail')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+IconData _serviceIcon(String value) {
+  return switch (value) {
+    'lodging' => Icons.bed_rounded,
+    'tent' => Icons.cabin_rounded,
+    'food' => Icons.restaurant_rounded,
+    'grocery' => Icons.local_grocery_store_rounded,
+    'drinkableWater' => Icons.water_drop_rounded,
+    'nonDrinkableWater' => Icons.water_drop_outlined,
+    'toilets' => Icons.wc_rounded,
+    'medical' => Icons.medical_services_rounded,
+    'pharmacy' => Icons.local_pharmacy_rounded,
+    'atm' => Icons.account_balance_rounded,
+    'busStop' => Icons.directions_bus_rounded,
+    _ => Icons.check_circle_outline_rounded,
+  };
+}
+
+String _serviceLabel(String value) {
+  return switch (value) {
+    'lodging' => 'Lodging',
+    'tent' => 'Camping',
+    'food' => 'Food',
+    'grocery' => 'Groceries',
+    'drinkableWater' => 'Drinking water',
+    'nonDrinkableWater' => 'Non-drinking water',
+    'toilets' => 'Toilets',
+    'medical' => 'Medical',
+    'pharmacy' => 'Pharmacy',
+    'atm' => 'ATM',
+    'busStop' => 'Bus',
+    _ => value,
+  };
+}
+
+Color _serviceColor(String value) {
+  return switch (value) {
+    'drinkableWater' || 'nonDrinkableWater' => const Color(0xFF237DB6),
+    'medical' || 'pharmacy' => const Color(0xFFC94949),
+    'food' || 'grocery' => const Color(0xFFB76E24),
+    _ => _green,
+  };
+}

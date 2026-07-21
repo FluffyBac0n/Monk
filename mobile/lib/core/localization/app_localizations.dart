@@ -1,0 +1,353 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+class AppLocalizations {
+  const AppLocalizations(this.locale);
+
+  final Locale locale;
+
+  static const supportedLocales = [Locale('en'), Locale('de'), Locale('es')];
+
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
+
+  static AppLocalizations of(BuildContext context) =>
+      Localizations.of<AppLocalizations>(context, AppLocalizations) ??
+      const AppLocalizations(Locale('en'));
+
+  String t(String english) =>
+      _translations[locale.languageCode]?[english] ?? english;
+
+  String stage(int sequence) => '${t('Stage')} $sequence';
+
+  String from(String place) => '${t('From')} $place';
+
+  String routeDirection(String start, String end) => '$start  →  $end';
+
+  String get pafosAirport => t('Pafos Airport');
+  String get larnakaAirport => t('Larnaka Airport');
+}
+
+extension AppLocalizationsContext on BuildContext {
+  AppLocalizations get l10n => AppLocalizations.of(this);
+}
+
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
+  const _AppLocalizationsDelegate();
+
+  @override
+  bool isSupported(Locale locale) => AppLocalizations.supportedLocales.any(
+    (supported) => supported.languageCode == locale.languageCode,
+  );
+
+  @override
+  Future<AppLocalizations> load(Locale locale) =>
+      SynchronousFuture(AppLocalizations(locale));
+
+  @override
+  bool shouldReload(_AppLocalizationsDelegate old) => false;
+}
+
+const _translations = <String, Map<String, String>>{
+  'de': {
+    'Settings': 'Einstellungen',
+    'TRAIL LIBRARY': 'WEGBIBLIOTHEK',
+    'Explore trails': 'Wanderwege entdecken',
+    'Choose a trail to view its stages and maps.':
+        'Wähle einen Weg, um Etappen und Karten anzusehen.',
+    'Current trails': 'Aktuelle Wanderwege',
+    'available': 'verfügbar',
+    'LONG DISTANCE': 'FERNWANDERWEG',
+    'A long-distance journey linking the coast, forests and Troodos mountains.':
+        'Eine Fernwanderung, die Küste, Wälder und das Troodos-Gebirge verbindet.',
+    'Trail data not downloaded': 'Wegdaten nicht heruntergeladen',
+    'Explore trail': 'Weg erkunden',
+    'Language': 'Sprache',
+    'Measurements': 'Maßeinheiten',
+    'Metric': 'Metrisch',
+    'Imperial': 'Imperial',
+    'Kilometres and metres': 'Kilometer und Meter',
+    'Miles and feet': 'Meilen und Fuß',
+    'Changes apply throughout the app.':
+        'Änderungen gelten in der gesamten App.',
+    'Stage by stage': 'Etappe für Etappe',
+    'Refresh offline trail': 'Offline-Weg aktualisieren',
+    'Walk from Pafos to Larnaka': 'Von Pafos nach Larnaka wandern',
+    'Walk from Larnaka to Pafos': 'Von Larnaka nach Pafos wandern',
+    'CYPRUS · LONG DISTANCE TRAIL': 'ZYPERN · FERNWANDERWEG',
+    'Pafos Airport': 'Flughafen Pafos',
+    'Larnaka Airport': 'Flughafen Larnaka',
+    'Distance': 'Entfernung',
+    'Stages': 'Etappen',
+    'High point': 'Höchster Punkt',
+    'Route': 'Route',
+    'Filter': 'Filter',
+    'Filter by services': 'Nach Angeboten filtern',
+    'Stages must offer every selected service.':
+        'Etappen müssen alle ausgewählten Angebote bieten.',
+    'Clear': 'Zurücksetzen',
+    'Apply filters': 'Filter anwenden',
+    'No stages match these services.':
+        'Keine Etappen entsprechen diesen Angeboten.',
+    'Clear filters': 'Filter löschen',
+    'Go to top': 'Zum Anfang',
+    'Go to end': 'Zum Ende',
+    'Map': 'Karte',
+    'Elevation': 'Höhenprofil',
+    'The route stages are shown below.':
+        'Die Etappen der Route werden unten angezeigt.',
+    'Trail guide available offline': 'Wanderführer offline verfügbar',
+    'Download this trail for offline use':
+        'Diesen Weg für die Offline-Nutzung herunterladen',
+    'Trail map': 'Wanderkarte',
+    'Refresh elevation data': 'Höhendaten aktualisieren',
+    'No elevation data is available.': 'Keine Höhendaten verfügbar.',
+    'Could not download the elevation profile.':
+        'Das Höhenprofil konnte nicht geladen werden.',
+    'Zoom out': 'Verkleinern',
+    'Zoom in': 'Vergrößern',
+    'Reset elevation view': 'Höhenansicht zurücksetzen',
+    'Hide stages': 'Etappen ausblenden',
+    'Show stages': 'Etappen anzeigen',
+    'Trail distance': 'Gesamtdistanz',
+    'Highest point': 'Höchster Punkt',
+    'High point position': 'Position des höchsten Punkts',
+    'Offline samples': 'Offline-Messpunkte',
+    'Preparing the offline elevation profile…':
+        'Offline-Höhenprofil wird vorbereitet…',
+    'Download profile': 'Profil herunterladen',
+    'Close stage summary': 'Etappenübersicht schließen',
+    'Stage': 'Etappe',
+    'From': 'Ab',
+    'Stage length': 'Etappenlänge',
+    'Altitude': 'Höhe',
+    'Services': 'Angebote',
+    'No services recorded for this stage.':
+        'Für diese Etappe sind keine Angebote erfasst.',
+    'Trail position': 'Position auf dem Weg',
+    'Following the Cyprus E4': 'Auf dem Cyprus E4',
+    'Route guidance will be available with the offline map.':
+        'Die Routenführung wird mit der Offline-Karte verfügbar sein.',
+    'Available offline': 'Offline verfügbar',
+    'Stage information is stored on this device.':
+        'Etappeninformationen sind auf diesem Gerät gespeichert.',
+    'Previous': 'Zurück',
+    'Next': 'Weiter',
+    'Show on map': 'Auf Karte anzeigen',
+    'Back to stages': 'Zurück zu den Etappen',
+    'Take the trail offline': 'Weg offline verfügbar machen',
+    'Download Cyprus E4 to browse its stages without a connection.':
+        'Cyprus E4 herunterladen, um Etappen ohne Verbindung anzusehen.',
+    'Download trail': 'Weg herunterladen',
+    'Lodging': 'Unterkunft',
+    'Camping': 'Camping',
+    'Food': 'Essen',
+    'Groceries': 'Lebensmittel',
+    'Drinking water': 'Trinkwasser',
+    'Non-drinking water': 'Kein Trinkwasser',
+    'Toilets': 'Toiletten',
+    'Medical': 'Medizinische Hilfe',
+    'Pharmacy': 'Apotheke',
+    'Bus': 'Bus',
+    'Offline map downloaded': 'Offline-Karte heruntergeladen',
+    'Downloading offline map': 'Offline-Karte wird heruntergeladen',
+    'Offline map download failed': 'Offline-Karten-Download fehlgeschlagen',
+    'Download offline map': 'Offline-Karte herunterladen',
+    'Trail map available offline': 'Wanderkarte offline verfügbar',
+    'Download interrupted': 'Download unterbrochen',
+    'Take the map offline': 'Karte offline verfügbar machen',
+    'Remove offline map': 'Offline-Karte entfernen',
+    'Try again': 'Erneut versuchen',
+    'Cancel': 'Abbrechen',
+    'Remove': 'Entfernen',
+    'Remove offline map?': 'Offline-Karte entfernen?',
+    'Show the whole trail': 'Gesamten Weg anzeigen',
+    'My location': 'Mein Standort',
+    'Offline maps': 'Offline-Karten',
+    'Downloaded': 'Heruntergeladen',
+    'Checking offline maps…': 'Offline-Karten werden geprüft…',
+    'No offline maps downloaded.': 'Keine Offline-Karten heruntergeladen.',
+    'Delete offline maps': 'Offline-Karten löschen',
+    'Delete offline maps?': 'Offline-Karten löschen?',
+    'Delete': 'Löschen',
+    'Firebase is not configured for this build.':
+        'Firebase ist für diesen Build nicht konfiguriert.',
+    'Could not update the trail. Your offline copy is unchanged.':
+        'Der Weg konnte nicht aktualisiert werden. Die Offline-Kopie bleibt unverändert.',
+    'The Troodos section contains the route’s largest climbs. Plan water and daylight before entering long mountain stages.':
+        'Der Troodos-Abschnitt enthält die größten Anstiege der Route. Plane Wasser und Tageslicht vor langen Bergetappen ein.',
+    'Offline map status could not be read.':
+        'Der Status der Offline-Karte konnte nicht gelesen werden.',
+    'The Mapbox Outdoors style and detailed tiles along the Cyprus E4 are stored on this device.':
+        'Der Mapbox-Outdoors-Stil und detaillierte Kacheln entlang des Cyprus E4 sind auf diesem Gerät gespeichert.',
+    'Please try the download again.': 'Bitte versuche den Download erneut.',
+    'Downloads a detailed corridor around the complete Cyprus E4 for use without a connection.':
+        'Lädt einen detaillierten Korridor entlang des gesamten Cyprus E4 für die Offline-Nutzung herunter.',
+    'Download the route data first.': 'Lade zuerst die Routendaten herunter.',
+    'The route, stages and elevation will remain offline. Only the Mapbox background tiles will be removed.':
+        'Route, Etappen und Höhenprofil bleiben offline verfügbar. Nur die Mapbox-Hintergrundkacheln werden entfernt.',
+    'Turn on Location Services to show your position.':
+        'Aktiviere die Ortungsdienste, um deine Position anzuzeigen.',
+    'Location permission is needed to show your position.':
+        'Zum Anzeigen deiner Position ist die Standortberechtigung erforderlich.',
+    'Your location could not be read right now.':
+        'Dein Standort konnte gerade nicht ermittelt werden.',
+    'Connect Mapbox': 'Mapbox verbinden',
+    'Add a public Mapbox access token when running the app to load the map tiles.':
+        'Füge beim Start der App ein öffentliches Mapbox-Zugriffstoken hinzu, um die Kartenkacheln zu laden.',
+    'Route data is not on this device yet.':
+        'Die Routendaten sind noch nicht auf diesem Gerät.',
+    'Download route': 'Route herunterladen',
+  },
+  'es': {
+    'Settings': 'Ajustes',
+    'TRAIL LIBRARY': 'BIBLIOTECA DE RUTAS',
+    'Explore trails': 'Explorar rutas',
+    'Choose a trail to view its stages and maps.':
+        'Elige una ruta para ver sus etapas y mapas.',
+    'Current trails': 'Rutas actuales',
+    'available': 'disponible',
+    'LONG DISTANCE': 'GRAN RECORRIDO',
+    'A long-distance journey linking the coast, forests and Troodos mountains.':
+        'Una travesía de larga distancia que une la costa, los bosques y las montañas de Troodos.',
+    'Trail data not downloaded': 'Datos de la ruta no descargados',
+    'Explore trail': 'Explorar ruta',
+    'Language': 'Idioma',
+    'Measurements': 'Unidades',
+    'Metric': 'Métrico',
+    'Imperial': 'Imperial',
+    'Kilometres and metres': 'Kilómetros y metros',
+    'Miles and feet': 'Millas y pies',
+    'Changes apply throughout the app.':
+        'Los cambios se aplican en toda la aplicación.',
+    'Stage by stage': 'Etapa por etapa',
+    'Refresh offline trail': 'Actualizar ruta sin conexión',
+    'Walk from Pafos to Larnaka': 'Caminar de Pafos a Larnaka',
+    'Walk from Larnaka to Pafos': 'Caminar de Larnaka a Pafos',
+    'CYPRUS · LONG DISTANCE TRAIL': 'CHIPRE · SENDERO DE GRAN RECORRIDO',
+    'Pafos Airport': 'Aeropuerto de Pafos',
+    'Larnaka Airport': 'Aeropuerto de Larnaka',
+    'Distance': 'Distancia',
+    'Stages': 'Etapas',
+    'High point': 'Punto más alto',
+    'Route': 'Ruta',
+    'Filter': 'Filtrar',
+    'Filter by services': 'Filtrar por servicios',
+    'Stages must offer every selected service.':
+        'Las etapas deben ofrecer todos los servicios seleccionados.',
+    'Clear': 'Limpiar',
+    'Apply filters': 'Aplicar filtros',
+    'No stages match these services.':
+        'Ninguna etapa coincide con estos servicios.',
+    'Clear filters': 'Quitar filtros',
+    'Go to top': 'Ir al inicio',
+    'Go to end': 'Ir al final',
+    'Map': 'Mapa',
+    'Elevation': 'Desnivel',
+    'The route stages are shown below.':
+        'Las etapas de la ruta se muestran abajo.',
+    'Trail guide available offline': 'Guía disponible sin conexión',
+    'Download this trail for offline use':
+        'Descarga esta ruta para usarla sin conexión',
+    'Trail map': 'Mapa de la ruta',
+    'Refresh elevation data': 'Actualizar datos de desnivel',
+    'No elevation data is available.': 'No hay datos de desnivel.',
+    'Could not download the elevation profile.':
+        'No se pudo descargar el perfil de desnivel.',
+    'Zoom out': 'Alejar',
+    'Zoom in': 'Acercar',
+    'Reset elevation view': 'Restablecer vista de desnivel',
+    'Hide stages': 'Ocultar etapas',
+    'Show stages': 'Mostrar etapas',
+    'Trail distance': 'Distancia total',
+    'Highest point': 'Punto más alto',
+    'High point position': 'Posición del punto más alto',
+    'Offline samples': 'Muestras sin conexión',
+    'Preparing the offline elevation profile…':
+        'Preparando el perfil sin conexión…',
+    'Download profile': 'Descargar perfil',
+    'Close stage summary': 'Cerrar resumen de etapa',
+    'Stage': 'Etapa',
+    'From': 'Desde',
+    'Stage length': 'Longitud de etapa',
+    'Altitude': 'Altitud',
+    'Services': 'Servicios',
+    'No services recorded for this stage.':
+        'No hay servicios registrados para esta etapa.',
+    'Trail position': 'Posición en la ruta',
+    'Following the Cyprus E4': 'Siguiendo la Cyprus E4',
+    'Route guidance will be available with the offline map.':
+        'La navegación estará disponible con el mapa sin conexión.',
+    'Available offline': 'Disponible sin conexión',
+    'Stage information is stored on this device.':
+        'La información de la etapa está guardada en este dispositivo.',
+    'Previous': 'Anterior',
+    'Next': 'Siguiente',
+    'Show on map': 'Mostrar en el mapa',
+    'Back to stages': 'Volver a las etapas',
+    'Take the trail offline': 'Guardar la ruta sin conexión',
+    'Download Cyprus E4 to browse its stages without a connection.':
+        'Descarga Cyprus E4 para ver sus etapas sin conexión.',
+    'Download trail': 'Descargar ruta',
+    'Lodging': 'Alojamiento',
+    'Camping': 'Camping',
+    'Food': 'Comida',
+    'Groceries': 'Comestibles',
+    'Drinking water': 'Agua potable',
+    'Non-drinking water': 'Agua no potable',
+    'Toilets': 'Aseos',
+    'Medical': 'Asistencia médica',
+    'Pharmacy': 'Farmacia',
+    'Bus': 'Autobús',
+    'Offline map downloaded': 'Mapa sin conexión descargado',
+    'Downloading offline map': 'Descargando mapa sin conexión',
+    'Offline map download failed': 'Error al descargar el mapa',
+    'Download offline map': 'Descargar mapa sin conexión',
+    'Trail map available offline': 'Mapa de la ruta disponible sin conexión',
+    'Download interrupted': 'Descarga interrumpida',
+    'Take the map offline': 'Guardar el mapa sin conexión',
+    'Remove offline map': 'Eliminar mapa sin conexión',
+    'Try again': 'Intentar de nuevo',
+    'Cancel': 'Cancelar',
+    'Remove': 'Eliminar',
+    'Remove offline map?': '¿Eliminar el mapa sin conexión?',
+    'Show the whole trail': 'Mostrar toda la ruta',
+    'My location': 'Mi ubicación',
+    'Offline maps': 'Mapas sin conexión',
+    'Downloaded': 'Descargado',
+    'Checking offline maps…': 'Comprobando mapas sin conexión…',
+    'No offline maps downloaded.': 'No hay mapas sin conexión descargados.',
+    'Delete offline maps': 'Eliminar mapas sin conexión',
+    'Delete offline maps?': '¿Eliminar mapas sin conexión?',
+    'Delete': 'Eliminar',
+    'Firebase is not configured for this build.':
+        'Firebase no está configurado para esta compilación.',
+    'Could not update the trail. Your offline copy is unchanged.':
+        'No se pudo actualizar la ruta. La copia sin conexión no ha cambiado.',
+    'The Troodos section contains the route’s largest climbs. Plan water and daylight before entering long mountain stages.':
+        'La sección de Troodos contiene las mayores subidas de la ruta. Planifica el agua y las horas de luz antes de las largas etapas de montaña.',
+    'Offline map status could not be read.':
+        'No se pudo leer el estado del mapa sin conexión.',
+    'The Mapbox Outdoors style and detailed tiles along the Cyprus E4 are stored on this device.':
+        'El estilo Mapbox Outdoors y los mosaicos detallados de la Cyprus E4 están guardados en este dispositivo.',
+    'Please try the download again.': 'Vuelve a intentar la descarga.',
+    'Downloads a detailed corridor around the complete Cyprus E4 for use without a connection.':
+        'Descarga un corredor detallado de toda la Cyprus E4 para usarlo sin conexión.',
+    'Download the route data first.': 'Descarga primero los datos de la ruta.',
+    'The route, stages and elevation will remain offline. Only the Mapbox background tiles will be removed.':
+        'La ruta, las etapas y el desnivel seguirán disponibles sin conexión. Solo se eliminarán los mosaicos de fondo de Mapbox.',
+    'Turn on Location Services to show your position.':
+        'Activa los servicios de ubicación para mostrar tu posición.',
+    'Location permission is needed to show your position.':
+        'Se necesita permiso de ubicación para mostrar tu posición.',
+    'Your location could not be read right now.':
+        'No se pudo obtener tu ubicación en este momento.',
+    'Connect Mapbox': 'Conectar Mapbox',
+    'Add a public Mapbox access token when running the app to load the map tiles.':
+        'Añade un token público de Mapbox al iniciar la aplicación para cargar los mosaicos del mapa.',
+    'Route data is not on this device yet.':
+        'Los datos de la ruta aún no están en este dispositivo.',
+    'Download route': 'Descargar ruta',
+  },
+};

@@ -1,0 +1,105 @@
+{
+  "project_info": {
+    "project_number": "893185124081",
+    "project_id": "eurotrex",
+    "storage_bucket": "eurotrex.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:893185124081:android:85eb076fab3c33f46a6b50",
+        "android_client_info": {
+          "package_name": "com.example.compass_25"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcPR_gnqKRiv3ie6BcFbYQqFj5Nv7IwBA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:893185124081:android:283c6f103c0643fb6a6b50",
+        "android_client_info": {
+          "package_name": "com.example.cupertino_compass"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcPR_gnqKRiv3ie6BcFbYQqFj5Nv7IwBA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:893185124081:android:cd6d3d562bd9f11f6a6b50",
+        "android_client_info": {
+          "package_name": "com.example.eurotrex"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcPR_gnqKRiv3ie6BcFbYQqFj5Nv7IwBA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:893185124081:android:63a1fa48ed3c37c16a6b50",
+        "android_client_info": {
+          "package_name": "com.monktrail.monk_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcPR_gnqKRiv3ie6BcFbYQqFj5Nv7IwBA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:893185124081:android:605f109c4f4cfbdd6a6b50",
+        "android_client_info": {
+          "package_name": "eu.eurotrex.e4"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcPR_gnqKRiv3ie6BcFbYQqFj5Nv7IwBA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
