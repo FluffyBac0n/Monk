@@ -174,6 +174,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                           itemBuilder: (context, index) => _StageTimelineRow(
                             stage: filteredItems[index],
                             formatter: formatter,
+                            direction: direction,
                             distanceKm:
                                 filteredItems[index].accumulatedDistanceKm ==
                                     null
@@ -481,7 +482,7 @@ class _TrailDashboard extends ConsumerWidget {
                       Text(
                         l10n.t(
                           isMapOffline
-                              ? 'Trail data and Mapbox map available offline'
+                              ? 'Trail data and map available offline'
                               : 'Trail data available offline',
                         ),
                         style: const TextStyle(fontWeight: FontWeight.w700),
@@ -491,12 +492,12 @@ class _TrailDashboard extends ConsumerWidget {
                         Text(
                           l10n.t(
                             mapStatusChecking
-                                ? 'Checking Mapbox offline map…'
+                                ? 'Checking offline map…'
                                 : isDownloading
-                                ? 'Downloading Mapbox offline map'
+                                ? 'Downloading offline map'
                                 : mapStatusFailed
-                                ? 'Mapbox offline map download failed'
-                                : 'Mapbox offline map not downloaded',
+                                ? 'Offline map download failed'
+                                : 'Offline map not downloaded',
                           ),
                           style: const TextStyle(
                             color: Colors.black54,
@@ -603,6 +604,7 @@ class _StageTimelineRow extends StatelessWidget {
   const _StageTimelineRow({
     required this.stage,
     required this.formatter,
+    required this.direction,
     required this.distanceKm,
     required this.isFirst,
     required this.isLast,
@@ -613,6 +615,7 @@ class _StageTimelineRow extends StatelessWidget {
 
   final TrailStage stage;
   final MeasurementFormatter formatter;
+  final TrailDirection direction;
   final double? distanceKm;
   final bool isFirst;
   final bool isLast;
@@ -625,6 +628,12 @@ class _StageTimelineRow extends StatelessWidget {
     final activeServices = stage.services.entries
         .where((entry) => entry.value)
         .toList();
+    final ascentM = direction.isReversed
+        ? stage.elevationDownM
+        : stage.elevationUpM;
+    final descentM = direction.isReversed
+        ? stage.elevationUpM
+        : stage.elevationDownM;
     final dotColor = isTrailStart
         ? _green
         : isTrailEnd
@@ -638,35 +647,88 @@ class _StageTimelineRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(
-            width: 72,
-            child: Column(
+            width: 84,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
-                  child: Container(
-                    width: 2,
-                    color: isFirst
-                        ? Colors.transparent
-                        : const Color(0xFFB9BDB8),
+                  child: Center(
+                    child: Column(
+                      key: ValueKey('stage-side-metrics-${stage.id}'),
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _StageSideMetric(
+                          key: ValueKey('stage-ascent-${stage.id}'),
+                          icon: Icons.arrow_upward_rounded,
+                          value: ascentM == null
+                              ? '—'
+                              : _compactMeasurement(
+                                  formatter.altitude(ascentM),
+                                ),
+                          tooltip: context.l10n.t('Ascent'),
+                          color: _green,
+                        ),
+                        _StageSideMetric(
+                          key: ValueKey('stage-descent-${stage.id}'),
+                          icon: Icons.arrow_downward_rounded,
+                          value: descentM == null
+                              ? '—'
+                              : _compactMeasurement(
+                                  formatter.altitude(descentM),
+                                ),
+                          tooltip: context.l10n.t('Descent'),
+                          color: _red,
+                        ),
+                        _StageSideMetric(
+                          key: ValueKey('stage-length-${stage.id}'),
+                          icon: Icons.straighten_rounded,
+                          value: stage.segmentLengthKm == null
+                              ? '—'
+                              : _compactMeasurement(
+                                  formatter.distance(stage.segmentLengthKm!),
+                                ),
+                          tooltip: context.l10n.t('Stage length'),
+                          color: _filterBlueTeal,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                Container(
-                  width: 15,
-                  height: 15,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: dotColor,
-                    border: Border.all(color: _sand, width: 3),
-                    boxShadow: const [
-                      BoxShadow(color: Colors.black12, blurRadius: 2),
+                SizedBox(
+                  width: 20,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          width: 2,
+                          color: isFirst
+                              ? Colors.transparent
+                              : const Color(0xFFB9BDB8),
+                        ),
+                      ),
+                      Container(
+                        key: ValueKey('stage-marker-${stage.id}'),
+                        width: 15,
+                        height: 15,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: dotColor,
+                          border: Border.all(color: _sand, width: 3),
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black12, blurRadius: 2),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Container(
+                          width: 2,
+                          color: isLast
+                              ? Colors.transparent
+                              : const Color(0xFFB9BDB8),
+                        ),
+                      ),
                     ],
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    color: isLast
-                        ? Colors.transparent
-                        : const Color(0xFFB9BDB8),
                   ),
                 ),
               ],
@@ -701,19 +763,47 @@ class _StageTimelineRow extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-                                  if (distanceKm != null)
-                                    Text(
-                                      formatter.distance(distanceKm!),
-                                      style: const TextStyle(
-                                        color: _green,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 12,
+                                  if (distanceKm != null ||
+                                      stage.altitudeM != null)
+                                    Row(
+                                      key: ValueKey(
+                                        'stage-card-metrics-${stage.id}',
                                       ),
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (distanceKm != null)
+                                          Text(
+                                            formatter.distance(distanceKm!),
+                                            key: ValueKey(
+                                              'stage-card-distance-${stage.id}',
+                                            ),
+                                            style: const TextStyle(
+                                              color: _green,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        if (distanceKm != null &&
+                                            stage.altitudeM != null)
+                                          const SizedBox(width: 8),
+                                        if (stage.altitudeM
+                                            case final altitude?)
+                                          _MiniLabel(
+                                            key: ValueKey(
+                                              'stage-card-altitude-${stage.id}',
+                                            ),
+                                            icon: Icons.landscape_outlined,
+                                            label: formatter.altitude(altitude),
+                                          ),
+                                      ],
                                     ),
                                 ],
                               ),
                               const SizedBox(height: 8),
                               Wrap(
+                                key: ValueKey(
+                                  'stage-card-services-${stage.id}',
+                                ),
                                 spacing: 8,
                                 runSpacing: 6,
                                 children: [
@@ -740,11 +830,6 @@ class _StageTimelineRow extends StatelessWidget {
                                         color: _serviceColor(service.key),
                                       ),
                                     ),
-                                  if (stage.altitudeM case final altitude?)
-                                    _MiniLabel(
-                                      icon: Icons.landscape_outlined,
-                                      label: formatter.altitude(altitude),
-                                    ),
                                 ],
                               ),
                             ],
@@ -760,6 +845,46 @@ class _StageTimelineRow extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _compactMeasurement(String value) => value.replaceAll(' ', '');
+
+class _StageSideMetric extends StatelessWidget {
+  const _StageSideMetric({
+    required this.icon,
+    required this.value,
+    required this.tooltip,
+    required this.color,
+    super.key,
+  });
+
+  final IconData icon;
+  final String value;
+  final String tooltip;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 9, color: color),
+          const SizedBox(width: 2),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 8.5,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
             ),
           ),
         ],
@@ -802,7 +927,7 @@ class _EndpointBadge extends StatelessWidget {
 }
 
 class _MiniLabel extends StatelessWidget {
-  const _MiniLabel({required this.icon, required this.label});
+  const _MiniLabel({required this.icon, required this.label, super.key});
 
   final IconData icon;
   final String label;
@@ -1140,8 +1265,8 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                   title: l10n.t('Following the Cyprus E4'),
                   subtitle: l10n.t(
                     isMapOffline
-                        ? 'Trail data and Mapbox background tiles are available offline.'
-                        : 'Trail data is available offline. Download the Mapbox offline map for background tiles.',
+                        ? 'Trail data and background map are available offline.'
+                        : 'Trail data is available offline. Download the offline map to see map details without a connection.',
                   ),
                 ),
               ],

@@ -137,13 +137,13 @@ class _OfflineMapAppBarButton extends StatelessWidget {
     final l10n = context.l10n;
     final value = state.value;
     final tooltip = switch (value?.phase) {
-      OfflineMapPhase.ready => l10n.t('Mapbox offline map downloaded'),
-      OfflineMapPhase.downloading => l10n.t('Downloading Mapbox offline map'),
+      OfflineMapPhase.ready => l10n.t('Offline map downloaded'),
+      OfflineMapPhase.downloading => l10n.t('Downloading offline map'),
       OfflineMapPhase.failed when value?.failure == OfflineMapFailure.removal =>
-        l10n.t('Mapbox offline map removal failed'),
-      OfflineMapPhase.failed => l10n.t('Mapbox offline map download failed'),
-      _ when state.isLoading => l10n.t('Checking Mapbox offline map…'),
-      _ => l10n.t('Mapbox offline map not downloaded'),
+        l10n.t('Offline map removal failed'),
+      OfflineMapPhase.failed => l10n.t('Offline map download failed'),
+      _ when state.isLoading => l10n.t('Checking offline map…'),
+      _ => l10n.t('Offline map not downloaded'),
     };
     final icon = switch (value?.phase) {
       OfflineMapPhase.ready => const Icon(Icons.offline_pin_rounded),
@@ -233,14 +233,14 @@ class _OfflineMapSheetContent extends StatelessWidget {
     final failed = state.phase == OfflineMapPhase.failed;
     final removalFailed = failed && state.failure == OfflineMapFailure.removal;
     final title = ready
-        ? l10n.t('Mapbox offline map available')
+        ? l10n.t('Offline map available')
         : downloading
-        ? l10n.t('Downloading Mapbox offline map')
+        ? l10n.t('Downloading offline map')
         : removalFailed
-        ? l10n.t('Mapbox offline map removal failed')
+        ? l10n.t('Offline map removal failed')
         : failed
-        ? l10n.t('Mapbox offline map download failed')
-        : l10n.t('Download Mapbox offline map');
+        ? l10n.t('Offline map download failed')
+        : l10n.t('Download offline map');
     final icon = ready
         ? Icons.offline_pin_rounded
         : downloading
@@ -264,9 +264,7 @@ class _OfflineMapSheetContent extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           ready
-              ? l10n.t(
-                  'The Mapbox Outdoors style and detailed tiles along the Cyprus E4 are stored on this device.',
-                )
+              ? l10n.t('The detailed Cyprus E4 map is stored on this device.')
               : failed
               ? l10n.t(state.message ?? 'Please try the download again.')
               : l10n.t(
@@ -387,7 +385,7 @@ Future<void> _confirmOfflineMapDelete(
       title: Text(context.l10n.t('Remove offline map?')),
       content: Text(
         context.l10n.t(
-          'The route, stages and elevation will remain offline. Only the Mapbox background tiles will be removed.',
+          'The route, stages and elevation will remain offline. Only the offline map will be removed.',
         ),
       ),
       actions: [
@@ -1186,7 +1184,7 @@ class _MapboxSetupState extends StatelessWidget {
             const Icon(Icons.map_outlined, size: 62, color: _green),
             const SizedBox(height: 18),
             Text(
-              context.l10n.t('Connect Mapbox'),
+              context.l10n.t('Map unavailable'),
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
@@ -1194,22 +1192,9 @@ class _MapboxSetupState extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               context.l10n.t(
-                'Add a public Mapbox access token when running the app to load the map tiles.',
+                'The map service is not configured for this build.',
               ),
               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 18),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const SelectableText(
-                '--dart-define=MAPBOX_ACCESS_TOKEN=pk…',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontFamily: 'monospace', fontSize: 12),
-              ),
             ),
           ],
         ),

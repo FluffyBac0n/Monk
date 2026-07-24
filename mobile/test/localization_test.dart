@@ -16,6 +16,8 @@ void main() {
     expect(german.t('Crete E4'), 'Crete E4');
     expect(german.t('Peloponnese E4'), 'Peloponnes E4');
     expect(german.t('Offline access'), 'Offline-Zugriff');
+    expect(german.t('Offline map'), 'Offline-Karte');
+    expect(german.t('Map unavailable'), 'Karte nicht verfügbar');
     expect(german.t('Estimated walking time'), 'Geschätzte Gehzeit');
     expect(german.t('Selected stage'), 'Ausgewählte Etappe');
 
@@ -28,6 +30,8 @@ void main() {
     expect(spanish.t('Crete E4'), 'Crete E4');
     expect(spanish.t('Peloponnese E4'), 'Peloponeso E4');
     expect(spanish.t('Offline access'), 'Acceso sin conexión');
+    expect(spanish.t('Offline map'), 'Mapa sin conexión');
+    expect(spanish.t('Map unavailable'), 'Mapa no disponible');
     expect(spanish.t('Estimated walking time'), 'Tiempo estimado de caminata');
     expect(spanish.t('Selected stage'), 'Etapa seleccionada');
   });

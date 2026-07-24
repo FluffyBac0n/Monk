@@ -232,9 +232,9 @@ class _OfflineMapStatus extends StatelessWidget {
       return _OfflineStatusPanel(
         icon: Icons.map_outlined,
         color: Colors.black54,
-        title: l10n.t('Mapbox offline map'),
+        title: l10n.t('Offline map'),
         status: l10n.t('Checking offline maps…'),
-        description: l10n.t('Detailed background tiles along the trail'),
+        description: l10n.t('Detailed map along the trail'),
         trailing: const SizedBox.square(
           dimension: 20,
           child: CircularProgressIndicator(strokeWidth: 2.5),
@@ -245,9 +245,9 @@ class _OfflineMapStatus extends StatelessWidget {
       return _OfflineStatusPanel(
         icon: Icons.cloud_off_rounded,
         color: _red,
-        title: l10n.t('Mapbox offline map'),
+        title: l10n.t('Offline map'),
         status: l10n.t('Offline map status could not be read.'),
-        description: l10n.t('Detailed background tiles along the trail'),
+        description: l10n.t('Detailed map along the trail'),
         footer: OutlinedButton.icon(
           onPressed: onRefresh,
           icon: const Icon(Icons.refresh_rounded),
@@ -284,9 +284,9 @@ class _OfflineMapStatus extends StatelessWidget {
     return _OfflineStatusPanel(
       icon: icon,
       color: color,
-      title: l10n.t('Mapbox offline map'),
+      title: l10n.t('Offline map'),
       status: status,
-      description: l10n.t('Detailed background tiles along the trail'),
+      description: l10n.t('Detailed map along the trail'),
       body: Column(
         children: [
           if (downloading) ...[
@@ -493,7 +493,7 @@ Future<void> _confirmDeleteOfflineMap(
       title: Text(l10n.t('Remove offline map?')),
       content: Text(
         l10n.t(
-          'The route, stages and elevation will remain offline. Only the Mapbox background tiles will be removed.',
+          'The route, stages and elevation will remain offline. Only the offline map will be removed.',
         ),
       ),
       actions: [

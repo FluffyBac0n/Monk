@@ -37,10 +37,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
-    expect(
-      find.text('Trail data and Mapbox map available offline'),
-      findsOneWidget,
-    );
+    expect(find.text('Trail data and map available offline'), findsOneWidget);
 
     final providerScope = ProviderScope.containerOf(
       tester.element(find.byType(StagesScreen)),
@@ -48,7 +45,7 @@ void main() {
     await providerScope.read(offlineMapProvider.notifier).delete();
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.info_outline_rounded), findsWidgets);
-    expect(find.text('Mapbox offline map not downloaded'), findsOneWidget);
+    expect(find.text('Offline map not downloaded'), findsOneWidget);
 
     final information = find.byKey(const ValueKey('trail-information'));
     final reverse = find.byKey(const ValueKey('reverse-trail-direction'));
@@ -549,8 +546,50 @@ void main() {
 
     final pafosCard = find.byKey(const ValueKey('stage-card-pafos'));
     final larnakaCard = find.byKey(const ValueKey('stage-card-larnaka'));
+    final pafosDistance = find.byKey(
+      const ValueKey('stage-card-distance-pafos'),
+    );
+    final pafosAltitude = find.byKey(
+      const ValueKey('stage-card-altitude-pafos'),
+    );
+    final pafosServices = find.byKey(
+      const ValueKey('stage-card-services-pafos'),
+    );
+    final larnakaSideMetrics = find.byKey(
+      const ValueKey('stage-side-metrics-larnaka'),
+    );
+    final larnakaMarker = find.byKey(const ValueKey('stage-marker-larnaka'));
+    final larnakaAscent = find.byKey(const ValueKey('stage-ascent-larnaka'));
+    final larnakaDescent = find.byKey(const ValueKey('stage-descent-larnaka'));
+    final larnakaLength = find.byKey(const ValueKey('stage-length-larnaka'));
 
     expect(find.text('Pafos Airport  →  Larnaka Airport'), findsOneWidget);
+    expect(pafosDistance, findsOneWidget);
+    expect(pafosAltitude, findsOneWidget);
+    expect(
+      tester.getCenter(pafosDistance).dx,
+      lessThan(tester.getCenter(pafosAltitude).dx),
+    );
+    expect(
+      find.descendant(of: pafosServices, matching: pafosAltitude),
+      findsNothing,
+    );
+    expect(
+      tester.getCenter(larnakaSideMetrics).dx,
+      lessThan(tester.getCenter(larnakaMarker).dx),
+    );
+    expect(
+      find.descendant(of: larnakaAscent, matching: find.text('120m')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: larnakaDescent, matching: find.text('45m')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: larnakaLength, matching: find.text('10.0km')),
+      findsOneWidget,
+    );
     expect(
       find.descendant(of: pafosCard, matching: find.text('Start point')),
       findsOneWidget,
@@ -564,6 +603,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Larnaka Airport  →  Pafos Airport'), findsOneWidget);
+    expect(
+      find.descendant(of: larnakaAscent, matching: find.text('45m')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: larnakaDescent, matching: find.text('120m')),
+      findsOneWidget,
+    );
     expect(
       find.descendant(of: larnakaCard, matching: find.text('Start point')),
       findsOneWidget,
@@ -814,7 +861,7 @@ void main() {
     );
   });
 
-  testWidgets('map explains how to supply a missing Mapbox token', (
+  testWidgets('map hides provider details when configuration is missing', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -823,8 +870,12 @@ void main() {
       ),
     );
 
-    expect(find.text('Connect Mapbox'), findsOneWidget);
-    expect(find.text('--dart-define=MAPBOX_ACCESS_TOKEN=pk…'), findsOneWidget);
+    expect(find.text('Map unavailable'), findsOneWidget);
+    expect(
+      find.text('The map service is not configured for this build.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Mapbox'), findsNothing);
   });
 }
 
@@ -882,6 +933,8 @@ class _EndpointStagesController extends StagesController {
       name: 'Larnaka Airport',
       accumulatedDistanceKm: 10,
       segmentLengthKm: 10,
+      elevationUpM: 120,
+      elevationDownM: 45,
       altitudeM: 4,
       services: {},
     ),
