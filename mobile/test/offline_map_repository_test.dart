@@ -52,4 +52,35 @@ void main() {
     expect(formatOfflineBytes(1536), '1.5 KB');
     expect(formatOfflineBytes(5 * 1024 * 1024), '5.0 MB');
   });
+
+  test('reads the offline map download timestamp from metadata', () {
+    expect(
+      parseOfflineMapDownloadedAt('2026-07-24T09:30:00.000Z'),
+      DateTime.utc(2026, 7, 24, 9, 30),
+    );
+    expect(
+      parseOfflineMapDownloadedAt(
+        DateTime.utc(2026, 7, 24, 9, 30).millisecondsSinceEpoch,
+      ),
+      DateTime.utc(2026, 7, 24, 9, 30),
+    );
+    expect(parseOfflineMapDownloadedAt('not-a-date'), isNull);
+  });
+
+  test('failed state retains interrupted download details', () {
+    final downloadedAt = DateTime.utc(2026, 7, 24, 9, 30);
+    final state = OfflineMapState.failed(
+      'download failed',
+      failure: OfflineMapFailure.download,
+      progress: 0.42,
+      completedBytes: 2048,
+      downloadedAt: downloadedAt,
+    );
+
+    expect(state.isFailed, isTrue);
+    expect(state.progress, 0.42);
+    expect(state.completedBytes, 2048);
+    expect(state.downloadedAt, downloadedAt);
+    expect(state.failure, OfflineMapFailure.download);
+  });
 }

@@ -51,6 +51,12 @@ class _AppLocalizationsDelegate
 
 const _translations = <String, Map<String, String>>{
   'de': {
+    'EUROTREX': 'EUROTREX',
+    'Co-funded by the European Union':
+        'Kofinanziert von der Europäischen Union',
+    'Republic of Cyprus': 'Republik Zypern',
+    'Crete E4': 'Crete E4',
+    'Peloponnese E4': 'Peloponnes E4',
     'Settings': 'Einstellungen',
     'TRAIL LIBRARY': 'WEGBIBLIOTHEK',
     'Explore trails': 'Wanderwege entdecken',
@@ -62,6 +68,13 @@ const _translations = <String, Map<String, String>>{
     'A long-distance journey linking the coast, forests and Troodos mountains.':
         'Eine Fernwanderung, die Küste, Wälder und das Troodos-Gebirge verbindet.',
     'Trail data not downloaded': 'Wegdaten nicht heruntergeladen',
+    'Trail data available offline': 'Wegdaten offline verfügbar',
+    'Trail data and Mapbox map available offline':
+        'Wegdaten und Mapbox-Karte offline verfügbar',
+    'Trail data and Mapbox background tiles are available offline.':
+        'Wegdaten und Mapbox-Hintergrundkarten sind offline verfügbar.',
+    'Trail data is available offline. Download the Mapbox offline map for background tiles.':
+        'Wegdaten sind offline verfügbar. Lade die Mapbox-Offline-Karte für Hintergrundkarten herunter.',
     'Explore trail': 'Weg erkunden',
     'Language': 'Sprache',
     'Measurements': 'Maßeinheiten',
@@ -76,6 +89,7 @@ const _translations = <String, Map<String, String>>{
     'Walk from Pafos to Larnaka': 'Von Pafos nach Larnaka wandern',
     'Walk from Larnaka to Pafos': 'Von Larnaka nach Pafos wandern',
     'CYPRUS · LONG DISTANCE TRAIL': 'ZYPERN · FERNWANDERWEG',
+    'Cyprus E4': 'Cyprus E4',
     'Pafos Airport': 'Flughafen Pafos',
     'Larnaka Airport': 'Flughafen Larnaka',
     'Distance': 'Entfernung',
@@ -114,11 +128,22 @@ const _translations = <String, Map<String, String>>{
     'Highest point': 'Höchster Punkt',
     'High point position': 'Position des höchsten Punkts',
     'Offline samples': 'Offline-Messpunkte',
+    'Total ascent': 'Gesamtanstieg',
+    'Total descent': 'Gesamtabstieg',
+    'Ascent': 'Anstieg',
+    'Descent': 'Abstieg',
+    'Estimated walking time': 'Geschätzte Gehzeit',
+    'Naismith estimate based on distance and ascent. Breaks and terrain are not included.':
+        'Schätzung nach Naismith basierend auf Distanz und Anstieg. Pausen und Gelände sind nicht berücksichtigt.',
+    'h': 'Std.',
+    'min': 'Min.',
     'Preparing the offline elevation profile…':
         'Offline-Höhenprofil wird vorbereitet…',
     'Download profile': 'Profil herunterladen',
     'Close stage summary': 'Etappenübersicht schließen',
     'Stage': 'Etappe',
+    'Start point': 'Startpunkt',
+    'Finish point': 'Zielpunkt',
     'From': 'Ab',
     'Stage length': 'Etappenlänge',
     'Altitude': 'Höhe',
@@ -142,6 +167,7 @@ const _translations = <String, Map<String, String>>{
     'Download trail': 'Weg herunterladen',
     'Lodging': 'Unterkunft',
     'Book accommodation': 'Unterkunft buchen',
+    'Accommodation booking': 'Unterkunftsbuchung',
     'Coming soon': 'Demnächst verfügbar',
     'Camping': 'Camping',
     'Food': 'Essen',
@@ -157,6 +183,32 @@ const _translations = <String, Map<String, String>>{
     'Downloading offline map': 'Offline-Karte wird heruntergeladen',
     'Offline map download failed': 'Offline-Karten-Download fehlgeschlagen',
     'Download offline map': 'Offline-Karte herunterladen',
+    'Offline access': 'Offline-Zugriff',
+    'Offline content for this trail': 'Offline-Inhalte für diesen Weg',
+    'Checking trail data…': 'Wegdaten werden geprüft…',
+    'Trail data status could not be read.':
+        'Der Status der Wegdaten konnte nicht gelesen werden.',
+    'Trail data': 'Wegdaten',
+    'Route, stages and elevation': 'Route, Etappen und Höhenprofil',
+    'Mapbox offline map': 'Mapbox-Offline-Karte',
+    'Detailed background tiles along the trail':
+        'Detaillierte Hintergrundkarten entlang des Wegs',
+    'Check again': 'Erneut prüfen',
+    'Size': 'Größe',
+    'Last updated': 'Zuletzt aktualisiert',
+    'Not available': 'Nicht verfügbar',
+    'Checking Mapbox offline map…': 'Mapbox-Offline-Karte wird geprüft…',
+    'Downloading Mapbox offline map':
+        'Mapbox-Offline-Karte wird heruntergeladen',
+    'Mapbox offline map downloaded': 'Mapbox-Offline-Karte heruntergeladen',
+    'Mapbox offline map available': 'Mapbox-Offline-Karte verfügbar',
+    'Mapbox offline map download failed':
+        'Download der Mapbox-Offline-Karte fehlgeschlagen',
+    'Mapbox offline map removal failed':
+        'Mapbox-Offline-Karte konnte nicht entfernt werden',
+    'Mapbox offline map not downloaded':
+        'Mapbox-Offline-Karte nicht heruntergeladen',
+    'Download Mapbox offline map': 'Mapbox-Offline-Karte herunterladen',
     'Trail map available offline': 'Wanderkarte offline verfügbar',
     'Download interrupted': 'Download unterbrochen',
     'Take the map offline': 'Karte offline verfügbar machen',
@@ -168,6 +220,8 @@ const _translations = <String, Map<String, String>>{
     'Show the whole trail': 'Gesamten Weg anzeigen',
     'Start': 'Start',
     'Finish': 'Ziel',
+    'Selected stage': 'Ausgewählte Etappe',
+    'Other stages': 'Weitere Etappen',
     'My location': 'Mein Standort',
     'Offline maps': 'Offline-Karten',
     'Downloaded': 'Heruntergeladen',
@@ -184,6 +238,10 @@ const _translations = <String, Map<String, String>>{
         'Der Troodos-Abschnitt enthält die größten Anstiege der Route. Plane Wasser und Tageslicht vor langen Bergetappen ein.',
     'Offline map status could not be read.':
         'Der Status der Offline-Karte konnte nicht gelesen werden.',
+    'The offline map could not be downloaded. Check your connection and try again.':
+        'Die Offline-Karte konnte nicht heruntergeladen werden. Prüfe deine Verbindung und versuche es erneut.',
+    'The offline map could not be removed.':
+        'Die Offline-Karte konnte nicht entfernt werden.',
     'The Mapbox Outdoors style and detailed tiles along the Cyprus E4 are stored on this device.':
         'Der Mapbox-Outdoors-Stil und detaillierte Kacheln entlang des Cyprus E4 sind auf diesem Gerät gespeichert.',
     'Please try the download again.': 'Bitte versuche den Download erneut.',
@@ -233,6 +291,11 @@ const _translations = <String, Map<String, String>>{
     'Download route': 'Route herunterladen',
   },
   'es': {
+    'EUROTREX': 'EUROTREX',
+    'Co-funded by the European Union': 'Cofinanciado por la Unión Europea',
+    'Republic of Cyprus': 'República de Chipre',
+    'Crete E4': 'Crete E4',
+    'Peloponnese E4': 'Peloponeso E4',
     'Settings': 'Ajustes',
     'TRAIL LIBRARY': 'BIBLIOTECA DE RUTAS',
     'Explore trails': 'Explorar rutas',
@@ -244,6 +307,13 @@ const _translations = <String, Map<String, String>>{
     'A long-distance journey linking the coast, forests and Troodos mountains.':
         'Una travesía de larga distancia que une la costa, los bosques y las montañas de Troodos.',
     'Trail data not downloaded': 'Datos de la ruta no descargados',
+    'Trail data available offline': 'Datos de la ruta disponibles sin conexión',
+    'Trail data and Mapbox map available offline':
+        'Datos de la ruta y mapa de Mapbox disponibles sin conexión',
+    'Trail data and Mapbox background tiles are available offline.':
+        'Los datos de la ruta y los mapas de fondo de Mapbox están disponibles sin conexión.',
+    'Trail data is available offline. Download the Mapbox offline map for background tiles.':
+        'Los datos de la ruta están disponibles sin conexión. Descarga el mapa sin conexión de Mapbox para disponer de mapas de fondo.',
     'Explore trail': 'Explorar ruta',
     'Language': 'Idioma',
     'Measurements': 'Unidades',
@@ -258,6 +328,7 @@ const _translations = <String, Map<String, String>>{
     'Walk from Pafos to Larnaka': 'Caminar de Pafos a Larnaka',
     'Walk from Larnaka to Pafos': 'Caminar de Larnaka a Pafos',
     'CYPRUS · LONG DISTANCE TRAIL': 'CHIPRE · SENDERO DE GRAN RECORRIDO',
+    'Cyprus E4': 'Cyprus E4',
     'Pafos Airport': 'Aeropuerto de Pafos',
     'Larnaka Airport': 'Aeropuerto de Larnaka',
     'Distance': 'Distancia',
@@ -296,11 +367,22 @@ const _translations = <String, Map<String, String>>{
     'Highest point': 'Punto más alto',
     'High point position': 'Posición del punto más alto',
     'Offline samples': 'Muestras sin conexión',
+    'Total ascent': 'Ascenso total',
+    'Total descent': 'Descenso total',
+    'Ascent': 'Ascenso',
+    'Descent': 'Descenso',
+    'Estimated walking time': 'Tiempo estimado de caminata',
+    'Naismith estimate based on distance and ascent. Breaks and terrain are not included.':
+        'Estimación de Naismith basada en la distancia y el ascenso. No incluye descansos ni terreno.',
+    'h': 'h',
+    'min': 'min',
     'Preparing the offline elevation profile…':
         'Preparando el perfil sin conexión…',
     'Download profile': 'Descargar perfil',
     'Close stage summary': 'Cerrar resumen de etapa',
     'Stage': 'Etapa',
+    'Start point': 'Punto de inicio',
+    'Finish point': 'Punto final',
     'From': 'Desde',
     'Stage length': 'Longitud de etapa',
     'Altitude': 'Altitud',
@@ -324,6 +406,7 @@ const _translations = <String, Map<String, String>>{
     'Download trail': 'Descargar ruta',
     'Lodging': 'Alojamiento',
     'Book accommodation': 'Reservar alojamiento',
+    'Accommodation booking': 'Reserva de alojamiento',
     'Coming soon': 'Próximamente',
     'Camping': 'Camping',
     'Food': 'Comida',
@@ -339,6 +422,33 @@ const _translations = <String, Map<String, String>>{
     'Downloading offline map': 'Descargando mapa sin conexión',
     'Offline map download failed': 'Error al descargar el mapa',
     'Download offline map': 'Descargar mapa sin conexión',
+    'Offline access': 'Acceso sin conexión',
+    'Offline content for this trail': 'Contenido sin conexión de esta ruta',
+    'Checking trail data…': 'Comprobando los datos de la ruta…',
+    'Trail data status could not be read.':
+        'No se pudo consultar el estado de los datos de la ruta.',
+    'Trail data': 'Datos de la ruta',
+    'Route, stages and elevation': 'Ruta, etapas y perfil de elevación',
+    'Mapbox offline map': 'Mapa sin conexión de Mapbox',
+    'Detailed background tiles along the trail':
+        'Mapas de fondo detallados a lo largo de la ruta',
+    'Check again': 'Comprobar de nuevo',
+    'Size': 'Tamaño',
+    'Last updated': 'Última actualización',
+    'Not available': 'No disponible',
+    'Checking Mapbox offline map…':
+        'Comprobando el mapa sin conexión de Mapbox…',
+    'Downloading Mapbox offline map':
+        'Descargando el mapa sin conexión de Mapbox',
+    'Mapbox offline map downloaded': 'Mapa sin conexión de Mapbox descargado',
+    'Mapbox offline map available': 'Mapa sin conexión de Mapbox disponible',
+    'Mapbox offline map download failed':
+        'Error al descargar el mapa sin conexión de Mapbox',
+    'Mapbox offline map removal failed':
+        'No se pudo eliminar el mapa sin conexión de Mapbox',
+    'Mapbox offline map not downloaded':
+        'Mapa sin conexión de Mapbox no descargado',
+    'Download Mapbox offline map': 'Descargar mapa sin conexión de Mapbox',
     'Trail map available offline': 'Mapa de la ruta disponible sin conexión',
     'Download interrupted': 'Descarga interrumpida',
     'Take the map offline': 'Guardar el mapa sin conexión',
@@ -350,6 +460,8 @@ const _translations = <String, Map<String, String>>{
     'Show the whole trail': 'Mostrar toda la ruta',
     'Start': 'Inicio',
     'Finish': 'Final',
+    'Selected stage': 'Etapa seleccionada',
+    'Other stages': 'Otras etapas',
     'My location': 'Mi ubicación',
     'Offline maps': 'Mapas sin conexión',
     'Downloaded': 'Descargado',
@@ -366,6 +478,10 @@ const _translations = <String, Map<String, String>>{
         'La sección de Troodos contiene las mayores subidas de la ruta. Planifica el agua y las horas de luz antes de las largas etapas de montaña.',
     'Offline map status could not be read.':
         'No se pudo leer el estado del mapa sin conexión.',
+    'The offline map could not be downloaded. Check your connection and try again.':
+        'No se pudo descargar el mapa sin conexión. Comprueba tu conexión e inténtalo de nuevo.',
+    'The offline map could not be removed.':
+        'No se pudo eliminar el mapa sin conexión.',
     'The Mapbox Outdoors style and detailed tiles along the Cyprus E4 are stored on this device.':
         'El estilo Mapbox Outdoors y los mosaicos detallados de la Cyprus E4 están guardados en este dispositivo.',
     'Please try the download again.': 'Vuelve a intentar la descarga.',

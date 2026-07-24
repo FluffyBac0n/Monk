@@ -40,9 +40,13 @@ class OfflineMapController extends AsyncNotifier<OfflineMapState> {
           );
       state = AsyncData(result);
     } catch (_) {
-      state = const AsyncData(
+      final interrupted = state.value;
+      state = AsyncData(
         OfflineMapState.failed(
           'The offline map could not be downloaded. Check your connection and try again.',
+          failure: OfflineMapFailure.download,
+          progress: interrupted?.progress ?? 0,
+          completedBytes: interrupted?.completedBytes ?? 0,
         ),
       );
     }
@@ -50,13 +54,19 @@ class OfflineMapController extends AsyncNotifier<OfflineMapState> {
 
   Future<void> delete() async {
     if (state.value?.isDownloading == true) return;
+    final previous = state.value;
     state = const AsyncLoading();
     try {
       await ref.read(offlineMapRepositoryProvider).delete();
       state = const AsyncData(OfflineMapState.notDownloaded());
     } catch (_) {
-      state = const AsyncData(
-        OfflineMapState.failed('The offline map could not be removed.'),
+      state = AsyncData(
+        OfflineMapState.failed(
+          'The offline map could not be removed.',
+          failure: OfflineMapFailure.removal,
+          completedBytes: previous?.completedBytes ?? 0,
+          downloadedAt: previous?.downloadedAt,
+        ),
       );
     }
   }

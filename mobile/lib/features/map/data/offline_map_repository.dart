@@ -5,6 +5,7 @@ import '../domain/offline_map_state.dart';
 
 const cyprusE4OfflineRegionId = 'cyprus-e4-outdoors-v1';
 const cyprusE4OfflineStyleUri = MapboxStyles.OUTDOORS;
+const _downloadedAtMetadataKey = 'downloadedAt';
 
 typedef OfflineProgressCallback =
     void Function(double progress, int completedBytes);
@@ -51,7 +52,19 @@ class OfflineMapRepository {
         style.requiredResourceCount > 0 &&
         style.completedResourceCount >= style.requiredResourceCount;
     if (regionComplete && styleComplete) {
-      return OfflineMapState.ready(completedBytes: completedBytes);
+      DateTime? downloadedAt;
+      try {
+        final metadata = await _tileStore!.tileRegionMetadata(region.id);
+        downloadedAt = parseOfflineMapDownloadedAt(
+          metadata[_downloadedAtMetadataKey],
+        );
+      } catch (_) {
+        // Older downloads may not include MONK metadata.
+      }
+      return OfflineMapState.ready(
+        completedBytes: completedBytes,
+        downloadedAt: downloadedAt,
+      );
     }
 
     final required =
@@ -74,6 +87,7 @@ class OfflineMapRepository {
       throw StateError('Route geometry is required for an offline download.');
     }
     await _initialize();
+    final downloadedAt = DateTime.now().toUtc().toIso8601String();
 
     var styleBytes = 0;
     await _offlineManager!.loadStylePack(
@@ -105,10 +119,11 @@ class OfflineMapRepository {
             maxZoom: 15,
           ),
         ],
-        metadata: const {
+        metadata: {
           'trailId': 'cyprus-e4',
           'version': 1,
           'coverage': 'route-corridor',
+          _downloadedAtMetadataKey: downloadedAt,
         },
         acceptExpired: true,
         networkRestriction: NetworkRestriction.NONE,
@@ -138,6 +153,14 @@ class OfflineMapRepository {
       await _offlineManager!.removeStylePack(cyprusE4OfflineStyleUri);
     }
   }
+}
+
+DateTime? parseOfflineMapDownloadedAt(Object? value) {
+  if (value is String) return DateTime.tryParse(value)?.toUtc();
+  if (value is int) {
+    return DateTime.fromMillisecondsSinceEpoch(value, isUtc: true);
+  }
+  return null;
 }
 
 Map<String?, Object?> buildOfflineCorridorGeometry(List<RoutePoint> points) {

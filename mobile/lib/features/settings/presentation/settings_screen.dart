@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/app_settings_controller.dart';
+import '../../elevation/presentation/elevation_controller.dart';
 import '../../map/domain/offline_map_state.dart';
 import '../../map/presentation/offline_map_controller.dart';
+import '../../stages/presentation/stages_controller.dart';
 
 const _ink = Color(0xFF17201B);
 const _green = Color(0xFF277653);
@@ -32,7 +34,7 @@ class SettingsScreen extends ConsumerWidget {
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
             Text(
-              'MONK · ${l10n.t('App preferences').toUpperCase()}',
+              l10n.t('App preferences').toUpperCase(),
               style: const TextStyle(
                 color: Colors.white60,
                 fontSize: 9,
@@ -92,7 +94,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 14),
-          const _OfflineMapsSetting(),
+          const _OfflineAccessSetting(),
           const SizedBox(height: 14),
           Text(
             l10n.t('Changes apply throughout the app.'),
@@ -107,42 +109,57 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-class _OfflineMapsSetting extends ConsumerWidget {
-  const _OfflineMapsSetting();
+class _OfflineAccessSetting extends ConsumerWidget {
+  const _OfflineAccessSetting();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final offlineMap = ref.watch(offlineMapProvider);
-    final state = offlineMap.value;
-    final isReady = state?.isReady == true;
-    final status = isReady
-        ? '${l10n.t('Downloaded')} · ${formatOfflineBytes(state!.completedBytes)}'
-        : offlineMap.isLoading
-        ? l10n.t('Checking offline maps…')
-        : l10n.t('No offline maps downloaded.');
+    final stages = ref.watch(stagesProvider);
+    final route = ref.watch(elevationProvider);
+    final routePoints = route.value ?? const [];
+    final trailDataChecking = stages.isLoading || route.isLoading;
+    final trailDataFailed = stages.hasError || route.hasError;
+    final trailDataReady =
+        !trailDataChecking &&
+        !trailDataFailed &&
+        (stages.value?.isNotEmpty ?? false) &&
+        routePoints.isNotEmpty;
 
     return _SettingsCard(
       icon: Icons.offline_pin_rounded,
-      title: l10n.t('Offline maps'),
+      title: l10n.t('Offline access'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(status, style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            l10n.t('Cyprus E4'),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            l10n.t('Offline content for this trail'),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.black54),
+          ),
           const SizedBox(height: 14),
-          FilledButton.icon(
-            key: const Key('settings-delete-offline-maps'),
-            style: FilledButton.styleFrom(
-              backgroundColor: _red,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: _red.withValues(alpha: 0.35),
-              disabledForegroundColor: Colors.white70,
-            ),
-            onPressed: isReady
-                ? () => _confirmDeleteOfflineMaps(context, ref)
-                : null,
-            icon: const Icon(Icons.delete_outline_rounded),
-            label: Text(l10n.t('Delete offline maps')),
+          _TrailDataStatus(
+            checking: trailDataChecking,
+            failed: trailDataFailed,
+            ready: trailDataReady,
+          ),
+          const SizedBox(height: 10),
+          _OfflineMapStatus(
+            asyncState: offlineMap,
+            canDownload: routePoints.isNotEmpty,
+            onDownload: () =>
+                ref.read(offlineMapProvider.notifier).download(routePoints),
+            onRefresh: () => ref.read(offlineMapProvider.notifier).refresh(),
+            onDelete: () => _confirmDeleteOfflineMap(context, ref),
           ),
         ],
       ),
@@ -150,7 +167,322 @@ class _OfflineMapsSetting extends ConsumerWidget {
   }
 }
 
-Future<void> _confirmDeleteOfflineMaps(
+class _TrailDataStatus extends StatelessWidget {
+  const _TrailDataStatus({
+    required this.checking,
+    required this.failed,
+    required this.ready,
+  });
+
+  final bool checking;
+  final bool failed;
+  final bool ready;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final color = failed
+        ? _red
+        : ready
+        ? _green
+        : Colors.black54;
+    final status = checking
+        ? l10n.t('Checking trail data…')
+        : failed
+        ? l10n.t('Trail data status could not be read.')
+        : ready
+        ? l10n.t('Trail data available offline')
+        : l10n.t('Trail data not downloaded');
+
+    return _OfflineStatusPanel(
+      icon: ready ? Icons.check_circle_rounded : Icons.route_rounded,
+      color: color,
+      title: l10n.t('Trail data'),
+      status: status,
+      description: l10n.t('Route, stages and elevation'),
+      trailing: checking
+          ? const SizedBox.square(
+              dimension: 20,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            )
+          : null,
+    );
+  }
+}
+
+class _OfflineMapStatus extends StatelessWidget {
+  const _OfflineMapStatus({
+    required this.asyncState,
+    required this.canDownload,
+    required this.onDownload,
+    required this.onRefresh,
+    required this.onDelete,
+  });
+
+  final AsyncValue<OfflineMapState> asyncState;
+  final bool canDownload;
+  final VoidCallback onDownload;
+  final VoidCallback onRefresh;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    if (asyncState.isLoading) {
+      return _OfflineStatusPanel(
+        icon: Icons.map_outlined,
+        color: Colors.black54,
+        title: l10n.t('Mapbox offline map'),
+        status: l10n.t('Checking offline maps…'),
+        description: l10n.t('Detailed background tiles along the trail'),
+        trailing: const SizedBox.square(
+          dimension: 20,
+          child: CircularProgressIndicator(strokeWidth: 2.5),
+        ),
+      );
+    }
+    if (asyncState.hasError || asyncState.value == null) {
+      return _OfflineStatusPanel(
+        icon: Icons.cloud_off_rounded,
+        color: _red,
+        title: l10n.t('Mapbox offline map'),
+        status: l10n.t('Offline map status could not be read.'),
+        description: l10n.t('Detailed background tiles along the trail'),
+        footer: OutlinedButton.icon(
+          onPressed: onRefresh,
+          icon: const Icon(Icons.refresh_rounded),
+          label: Text(l10n.t('Check again')),
+        ),
+      );
+    }
+
+    final state = asyncState.requireValue;
+    final ready = state.phase == OfflineMapPhase.ready;
+    final downloading = state.phase == OfflineMapPhase.downloading;
+    final failed = state.phase == OfflineMapPhase.failed;
+    final removalFailed = failed && state.failure == OfflineMapFailure.removal;
+    final color = failed
+        ? _red
+        : ready
+        ? _green
+        : Colors.black54;
+    final icon = failed
+        ? Icons.cloud_off_rounded
+        : ready
+        ? Icons.check_circle_rounded
+        : downloading
+        ? Icons.downloading_rounded
+        : Icons.map_outlined;
+    final status = failed
+        ? l10n.t(state.message ?? 'Offline map download failed')
+        : ready
+        ? l10n.t('Offline map downloaded')
+        : downloading
+        ? l10n.t('Downloading offline map')
+        : l10n.t('Offline map not downloaded');
+
+    return _OfflineStatusPanel(
+      icon: icon,
+      color: color,
+      title: l10n.t('Mapbox offline map'),
+      status: status,
+      description: l10n.t('Detailed background tiles along the trail'),
+      body: Column(
+        children: [
+          if (downloading) ...[
+            LinearProgressIndicator(value: state.progress),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('${(state.progress * 100).round()}%'),
+                Text(formatOfflineBytes(state.completedBytes)),
+              ],
+            ),
+          ],
+          if (ready || state.completedBytes > 0) ...[
+            _OfflineFact(
+              label: l10n.t('Size'),
+              value: formatOfflineBytes(state.completedBytes),
+            ),
+          ],
+          if (ready) ...[
+            _OfflineFact(
+              label: l10n.t('Last updated'),
+              value: state.downloadedAt == null
+                  ? l10n.t('Not available')
+                  : _formatOfflineMapDate(context, state.downloadedAt!),
+            ),
+          ],
+        ],
+      ),
+      footer: ready
+          ? FilledButton.icon(
+              key: const Key('settings-delete-offline-maps'),
+              style: FilledButton.styleFrom(
+                backgroundColor: _red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: onDelete,
+              icon: const Icon(Icons.delete_outline_rounded),
+              label: Text(l10n.t('Remove offline map')),
+            )
+          : downloading
+          ? null
+          : FilledButton.icon(
+              key: const Key('settings-download-offline-map'),
+              onPressed: removalFailed
+                  ? onRefresh
+                  : canDownload
+                  ? onDownload
+                  : null,
+              icon: Icon(
+                removalFailed ? Icons.refresh_rounded : Icons.download_rounded,
+              ),
+              label: Text(
+                l10n.t(
+                  removalFailed
+                      ? 'Check again'
+                      : failed
+                      ? 'Try again'
+                      : 'Download offline map',
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+class _OfflineStatusPanel extends StatelessWidget {
+  const _OfflineStatusPanel({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.status,
+    required this.description,
+    this.trailing,
+    this.body,
+    this.footer,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String status;
+  final String description;
+  final Widget? trailing;
+  final Widget? body;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F8F5),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.07)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.11),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 21, color: color),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      status,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      description,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.black54),
+                    ),
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+            ],
+          ),
+          if (body != null) ...[const SizedBox(height: 13), body!],
+          if (footer != null) ...[
+            const SizedBox(height: 13),
+            SizedBox(width: double.infinity, child: footer!),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _OfflineFact extends StatelessWidget {
+  const _OfflineFact({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.black54),
+          ),
+          const Spacer(),
+          Text(
+            value,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatOfflineMapDate(BuildContext context, DateTime downloadedAt) {
+  final localTime = downloadedAt.toLocal();
+  final material = MaterialLocalizations.of(context);
+  final date = material.formatCompactDate(localTime);
+  final time = material.formatTimeOfDay(
+    TimeOfDay.fromDateTime(localTime),
+    alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+  );
+  return '$date · $time';
+}
+
+Future<void> _confirmDeleteOfflineMap(
   BuildContext context,
   WidgetRef ref,
 ) async {
@@ -158,7 +490,7 @@ Future<void> _confirmDeleteOfflineMaps(
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: Text(l10n.t('Delete offline maps?')),
+      title: Text(l10n.t('Remove offline map?')),
       content: Text(
         l10n.t(
           'The route, stages and elevation will remain offline. Only the Mapbox background tiles will be removed.',
@@ -176,7 +508,7 @@ Future<void> _confirmDeleteOfflineMaps(
             foregroundColor: Colors.white,
           ),
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: Text(l10n.t('Delete')),
+          child: Text(l10n.t('Remove')),
         ),
       ],
     ),

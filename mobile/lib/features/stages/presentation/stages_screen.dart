@@ -6,6 +6,7 @@ import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
 import '../data/stage_repository.dart';
 import '../domain/stage.dart';
+import '../domain/walking_time_estimator.dart';
 import '../../elevation/presentation/elevation_screen.dart';
 import '../../map/presentation/map_screen.dart';
 import '../../map/presentation/offline_map_controller.dart';
@@ -44,6 +45,14 @@ double _trailDistanceKm(List<TrailStage> stages) {
     if (distance != null && distance > total) total = distance;
   }
   return total;
+}
+
+String _formatWalkingTime(Duration duration, AppLocalizations l10n) {
+  final hours = duration.inHours;
+  final minutes = duration.inMinutes.remainder(60);
+  if (hours == 0) return '$minutes ${l10n.t('min')}';
+  if (minutes == 0) return '$hours ${l10n.t('h')}';
+  return '$hours ${l10n.t('h')} $minutes ${l10n.t('min')}';
 }
 
 class StagesScreen extends ConsumerStatefulWidget {
@@ -271,46 +280,46 @@ class _TrailAppBar extends StatelessWidget {
       pinned: true,
       backgroundColor: _ink,
       foregroundColor: Colors.white,
-      title: const Text(
-        'MONK',
-        style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2.4),
-      ),
-      actions: [
-        IconButton(
-          key: const ValueKey('trail-information'),
-          tooltip: l10n.t('Trail information'),
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => const TrailInformationScreen(),
+      titleSpacing: 0,
+      title: Row(
+        key: const ValueKey('trail-toolbar-actions'),
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          IconButton(
+            key: const ValueKey('trail-information'),
+            tooltip: l10n.t('Trail information'),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const TrailInformationScreen(),
+              ),
             ),
+            icon: const Icon(Icons.info_outline_rounded),
           ),
-          icon: const Icon(Icons.info_outline_rounded),
-        ),
-        IconButton(
-          key: const ValueKey('reverse-trail-direction'),
-          tooltip: l10n.t(
-            direction.isReversed
-                ? 'Walk from Pafos to Larnaka'
-                : 'Walk from Larnaka to Pafos',
+          IconButton(
+            key: const ValueKey('reverse-trail-direction'),
+            tooltip: l10n.t(
+              direction.isReversed
+                  ? 'Walk from Pafos to Larnaka'
+                  : 'Walk from Larnaka to Pafos',
+            ),
+            onPressed: onReverse,
+            icon: const Icon(Icons.swap_vert_rounded),
           ),
-          onPressed: onReverse,
-          icon: const Icon(Icons.swap_vert_rounded),
-        ),
-        IconButton(
-          key: const ValueKey('refresh-offline-trail'),
-          tooltip: l10n.t('Refresh offline trail'),
-          onPressed: onRefresh,
-          icon: const Icon(Icons.sync_rounded),
-        ),
-        IconButton(
-          tooltip: l10n.t('Settings'),
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+          IconButton(
+            key: const ValueKey('refresh-offline-trail'),
+            tooltip: l10n.t('Refresh offline trail'),
+            onPressed: onRefresh,
+            icon: const Icon(Icons.sync_rounded),
           ),
-          icon: const Icon(Icons.tune_rounded),
-        ),
-        const SizedBox(width: 8),
-      ],
+          IconButton(
+            tooltip: l10n.t('Settings'),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+            ),
+            icon: const Icon(Icons.tune_rounded),
+          ),
+        ],
+      ),
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: const BoxDecoration(
@@ -349,7 +358,7 @@ class _TrailAppBar extends StatelessWidget {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    'Cyprus E4',
+                    l10n.t('Cyprus E4'),
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
@@ -388,6 +397,9 @@ class _TrailDashboard extends ConsumerWidget {
     final offlineMap = ref.watch(offlineMapProvider);
     final isMapOffline = offlineMap.value?.isReady == true;
     final isDownloading = offlineMap.value?.isDownloading == true;
+    final mapStatusFailed =
+        offlineMap.hasError || offlineMap.value?.isFailed == true;
+    final mapStatusChecking = offlineMap.isLoading;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
@@ -463,13 +475,36 @@ class _TrailDashboard extends ConsumerWidget {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    isMapOffline
-                        ? l10n.t('Trail guide available offline')
-                        : isDownloading
-                        ? l10n.t('Downloading offline map')
-                        : l10n.t('Offline map not downloaded'),
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.t(
+                          isMapOffline
+                              ? 'Trail data and Mapbox map available offline'
+                              : 'Trail data available offline',
+                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      if (!isMapOffline) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          l10n.t(
+                            mapStatusChecking
+                                ? 'Checking Mapbox offline map…'
+                                : isDownloading
+                                ? 'Downloading Mapbox offline map'
+                                : mapStatusFailed
+                                ? 'Mapbox offline map download failed'
+                                : 'Mapbox offline map not downloaded',
+                          ),
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
@@ -641,6 +676,7 @@ class _StageTimelineRow extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: Material(
+                key: ValueKey('stage-card-${stage.id}'),
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 clipBehavior: Clip.antiAlias,
@@ -681,6 +717,18 @@ class _StageTimelineRow extends StatelessWidget {
                                 spacing: 8,
                                 runSpacing: 6,
                                 children: [
+                                  if (isTrailStart || isTrailEnd)
+                                    _EndpointBadge(
+                                      key: ValueKey(
+                                        'stage-endpoint-${stage.id}',
+                                      ),
+                                      label: context.l10n.t(
+                                        isTrailStart
+                                            ? 'Start point'
+                                            : 'Finish point',
+                                      ),
+                                      color: isTrailStart ? _green : _red,
+                                    ),
                                   for (final service in activeServices.take(7))
                                     Tooltip(
                                       message: context.l10n.t(
@@ -712,6 +760,39 @@ class _StageTimelineRow extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EndpointBadge extends StatelessWidget {
+  const _EndpointBadge({required this.label, required this.color, super.key});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.flag_rounded, size: 13, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -769,6 +850,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
     final formatter = MeasurementFormatter(
       ref.watch(appSettingsProvider).measurementSystem,
     );
+    final isMapOffline = ref.watch(offlineMapProvider).value?.isReady == true;
     final services = stage.services.entries
         .where((entry) => entry.value)
         .toList();
@@ -779,6 +861,33 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
             accumulatedDistance,
             _trailDistanceKm(widget.stages),
           );
+    final endpointLabel = index == 0
+        ? l10n.t('Start point')
+        : index == widget.stages.length - 1
+        ? l10n.t('Finish point')
+        : null;
+    final hasStageLength =
+        stage.segmentLengthKm != null && stage.segmentLengthKm! > 0;
+    final ascentM = widget.direction.isReversed
+        ? stage.elevationDownM
+        : stage.elevationUpM;
+    final descentM = widget.direction.isReversed
+        ? stage.elevationUpM
+        : stage.elevationDownM;
+    final hasStageEffort =
+        hasStageLength &&
+        ascentM != null &&
+        ascentM.isFinite &&
+        ascentM >= 0 &&
+        descentM != null &&
+        descentM.isFinite &&
+        descentM >= 0;
+    final walkingTime = hasStageEffort
+        ? estimateNaismithWalkingTime(
+            distanceKm: stage.segmentLengthKm!,
+            ascentM: ascentM,
+          )
+        : null;
     return Scaffold(
       backgroundColor: _sand,
       appBar: AppBar(
@@ -792,7 +901,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
             Text(
-              'CYPRUS E4 · ${l10n.stage(stage.sequence).toUpperCase()}',
+              'CYPRUS E4 · ${(endpointLabel ?? l10n.stage(stage.sequence)).toUpperCase()}',
               style: const TextStyle(
                 fontSize: 9,
                 color: Colors.white60,
@@ -853,11 +962,18 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: _DetailMetric(
-                  icon: Icons.straighten_rounded,
-                  value: stage.segmentLengthKm == null
-                      ? '—'
-                      : formatter.distance(stage.segmentLengthKm!),
-                  label: l10n.t('Stage length'),
+                  key: const Key('stage-detail-position'),
+                  icon: endpointLabel == null
+                      ? Icons.straighten_rounded
+                      : Icons.flag_rounded,
+                  value:
+                      endpointLabel ??
+                      (hasStageLength
+                          ? formatter.distance(stage.segmentLengthKm!)
+                          : '—'),
+                  label: endpointLabel != null
+                      ? l10n.t('Trail position')
+                      : l10n.t('Stage length'),
                 ),
               ),
               const SizedBox(width: 10),
@@ -872,6 +988,64 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
               ),
             ],
           ),
+          if (walkingTime != null) ...[
+            const SizedBox(height: 12),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _DetailMetric(
+                      key: const Key('stage-detail-ascent'),
+                      icon: Icons.trending_up_rounded,
+                      value: formatter.altitude(ascentM!),
+                      label: l10n.t('Ascent'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _DetailMetric(
+                      key: const Key('stage-detail-descent'),
+                      icon: Icons.trending_down_rounded,
+                      value: formatter.altitude(descentM!),
+                      label: l10n.t('Descent'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _DetailMetric(
+                      key: const Key('stage-detail-walking-time'),
+                      icon: Icons.schedule_rounded,
+                      value: _formatWalkingTime(walkingTime, l10n),
+                      label: l10n.t('Estimated walking time'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  size: 16,
+                  color: Colors.black45,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    l10n.t(
+                      'Naismith estimate based on distance and ascent. Breaks and terrain are not included.',
+                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.black54),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
           _DetailSection(
             title: l10n.t('Services'),
@@ -899,35 +1073,60 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
             const SizedBox(height: 12),
             _DetailSection(
               title: l10n.t('Lodging'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Tooltip(
-                    message: l10n.t('Coming soon'),
-                    child: FilledButton.icon(
-                      key: ValueKey('book-accommodation-${stage.id}'),
-                      onPressed: null,
-                      style: FilledButton.styleFrom(
-                        disabledBackgroundColor: _bookingBlue.withValues(
-                          alpha: 0.72,
-                        ),
-                        disabledForegroundColor: Colors.white,
+              child: Semantics(
+                label:
+                    '${l10n.t('Accommodation booking')}. ${l10n.t('Coming soon')}',
+                enabled: false,
+                child: ExcludeSemantics(
+                  child: Container(
+                    key: ValueKey('book-accommodation-${stage.id}'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _bookingBlue.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _bookingBlue.withValues(alpha: 0.25),
                       ),
-                      icon: const Icon(Icons.hotel_rounded),
-                      label: Text(l10n.t('Book accommodation')),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.hotel_rounded, color: _bookingBlue),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.t('Accommodation booking'),
+                                style: const TextStyle(
+                                  color: _bookingBlue,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                l10n.t('Coming soon'),
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(
+                          Icons.schedule_rounded,
+                          color: Colors.black38,
+                          size: 20,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    l10n.t('Coming soon'),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.black45,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ],
@@ -940,7 +1139,9 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                   icon: Icons.hiking_rounded,
                   title: l10n.t('Following the Cyprus E4'),
                   subtitle: l10n.t(
-                    'Route guidance will be available with the offline map.',
+                    isMapOffline
+                        ? 'Trail data and Mapbox background tiles are available offline.'
+                        : 'Trail data is available offline. Download the Mapbox offline map for background tiles.',
                   ),
                 ),
               ],
@@ -979,6 +1180,7 @@ class _DetailMetric extends StatelessWidget {
     required this.icon,
     required this.value,
     required this.label,
+    super.key,
   });
 
   final IconData icon;

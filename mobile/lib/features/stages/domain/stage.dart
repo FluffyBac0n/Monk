@@ -6,6 +6,8 @@ class TrailStage {
     required this.services,
     this.accumulatedDistanceKm,
     this.segmentLengthKm,
+    this.elevationUpM,
+    this.elevationDownM,
     this.altitudeM,
   });
 
@@ -14,6 +16,8 @@ class TrailStage {
   final String name;
   final double? accumulatedDistanceKm;
   final double? segmentLengthKm;
+  final double? elevationUpM;
+  final double? elevationDownM;
   final double? altitudeM;
   final Map<String, bool> services;
 
@@ -26,6 +30,8 @@ class TrailStage {
       accumulatedDistanceKm: (json['accumulatedDistanceKm'] as num?)
           ?.toDouble(),
       segmentLengthKm: (json['segmentLengthKm'] as num?)?.toDouble(),
+      elevationUpM: (json['elevationUpM'] as num?)?.toDouble(),
+      elevationDownM: (json['elevationDownM'] as num?)?.toDouble(),
       altitudeM: (json['altitudeM'] as num?)?.toDouble(),
       services: rawServices.map((key, value) => MapEntry(key, value == true)),
     );

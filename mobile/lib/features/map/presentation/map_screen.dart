@@ -62,19 +62,27 @@ class MapScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: _ink,
         foregroundColor: Colors.white,
+        toolbarHeight: 76,
         title: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               l10n.t('Trail map'),
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
+            const SizedBox(height: 2),
             Text(
+              key: const ValueKey('map-route-direction'),
               'CYPRUS E4 · ${l10n.routeDirection(direction.isReversed ? l10n.larnakaAirport : l10n.pafosAirport, direction.isReversed ? l10n.pafosAirport : l10n.larnakaAirport).toUpperCase()}',
+              maxLines: 2,
+              softWrap: true,
+              overflow: TextOverflow.visible,
               style: const TextStyle(
                 color: Colors.white60,
                 fontSize: 9,
-                letterSpacing: 1.2,
+                height: 1.2,
+                letterSpacing: 0.8,
               ),
             ),
           ],
@@ -129,10 +137,13 @@ class _OfflineMapAppBarButton extends StatelessWidget {
     final l10n = context.l10n;
     final value = state.value;
     final tooltip = switch (value?.phase) {
-      OfflineMapPhase.ready => l10n.t('Offline map downloaded'),
-      OfflineMapPhase.downloading => l10n.t('Downloading offline map'),
-      OfflineMapPhase.failed => l10n.t('Offline map download failed'),
-      _ => l10n.t('Download offline map'),
+      OfflineMapPhase.ready => l10n.t('Mapbox offline map downloaded'),
+      OfflineMapPhase.downloading => l10n.t('Downloading Mapbox offline map'),
+      OfflineMapPhase.failed when value?.failure == OfflineMapFailure.removal =>
+        l10n.t('Mapbox offline map removal failed'),
+      OfflineMapPhase.failed => l10n.t('Mapbox offline map download failed'),
+      _ when state.isLoading => l10n.t('Checking Mapbox offline map…'),
+      _ => l10n.t('Mapbox offline map not downloaded'),
     };
     final icon = switch (value?.phase) {
       OfflineMapPhase.ready => const Icon(Icons.offline_pin_rounded),
@@ -190,6 +201,7 @@ class _OfflineMapSheet extends ConsumerWidget {
             canDownload: points.isNotEmpty,
             onDownload: () =>
                 ref.read(offlineMapProvider.notifier).download(points),
+            onRefresh: () => ref.read(offlineMapProvider.notifier).refresh(),
             onDelete: () => _confirmOfflineMapDelete(context, ref),
           ),
         ),
@@ -203,12 +215,14 @@ class _OfflineMapSheetContent extends StatelessWidget {
     required this.state,
     required this.canDownload,
     required this.onDownload,
+    required this.onRefresh,
     required this.onDelete,
   });
 
   final OfflineMapState state;
   final bool canDownload;
   final VoidCallback onDownload;
+  final VoidCallback onRefresh;
   final VoidCallback onDelete;
 
   @override
@@ -217,13 +231,16 @@ class _OfflineMapSheetContent extends StatelessWidget {
     final ready = state.phase == OfflineMapPhase.ready;
     final downloading = state.phase == OfflineMapPhase.downloading;
     final failed = state.phase == OfflineMapPhase.failed;
+    final removalFailed = failed && state.failure == OfflineMapFailure.removal;
     final title = ready
-        ? l10n.t('Trail map available offline')
+        ? l10n.t('Mapbox offline map available')
         : downloading
-        ? l10n.t('Downloading offline map')
+        ? l10n.t('Downloading Mapbox offline map')
+        : removalFailed
+        ? l10n.t('Mapbox offline map removal failed')
         : failed
-        ? l10n.t('Download interrupted')
-        : l10n.t('Take the map offline');
+        ? l10n.t('Mapbox offline map download failed')
+        : l10n.t('Download Mapbox offline map');
     final icon = ready
         ? Icons.offline_pin_rounded
         : downloading
@@ -251,7 +268,7 @@ class _OfflineMapSheetContent extends StatelessWidget {
                   'The Mapbox Outdoors style and detailed tiles along the Cyprus E4 are stored on this device.',
                 )
               : failed
-              ? state.message ?? l10n.t('Please try the download again.')
+              ? l10n.t(state.message ?? 'Please try the download again.')
               : l10n.t(
                   'Downloads a detailed corridor around the complete Cyprus E4 for use without a connection.',
                 ),
@@ -289,6 +306,16 @@ class _OfflineMapSheetContent extends StatelessWidget {
               onPressed: onDelete,
               icon: const Icon(Icons.delete_outline_rounded),
               label: Text(l10n.t('Remove offline map')),
+            ),
+          )
+        else if (removalFailed)
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              key: const ValueKey('refresh-offline-map'),
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(l10n.t('Check again')),
             ),
           )
         else
@@ -707,14 +734,19 @@ class _RouteMapState extends State<_RouteMap> {
       if (point.lng > maxLng) maxLng = point.lng;
     }
 
+    final mapSize = _lastMapSize ?? MediaQuery.sizeOf(context);
+    final portrait = mapSize.height > mapSize.width;
+    final bearing = routeFitBearing(widget.points, mapSize);
     final camera = await map.cameraForCoordinateBounds(
       CoordinateBounds(
         southwest: Point(coordinates: Position(minLng, minLat)),
         northeast: Point(coordinates: Position(maxLng, maxLat)),
         infiniteBounds: false,
       ),
-      MbxEdgeInsets(top: 48, left: 36, bottom: 96, right: 36),
-      0,
+      portrait
+          ? MbxEdgeInsets(top: 76, left: 44, bottom: 102, right: 72)
+          : MbxEdgeInsets(top: 48, left: 44, bottom: 82, right: 72),
+      bearing,
       0,
       null,
       null,
@@ -731,6 +763,7 @@ class _RouteMapState extends State<_RouteMap> {
       CameraOptions(
         center: Point(coordinates: Position(point.lng, point.lat)),
         zoom: 13,
+        bearing: 0,
       ),
       MapAnimationOptions(duration: 700, startDelay: 0),
     );
@@ -776,6 +809,7 @@ class _RouteMapState extends State<_RouteMap> {
             coordinates: Position(position.longitude, position.latitude),
           ),
           zoom: 14,
+          bearing: 0,
         ),
         MapAnimationOptions(duration: 700, startDelay: 0),
       );
@@ -832,6 +866,12 @@ class _RouteMapState extends State<_RouteMap> {
                 onTap: _openSelectedStage,
                 onClose: _clearSelectedStage,
               ),
+            const Positioned(
+              top: 36,
+              left: 12,
+              right: 68,
+              child: Align(alignment: Alignment.topLeft, child: _MapLegend()),
+            ),
             Positioned(
               left: 12,
               bottom: 28,
@@ -851,7 +891,7 @@ class _RouteMapState extends State<_RouteMap> {
                       width: 22,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.black,
+                        color: _routeBlue,
                         borderRadius: BorderRadius.circular(2),
                         border: Border.all(color: Colors.white, width: 0.7),
                       ),
@@ -904,6 +944,99 @@ class _RouteMapState extends State<_RouteMap> {
           ],
         );
       },
+    );
+  }
+}
+
+class _MapLegend extends StatelessWidget {
+  const _MapLegend();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Semantics(
+      container: true,
+      child: Container(
+        key: const ValueKey('map-legend'),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Wrap(
+          spacing: 12,
+          runSpacing: 6,
+          children: [
+            _MapLegendItem(color: _green, label: l10n.t('Start')),
+            _MapLegendItem(color: _red, label: l10n.t('Finish')),
+            _MapLegendItem(
+              color: _routeBlue,
+              label: l10n.t('Selected stage'),
+              selected: true,
+            ),
+            _MapLegendItem(color: _yellow, label: l10n.t('Other stages')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MapLegendItem extends StatelessWidget {
+  const _MapLegendItem({
+    required this.color,
+    required this.label,
+    this.selected = false,
+  });
+
+  final Color color;
+  final String label;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: selected ? 11 : 10,
+          height: selected ? 11 : 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected ? Colors.white : _ink,
+              width: selected ? 2 : 1,
+            ),
+            boxShadow: selected
+                ? const [
+                    BoxShadow(
+                      color: Color(0x50000000),
+                      blurRadius: 1,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: const TextStyle(
+            color: _ink,
+            fontSize: 10,
+            height: 1.1,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1143,3 +1276,6 @@ RoutePoint routePointNearestDistance(
       ? after
       : before;
 }
+
+/// Keeps the full-route view north-up while Mapbox fits the route bounds.
+double routeFitBearing(List<RoutePoint> points, Size viewportSize) => 0;

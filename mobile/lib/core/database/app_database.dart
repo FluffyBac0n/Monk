@@ -1,18 +1,19 @@
-import 'dart:convert';
-
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
-import '../../features/stages/domain/stage.dart';
 import '../../features/elevation/domain/route_point.dart';
+import '../../features/stages/domain/stage.dart';
+import 'stage_database_codec.dart';
 
 class AppDatabase {
+  static const schemaVersion = 4;
+
   Database? _database;
 
   Future<Database> get database async {
     return _database ??= await openDatabase(
       p.join(await getDatabasesPath(), 'monk.db'),
-      version: 3,
+      version: schemaVersion,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE stages (
@@ -22,6 +23,8 @@ class AppDatabase {
             name TEXT NOT NULL,
             accumulated_distance_km REAL,
             segment_length_km REAL,
+            elevation_up_m REAL,
+            elevation_down_m REAL,
             altitude_m REAL,
             services_json TEXT NOT NULL
           )
@@ -36,6 +39,7 @@ class AppDatabase {
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) await _createRoutePointsTable(db);
         if (oldVersion < 3) await _createSettingsTable(db);
+        if (oldVersion < 4) await _addStageElevationColumns(db);
       },
     );
   }
@@ -121,6 +125,11 @@ class AppDatabase {
     ''');
   }
 
+  static Future<void> _addStageElevationColumns(Database db) async {
+    await db.execute('ALTER TABLE stages ADD COLUMN elevation_up_m REAL');
+    await db.execute('ALTER TABLE stages ADD COLUMN elevation_down_m REAL');
+  }
+
   Future<Map<String, String>> readSettings() async {
     final db = await database;
     final rows = await db.query('app_settings');
@@ -154,33 +163,11 @@ class AppDatabase {
       await txn.delete('stages', where: 'trail_id = ?', whereArgs: [trailId]);
       final batch = txn.batch();
       for (final stage in stages) {
-        batch.insert('stages', {
-          'id': stage.id,
-          'trail_id': trailId,
-          'sequence': stage.sequence,
-          'name': stage.name,
-          'accumulated_distance_km': stage.accumulatedDistanceKm,
-          'segment_length_km': stage.segmentLengthKm,
-          'altitude_m': stage.altitudeM,
-          'services_json': jsonEncode(stage.services),
-        });
+        batch.insert('stages', encodeTrailStageRow(trailId, stage));
       }
       await batch.commit(noResult: true);
     });
   }
 
-  TrailStage _fromRow(Map<String, Object?> row) {
-    return TrailStage(
-      id: row['id']! as String,
-      sequence: row['sequence']! as int,
-      name: row['name']! as String,
-      accumulatedDistanceKm: (row['accumulated_distance_km'] as num?)
-          ?.toDouble(),
-      segmentLengthKm: (row['segment_length_km'] as num?)?.toDouble(),
-      altitudeM: (row['altitude_m'] as num?)?.toDouble(),
-      services:
-          (jsonDecode(row['services_json']! as String) as Map<String, dynamic>)
-              .map((key, value) => MapEntry(key, value == true)),
-    );
-  }
+  TrailStage _fromRow(Map<String, Object?> row) => decodeTrailStageRow(row);
 }

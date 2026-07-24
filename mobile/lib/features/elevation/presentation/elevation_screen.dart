@@ -12,6 +12,7 @@ import '../../stages/presentation/stages_controller.dart';
 import '../../stages/presentation/stages_screen.dart';
 import '../../trail/domain/trail_direction.dart';
 import '../../trail/presentation/trail_direction_controller.dart';
+import '../domain/elevation_totals.dart';
 import '../domain/route_point.dart';
 import 'elevation_controller.dart';
 
@@ -236,6 +237,13 @@ class _ElevationContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final highest = points.reduce((a, b) => a.altitudeM > b.altitudeM ? a : b);
     final lowest = points.reduce((a, b) => a.altitudeM < b.altitudeM ? a : b);
+    final elevationTotals = calculateElevationTotals(points);
+    final totalAscentM = direction.isReversed
+        ? elevationTotals.descentM
+        : elevationTotals.ascentM;
+    final totalDescentM = direction.isReversed
+        ? elevationTotals.ascentM
+        : elevationTotals.descentM;
     final totalDistance = points.last.distanceKm;
     final chartPoints = _downsample(points, 900);
     final stageMarks = <({TrailStage stage, int stageIndex})>[
@@ -560,21 +568,19 @@ class _ElevationContent extends StatelessWidget {
           children: [
             Expanded(
               child: _ElevationMetric(
-                icon: Icons.location_on_outlined,
-                value: formatter.distance(
-                  direction.isReversed
-                      ? highest.reverseDistanceKm
-                      : highest.distanceKm,
-                ),
-                label: context.l10n.t('High point position'),
+                key: const Key('elevation-total-ascent'),
+                icon: Icons.trending_up_rounded,
+                value: formatter.altitude(totalAscentM),
+                label: context.l10n.t('Total ascent'),
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: _ElevationMetric(
-                icon: Icons.offline_pin_rounded,
-                value: '${points.length}',
-                label: context.l10n.t('Offline samples'),
+                key: const Key('elevation-total-descent'),
+                icon: Icons.trending_down_rounded,
+                value: formatter.altitude(totalDescentM),
+                label: context.l10n.t('Total descent'),
               ),
             ),
           ],
@@ -784,6 +790,7 @@ class _ElevationMetric extends StatelessWidget {
     required this.icon,
     required this.value,
     required this.label,
+    super.key,
   });
 
   final IconData icon;
