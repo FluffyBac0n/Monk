@@ -141,6 +141,8 @@ const _translations = <String, Map<String, String>>{
         'Cyprus E4 herunterladen, um Etappen ohne Verbindung anzusehen.',
     'Download trail': 'Weg herunterladen',
     'Lodging': 'Unterkunft',
+    'Book accommodation': 'Unterkunft buchen',
+    'Coming soon': 'Demnächst verfügbar',
     'Camping': 'Camping',
     'Food': 'Essen',
     'Groceries': 'Lebensmittel',
@@ -151,6 +153,7 @@ const _translations = <String, Map<String, String>>{
     'Pharmacy': 'Apotheke',
     'Bus': 'Bus',
     'Offline map downloaded': 'Offline-Karte heruntergeladen',
+    'Offline map not downloaded': 'Offline-Karte nicht heruntergeladen',
     'Downloading offline map': 'Offline-Karte wird heruntergeladen',
     'Offline map download failed': 'Offline-Karten-Download fehlgeschlagen',
     'Download offline map': 'Offline-Karte herunterladen',
@@ -163,6 +166,8 @@ const _translations = <String, Map<String, String>>{
     'Remove': 'Entfernen',
     'Remove offline map?': 'Offline-Karte entfernen?',
     'Show the whole trail': 'Gesamten Weg anzeigen',
+    'Start': 'Start',
+    'Finish': 'Ziel',
     'My location': 'Mein Standort',
     'Offline maps': 'Offline-Karten',
     'Downloaded': 'Heruntergeladen',
@@ -198,6 +203,33 @@ const _translations = <String, Map<String, String>>{
         'Füge beim Start der App ein öffentliches Mapbox-Zugriffstoken hinzu, um die Kartenkacheln zu laden.',
     'Route data is not on this device yet.':
         'Die Routendaten sind noch nicht auf diesem Gerät.',
+    'Trail information': 'Weginformationen',
+    'Trail guide': 'Wanderführer',
+    'App preferences': 'App-Einstellungen',
+    'Know the signs. Prepare for the trail.':
+        'Kenne die Markierungen. Bereite dich auf den Weg vor.',
+    'Sign posting': 'Wegmarkierung',
+    'Follow the yellow E4 signs and direction arrows. Markers may appear on posts, rocks or existing road signs.':
+        'Folge den gelben E4-Schildern und Richtungspfeilen. Markierungen können an Pfosten, Felsen oder vorhandenen Verkehrsschildern angebracht sein.',
+    'Typical E4 waymark': 'Typische E4-Wegmarkierung',
+    'Waymarks can be faded, damaged or missing, especially at junctions and on remote sections. Confirm your route on the offline map whenever the path is unclear.':
+        'Wegmarkierungen können verblasst, beschädigt oder nicht vorhanden sein, besonders an Kreuzungen und in abgelegenen Abschnitten. Prüfe die Route auf der Offline-Karte, wenn der Weg unklar ist.',
+    'Useful tips': 'Nützliche Tipps',
+    'Carry enough water': 'Nimm ausreichend Wasser mit',
+    'Water sources are irregular and may be seasonal. Refill whenever a reliable opportunity is available.':
+        'Wasserquellen sind unregelmäßig verteilt und können saisonabhängig sein. Fülle deine Vorräte bei jeder zuverlässigen Gelegenheit auf.',
+    'Plan for heat and daylight': 'Plane Hitze und Tageslicht ein',
+    'Start early, use sun protection and avoid exposed sections during the hottest hours.':
+        'Starte früh, verwende Sonnenschutz und meide ungeschützte Abschnitte während der heißesten Stunden.',
+    'Keep the route offline': 'Speichere die Route offline',
+    'Download the trail and map before leaving coverage, and carry a charged phone or backup power.':
+        'Lade Weg und Karte herunter, bevor du den Empfangsbereich verlässt, und nimm ein geladenes Telefon oder eine Powerbank mit.',
+    'Wear suitable footwear': 'Trage geeignetes Schuhwerk',
+    'The E4 includes asphalt, forest tracks and rough or loose mountain paths.':
+        'Der E4 führt über Asphalt, Waldwege sowie raue oder lockere Bergpfade.',
+    'Before you set out': 'Bevor du aufbrichst',
+    'Check the weather, tell someone your plan, and confirm that the stage suits your fitness and available daylight. In an emergency in Cyprus, call 112.':
+        'Prüfe das Wetter, informiere jemanden über deinen Plan und stelle sicher, dass die Etappe zu deiner Kondition und dem verfügbaren Tageslicht passt. Wähle in einem Notfall auf Zypern die 112.',
     'Download route': 'Route herunterladen',
   },
   'es': {
@@ -291,6 +323,8 @@ const _translations = <String, Map<String, String>>{
         'Descarga Cyprus E4 para ver sus etapas sin conexión.',
     'Download trail': 'Descargar ruta',
     'Lodging': 'Alojamiento',
+    'Book accommodation': 'Reservar alojamiento',
+    'Coming soon': 'Próximamente',
     'Camping': 'Camping',
     'Food': 'Comida',
     'Groceries': 'Comestibles',
@@ -301,6 +335,7 @@ const _translations = <String, Map<String, String>>{
     'Pharmacy': 'Farmacia',
     'Bus': 'Autobús',
     'Offline map downloaded': 'Mapa sin conexión descargado',
+    'Offline map not downloaded': 'Mapa sin conexión no descargado',
     'Downloading offline map': 'Descargando mapa sin conexión',
     'Offline map download failed': 'Error al descargar el mapa',
     'Download offline map': 'Descargar mapa sin conexión',
@@ -313,6 +348,8 @@ const _translations = <String, Map<String, String>>{
     'Remove': 'Eliminar',
     'Remove offline map?': '¿Eliminar el mapa sin conexión?',
     'Show the whole trail': 'Mostrar toda la ruta',
+    'Start': 'Inicio',
+    'Finish': 'Final',
     'My location': 'Mi ubicación',
     'Offline maps': 'Mapas sin conexión',
     'Downloaded': 'Descargado',
@@ -348,6 +385,33 @@ const _translations = <String, Map<String, String>>{
         'Añade un token público de Mapbox al iniciar la aplicación para cargar los mosaicos del mapa.',
     'Route data is not on this device yet.':
         'Los datos de la ruta aún no están en este dispositivo.',
+    'Trail information': 'Información de la ruta',
+    'Trail guide': 'Guía de la ruta',
+    'App preferences': 'Preferencias de la aplicación',
+    'Know the signs. Prepare for the trail.':
+        'Conoce las señales. Prepárate para la ruta.',
+    'Sign posting': 'Señalización',
+    'Follow the yellow E4 signs and direction arrows. Markers may appear on posts, rocks or existing road signs.':
+        'Sigue las señales amarillas de la E4 y las flechas de dirección. Las marcas pueden aparecer en postes, rocas o señales de tráfico existentes.',
+    'Typical E4 waymark': 'Marca típica de la E4',
+    'Waymarks can be faded, damaged or missing, especially at junctions and on remote sections. Confirm your route on the offline map whenever the path is unclear.':
+        'Las marcas pueden estar descoloridas, dañadas o faltar, especialmente en cruces y tramos remotos. Comprueba la ruta en el mapa sin conexión cuando el camino no esté claro.',
+    'Useful tips': 'Consejos útiles',
+    'Carry enough water': 'Lleva suficiente agua',
+    'Water sources are irregular and may be seasonal. Refill whenever a reliable opportunity is available.':
+        'Las fuentes de agua son irregulares y pueden ser estacionales. Repón agua siempre que encuentres una fuente fiable.',
+    'Plan for heat and daylight': 'Planifica el calor y la luz del día',
+    'Start early, use sun protection and avoid exposed sections during the hottest hours.':
+        'Empieza temprano, usa protección solar y evita los tramos expuestos durante las horas de más calor.',
+    'Keep the route offline': 'Guarda la ruta sin conexión',
+    'Download the trail and map before leaving coverage, and carry a charged phone or backup power.':
+        'Descarga la ruta y el mapa antes de perder la cobertura y lleva el teléfono cargado o una batería externa.',
+    'Wear suitable footwear': 'Usa calzado adecuado',
+    'The E4 includes asphalt, forest tracks and rough or loose mountain paths.':
+        'La E4 incluye asfalto, pistas forestales y senderos de montaña irregulares o con terreno suelto.',
+    'Before you set out': 'Antes de salir',
+    'Check the weather, tell someone your plan, and confirm that the stage suits your fitness and available daylight. In an emergency in Cyprus, call 112.':
+        'Consulta el tiempo, informa a alguien de tu plan y confirma que la etapa se adapta a tu condición física y a las horas de luz disponibles. En una emergencia en Chipre, llama al 112.',
     'Download route': 'Descargar ruta',
   },
 };

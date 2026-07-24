@@ -22,7 +22,9 @@ const _sand = Color(0xFFF4F2EC);
 const _orange = Color(0xFFC57432);
 
 class ElevationScreen extends ConsumerStatefulWidget {
-  const ElevationScreen({super.key});
+  const ElevationScreen({this.initialStageIndex, super.key});
+
+  final int? initialStageIndex;
 
   @override
   ConsumerState<ElevationScreen> createState() => _ElevationScreenState();
@@ -31,8 +33,10 @@ class ElevationScreen extends ConsumerStatefulWidget {
 class _ElevationScreenState extends ConsumerState<ElevationScreen> {
   final TransformationController elevationTransformationController =
       TransformationController();
-  bool showStages = true;
-  int? selectedStageIndex;
+  bool showStages = false;
+  bool stagesExplicitlyHidden = false;
+  late int? selectedStageIndex = widget.initialStageIndex;
+  bool initialStageFocusApplied = false;
 
   @override
   void dispose() {
@@ -50,6 +54,42 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
       appliedFactor,
       1,
     );
+  }
+
+  void _focusInitialStage(
+    List<TrailStage> stages,
+    TrailDirection direction,
+    double totalDistance,
+  ) {
+    if (initialStageFocusApplied) return;
+    final initialIndex = widget.initialStageIndex;
+    if (initialIndex == null ||
+        initialIndex < 0 ||
+        initialIndex >= stages.length ||
+        totalDistance <= 0) {
+      initialStageFocusApplied = true;
+      return;
+    }
+    final distance = stages[initialIndex].accumulatedDistanceKm;
+    if (distance == null) {
+      initialStageFocusApplied = true;
+      return;
+    }
+    initialStageFocusApplied = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      const scale = 4.0;
+      final width = MediaQuery.sizeOf(context).width - 32;
+      final position = direction.distanceFromStart(distance, totalDistance);
+      final fraction = (position / totalDistance).clamp(0.0, 1.0);
+      final translation = (width / 2 - fraction * width * scale).clamp(
+        width * (1 - scale),
+        0.0,
+      );
+      final matrix = Matrix4.diagonal3Values(scale, 1, 1)
+        ..storage[12] = translation;
+      elevationTransformationController.value = matrix;
+    });
   }
 
   @override
@@ -100,47 +140,53 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
         ],
       ),
       body: elevation.when(
-        data: (points) => points.isEmpty
-            ? _ElevationError(
-                message: l10n.t('No elevation data is available.'),
-                onRetry: () => ref.read(elevationProvider.notifier).refresh(),
-              )
-            : _ElevationContent(
-                points: points,
-                stages: stages,
-                direction: direction,
-                formatter: formatter,
-                showStages: showStages,
-                onToggleStages: stages.isEmpty
-                    ? null
-                    : () => setState(() {
-                        showStages = !showStages;
-                        if (!showStages) selectedStageIndex = null;
-                      }),
-                selectedStageIndex: selectedStageIndex,
-                transformationController: elevationTransformationController,
-                onZoomIn: () => _zoomElevation(1.5),
-                onZoomOut: () => _zoomElevation(1 / 1.5),
-                onResetView: () => elevationTransformationController.value =
-                    Matrix4.identity(),
-                onStageTap: (stageIndex) =>
-                    setState(() => selectedStageIndex = stageIndex),
-                onStageSummaryTap: () {
-                  final stageIndex = selectedStageIndex;
-                  if (stageIndex == null) return;
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => StageDetailScreen(
-                        stages: stages,
-                        initialIndex: stageIndex,
-                        direction: direction,
+        data: (points) {
+          if (points.isNotEmpty) {
+            _focusInitialStage(stages, direction, points.last.distanceKm);
+          }
+          return points.isEmpty
+              ? _ElevationError(
+                  message: l10n.t('No elevation data is available.'),
+                  onRetry: () => ref.read(elevationProvider.notifier).refresh(),
+                )
+              : _ElevationContent(
+                  points: points,
+                  stages: stages,
+                  direction: direction,
+                  formatter: formatter,
+                  showStages: showStages,
+                  stagesExplicitlyHidden: stagesExplicitlyHidden,
+                  onToggleStages: stages.isEmpty
+                      ? null
+                      : () => setState(() {
+                          showStages = !showStages;
+                          stagesExplicitlyHidden = !showStages;
+                        }),
+                  selectedStageIndex: selectedStageIndex,
+                  transformationController: elevationTransformationController,
+                  onZoomIn: () => _zoomElevation(1.5),
+                  onZoomOut: () => _zoomElevation(1 / 1.5),
+                  onResetView: () => elevationTransformationController.value =
+                      Matrix4.identity(),
+                  onStageTap: (stageIndex) =>
+                      setState(() => selectedStageIndex = stageIndex),
+                  onStageSummaryTap: () {
+                    final stageIndex = selectedStageIndex;
+                    if (stageIndex == null) return;
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => StageDetailScreen(
+                          stages: stages,
+                          initialIndex: stageIndex,
+                          direction: direction,
+                        ),
                       ),
-                    ),
-                  );
-                },
-                onStageSummaryClose: () =>
-                    setState(() => selectedStageIndex = null),
-              ),
+                    );
+                  },
+                  onStageSummaryClose: () =>
+                      setState(() => selectedStageIndex = null),
+                );
+        },
         loading: () => const _ElevationLoading(),
         error: (error, _) => _ElevationError(
           message: l10n.t('Could not download the elevation profile.'),
@@ -158,6 +204,7 @@ class _ElevationContent extends StatelessWidget {
     required this.direction,
     required this.formatter,
     required this.showStages,
+    required this.stagesExplicitlyHidden,
     required this.onToggleStages,
     required this.selectedStageIndex,
     required this.transformationController,
@@ -174,6 +221,7 @@ class _ElevationContent extends StatelessWidget {
   final TrailDirection direction;
   final MeasurementFormatter formatter;
   final bool showStages;
+  final bool stagesExplicitlyHidden;
   final VoidCallback? onToggleStages;
   final int? selectedStageIndex;
   final TransformationController transformationController;
@@ -204,6 +252,15 @@ class _ElevationContent extends StatelessWidget {
         : null;
     final startStageMark = stageMarks.isEmpty ? null : stageMarks.first;
     final endStageMark = stageMarks.isEmpty ? null : stageMarks.last;
+    final displayedStageMarks = showStages
+        ? stageMarks
+        : stagesExplicitlyHidden
+        ? const <({TrailStage stage, int stageIndex})>[]
+        : selectedStageIndex == null
+        ? const <({TrailStage stage, int stageIndex})>[]
+        : stageMarks
+              .where((mark) => mark.stageIndex == selectedStageIndex)
+              .toList(growable: false);
     final minAltitude = math.min(0.0, lowest.altitudeM).floorToDouble();
     final maxAltitude = (highest.altitudeM / 100).ceil() * 100.0;
 
@@ -240,8 +297,8 @@ class _ElevationContent extends StatelessWidget {
                 showStages ? 'Hide stages' : 'Show stages',
               ),
               icon: showStages
-                  ? Icons.visibility_off_outlined
-                  : Icons.visibility_outlined,
+                  ? Icons.location_on_rounded
+                  : Icons.location_on_outlined,
               onPressed: onToggleStages,
             ),
           ],
@@ -392,10 +449,10 @@ class _ElevationContent extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (showStages && stageMarks.isNotEmpty)
+                          if (displayedStageMarks.isNotEmpty)
                             LineChartBarData(
                               spots: [
-                                for (final mark in stageMarks)
+                                for (final mark in displayedStageMarks)
                                   FlSpot(
                                     direction.distanceFromStart(
                                       mark.stage.accumulatedDistanceKm!,
@@ -410,17 +467,38 @@ class _ElevationContent extends StatelessWidget {
                                 show: true,
                                 getDotPainter: (spot, percent, bar, index) =>
                                     FlDotCirclePainter(
-                                      radius: 2.5,
+                                      radius:
+                                          displayedStageMarks[index]
+                                                  .stageIndex ==
+                                              selectedStageIndex
+                                          ? 4.5
+                                          : 2.5,
                                       color:
-                                          stageMarks[index].stageIndex ==
-                                              startStageMark?.stageIndex
+                                          displayedStageMarks[index]
+                                                  .stageIndex ==
+                                              selectedStageIndex
+                                          ? const Color(0xFF1565C0)
+                                          : displayedStageMarks[index]
+                                                    .stageIndex ==
+                                                startStageMark?.stageIndex
                                           ? _green
-                                          : stageMarks[index].stageIndex ==
+                                          : displayedStageMarks[index]
+                                                    .stageIndex ==
                                                 endStageMark?.stageIndex
                                           ? _red
                                           : const Color(0xFFF2C94C),
-                                      strokeWidth: 1.2,
-                                      strokeColor: _ink,
+                                      strokeWidth:
+                                          displayedStageMarks[index]
+                                                  .stageIndex ==
+                                              selectedStageIndex
+                                          ? 2.4
+                                          : 1.2,
+                                      strokeColor:
+                                          displayedStageMarks[index]
+                                                  .stageIndex ==
+                                              selectedStageIndex
+                                          ? Colors.white
+                                          : _ink,
                                     ),
                               ),
                             ),
@@ -438,7 +516,7 @@ class _ElevationContent extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (showStages && selectedStage != null)
+                  if (selectedStage != null && !stagesExplicitlyHidden)
                     Align(
                       alignment: Alignment.topCenter,
                       child: _ElevationStageSummary(

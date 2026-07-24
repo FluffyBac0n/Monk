@@ -8,9 +8,11 @@ import '../data/stage_repository.dart';
 import '../domain/stage.dart';
 import '../../elevation/presentation/elevation_screen.dart';
 import '../../map/presentation/map_screen.dart';
+import '../../map/presentation/offline_map_controller.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../trail/domain/trail_direction.dart';
 import '../../trail/presentation/trail_direction_controller.dart';
+import '../../trail/presentation/trail_information_screen.dart';
 import 'stages_controller.dart';
 
 const _ink = Color(0xFF17201B);
@@ -19,6 +21,8 @@ const _red = Color(0xFFD14B45);
 const _mint = Color(0xFFE1F1E8);
 const _sand = Color(0xFFF4F2EC);
 const _yellow = Color(0xFFF2C94C);
+const _bookingBlue = Color(0xFF1565C0);
+const _filterBlueTeal = Color(0xFF356F7A);
 const _filterServiceKeys = [
   'lodging',
   'tent',
@@ -89,7 +93,6 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
     final formatter = MeasurementFormatter(
       ref.watch(appSettingsProvider).measurementSystem,
     );
-    final l10n = context.l10n;
     ref.listen(stagesProvider, (previous, next) {
       if (!next.hasError || next.isLoading) return;
       final message = next.error is FirebaseNotConfiguredException
@@ -116,37 +119,17 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
               direction: direction,
               onReverse: () =>
                   ref.read(trailDirectionProvider.notifier).toggle(),
+              onRefresh: stages.isLoading
+                  ? null
+                  : () => ref.read(stagesProvider.notifier).sync(),
             ),
             SliverToBoxAdapter(
               child: _TrailDashboard(
-                isOffline: stages.hasValue && stages.requireValue.isNotEmpty,
                 selectedServiceCount: selectedServices.length,
                 onFilterServices: _openServiceFilters,
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 28, 20, 14),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.t('Stage by stage'),
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    IconButton.filledTonal(
-                      tooltip: l10n.t('Refresh offline trail'),
-                      onPressed: stages.isLoading
-                          ? null
-                          : () => ref.read(stagesProvider.notifier).sync(),
-                      icon: const Icon(Icons.sync_rounded),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 28)),
             stages.when(
               skipLoadingOnRefresh: true,
               data: (items) {
@@ -266,10 +249,15 @@ class _StageScrollControls extends StatelessWidget {
 }
 
 class _TrailAppBar extends StatelessWidget {
-  const _TrailAppBar({required this.direction, required this.onReverse});
+  const _TrailAppBar({
+    required this.direction,
+    required this.onReverse,
+    required this.onRefresh,
+  });
 
   final TrailDirection direction;
   final VoidCallback onReverse;
+  final VoidCallback? onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -289,6 +277,16 @@ class _TrailAppBar extends StatelessWidget {
       ),
       actions: [
         IconButton(
+          key: const ValueKey('trail-information'),
+          tooltip: l10n.t('Trail information'),
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const TrailInformationScreen(),
+            ),
+          ),
+          icon: const Icon(Icons.info_outline_rounded),
+        ),
+        IconButton(
           key: const ValueKey('reverse-trail-direction'),
           tooltip: l10n.t(
             direction.isReversed
@@ -297,6 +295,12 @@ class _TrailAppBar extends StatelessWidget {
           ),
           onPressed: onReverse,
           icon: const Icon(Icons.swap_vert_rounded),
+        ),
+        IconButton(
+          key: const ValueKey('refresh-offline-trail'),
+          tooltip: l10n.t('Refresh offline trail'),
+          onPressed: onRefresh,
+          icon: const Icon(Icons.sync_rounded),
         ),
         IconButton(
           tooltip: l10n.t('Settings'),
@@ -323,33 +327,38 @@ class _TrailAppBar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Row(
-                    children: [
-                      const _RouteBadge(),
-                      const SizedBox(width: 10),
-                      Text(
-                        l10n.t('CYPRUS · LONG DISTANCE TRAIL'),
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.1,
-                        ),
+                  Container(
+                    key: const ValueKey('stage-long-distance-badge'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _yellow,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      l10n.t('LONG DISTANCE'),
+                      style: const TextStyle(
+                        color: _ink,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Cyprus E4',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Cyprus E4',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   Text(
                     l10n.routeDirection(start, end),
-                    style: TextStyle(color: Colors.white70, fontSize: 15),
+                    style: const TextStyle(color: Colors.white70),
                   ),
                 ],
               ),
@@ -361,31 +370,12 @@ class _TrailAppBar extends StatelessWidget {
   }
 }
 
-class _RouteBadge extends StatelessWidget {
-  const _RouteBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        color: _yellow,
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: const Icon(Icons.arrow_upward_rounded, color: _ink, size: 24),
-    );
-  }
-}
-
 class _TrailDashboard extends ConsumerWidget {
   const _TrailDashboard({
-    required this.isOffline,
     required this.selectedServiceCount,
     required this.onFilterServices,
   });
 
-  final bool isOffline;
   final int selectedServiceCount;
   final VoidCallback onFilterServices;
 
@@ -395,6 +385,9 @@ class _TrailDashboard extends ConsumerWidget {
     final formatter = MeasurementFormatter(
       ref.watch(appSettingsProvider).measurementSystem,
     );
+    final offlineMap = ref.watch(offlineMapProvider);
+    final isMapOffline = offlineMap.value?.isReady == true;
+    final isDownloading = offlineMap.value?.isDownloading == true;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
@@ -421,7 +414,7 @@ class _TrailDashboard extends ConsumerWidget {
                 child: _DashboardAction(
                   icon: Icons.route_rounded,
                   label: l10n.t('Filter'),
-                  color: _ink,
+                  color: _filterBlueTeal,
                   badgeCount: selectedServiceCount,
                   onTap: onFilterServices,
                 ),
@@ -454,23 +447,28 @@ class _TrailDashboard extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           Container(
+            key: const ValueKey('offline-map-status-banner'),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             decoration: BoxDecoration(
-              color: isOffline ? _mint : const Color(0xFFFFF4D6),
+              color: isMapOffline ? _mint : const Color(0xFFE9ECEA),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
               children: [
                 Icon(
-                  isOffline ? Icons.offline_pin_rounded : Icons.cloud_download,
-                  color: isOffline ? _green : const Color(0xFF8E681B),
+                  isMapOffline
+                      ? Icons.check_circle_rounded
+                      : Icons.info_outline_rounded,
+                  color: isMapOffline ? _green : Colors.black54,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    isOffline
+                    isMapOffline
                         ? l10n.t('Trail guide available offline')
-                        : l10n.t('Download this trail for offline use'),
+                        : isDownloading
+                        ? l10n.t('Downloading offline map')
+                        : l10n.t('Offline map not downloaded'),
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -815,6 +813,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
             icon: const Icon(Icons.route_rounded),
           ),
           IconButton(
+            key: const ValueKey('stage-detail-map'),
             tooltip: l10n.t('Show on map'),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
@@ -822,6 +821,16 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
               ),
             ),
             icon: const Icon(Icons.map_outlined),
+          ),
+          IconButton(
+            key: const ValueKey('stage-detail-elevation'),
+            tooltip: l10n.t('Elevation'),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => ElevationScreen(initialStageIndex: index),
+              ),
+            ),
+            icon: const Icon(Icons.show_chart_rounded),
           ),
         ],
       ),
@@ -886,6 +895,42 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                     ],
                   ),
           ),
+          if (stage.services['lodging'] == true) ...[
+            const SizedBox(height: 12),
+            _DetailSection(
+              title: l10n.t('Lodging'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Tooltip(
+                    message: l10n.t('Coming soon'),
+                    child: FilledButton.icon(
+                      key: ValueKey('book-accommodation-${stage.id}'),
+                      onPressed: null,
+                      style: FilledButton.styleFrom(
+                        disabledBackgroundColor: _bookingBlue.withValues(
+                          alpha: 0.72,
+                        ),
+                        disabledForegroundColor: Colors.white,
+                      ),
+                      icon: const Icon(Icons.hotel_rounded),
+                      label: Text(l10n.t('Book accommodation')),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.t('Coming soon'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.black45,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           _DetailSection(
             title: l10n.t('Trail position'),
@@ -896,14 +941,6 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                   title: l10n.t('Following the Cyprus E4'),
                   subtitle: l10n.t(
                     'Route guidance will be available with the offline map.',
-                  ),
-                ),
-                const Divider(height: 24),
-                _PositionRow(
-                  icon: Icons.download_done_rounded,
-                  title: l10n.t('Available offline'),
-                  subtitle: l10n.t(
-                    'Stage information is stored on this device.',
                   ),
                 ),
               ],

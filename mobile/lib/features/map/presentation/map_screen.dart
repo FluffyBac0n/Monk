@@ -23,6 +23,7 @@ const _green = Color(0xFF277653);
 const _red = Color(0xFFD14B45);
 const _sand = Color(0xFFF4F2EC);
 const _yellow = Color(0xFFF2C94C);
+const _routeBlue = Color(0xFF1565C0);
 
 class MapScreen extends ConsumerWidget {
   const MapScreen({
@@ -406,14 +407,18 @@ class _RouteMapState extends State<_RouteMap> {
   late final CameraViewportState _initialViewport;
   MapboxMap? _map;
   CircleAnnotationManager? _stageManager;
+  PointAnnotationManager? _stageLabelManager;
   Cancelable? _stageTapListener;
   final Map<String, int> _stageIndexByAnnotation = {};
   int? _selectedStageIndex;
   Point? _selectedStagePoint;
   ScreenCoordinate? _selectedStageScreenPosition;
   bool _locating = false;
-  bool _stagesVisible = true;
+  bool _stagesVisible = false;
+  bool _stagesExplicitlyHidden = false;
   bool _changingStageVisibility = false;
+  bool _initialCameraApplied = false;
+  Size? _lastMapSize;
 
   @override
   void initState() {
@@ -441,12 +446,17 @@ class _RouteMapState extends State<_RouteMap> {
     _map = map;
     await _drawRoute(map);
     await _drawStages(map);
+  }
 
+  Future<void> _onMapLoaded(MapLoadedEventData _) async {
+    if (_initialCameraApplied || !mounted) return;
+    _initialCameraApplied = true;
     final initialIndex = widget.initialStageIndex;
     if (initialIndex != null &&
         initialIndex >= 0 &&
         initialIndex < widget.stages.length) {
       await _focusStage(initialIndex);
+      await _selectStage(initialIndex);
     } else {
       await _fitRoute();
     }
@@ -461,7 +471,7 @@ class _RouteMapState extends State<_RouteMap> {
             for (final point in widget.points) Position(point.lng, point.lat),
           ],
         ),
-        lineColor: Colors.black.toARGB32(),
+        lineColor: _routeBlue.toARGB32(),
         lineWidth: 5,
         lineBorderColor: Colors.white.toARGB32(),
         lineBorderWidth: 1.5,
@@ -471,6 +481,21 @@ class _RouteMapState extends State<_RouteMap> {
   }
 
   Future<void> _drawStages(MapboxMap map) async {
+    final l10n = context.l10n;
+    _stageTapListener?.cancel();
+    _stageTapListener = null;
+    final previousManager = _stageManager;
+    if (previousManager != null) {
+      await map.annotations.removeAnnotationManager(previousManager);
+    }
+    final previousLabelManager = _stageLabelManager;
+    if (previousLabelManager != null) {
+      await map.annotations.removeAnnotationManager(previousLabelManager);
+    }
+    _stageManager = null;
+    _stageLabelManager = null;
+    _stageIndexByAnnotation.clear();
+
     final locatedStages = <({int index, TrailStage stage, RoutePoint point})>[];
     for (var index = 0; index < widget.stages.length; index++) {
       final stage = widget.stages[index];
@@ -497,34 +522,93 @@ class _RouteMapState extends State<_RouteMap> {
           ? (aDistance < bDistance ? a : b)
           : (aDistance > bDistance ? a : b);
     });
+    final displayedStages = _stagesVisible
+        ? locatedStages
+        : _stagesExplicitlyHidden
+        ? const <({int index, TrailStage stage, RoutePoint point})>[]
+        : locatedStages
+              .where(
+                (item) =>
+                    item.index == startStage.index ||
+                    item.index == endStage.index ||
+                    item.index == widget.initialStageIndex,
+              )
+              .toList(growable: false);
+    if (displayedStages.isEmpty) return;
 
-    _stageTapListener?.cancel();
-    _stageTapListener = null;
-    _stageIndexByAnnotation.clear();
     final manager = await map.annotations.createCircleAnnotationManager();
     _stageManager = manager;
     final annotations = await manager.createMulti([
-      for (final item in locatedStages)
+      for (final item in displayedStages)
         CircleAnnotationOptions(
           geometry: Point(
             coordinates: Position(item.point.lng, item.point.lat),
           ),
-          circleColor: item.index == startStage.index
+          circleColor: item.index == _selectedStageIndex
+              ? _routeBlue.toARGB32()
+              : item.index == startStage.index
               ? _green.toARGB32()
               : item.index == endStage.index
               ? _red.toARGB32()
               : _yellow.toARGB32(),
-          circleRadius: 3.75,
-          circleStrokeColor: _ink.toARGB32(),
-          circleStrokeWidth: 1.5,
+          circleRadius: item.index == _selectedStageIndex
+              ? 11
+              : item.index == startStage.index || item.index == endStage.index
+              ? 9
+              : 8,
+          circleStrokeColor: item.index == _selectedStageIndex
+              ? Colors.white.toARGB32()
+              : _ink.toARGB32(),
+          circleStrokeWidth: item.index == _selectedStageIndex ? 3 : 1.5,
           customData: {'stageIndex': item.index, 'name': item.stage.name},
+        ),
+    ]);
+
+    final labelManager = await map.annotations.createPointAnnotationManager();
+    _stageLabelManager = labelManager;
+    await labelManager.setTextAllowOverlap(true);
+    await labelManager.setTextIgnorePlacement(true);
+    await labelManager.createMulti([
+      for (final item in displayedStages)
+        PointAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(item.point.lng, item.point.lat),
+          ),
+          textField: item.index == startStage.index
+              ? l10n.t('Start').toUpperCase()
+              : item.index == endStage.index
+              ? l10n.t('Finish').toUpperCase()
+              : '${item.stage.sequence}',
+          textAnchor:
+              item.index == startStage.index || item.index == endStage.index
+              ? TextAnchor.TOP
+              : TextAnchor.CENTER,
+          textOffset:
+              item.index == startStage.index || item.index == endStage.index
+              ? [0, 1.1]
+              : [0, 0],
+          textSize:
+              item.index == startStage.index || item.index == endStage.index
+              ? 11
+              : 10,
+          textColor:
+              item.index == startStage.index || item.index == endStage.index
+              ? _ink.toARGB32()
+              : item.index == _selectedStageIndex
+              ? Colors.white.toARGB32()
+              : _ink.toARGB32(),
+          textHaloColor: Colors.white.toARGB32(),
+          textHaloWidth:
+              item.index == startStage.index || item.index == endStage.index
+              ? 1.5
+              : 0,
         ),
     ]);
 
     for (var index = 0; index < annotations.length; index++) {
       final annotation = annotations[index];
       if (annotation != null) {
-        _stageIndexByAnnotation[annotation.id] = locatedStages[index].index;
+        _stageIndexByAnnotation[annotation.id] = displayedStages[index].index;
       }
     }
     _stageTapListener = manager.tapEvents(
@@ -541,25 +625,16 @@ class _RouteMapState extends State<_RouteMap> {
     if (map == null || _changingStageVisibility) return;
     setState(() => _changingStageVisibility = true);
     try {
-      if (_stagesVisible) {
-        _stageTapListener?.cancel();
-        _stageTapListener = null;
-        final manager = _stageManager;
-        if (manager != null) {
-          await map.annotations.removeAnnotationManager(manager);
-        }
-        _stageManager = null;
-        _stageIndexByAnnotation.clear();
-        if (!mounted) return;
-        setState(() {
-          _stagesVisible = false;
-          _selectedStageIndex = null;
-          _selectedStagePoint = null;
+      setState(() {
+        _stagesVisible = !_stagesVisible;
+        _stagesExplicitlyHidden = !_stagesVisible;
+        if (!_stagesVisible) {
           _selectedStageScreenPosition = null;
-        });
-      } else {
-        setState(() => _stagesVisible = true);
-        await _drawStages(map);
+        }
+      });
+      await _drawStages(map);
+      if (_stagesVisible && _selectedStageIndex != null) {
+        await _updateSelectedStagePosition();
       }
     } finally {
       if (mounted) setState(() => _changingStageVisibility = false);
@@ -567,8 +642,9 @@ class _RouteMapState extends State<_RouteMap> {
   }
 
   Future<void> _selectStage(int stageIndex) async {
+    final map = _map;
     final distance = widget.stages[stageIndex].accumulatedDistanceKm;
-    if (distance == null) return;
+    if (map == null || distance == null) return;
     final routePoint = routePointNearestDistance(widget.points, distance);
     final point = Point(coordinates: Position(routePoint.lng, routePoint.lat));
     setState(() {
@@ -576,15 +652,29 @@ class _RouteMapState extends State<_RouteMap> {
       _selectedStagePoint = point;
       _selectedStageScreenPosition = null;
     });
+    await _drawStages(map);
     await _updateSelectedStagePosition();
   }
 
+  Future<void> _clearSelectedStage() async {
+    setState(() {
+      _selectedStageIndex = null;
+      _selectedStagePoint = null;
+      _selectedStageScreenPosition = null;
+    });
+    final map = _map;
+    if (map != null) await _drawStages(map);
+  }
+
   Future<void> _updateSelectedStagePosition() async {
+    if (_stagesExplicitlyHidden) return;
     final map = _map;
     final point = _selectedStagePoint;
     if (map == null || point == null) return;
     final position = await map.pixelForCoordinate(point);
-    if (!mounted || point != _selectedStagePoint) return;
+    if (!mounted || _stagesExplicitlyHidden || point != _selectedStagePoint) {
+      return;
+    }
     setState(() => _selectedStageScreenPosition = position);
   }
 
@@ -706,101 +796,114 @@ class _RouteMapState extends State<_RouteMap> {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (context, constraints) => Stack(
-        children: [
-          MapWidget(
-            key: const ValueKey('cyprus-e4-map'),
-            styleUri: MapboxStyles.OUTDOORS,
-            viewport: _initialViewport,
-            onMapCreated: _onMapCreated,
-            onMapIdleListener: (_) => _updateSelectedStagePosition(),
-          ),
-          if (_selectedStageIndex != null &&
-              _selectedStageScreenPosition != null)
-            _StageSummaryPopup(
-              stage: widget.stages[_selectedStageIndex!],
-              formatter: widget.formatter,
-              distanceKm: widget.direction.distanceFromStart(
-                widget.stages[_selectedStageIndex!].accumulatedDistanceKm!,
-                widget.points.last.distanceKm,
-              ),
-              mapPosition: _selectedStageScreenPosition!,
-              mapSize: constraints.biggest,
-              onTap: _openSelectedStage,
-              onClose: () => setState(() {
-                _selectedStageIndex = null;
-                _selectedStagePoint = null;
-                _selectedStageScreenPosition = null;
-              }),
+      builder: (context, constraints) {
+        if (_lastMapSize != constraints.biggest) {
+          _lastMapSize = constraints.biggest;
+          final selectedStageIndex = _selectedStageIndex;
+          if (selectedStageIndex != null && !_stagesExplicitlyHidden) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _selectedStageIndex == selectedStageIndex) {
+                _focusStage(selectedStageIndex);
+              }
+            });
+          }
+        }
+        return Stack(
+          children: [
+            MapWidget(
+              key: const ValueKey('cyprus-e4-map'),
+              styleUri: MapboxStyles.OUTDOORS,
+              viewport: _initialViewport,
+              onMapCreated: _onMapCreated,
+              onMapLoadedListener: _onMapLoaded,
+              onMapIdleListener: (_) => _updateSelectedStagePosition(),
             ),
-          Positioned(
-            left: 12,
-            bottom: 28,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: _ink.withValues(alpha: 0.88),
-                borderRadius: BorderRadius.circular(12),
+            if (_selectedStageIndex != null &&
+                _selectedStageScreenPosition != null)
+              _StageSummaryPopup(
+                stage: widget.stages[_selectedStageIndex!],
+                formatter: widget.formatter,
+                distanceKm: widget.direction.distanceFromStart(
+                  widget.stages[_selectedStageIndex!].accumulatedDistanceKm!,
+                  widget.points.last.distanceKm,
+                ),
+                mapPosition: _selectedStageScreenPosition!,
+                mapSize: constraints.biggest,
+                onTap: _openSelectedStage,
+                onClose: _clearSelectedStage,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+            Positioned(
+              left: 12,
+              bottom: 28,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: _ink.withValues(alpha: 0.88),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 22,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(2),
+                        border: Border.all(color: Colors.white, width: 0.7),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Cyprus E4 · ${widget.formatter.distance(widget.points.last.distanceKm, decimals: 0)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              right: 12,
+              bottom: 28,
+              child: Column(
                 children: [
-                  Container(
-                    width: 22,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(2),
-                      border: Border.all(color: Colors.white, width: 0.7),
+                  _MapControl(
+                    key: const ValueKey('map-stage-toggle'),
+                    tooltip: context.l10n.t(
+                      _stagesVisible ? 'Hide stages' : 'Show stages',
                     ),
+                    icon: _changingStageVisibility
+                        ? null
+                        : _stagesVisible
+                        ? Icons.location_on_rounded
+                        : Icons.location_on_outlined,
+                    onPressed: _toggleStages,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Cyprus E4 · ${widget.formatter.distance(widget.points.last.distanceKm, decimals: 0)}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  const SizedBox(height: 10),
+                  _MapControl(
+                    tooltip: context.l10n.t('Show the whole trail'),
+                    icon: Icons.route_rounded,
+                    onPressed: _fitRoute,
+                  ),
+                  const SizedBox(height: 10),
+                  _MapControl(
+                    tooltip: context.l10n.t('My location'),
+                    icon: _locating ? null : Icons.my_location_rounded,
+                    onPressed: _showCurrentLocation,
                   ),
                 ],
               ),
             ),
-          ),
-          Positioned(
-            right: 12,
-            bottom: 28,
-            child: Column(
-              children: [
-                _MapControl(
-                  key: const ValueKey('map-stage-toggle'),
-                  tooltip: context.l10n.t(
-                    _stagesVisible ? 'Hide stages' : 'Show stages',
-                  ),
-                  icon: _changingStageVisibility
-                      ? null
-                      : _stagesVisible
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  onPressed: _toggleStages,
-                ),
-                const SizedBox(height: 10),
-                _MapControl(
-                  tooltip: context.l10n.t('Show the whole trail'),
-                  icon: Icons.route_rounded,
-                  onPressed: _fitRoute,
-                ),
-                const SizedBox(height: 10),
-                _MapControl(
-                  tooltip: context.l10n.t('My location'),
-                  icon: _locating ? null : Icons.my_location_rounded,
-                  onPressed: _showCurrentLocation,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 }

@@ -14,8 +14,65 @@ import 'package:monk_mobile/features/map/presentation/offline_map_controller.dar
 import 'package:monk_mobile/features/stages/domain/stage.dart';
 import 'package:monk_mobile/features/stages/presentation/stages_controller.dart';
 import 'package:monk_mobile/features/stages/presentation/stages_screen.dart';
+import 'package:monk_mobile/features/trail/presentation/trail_information_screen.dart';
 
 void main() {
+  testWidgets('trail information opens beside the reverse control', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          stagesProvider.overrideWith(_FakeStagesController.new),
+          offlineMapProvider.overrideWith(_FakeOfflineMapController.new),
+        ],
+        child: const MaterialApp(home: StagesScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('stage-long-distance-badge')),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+    expect(find.text('Trail guide available offline'), findsOneWidget);
+
+    final providerScope = ProviderScope.containerOf(
+      tester.element(find.byType(StagesScreen)),
+    );
+    await providerScope.read(offlineMapProvider.notifier).delete();
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.info_outline_rounded), findsWidgets);
+    expect(find.text('Offline map not downloaded'), findsOneWidget);
+
+    final information = find.byKey(const ValueKey('trail-information'));
+    final reverse = find.byKey(const ValueKey('reverse-trail-direction'));
+    final refresh = find.byKey(const ValueKey('refresh-offline-trail'));
+    expect(information, findsOneWidget);
+    expect(refresh, findsOneWidget);
+    expect(
+      tester.getCenter(information).dx,
+      lessThan(tester.getCenter(reverse).dx),
+    );
+    expect(
+      tester.getCenter(reverse).dx,
+      lessThan(tester.getCenter(refresh).dx),
+    );
+    expect(find.text('Stage by stage'), findsNothing);
+
+    await tester.tap(information);
+    await tester.pumpAndSettle();
+    expect(find.byType(TrailInformationScreen), findsOneWidget);
+    expect(find.text('Sign posting'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Useful tips'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Useful tips'), findsOneWidget);
+  });
+
   testWidgets('shows the trail library and opens Cyprus E4', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: MonkApp()));
     await tester.pumpAndSettle();
@@ -52,7 +109,15 @@ void main() {
     expect(find.text('Pafos Airport'), findsOneWidget);
     expect(find.text('6.3 km'), findsOneWidget);
     expect(find.text('Drinking water'), findsOneWidget);
-    expect(find.text('Available offline'), findsOneWidget);
+    expect(find.text('Available offline'), findsNothing);
+    final mapAction = find.byKey(const ValueKey('stage-detail-map'));
+    final elevationAction = find.byKey(
+      const ValueKey('stage-detail-elevation'),
+    );
+    expect(
+      tester.getCenter(mapAction).dx,
+      lessThan(tester.getCenter(elevationAction).dx),
+    );
   });
 
   testWidgets('stage detail shortcut returns past the map to stages', (
@@ -110,6 +175,55 @@ void main() {
     expect(find.text('Map screen'), findsNothing);
   });
 
+  testWidgets('stage detail elevation shortcut opens the selected stage', (
+    tester,
+  ) async {
+    const stage = TrailStage(
+      id: 'stage-one',
+      sequence: 1,
+      name: 'Stage one',
+      accumulatedDistanceKm: 5,
+      altitudeM: 50,
+      services: {},
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          elevationProvider.overrideWith(_FakeElevationController.new),
+          stagesProvider.overrideWith(_SingleStageController.new),
+        ],
+        child: const MaterialApp(
+          home: StageDetailScreen(stages: [stage], initialIndex: 0),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('stage-detail-elevation')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ElevationScreen), findsOneWidget);
+    expect(find.byType(LineChart), findsOneWidget);
+    final chart = tester.widget<LineChart>(find.byType(LineChart));
+    expect(
+      chart.transformationConfig.transformationController!.value
+          .getMaxScaleOnAxis(),
+      greaterThan(1),
+    );
+    final stageToggle = find.byKey(const Key('elevation-stage-toggle'));
+    expect(find.text('Stage one'), findsOneWidget);
+
+    await tester.tap(stageToggle);
+    await tester.pumpAndSettle();
+    expect(find.text('Stage one'), findsOneWidget);
+
+    await tester.tap(stageToggle);
+    await tester.pumpAndSettle();
+    expect(find.text('Stage one'), findsNothing);
+
+    await tester.tap(stageToggle);
+    await tester.pumpAndSettle();
+    expect(find.text('Stage one'), findsOneWidget);
+  });
+
   testWidgets('stages can reverse the shared trail direction', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -148,6 +262,35 @@ void main() {
     await tester.tap(clearFilters);
     await tester.pumpAndSettle();
     expect(find.text('No stages match these services.'), findsNothing);
+  });
+
+  testWidgets('lodging stage detail shows disabled accommodation booking', (
+    tester,
+  ) async {
+    const lodgingStage = TrailStage(
+      id: 'lodging-stage',
+      sequence: 1,
+      name: 'Lodging stage',
+      accumulatedDistanceKm: 1,
+      altitudeM: 100,
+      services: {'lodging': true},
+    );
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: StageDetailScreen(stages: [lodgingStage], initialIndex: 0),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final booking = find.byKey(
+      const ValueKey('book-accommodation-lodging-stage'),
+    );
+    expect(booking, findsOneWidget);
+    expect(find.text('Book accommodation'), findsOneWidget);
+    expect(find.text('Coming soon'), findsOneWidget);
+    expect(tester.widget<FilledButton>(booking).onPressed, isNull);
   });
 
   testWidgets('stage controls jump to the end and back to the top', (
@@ -276,14 +419,33 @@ void main() {
     await tester.tap(find.byKey(const Key('elevation-reset-view')));
     await tester.pump();
 
-    expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
-    await tester.tap(find.byKey(const Key('elevation-stage-toggle')));
+    final stageToggle = find.byKey(const Key('elevation-stage-toggle'));
+    expect(
+      find.descendant(
+        of: stageToggle,
+        matching: find.byIcon(Icons.location_on_outlined),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(stageToggle);
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
+    expect(
+      find.descendant(
+        of: stageToggle,
+        matching: find.byIcon(Icons.location_on_rounded),
+      ),
+      findsOneWidget,
+    );
 
-    await tester.tap(find.byKey(const Key('elevation-stage-toggle')));
+    await tester.tap(stageToggle);
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
+    expect(
+      find.descendant(
+        of: stageToggle,
+        matching: find.byIcon(Icons.location_on_outlined),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('map explains how to supply a missing Mapbox token', (
@@ -349,6 +511,20 @@ class _ManyStagesController extends StagesController {
       services: const {},
     ),
   );
+}
+
+class _SingleStageController extends StagesController {
+  @override
+  Future<List<TrailStage>> build() async => const [
+    TrailStage(
+      id: 'stage-one',
+      sequence: 1,
+      name: 'Stage one',
+      accumulatedDistanceKm: 5,
+      altitudeM: 50,
+      services: {},
+    ),
+  ];
 }
 
 class _FakeAppSettingsController extends AppSettingsController {
