@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../about/presentation/about_screen.dart';
 import '../../elevation/presentation/elevation_controller.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../stages/presentation/stages_controller.dart';
@@ -52,6 +53,17 @@ class TrailsScreen extends ConsumerWidget {
               ),
             ),
             actions: [
+              IconButton(
+                key: const ValueKey('about-us-button'),
+                tooltip: l10n.t('About us'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    settings: const RouteSettings(name: AboutScreen.routeName),
+                    builder: (_) => const AboutScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.info_outline_rounded),
+              ),
               IconButton(
                 tooltip: l10n.t('Settings'),
                 onPressed: () => Navigator.of(context).push(
@@ -128,59 +140,7 @@ class TrailsScreen extends ConsumerWidget {
                   trailId: 'peloponnese-e4',
                   trailName: 'Peloponnese E4',
                 ),
-                const SizedBox(height: 28),
-                const _FundingPartnersFooter(),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FundingPartnersFooter extends StatelessWidget {
-  const _FundingPartnersFooter();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return Container(
-      key: const ValueKey('explore-trails-partners-footer'),
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _ink.withValues(alpha: 0.08)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Center(
-              child: Image.asset(
-                'assets/branding/eu_flag_color.png',
-                key: const ValueKey('explore-trails-eu-logo'),
-                height: 38,
-                fit: BoxFit.contain,
-                cacheHeight: 152,
-                filterQuality: FilterQuality.high,
-                semanticLabel: l10n.t('Co-funded by the European Union'),
-              ),
-            ),
-          ),
-          Container(width: 1, height: 28, color: _ink.withValues(alpha: 0.10)),
-          Expanded(
-            child: Center(
-              child: Image.asset(
-                'assets/branding/republic_of_cyprus_emblem.png',
-                key: const ValueKey('explore-trails-cyprus-logo'),
-                height: 38,
-                fit: BoxFit.contain,
-                cacheHeight: 152,
-                filterQuality: FilterQuality.high,
-                semanticLabel: l10n.t('Republic of Cyprus'),
-              ),
             ),
           ),
         ],

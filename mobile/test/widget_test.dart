@@ -3,8 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monk_mobile/app.dart';
+import 'package:monk_mobile/core/app_info/app_version_provider.dart';
+import 'package:monk_mobile/core/links/external_url_launcher.dart';
 import 'package:monk_mobile/core/settings/app_settings.dart';
 import 'package:monk_mobile/core/settings/app_settings_controller.dart';
+import 'package:monk_mobile/features/about/presentation/about_screen.dart';
+import 'package:monk_mobile/features/accommodation/data/lodging_repository.dart';
+import 'package:monk_mobile/features/accommodation/domain/lodging.dart';
+import 'package:monk_mobile/features/accommodation/presentation/accommodation_controller.dart';
+import 'package:monk_mobile/features/accommodation/presentation/accommodation_screen.dart';
 import 'package:monk_mobile/features/elevation/domain/route_point.dart';
 import 'package:monk_mobile/features/elevation/presentation/elevation_controller.dart';
 import 'package:monk_mobile/features/elevation/presentation/elevation_screen.dart';
@@ -32,12 +39,24 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final longDistance = find.byKey(
+      const ValueKey('stage-long-distance-badge'),
+    );
+    final offlineStatus = find.byKey(
+      const ValueKey('offline-map-status-badge'),
+    );
+    expect(longDistance, findsOneWidget);
+    expect(offlineStatus, findsOneWidget);
     expect(
-      find.byKey(const ValueKey('stage-long-distance-badge')),
-      findsOneWidget,
+      tester.getCenter(longDistance).dx,
+      lessThan(tester.getCenter(offlineStatus).dx),
+    );
+    expect(
+      find.byKey(const ValueKey('offline-map-status-banner')),
+      findsNothing,
     );
     expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
-    expect(find.text('Trail data and map available offline'), findsOneWidget);
+    expect(find.text('OFFLINE MAP AVAILABLE'), findsOneWidget);
 
     final providerScope = ProviderScope.containerOf(
       tester.element(find.byType(StagesScreen)),
@@ -45,7 +64,7 @@ void main() {
     await providerScope.read(offlineMapProvider.notifier).delete();
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.info_outline_rounded), findsWidgets);
-    expect(find.text('Offline map not downloaded'), findsOneWidget);
+    expect(find.text('OFFLINE MAP NOT DOWNLOADED'), findsOneWidget);
 
     final information = find.byKey(const ValueKey('trail-information'));
     final reverse = find.byKey(const ValueKey('reverse-trail-direction'));
@@ -122,54 +141,124 @@ void main() {
       tester.widget<Row>(toolbarActions).mainAxisAlignment,
       MainAxisAlignment.spaceEvenly,
     );
-    expect(find.byKey(const ValueKey('explore-trails-eu-logo')), findsNothing);
-    expect(
-      find.byKey(const ValueKey('explore-trails-cyprus-logo')),
-      findsNothing,
-    );
+    expect(find.byKey(const ValueKey('about-eu-logo')), findsNothing);
+    expect(find.byKey(const ValueKey('about-cyprus-logo')), findsNothing);
     expect(find.text('Take the trail offline'), findsOneWidget);
     expect(find.text('Download trail'), findsWidgets);
   });
 
-  testWidgets('funding logos share an Explore Trails footer', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: MonkApp()));
+  testWidgets('funding partners and contact links live on About', (
+    tester,
+  ) async {
+    final launchedUris = <Uri>[];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appVersionProvider.overrideWith((ref) async => '1.0.0 (1)'),
+          externalUrlLauncherProvider.overrideWithValue((uri) async {
+            launchedUris.add(uri);
+            return true;
+          }),
+        ],
+        child: const MonkApp(),
+      ),
+    );
     await tester.pumpAndSettle();
 
-    final footer = find.byKey(const ValueKey('explore-trails-partners-footer'));
-    await tester.scrollUntilVisible(
-      footer,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-
-    final euLogo = find.byKey(const ValueKey('explore-trails-eu-logo'));
-    final cyprusLogo = find.byKey(const ValueKey('explore-trails-cyprus-logo'));
-    expect(footer, findsOneWidget);
-    expect(find.descendant(of: footer, matching: euLogo), findsOneWidget);
-    expect(find.descendant(of: footer, matching: cyprusLogo), findsOneWidget);
-    expect(tester.getSize(footer).height, lessThanOrEqualTo(58));
-    expect(tester.getSize(euLogo).height, tester.getSize(cyprusLogo).height);
     expect(
-      tester.getTopLeft(cyprusLogo).dx,
-      greaterThan(tester.getTopRight(euLogo).dx),
-    );
-    expect(
-      find.descendant(of: find.byType(SliverAppBar), matching: euLogo),
+      find.byKey(const ValueKey('explore-trails-partners-footer')),
       findsNothing,
     );
+    expect(find.byKey(const ValueKey('about-eu-logo')), findsNothing);
+    expect(find.byKey(const ValueKey('about-cyprus-logo')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('about-us-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AboutScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('about-screen')), findsOneWidget);
+    expect(find.text('Project funding'), findsOneWidget);
+
+    final euLogo = find.byKey(const ValueKey('about-eu-logo'));
+    final cyprusLogo = find.byKey(const ValueKey('about-cyprus-logo'));
+    expect(euLogo, findsOneWidget);
+    expect(cyprusLogo, findsOneWidget);
     expect(
-      ((tester.widget<Image>(euLogo).image as ResizeImage).imageProvider
-              as AssetImage)
-          .assetName,
+      (tester.widget<Image>(euLogo).image as AssetImage).assetName,
       'assets/branding/eu_flag_color.png',
     );
     expect(
-      ((tester.widget<Image>(cyprusLogo).image as ResizeImage).imageProvider
-              as AssetImage)
-          .assetName,
+      (tester.widget<Image>(cyprusLogo).image as AssetImage).assetName,
       'assets/branding/republic_of_cyprus_emblem.png',
     );
+
+    final website = find.byKey(const ValueKey('about-website'));
+    await tester.scrollUntilVisible(
+      website,
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(website);
+    await tester.pump();
+
+    final suggestions = find.byKey(const ValueKey('about-suggestions-email'));
+    await tester.scrollUntilVisible(
+      suggestions,
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(suggestions);
+    await tester.pump();
+
+    expect(find.text('Version 1.0.0 (1)'), findsOneWidget);
+    expect(launchedUris.first, Uri.parse(eurotrexWebsiteUrl));
+    expect(launchedUris.last.scheme, 'mailto');
+    expect(launchedUris.last.path, eurotrexSuggestionsEmail);
+    expect(
+      launchedUris.last.queryParameters['subject'],
+      'EUROTREX app suggestion',
+    );
   });
+
+  testWidgets(
+    'suggestion opens the website contact form when email is unavailable',
+    (tester) async {
+      final launchedUris = <Uri>[];
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appVersionProvider.overrideWith((ref) async => '1.0.0 (1)'),
+            externalUrlLauncherProvider.overrideWithValue((uri) async {
+              launchedUris.add(uri);
+              return uri.scheme == 'https';
+            }),
+          ],
+          child: const MaterialApp(home: AboutScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final suggestions = find.byKey(const ValueKey('about-suggestions-email'));
+      await tester.scrollUntilVisible(
+        suggestions,
+        300,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(suggestions);
+      await tester.pump();
+
+      expect(launchedUris, hasLength(2));
+      expect(launchedUris.first.scheme, 'mailto');
+      expect(launchedUris.first.path, eurotrexSuggestionsEmail);
+      expect(launchedUris.last, Uri.parse(eurotrexWebsiteUrl));
+      expect(
+        find.text(
+          'No email app is available. Opening the EUROTREX website contact form instead.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('upcoming E4 trails are noninteractive coming-soon rows', (
     tester,
@@ -355,22 +444,40 @@ void main() {
   testWidgets('stage effort swaps ascent and descent for reverse travel', (
     tester,
   ) async {
-    const stage = TrailStage(
-      id: 'reverse-stage',
-      sequence: 1,
-      name: 'Reverse stage',
-      accumulatedDistanceKm: 6.3,
+    const reverseStart = TrailStage(
+      id: 'reverse-start',
+      sequence: 3,
+      name: 'Larnaka Airport',
+      accumulatedDistanceKm: 10,
       segmentLengthKm: 6.3,
       elevationUpM: 52,
       elevationDownM: 15,
+      services: {},
+    );
+    const stage = TrailStage(
+      id: 'reverse-stage',
+      sequence: 2,
+      name: 'Reverse stage',
+      accumulatedDistanceKm: 3.7,
+      segmentLengthKm: 3.7,
+      elevationUpM: 400,
+      elevationDownM: 300,
+      services: {},
+    );
+    const reverseFinish = TrailStage(
+      id: 'reverse-finish',
+      sequence: 1,
+      name: 'Pafos Airport',
+      accumulatedDistanceKm: 0,
+      segmentLengthKm: 0,
       services: {},
     );
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(
           home: StageDetailScreen(
-            stages: [stage],
-            initialIndex: 0,
+            stages: [reverseStart, stage, reverseFinish],
+            initialIndex: 1,
             direction: TrailDirection.larnakaToPafos,
           ),
         ),
@@ -438,6 +545,8 @@ void main() {
           name: 'Larnaka Airport',
           accumulatedDistanceKm: 558,
           segmentLengthKm: 2.4,
+          elevationUpM: 90,
+          elevationDownM: 30,
           services: {},
         ),
         TrailStage(
@@ -481,6 +590,9 @@ void main() {
         find.descendant(of: positionCard, matching: find.text('Stage length')),
         findsNothing,
       );
+      expect(find.byKey(const Key('stage-detail-ascent')), findsNothing);
+      expect(find.byKey(const Key('stage-detail-descent')), findsNothing);
+      expect(find.byKey(const Key('stage-detail-walking-time')), findsNothing);
     },
   );
 
@@ -549,8 +661,14 @@ void main() {
     final pafosDistance = find.byKey(
       const ValueKey('stage-card-distance-pafos'),
     );
+    final larnakaDistance = find.byKey(
+      const ValueKey('stage-card-distance-larnaka'),
+    );
     final pafosAltitude = find.byKey(
       const ValueKey('stage-card-altitude-pafos'),
+    );
+    final larnakaAltitude = find.byKey(
+      const ValueKey('stage-card-altitude-larnaka'),
     );
     final pafosServices = find.byKey(
       const ValueKey('stage-card-services-pafos'),
@@ -558,17 +676,27 @@ void main() {
     final larnakaSideMetrics = find.byKey(
       const ValueKey('stage-side-metrics-larnaka'),
     );
+    final pafosEndpoint = find.byKey(const ValueKey('stage-endpoint-pafos'));
+    final larnakaEndpoint = find.byKey(
+      const ValueKey('stage-endpoint-larnaka'),
+    );
+    final pafosMarker = find.byKey(const ValueKey('stage-marker-pafos'));
     final larnakaMarker = find.byKey(const ValueKey('stage-marker-larnaka'));
     final larnakaAscent = find.byKey(const ValueKey('stage-ascent-larnaka'));
     final larnakaDescent = find.byKey(const ValueKey('stage-descent-larnaka'));
     final larnakaLength = find.byKey(const ValueKey('stage-length-larnaka'));
+    final pafosAscent = find.byKey(const ValueKey('stage-ascent-pafos'));
+    final pafosDescent = find.byKey(const ValueKey('stage-descent-pafos'));
+    final pafosLength = find.byKey(const ValueKey('stage-length-pafos'));
 
     expect(find.text('Pafos Airport  →  Larnaka Airport'), findsOneWidget);
-    expect(pafosDistance, findsOneWidget);
+    expect(pafosDistance, findsNothing);
     expect(pafosAltitude, findsOneWidget);
+    expect(larnakaDistance, findsOneWidget);
+    expect(larnakaAltitude, findsOneWidget);
     expect(
-      tester.getCenter(pafosDistance).dx,
-      lessThan(tester.getCenter(pafosAltitude).dx),
+      tester.getCenter(larnakaDistance).dx,
+      lessThan(tester.getCenter(larnakaAltitude).dx),
     );
     expect(
       find.descendant(of: pafosServices, matching: pafosAltitude),
@@ -591,34 +719,74 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.descendant(of: pafosCard, matching: find.text('Start point')),
+      find.descendant(of: pafosEndpoint, matching: find.text('Start point')),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: larnakaCard, matching: find.text('Finish point')),
+      find.descendant(of: larnakaEndpoint, matching: find.text('Finish point')),
       findsOneWidget,
+    );
+    expect(
+      tester.getCenter(pafosEndpoint).dx,
+      lessThan(tester.getCenter(pafosMarker).dx),
+    );
+    expect(
+      tester.getCenter(larnakaEndpoint).dx,
+      lessThan(tester.getCenter(larnakaMarker).dx),
+    );
+    expect(
+      find.descendant(of: pafosCard, matching: find.text('Start point')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: larnakaCard, matching: find.text('Finish point')),
+      findsNothing,
     );
 
     await tester.tap(find.byKey(const Key('reverse-trail-direction')));
     await tester.pumpAndSettle();
 
     expect(find.text('Larnaka Airport  →  Pafos Airport'), findsOneWidget);
+    expect(larnakaDistance, findsNothing);
+    expect(pafosDistance, findsOneWidget);
+    expect(larnakaAscent, findsNothing);
+    expect(larnakaDescent, findsNothing);
+    expect(larnakaLength, findsNothing);
     expect(
-      find.descendant(of: larnakaAscent, matching: find.text('45m')),
+      find.descendant(of: pafosAscent, matching: find.text('45m')),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: larnakaDescent, matching: find.text('120m')),
+      find.descendant(of: pafosDescent, matching: find.text('120m')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: pafosLength, matching: find.text('10.0km')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: larnakaEndpoint, matching: find.text('Start point')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: pafosEndpoint, matching: find.text('Finish point')),
       findsOneWidget,
     );
     expect(
       find.descendant(of: larnakaCard, matching: find.text('Start point')),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.descendant(of: pafosCard, matching: find.text('Finish point')),
-      findsOneWidget,
+      findsNothing,
     );
+
+    await tester.ensureVisible(larnakaCard);
+    await tester.tap(larnakaCard);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('stage-detail-ascent')), findsNothing);
+    expect(find.byKey(const Key('stage-detail-descent')), findsNothing);
+    expect(find.byKey(const Key('stage-detail-walking-time')), findsNothing);
   });
 
   testWidgets('dashboard filters stages by selected services', (tester) async {
@@ -646,7 +814,7 @@ void main() {
     expect(find.text('No stages match these services.'), findsNothing);
   });
 
-  testWidgets('lodging stage detail shows noninteractive booking status', (
+  testWidgets('stage accommodation opens and launches its booking website', (
     tester,
   ) async {
     const lodgingStage = TrailStage(
@@ -655,11 +823,43 @@ void main() {
       name: 'Lodging stage',
       accumulatedDistanceKm: 1,
       altitudeM: 100,
-      services: {'lodging': true},
+      services: {},
     );
+    final launchedUris = <Uri>[];
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      ProviderScope(
+        overrides: [
+          lodgingRepositoryProvider.overrideWithValue(
+            const _FakeLodgingRepository({
+              'lodging-stage': [
+                Lodging(
+                  id: 'forest-inn',
+                  stageId: 'lodging-stage',
+                  name: 'Forest Inn',
+                  type: 'Hotel',
+                  village: 'Platres',
+                  address: '1 Mountain Road',
+                  phone: '+357 99123456',
+                  email: 'stay@example.com',
+                  priceMinEur: 75,
+                  priceMaxEur: 95,
+                  distanceFromTrailKm: 0.4,
+                  monthsOpen: 'Apr–Oct',
+                  capacityPeople: 28,
+                  checkInTime: '14:00',
+                  checkOutTime: '11:00',
+                  website: 'https://booking.example.com/forest-inn',
+                  googleMapsUrl: 'https://maps.example.com/forest-inn',
+                ),
+              ],
+            }),
+          ),
+          externalUrlLauncherProvider.overrideWithValue((uri) async {
+            launchedUris.add(uri);
+            return true;
+          }),
+        ],
+        child: const MaterialApp(
           home: StageDetailScreen(stages: [lodgingStage], initialIndex: 0),
         ),
       ),
@@ -672,12 +872,148 @@ void main() {
     expect(booking, findsOneWidget);
     expect(find.text('Start point'), findsOneWidget);
     expect(find.text('0.0 km'), findsNothing);
-    expect(find.text('Accommodation booking'), findsOneWidget);
-    expect(find.text('Coming soon'), findsOneWidget);
+    expect(find.text('View accommodation'), findsOneWidget);
+    expect(find.text('Coming soon'), findsNothing);
+
+    await tester.tap(booking);
+    await tester.pumpAndSettle();
     expect(
-      find.descendant(of: booking, matching: find.byType(ButtonStyleButton)),
-      findsNothing,
+      find.byKey(const ValueKey('accommodation-screen-lodging-stage')),
+      findsOneWidget,
     );
+    expect(find.text('Forest Inn'), findsOneWidget);
+    expect(find.textContaining('Platres'), findsOneWidget);
+    expect(find.text('0.4 km'), findsOneWidget);
+
+    final book = find.byKey(const ValueKey('book-lodging-forest-inn'));
+    await tester.scrollUntilVisible(
+      book,
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(book);
+    await tester.pumpAndSettle();
+    expect(launchedUris, [Uri.parse('https://booking.example.com/forest-inn')]);
+  });
+
+  testWidgets('accommodation handles empty data and invalid booking links', (
+    tester,
+  ) async {
+    const stage = TrailStage(
+      id: 'stage-without-link',
+      sequence: 1,
+      name: 'Mountain stage',
+      services: {},
+    );
+    final repository = _MutableLodgingRepository(const [
+      Lodging(
+        id: 'mountain-shelter',
+        stageId: 'stage-without-link',
+        name: 'Mountain Shelter',
+        website: 'not-a-valid-url',
+        checkInTime: '00:00',
+        checkOutTime: '00:00',
+      ),
+    ]);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [lodgingRepositoryProvider.overrideWithValue(repository)],
+        child: const MaterialApp(home: AccommodationScreen(stage: stage)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final unavailable = find.byKey(
+      const ValueKey('book-lodging-mountain-shelter'),
+    );
+    expect(unavailable, findsOneWidget);
+    expect(find.text('Booking link unavailable'), findsOneWidget);
+    expect(find.text('00:00'), findsNothing);
+    expect(tester.widget<FilledButton>(unavailable).onPressed, isNull);
+
+    repository.lodgings = const [];
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AccommodationScreen)),
+    );
+    container.invalidate(lodgingsForStageProvider(stage.id));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('accommodation-empty')), findsOneWidget);
+    expect(
+      find.text('No accommodation is listed for this stage.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('accommodation error state retries the stage query', (
+    tester,
+  ) async {
+    const stage = TrailStage(
+      id: 'retry-stage',
+      sequence: 1,
+      name: 'Retry stage',
+      services: {},
+    );
+    final repository = _RetryLodgingRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [lodgingRepositoryProvider.overrideWithValue(repository)],
+        child: const MaterialApp(home: AccommodationScreen(stage: stage)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('accommodation-error')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('accommodation-retry')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('lodging-card-recovered-lodging')),
+      findsOneWidget,
+    );
+    expect(repository.calls, 2);
+  });
+
+  testWidgets('accommodation reports an external booking launch failure', (
+    tester,
+  ) async {
+    const stage = TrailStage(
+      id: 'failed-launch-stage',
+      sequence: 1,
+      name: 'Failed launch stage',
+      services: {},
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          lodgingRepositoryProvider.overrideWithValue(
+            const _FakeLodgingRepository({
+              'failed-launch-stage': [
+                Lodging(
+                  id: 'failed-launch-lodging',
+                  name: 'Forest Hotel',
+                  website: 'https://booking.example.com/forest-hotel',
+                ),
+              ],
+            }),
+          ),
+          externalUrlLauncherProvider.overrideWithValue((_) async => false),
+        ],
+        child: const MaterialApp(home: AccommodationScreen(stage: stage)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final book = find.byKey(
+      const ValueKey('book-lodging-failed-launch-lodging'),
+    );
+    await tester.scrollUntilVisible(
+      book,
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(book);
+    await tester.pump();
+
+    expect(find.text('Could not open this link.'), findsOneWidget);
   });
 
   testWidgets('stage controls jump to the end and back to the top', (
@@ -993,5 +1329,53 @@ class _FakeOfflineMapController extends OfflineMapController {
   @override
   Future<void> delete() async {
     state = const AsyncData(OfflineMapState.notDownloaded());
+  }
+}
+
+class _FakeLodgingRepository implements LodgingRepository {
+  const _FakeLodgingRepository(this.lodgingsByStage);
+
+  final Map<String, List<Lodging>> lodgingsByStage;
+
+  @override
+  Future<List<Lodging>> loadForStage({
+    required String trailId,
+    required String stageId,
+  }) async {
+    return lodgingsByStage[stageId] ?? const [];
+  }
+}
+
+class _MutableLodgingRepository implements LodgingRepository {
+  _MutableLodgingRepository(this.lodgings);
+
+  List<Lodging> lodgings;
+
+  @override
+  Future<List<Lodging>> loadForStage({
+    required String trailId,
+    required String stageId,
+  }) async {
+    return lodgings;
+  }
+}
+
+class _RetryLodgingRepository implements LodgingRepository {
+  int calls = 0;
+
+  @override
+  Future<List<Lodging>> loadForStage({
+    required String trailId,
+    required String stageId,
+  }) async {
+    calls++;
+    if (calls == 1) throw StateError('Temporary failure');
+    return const [
+      Lodging(
+        id: 'recovered-lodging',
+        name: 'Recovered lodging',
+        website: 'https://booking.example.com/recovered',
+      ),
+    ];
   }
 }

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/location/device_location.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
-import '../data/stage_repository.dart';
-import '../domain/stage.dart';
-import '../domain/walking_time_estimator.dart';
+import '../../accommodation/domain/lodging.dart';
+import '../../accommodation/presentation/accommodation_controller.dart';
+import '../../accommodation/presentation/accommodation_screen.dart';
+import '../../elevation/domain/route_point.dart';
+import '../../elevation/presentation/elevation_controller.dart';
 import '../../elevation/presentation/elevation_screen.dart';
 import '../../map/presentation/map_screen.dart';
 import '../../map/presentation/offline_map_controller.dart';
@@ -14,6 +17,10 @@ import '../../settings/presentation/settings_screen.dart';
 import '../../trail/domain/trail_direction.dart';
 import '../../trail/presentation/trail_direction_controller.dart';
 import '../../trail/presentation/trail_information_screen.dart';
+import '../data/stage_repository.dart';
+import '../domain/stage.dart';
+import '../domain/trail_location_matcher.dart';
+import '../domain/walking_time_estimator.dart';
 import 'stages_controller.dart';
 
 const _ink = Color(0xFF17201B);
@@ -47,6 +54,35 @@ double _trailDistanceKm(List<TrailStage> stages) {
   return total;
 }
 
+typedef _StageLegMetrics = ({
+  double? ascentM,
+  double? descentM,
+  double? lengthKm,
+});
+
+_StageLegMetrics _stageLegMetrics({
+  required List<TrailStage> orderedStages,
+  required int index,
+  required TrailDirection direction,
+}) {
+  if (index == 0) {
+    return (ascentM: 0, descentM: 0, lengthKm: 0);
+  }
+
+  final sourceStage = direction.isReversed
+      ? orderedStages[index - 1]
+      : orderedStages[index];
+  return (
+    ascentM: direction.isReversed
+        ? sourceStage.elevationDownM
+        : sourceStage.elevationUpM,
+    descentM: direction.isReversed
+        ? sourceStage.elevationUpM
+        : sourceStage.elevationDownM,
+    lengthKm: sourceStage.segmentLengthKm,
+  );
+}
+
 String _formatWalkingTime(Duration duration, AppLocalizations l10n) {
   final hours = duration.inHours;
   final minutes = duration.inMinutes.remainder(60);
@@ -66,7 +102,10 @@ class StagesScreen extends ConsumerStatefulWidget {
 
 class _StagesScreenState extends ConsumerState<StagesScreen> {
   final ScrollController scrollController = ScrollController();
+  final Map<String, GlobalKey> _stageRowKeys = {};
   Set<String> selectedServices = {};
+  String? _gpsSelectedStageId;
+  bool _isLocatingStage = false;
 
   @override
   void dispose() {
@@ -93,6 +132,163 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
     if (selection != null && mounted) {
       setState(() => selectedServices = selection);
     }
+  }
+
+  GlobalKey _stageRowKey(String stageId) =>
+      _stageRowKeys.putIfAbsent(stageId, GlobalKey.new);
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.t(message))));
+  }
+
+  Future<void> _findMyStage() async {
+    if (_isLocatingStage) return;
+    setState(() {
+      _isLocatingStage = true;
+      _gpsSelectedStageId = null;
+    });
+
+    try {
+      final routePointsFuture = ref.read(elevationProvider.future);
+      final sourceStagesFuture = ref.read(stagesProvider.future);
+      late final List<RoutePoint> routePoints;
+      late final List<TrailStage> sourceStages;
+      try {
+        (routePoints, sourceStages) = await (
+          routePointsFuture,
+          sourceStagesFuture,
+        ).wait;
+      } catch (_) {
+        _showMessage('Route data is not on this device yet.');
+        return;
+      }
+      if (!mounted) return;
+      if (routePoints.isEmpty || sourceStages.isEmpty) {
+        _showMessage('Route data is not on this device yet.');
+        return;
+      }
+
+      final locationReader = ref.read(deviceLocationReaderProvider);
+      final location = await locationReader();
+      if (!mounted) return;
+      if (!location.accuracyM.isFinite ||
+          location.accuracyM < 0 ||
+          location.accuracyM > maximumUsableLocationAccuracyM) {
+        _showMessage('Your location could not be read right now.');
+        return;
+      }
+
+      final direction = ref.read(trailDirectionProvider);
+      final orderedStages = direction.isReversed
+          ? sourceStages.reversed.toList(growable: false)
+          : sourceStages;
+      final match = findNearbyTrailStage(
+        latitude: location.latitude,
+        longitude: location.longitude,
+        locationAccuracyM: location.accuracyM,
+        routePoints: routePoints,
+        stages: orderedStages,
+      );
+      if (match == null) {
+        _showMessage('You are not on the trail.');
+        return;
+      }
+
+      final stage = orderedStages.firstWhere(
+        (item) => item.id == match.stageId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _gpsSelectedStageId = stage.id;
+        selectedServices.clear();
+      });
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+
+      final targetContext = _stageRowKeys[stage.id]?.currentContext;
+      if (targetContext != null &&
+          targetContext.mounted &&
+          !_isFullyVisible(targetContext)) {
+        await Scrollable.ensureVisible(
+          targetContext,
+          alignment: 0.16,
+          duration: const Duration(milliseconds: 550),
+          curve: Curves.easeOutCubic,
+        );
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.nearbyStage(stage.name))),
+        );
+      }
+    } on LocationServicesDisabledException {
+      _showMessage('Turn on Location Services to show your position.');
+    } on LocationPermissionDeniedException {
+      _showMessage('Location permission is needed to show your position.');
+    } catch (_) {
+      _showMessage('Your location could not be read right now.');
+    } finally {
+      if (mounted) setState(() => _isLocatingStage = false);
+    }
+  }
+
+  bool _isFullyVisible(BuildContext targetContext) {
+    final renderObject = targetContext.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.hasSize) return false;
+    final top = renderObject.localToGlobal(Offset.zero).dy;
+    final bottom = top + renderObject.size.height;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    return top >= kToolbarHeight + MediaQuery.paddingOf(context).top &&
+        bottom <= screenHeight - 24;
+  }
+
+  Widget _buildStageTimelineRow({
+    required BuildContext context,
+    required TrailStage stage,
+    required int filteredIndex,
+    required List<TrailStage> filteredItems,
+    required List<TrailStage> orderedItems,
+    required TrailDirection direction,
+    required MeasurementFormatter formatter,
+    required double totalDistanceKm,
+  }) {
+    final orderedIndex = orderedItems.indexWhere((item) => item.id == stage.id);
+    final legMetrics = _stageLegMetrics(
+      orderedStages: orderedItems,
+      index: orderedIndex,
+      direction: direction,
+    );
+    return _StageTimelineRow(
+      key: _stageRowKey(stage.id),
+      stage: stage,
+      formatter: formatter,
+      ascentM: legMetrics.ascentM,
+      descentM: legMetrics.descentM,
+      segmentLengthKm: legMetrics.lengthKm,
+      distanceKm: stage.accumulatedDistanceKm == null
+          ? null
+          : direction.distanceFromStart(
+              stage.accumulatedDistanceKm!,
+              totalDistanceKm,
+            ),
+      isFirst: filteredIndex == 0,
+      isLast: filteredIndex == filteredItems.length - 1,
+      isTrailStart: orderedIndex == 0,
+      isTrailEnd: orderedIndex == orderedItems.length - 1,
+      isSelected: stage.id == _gpsSelectedStageId,
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => StageDetailScreen(
+            stages: orderedItems,
+            initialIndex: orderedIndex,
+            direction: direction,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -138,7 +334,19 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                 onFilterServices: _openServiceFilters,
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 28)),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 20, 12),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: _GpsStageButton(
+                    isLocating: _isLocatingStage,
+                    hasSelection: _gpsSelectedStageId != null,
+                    onPressed: _findMyStage,
+                  ),
+                ),
+              ),
+            ),
             stages.when(
               skipLoadingOnRefresh: true,
               data: (items) {
@@ -169,39 +377,25 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                       )
                     : SliverPadding(
                         padding: const EdgeInsets.fromLTRB(12, 0, 20, 40),
-                        sliver: SliverList.builder(
-                          itemCount: filteredItems.length,
-                          itemBuilder: (context, index) => _StageTimelineRow(
-                            stage: filteredItems[index],
-                            formatter: formatter,
-                            direction: direction,
-                            distanceKm:
-                                filteredItems[index].accumulatedDistanceKm ==
-                                    null
-                                ? null
-                                : direction.distanceFromStart(
-                                    filteredItems[index].accumulatedDistanceKm!,
-                                    totalDistanceKm,
-                                  ),
-                            isFirst: index == 0,
-                            isLast: index == filteredItems.length - 1,
-                            isTrailStart:
-                                filteredItems[index].id ==
-                                orderedItems.first.id,
-                            isTrailEnd:
-                                filteredItems[index].id == orderedItems.last.id,
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => StageDetailScreen(
-                                  stages: orderedItems,
-                                  initialIndex: orderedItems.indexWhere(
-                                    (stage) =>
-                                        stage.id == filteredItems[index].id,
-                                  ),
+                        sliver: SliverToBoxAdapter(
+                          child: Column(
+                            children: [
+                              for (
+                                var index = 0;
+                                index < filteredItems.length;
+                                index++
+                              )
+                                _buildStageTimelineRow(
+                                  context: context,
+                                  stage: filteredItems[index],
+                                  filteredIndex: index,
+                                  filteredItems: filteredItems,
+                                  orderedItems: orderedItems,
                                   direction: direction,
+                                  formatter: formatter,
+                                  totalDistanceKm: totalDistanceKm,
                                 ),
-                              ),
-                            ),
+                            ],
                           ),
                         ),
                       );
@@ -217,6 +411,43 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _GpsStageButton extends StatelessWidget {
+  const _GpsStageButton({
+    required this.isLocating,
+    required this.hasSelection,
+    required this.onPressed,
+  });
+
+  final bool isLocating;
+  final bool hasSelection;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.icon(
+      key: const ValueKey('stage-gps-locate'),
+      onPressed: isLocating ? null : onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: hasSelection ? _bookingBlue : _filterBlueTeal,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: _filterBlueTeal.withValues(alpha: 0.55),
+        disabledForegroundColor: Colors.white70,
+        minimumSize: const Size(0, 38),
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        visualDensity: VisualDensity.compact,
+      ),
+      icon: Icon(
+        isLocating ? Icons.hourglass_top_rounded : Icons.gps_fixed_rounded,
+        size: 18,
+      ),
+      label: Text(
+        context.l10n.t('Find my stage'),
+        style: const TextStyle(fontWeight: FontWeight.w800),
       ),
     );
   }
@@ -294,7 +525,7 @@ class _TrailAppBar extends StatelessWidget {
                 builder: (_) => const TrailInformationScreen(),
               ),
             ),
-            icon: const Icon(Icons.info_outline_rounded),
+            icon: const Icon(Icons.signpost_rounded),
           ),
           IconButton(
             key: const ValueKey('reverse-trail-direction'),
@@ -337,25 +568,31 @@ class _TrailAppBar extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Container(
-                    key: const ValueKey('stage-long-distance-badge'),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _yellow,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      l10n.t('LONG DISTANCE'),
-                      style: const TextStyle(
-                        color: _ink,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1,
+                  Row(
+                    children: [
+                      Container(
+                        key: const ValueKey('stage-long-distance-badge'),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _yellow,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          l10n.t('LONG DISTANCE'),
+                          style: const TextStyle(
+                            color: _ink,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      const Flexible(child: _OfflineMapStatusBadge()),
+                    ],
                   ),
                   const SizedBox(height: 18),
                   Text(
@@ -380,6 +617,84 @@ class _TrailAppBar extends StatelessWidget {
   }
 }
 
+class _OfflineMapStatusBadge extends ConsumerWidget {
+  const _OfflineMapStatusBadge();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final offlineMap = ref.watch(offlineMapProvider);
+    final isReady = offlineMap.value?.isReady == true;
+    final isDownloading = offlineMap.value?.isDownloading == true;
+    final isFailed = offlineMap.hasError || offlineMap.value?.isFailed == true;
+    final isChecking = offlineMap.isLoading;
+    final label = context.l10n.t(
+      isReady
+          ? 'Offline map available'
+          : isChecking
+          ? 'Checking offline map…'
+          : isDownloading
+          ? 'Downloading offline map'
+          : isFailed
+          ? 'Offline map download failed'
+          : 'Offline map not downloaded',
+    );
+    final foreground = isReady
+        ? _green
+        : isFailed
+        ? _red
+        : Colors.white70;
+    final background = isReady
+        ? _mint
+        : isFailed
+        ? const Color(0xFF5A2928)
+        : Colors.white.withValues(alpha: 0.12);
+
+    return Tooltip(
+      message: label,
+      child: Container(
+        key: const ValueKey('offline-map-status-badge'),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isReady
+                  ? Icons.check_circle_rounded
+                  : isChecking
+                  ? Icons.hourglass_top_rounded
+                  : isDownloading
+                  ? Icons.download_rounded
+                  : isFailed
+                  ? Icons.error_outline_rounded
+                  : Icons.info_outline_rounded,
+              color: foreground,
+              size: 14,
+            ),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _TrailDashboard extends ConsumerWidget {
   const _TrailDashboard({
     required this.selectedServiceCount,
@@ -395,12 +710,6 @@ class _TrailDashboard extends ConsumerWidget {
     final formatter = MeasurementFormatter(
       ref.watch(appSettingsProvider).measurementSystem,
     );
-    final offlineMap = ref.watch(offlineMapProvider);
-    final isMapOffline = offlineMap.value?.isReady == true;
-    final isDownloading = offlineMap.value?.isDownloading == true;
-    final mapStatusFailed =
-        offlineMap.hasError || offlineMap.value?.isFailed == true;
-    final mapStatusChecking = offlineMap.isLoading;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
@@ -457,59 +766,6 @@ class _TrailDashboard extends ConsumerWidget {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            key: const ValueKey('offline-map-status-banner'),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            decoration: BoxDecoration(
-              color: isMapOffline ? _mint : const Color(0xFFE9ECEA),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  isMapOffline
-                      ? Icons.check_circle_rounded
-                      : Icons.info_outline_rounded,
-                  color: isMapOffline ? _green : Colors.black54,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.t(
-                          isMapOffline
-                              ? 'Trail data and map available offline'
-                              : 'Trail data available offline',
-                        ),
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      if (!isMapOffline) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          l10n.t(
-                            mapStatusChecking
-                                ? 'Checking offline map…'
-                                : isDownloading
-                                ? 'Downloading offline map'
-                                : mapStatusFailed
-                                ? 'Offline map download failed'
-                                : 'Offline map not downloaded',
-                          ),
-                          style: const TextStyle(
-                            color: Colors.black54,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -604,23 +860,30 @@ class _StageTimelineRow extends StatelessWidget {
   const _StageTimelineRow({
     required this.stage,
     required this.formatter,
-    required this.direction,
+    required this.ascentM,
+    required this.descentM,
+    required this.segmentLengthKm,
     required this.distanceKm,
     required this.isFirst,
     required this.isLast,
     required this.isTrailStart,
     required this.isTrailEnd,
+    required this.isSelected,
     required this.onTap,
+    super.key,
   });
 
   final TrailStage stage;
   final MeasurementFormatter formatter;
-  final TrailDirection direction;
+  final double? ascentM;
+  final double? descentM;
+  final double? segmentLengthKm;
   final double? distanceKm;
   final bool isFirst;
   final bool isLast;
   final bool isTrailStart;
   final bool isTrailEnd;
+  final bool isSelected;
   final VoidCallback onTap;
 
   @override
@@ -628,19 +891,67 @@ class _StageTimelineRow extends StatelessWidget {
     final activeServices = stage.services.entries
         .where((entry) => entry.value)
         .toList();
-    final ascentM = direction.isReversed
-        ? stage.elevationDownM
-        : stage.elevationUpM;
-    final descentM = direction.isReversed
-        ? stage.elevationUpM
-        : stage.elevationDownM;
-    final dotColor = isTrailStart
+    final showDistance = !isTrailStart && distanceKm != null;
+    final dotColor = isSelected
+        ? _bookingBlue
+        : isTrailStart
         ? _green
         : isTrailEnd
         ? _red
         : stage.services['lodging'] == true
         ? _green
         : _ink;
+    final sideMetrics = Column(
+      key: ValueKey('stage-side-metrics-${stage.id}'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _StageSideMetric(
+          key: ValueKey('stage-ascent-${stage.id}'),
+          icon: Icons.arrow_upward_rounded,
+          value: ascentM == null
+              ? '—'
+              : _compactMeasurement(formatter.altitude(ascentM!)),
+          tooltip: context.l10n.t('Ascent'),
+          color: _green,
+        ),
+        _StageSideMetric(
+          key: ValueKey('stage-descent-${stage.id}'),
+          icon: Icons.arrow_downward_rounded,
+          value: descentM == null
+              ? '—'
+              : _compactMeasurement(formatter.altitude(descentM!)),
+          tooltip: context.l10n.t('Descent'),
+          color: _red,
+        ),
+        _StageSideMetric(
+          key: ValueKey('stage-length-${stage.id}'),
+          icon: Icons.straighten_rounded,
+          value: segmentLengthKm == null
+              ? '—'
+              : _compactMeasurement(formatter.distance(segmentLengthKm!)),
+          tooltip: context.l10n.t('Stage length'),
+          color: _filterBlueTeal,
+        ),
+      ],
+    );
+    final endpointBadge = Padding(
+      padding: const EdgeInsets.only(right: 4),
+      child: _EndpointBadge(
+        key: ValueKey('stage-endpoint-${stage.id}'),
+        label: context.l10n.t(isTrailStart ? 'Start point' : 'Finish point'),
+        color: isTrailStart ? _green : _red,
+      ),
+    );
+    final sideContent = isTrailStart
+        ? endpointBadge
+        : isTrailEnd
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [endpointBadge, const SizedBox(height: 3), sideMetrics],
+          )
+        : sideMetrics;
 
     return IntrinsicHeight(
       child: Row(
@@ -651,50 +962,7 @@ class _StageTimelineRow extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      key: ValueKey('stage-side-metrics-${stage.id}'),
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        _StageSideMetric(
-                          key: ValueKey('stage-ascent-${stage.id}'),
-                          icon: Icons.arrow_upward_rounded,
-                          value: ascentM == null
-                              ? '—'
-                              : _compactMeasurement(
-                                  formatter.altitude(ascentM),
-                                ),
-                          tooltip: context.l10n.t('Ascent'),
-                          color: _green,
-                        ),
-                        _StageSideMetric(
-                          key: ValueKey('stage-descent-${stage.id}'),
-                          icon: Icons.arrow_downward_rounded,
-                          value: descentM == null
-                              ? '—'
-                              : _compactMeasurement(
-                                  formatter.altitude(descentM),
-                                ),
-                          tooltip: context.l10n.t('Descent'),
-                          color: _red,
-                        ),
-                        _StageSideMetric(
-                          key: ValueKey('stage-length-${stage.id}'),
-                          icon: Icons.straighten_rounded,
-                          value: stage.segmentLengthKm == null
-                              ? '—'
-                              : _compactMeasurement(
-                                  formatter.distance(stage.segmentLengthKm!),
-                                ),
-                          tooltip: context.l10n.t('Stage length'),
-                          color: _filterBlueTeal,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                Expanded(child: Center(child: sideContent)),
                 SizedBox(
                   width: 20,
                   child: Column(
@@ -737,110 +1005,112 @@ class _StageTimelineRow extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: Material(
-                key: ValueKey('stage-card-${stage.id}'),
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: onTap,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(15, 13, 10, 13),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      stage.name,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w800,
+              child: Semantics(
+                selected: isSelected,
+                child: Material(
+                  key: ValueKey('stage-card-${stage.id}'),
+                  color: isSelected ? const Color(0xFFE8F1FC) : Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: isSelected ? _bookingBlue : Colors.transparent,
+                      width: isSelected ? 2 : 0,
+                    ),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: onTap,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(15, 13, 10, 13),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        stage.name,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  if (distanceKm != null ||
-                                      stage.altitudeM != null)
-                                    Row(
-                                      key: ValueKey(
-                                        'stage-card-metrics-${stage.id}',
+                                    if (showDistance || stage.altitudeM != null)
+                                      Row(
+                                        key: ValueKey(
+                                          'stage-card-metrics-${stage.id}',
+                                        ),
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (showDistance)
+                                            Text(
+                                              formatter.distance(distanceKm!),
+                                              key: ValueKey(
+                                                'stage-card-distance-${stage.id}',
+                                              ),
+                                              style: const TextStyle(
+                                                color: _green,
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          if (showDistance &&
+                                              stage.altitudeM != null)
+                                            const SizedBox(width: 8),
+                                          if (stage.altitudeM
+                                              case final altitude?)
+                                            _MiniLabel(
+                                              key: ValueKey(
+                                                'stage-card-altitude-${stage.id}',
+                                              ),
+                                              icon: Icons.landscape_outlined,
+                                              label: formatter.altitude(
+                                                altitude,
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (distanceKm != null)
-                                          Text(
-                                            formatter.distance(distanceKm!),
-                                            key: ValueKey(
-                                              'stage-card-distance-${stage.id}',
-                                            ),
-                                            style: const TextStyle(
-                                              color: _green,
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        if (distanceKm != null &&
-                                            stage.altitudeM != null)
-                                          const SizedBox(width: 8),
-                                        if (stage.altitudeM
-                                            case final altitude?)
-                                          _MiniLabel(
-                                            key: ValueKey(
-                                              'stage-card-altitude-${stage.id}',
-                                            ),
-                                            icon: Icons.landscape_outlined,
-                                            label: formatter.altitude(altitude),
-                                          ),
-                                      ],
-                                    ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                key: ValueKey(
-                                  'stage-card-services-${stage.id}',
+                                  ],
                                 ),
-                                spacing: 8,
-                                runSpacing: 6,
-                                children: [
-                                  if (isTrailStart || isTrailEnd)
-                                    _EndpointBadge(
-                                      key: ValueKey(
-                                        'stage-endpoint-${stage.id}',
-                                      ),
-                                      label: context.l10n.t(
-                                        isTrailStart
-                                            ? 'Start point'
-                                            : 'Finish point',
-                                      ),
-                                      color: isTrailStart ? _green : _red,
+                                if (activeServices.isNotEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    key: ValueKey(
+                                      'stage-card-services-${stage.id}',
                                     ),
-                                  for (final service in activeServices.take(7))
-                                    Tooltip(
-                                      message: context.l10n.t(
-                                        _serviceLabel(service.key),
-                                      ),
-                                      child: Icon(
-                                        _serviceIcon(service.key),
-                                        size: 16,
-                                        color: _serviceColor(service.key),
-                                      ),
-                                    ),
+                                    spacing: 8,
+                                    runSpacing: 6,
+                                    children: [
+                                      for (final service in activeServices.take(
+                                        7,
+                                      ))
+                                        Tooltip(
+                                          message: context.l10n.t(
+                                            _serviceLabel(service.key),
+                                          ),
+                                          child: Icon(
+                                            _serviceIcon(service.key),
+                                            size: 16,
+                                            color: _serviceColor(service.key),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ],
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: Colors.black45,
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: Colors.black45,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -902,25 +1172,23 @@ class _EndpointBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      constraints: const BoxConstraints(maxWidth: 60),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.flag_rounded, size: 13, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
+      child: Text(
+        label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: color,
+          fontSize: 8.5,
+          fontWeight: FontWeight.w800,
+          height: 1.05,
+        ),
       ),
     );
   }
@@ -975,6 +1243,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
     final formatter = MeasurementFormatter(
       ref.watch(appSettingsProvider).measurementSystem,
     );
+    final lodgings = ref.watch(lodgingsForStageProvider(stage.id));
     final isMapOffline = ref.watch(offlineMapProvider).value?.isReady == true;
     final services = stage.services.entries
         .where((entry) => entry.value)
@@ -991,16 +1260,20 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
         : index == widget.stages.length - 1
         ? l10n.t('Finish point')
         : null;
-    final hasStageLength =
-        stage.segmentLengthKm != null && stage.segmentLengthKm! > 0;
-    final ascentM = widget.direction.isReversed
-        ? stage.elevationDownM
-        : stage.elevationUpM;
-    final descentM = widget.direction.isReversed
-        ? stage.elevationUpM
-        : stage.elevationDownM;
+    final legMetrics = _stageLegMetrics(
+      orderedStages: widget.stages,
+      index: index,
+      direction: widget.direction,
+    );
+    final segmentLengthKm = legMetrics.lengthKm;
+    final ascentM = legMetrics.ascentM;
+    final descentM = legMetrics.descentM;
+    final hasStageLength = segmentLengthKm != null && segmentLengthKm > 0;
     final hasStageEffort =
-        hasStageLength &&
+        index > 0 &&
+        segmentLengthKm != null &&
+        segmentLengthKm.isFinite &&
+        segmentLengthKm >= 0 &&
         ascentM != null &&
         ascentM.isFinite &&
         ascentM >= 0 &&
@@ -1009,7 +1282,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
         descentM >= 0;
     final walkingTime = hasStageEffort
         ? estimateNaismithWalkingTime(
-            distanceKm: stage.segmentLengthKm!,
+            distanceKm: segmentLengthKm,
             ascentM: ascentM,
           )
         : null;
@@ -1094,7 +1367,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                   value:
                       endpointLabel ??
                       (hasStageLength
-                          ? formatter.distance(stage.segmentLengthKm!)
+                          ? formatter.distance(segmentLengthKm)
                           : '—'),
                   label: endpointLabel != null
                       ? l10n.t('Trail position')
@@ -1194,63 +1467,15 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                     ],
                   ),
           ),
-          if (stage.services['lodging'] == true) ...[
+          if (stage.services['lodging'] == true ||
+              lodgings.value?.isNotEmpty == true) ...[
             const SizedBox(height: 12),
-            _DetailSection(
-              title: l10n.t('Lodging'),
-              child: Semantics(
-                label:
-                    '${l10n.t('Accommodation booking')}. ${l10n.t('Coming soon')}',
-                enabled: false,
-                child: ExcludeSemantics(
-                  child: Container(
-                    key: ValueKey('book-accommodation-${stage.id}'),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _bookingBlue.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: _bookingBlue.withValues(alpha: 0.25),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.hotel_rounded, color: _bookingBlue),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.t('Accommodation booking'),
-                                style: const TextStyle(
-                                  color: _bookingBlue,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                l10n.t('Coming soon'),
-                                style: const TextStyle(
-                                  color: Colors.black54,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.schedule_rounded,
-                          color: Colors.black38,
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                  ),
+            _StageAccommodationSection(
+              stage: stage,
+              lodgings: lodgings,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => AccommodationScreen(stage: stage),
                 ),
               ),
             ),
@@ -1295,6 +1520,87 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StageAccommodationSection extends StatelessWidget {
+  const _StageAccommodationSection({
+    required this.stage,
+    required this.lodgings,
+    required this.onTap,
+  });
+
+  final TrailStage stage;
+  final AsyncValue<List<Lodging>> lodgings;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final subtitle = lodgings.isLoading
+        ? l10n.t('Finding accommodation…')
+        : lodgings.hasError
+        ? l10n.t('Accommodation information is currently unavailable.')
+        : lodgings.value?.isEmpty == true
+        ? l10n.t('No accommodation is listed for this stage.')
+        : l10n.t('View places to stay');
+
+    return _DetailSection(
+      title: l10n.t('Accommodation'),
+      child: Material(
+        color: _bookingBlue.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          key: ValueKey('book-accommodation-${stage.id}'),
+          onTap: onTap,
+          child: Container(
+            key: ValueKey('stage-accommodation-${stage.id}'),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _bookingBlue.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.hotel_rounded, color: _bookingBlue),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.t('View accommodation'),
+                        style: const TextStyle(
+                          color: _bookingBlue,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: Colors.black54,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (lodgings.isLoading)
+                  const SizedBox.square(
+                    dimension: 19,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  const Icon(Icons.chevron_right_rounded, color: _bookingBlue),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
