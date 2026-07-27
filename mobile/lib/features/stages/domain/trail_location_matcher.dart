@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../../elevation/domain/route_point.dart';
+import '../../trail/domain/trail_direction.dart';
 import 'stage.dart';
 
 const defaultTrailProximityM = 100.0;
@@ -10,12 +11,12 @@ class NearbyTrailStage {
   const NearbyTrailStage({
     required this.stageId,
     required this.distanceFromTrailM,
-    required this.distanceFromStageM,
+    required this.projectedRouteDistanceKm,
   });
 
   final String stageId;
   final double distanceFromTrailM;
-  final double distanceFromStageM;
+  final double projectedRouteDistanceKm;
 }
 
 NearbyTrailStage? findNearbyTrailStage({
@@ -24,6 +25,7 @@ NearbyTrailStage? findNearbyTrailStage({
   required double locationAccuracyM,
   required List<RoutePoint> routePoints,
   required List<TrailStage> stages,
+  required TrailDirection direction,
 }) {
   if (!latitude.isFinite ||
       !longitude.isFinite ||
@@ -32,11 +34,20 @@ NearbyTrailStage? findNearbyTrailStage({
     return null;
   }
 
-  final distanceFromTrailM = _distanceFromRouteM(
+  final stageRouteIndex = _buildStageRouteIndex(
+    stages: stages,
+    direction: direction,
+  );
+  if (stageRouteIndex.boundaries.isEmpty) return null;
+
+  final match = _nearestStageRouteSection(
     latitude: latitude,
     longitude: longitude,
     routePoints: routePoints,
+    stageRouteIndex: stageRouteIndex,
   );
+  if (match == null) return null;
+
   final accuracyAllowanceM = locationAccuracyM.isFinite
       ? locationAccuracyM.clamp(0, maximumUsableLocationAccuracyM)
       : 0.0;
@@ -44,62 +55,142 @@ NearbyTrailStage? findNearbyTrailStage({
     defaultTrailProximityM,
     accuracyAllowanceM + 25,
   );
-  if (distanceFromTrailM > trailToleranceM) {
-    return null;
-  }
-
-  TrailStage? nearestStage;
-  var nearestStageDistanceM = double.infinity;
-  for (final stage in stages) {
-    final distanceKm = stage.accumulatedDistanceKm;
-    if (distanceKm == null || !distanceKm.isFinite) continue;
-    final routePoint = _routePointNearestDistance(routePoints, distanceKm);
-    final stageDistanceM = _haversineDistanceM(
-      latitude,
-      longitude,
-      routePoint.lat,
-      routePoint.lng,
-    );
-    if (stageDistanceM < nearestStageDistanceM) {
-      nearestStage = stage;
-      nearestStageDistanceM = stageDistanceM;
-    }
-  }
-  if (nearestStage == null) return null;
+  if (match.distanceM > trailToleranceM) return null;
 
   return NearbyTrailStage(
-    stageId: nearestStage.id,
-    distanceFromTrailM: distanceFromTrailM,
-    distanceFromStageM: nearestStageDistanceM,
+    stageId: stageRouteIndex.boundaries[match.stageIndex].stage.id,
+    distanceFromTrailM: match.distanceM,
+    projectedRouteDistanceKm: match.routeDistanceKm,
   );
 }
 
-double _distanceFromRouteM({
+typedef _StageRouteBoundary = ({TrailStage stage, double progressKm});
+typedef _StageRouteIndex = ({
+  List<_StageRouteBoundary> boundaries,
+  bool isReversed,
+});
+typedef _StageRouteMatch = ({
+  int stageIndex,
+  double distanceM,
+  double routeDistanceKm,
+});
+typedef _SegmentProjection = ({double distanceM, double fraction});
+
+_StageRouteIndex _buildStageRouteIndex({
+  required List<TrailStage> stages,
+  required TrailDirection direction,
+}) {
+  final canonicalBoundaries = <({TrailStage stage, double distanceKm})>[];
+  for (final stage in stages) {
+    final distanceKm = stage.accumulatedDistanceKm;
+    if (distanceKm == null || !distanceKm.isFinite) continue;
+    if (canonicalBoundaries.isNotEmpty &&
+        (canonicalBoundaries.last.distanceKm - distanceKm).abs() < 0.000001) {
+      continue;
+    }
+    canonicalBoundaries.add((stage: stage, distanceKm: distanceKm));
+  }
+  final orderedBoundaries = direction.isReversed
+      ? canonicalBoundaries.reversed
+      : canonicalBoundaries;
+  final boundaries = <_StageRouteBoundary>[
+    for (final boundary in orderedBoundaries)
+      (
+        stage: boundary.stage,
+        progressKm: direction.isReversed
+            ? -boundary.distanceKm
+            : boundary.distanceKm,
+      ),
+  ];
+  return (boundaries: boundaries, isReversed: direction.isReversed);
+}
+
+_StageRouteMatch? _nearestStageRouteSection({
   required double latitude,
   required double longitude,
   required List<RoutePoint> routePoints,
+  required _StageRouteIndex stageRouteIndex,
 }) {
   if (routePoints.length == 1) {
     final point = routePoints.first;
-    return _haversineDistanceM(latitude, longitude, point.lat, point.lng);
+    if (!point.lat.isFinite ||
+        !point.lng.isFinite ||
+        !point.distanceKm.isFinite) {
+      return null;
+    }
+    final stageIndex = _stageIndexAtRouteDistance(
+      point.distanceKm,
+      stageRouteIndex,
+    );
+    return (
+      stageIndex: stageIndex,
+      distanceM: _haversineDistanceM(latitude, longitude, point.lat, point.lng),
+      routeDistanceKm: point.distanceKm,
+    );
   }
 
-  var minimumDistanceM = double.infinity;
+  _StageRouteMatch? bestMatch;
   for (var index = 1; index < routePoints.length; index++) {
-    final distanceM = _distanceFromSegmentM(
+    final start = routePoints[index - 1];
+    final end = routePoints[index];
+    if (!start.lat.isFinite ||
+        !start.lng.isFinite ||
+        !start.distanceKm.isFinite ||
+        !end.lat.isFinite ||
+        !end.lng.isFinite ||
+        !end.distanceKm.isFinite) {
+      continue;
+    }
+    final projection = _projectOntoSegment(
       latitude: latitude,
       longitude: longitude,
-      start: routePoints[index - 1],
-      end: routePoints[index],
+      start: start,
+      end: end,
     );
-    if (distanceM < minimumDistanceM) {
-      minimumDistanceM = distanceM;
+    final routeDistanceKm =
+        start.distanceKm +
+        (end.distanceKm - start.distanceKm) * projection.fraction;
+    final stageIndex = _stageIndexAtRouteDistance(
+      routeDistanceKm,
+      stageRouteIndex,
+    );
+    final currentBest = bestMatch;
+    if (currentBest == null ||
+        projection.distanceM < currentBest.distanceM - 0.01 ||
+        ((projection.distanceM - currentBest.distanceM).abs() <= 0.01 &&
+            stageIndex < currentBest.stageIndex)) {
+      bestMatch = (
+        stageIndex: stageIndex,
+        distanceM: projection.distanceM,
+        routeDistanceKm: routeDistanceKm,
+      );
     }
   }
-  return minimumDistanceM;
+  return bestMatch;
 }
 
-double _distanceFromSegmentM({
+int _stageIndexAtRouteDistance(
+  double routeDistanceKm,
+  _StageRouteIndex stageRouteIndex,
+) {
+  final progressKm = stageRouteIndex.isReversed
+      ? -routeDistanceKm
+      : routeDistanceKm;
+  final boundaries = stageRouteIndex.boundaries;
+  var low = 0;
+  var high = boundaries.length;
+  while (low < high) {
+    final middle = (low + high) ~/ 2;
+    if (boundaries[middle].progressKm < progressKm) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low.clamp(0, boundaries.length - 1);
+}
+
+_SegmentProjection _projectOntoSegment({
   required double latitude,
   required double longitude,
   required RoutePoint start,
@@ -126,39 +217,25 @@ double _distanceFromSegmentM({
   final segmentY = endPoint.y - startPoint.y;
   final segmentLengthSquared = segmentX * segmentX + segmentY * segmentY;
   if (segmentLengthSquared == 0) {
-    return math.sqrt(startPoint.x * startPoint.x + startPoint.y * startPoint.y);
+    return (
+      distanceM: math.sqrt(
+        startPoint.x * startPoint.x + startPoint.y * startPoint.y,
+      ),
+      fraction: 0,
+    );
   }
 
-  final projection =
+  final fraction =
       (-(startPoint.x * segmentX + startPoint.y * segmentY) /
               segmentLengthSquared)
-          .clamp(0.0, 1.0);
-  final closestX = startPoint.x + projection * segmentX;
-  final closestY = startPoint.y + projection * segmentY;
-  return math.sqrt(closestX * closestX + closestY * closestY);
-}
-
-RoutePoint _routePointNearestDistance(
-  List<RoutePoint> points,
-  double distanceKm,
-) {
-  var low = 0;
-  var high = points.length - 1;
-  while (low < high) {
-    final middle = (low + high) ~/ 2;
-    if (points[middle].distanceKm < distanceKm) {
-      low = middle + 1;
-    } else {
-      high = middle;
-    }
-  }
-  if (low == 0) return points.first;
-  final before = points[low - 1];
-  final after = points[low];
-  return (distanceKm - before.distanceKm).abs() <=
-          (after.distanceKm - distanceKm).abs()
-      ? before
-      : after;
+          .clamp(0.0, 1.0)
+          .toDouble();
+  final closestX = startPoint.x + fraction * segmentX;
+  final closestY = startPoint.y + fraction * segmentY;
+  return (
+    distanceM: math.sqrt(closestX * closestX + closestY * closestY),
+    fraction: fraction,
+  );
 }
 
 double _haversineDistanceM(

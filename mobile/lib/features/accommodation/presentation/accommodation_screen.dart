@@ -5,6 +5,7 @@ import '../../../core/links/external_url_launcher.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../map/presentation/map_screen.dart';
 import '../../stages/domain/stage.dart';
 import '../domain/lodging.dart';
 import 'accommodation_controller.dart';
@@ -162,7 +163,6 @@ class _LodgingCard extends ConsumerWidget {
     final whatsapp = lodging.whatsapp?.trim();
     final email = lodging.email?.trim();
     final bookingUri = lodging.bookingUri;
-    final mapsUri = lodging.mapsUri;
     final facts = <_LodgingFactData>[
       if (_formatPrice(lodging, l10n) case final price?)
         _LodgingFactData(
@@ -311,12 +311,16 @@ class _LodgingCard extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: 16),
-            if (mapsUri != null) ...[
+            if (lodging.location != null) ...[
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   key: ValueKey('map-lodging-${lodging.id}'),
-                  onPressed: () => _openExternal(context, ref, mapsUri),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => MapScreen(initialLodging: lodging),
+                    ),
+                  ),
                   icon: const Icon(Icons.map_outlined),
                   label: Text(l10n.t('View on map')),
                 ),
@@ -524,7 +528,7 @@ String? _formatPrice(Lodging lodging, AppLocalizations l10n) {
 String _formatEuro(double minimum, double? maximum, AppLocalizations l10n) {
   final low = _formatNumber(minimum, l10n);
   final high = maximum == null ? null : _formatNumber(maximum, l10n);
-  if (l10n.locale.languageCode == 'de' || l10n.locale.languageCode == 'es') {
+  if (_usesPostfixedEuro(l10n.locale.languageCode)) {
     return '${high == null ? low : '$low–$high'}\u00a0€';
   }
   return high == null ? '€$low' : '€$low–€$high';
@@ -534,7 +538,10 @@ String _formatNumber(double value, AppLocalizations l10n) {
   final amount = value == value.roundToDouble()
       ? value.toStringAsFixed(0)
       : value.toStringAsFixed(2);
-  return l10n.locale.languageCode == 'de' || l10n.locale.languageCode == 'es'
+  return _usesPostfixedEuro(l10n.locale.languageCode)
       ? amount.replaceFirst('.', ',')
       : amount;
 }
+
+bool _usesPostfixedEuro(String languageCode) =>
+    const {'de', 'es', 'it', 'fr'}.contains(languageCode);

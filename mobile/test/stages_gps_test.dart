@@ -1,3 +1,5 @@
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,15 +20,19 @@ void main() {
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(800, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
+      final semanticsHandle = tester.ensureSemantics();
+      var locationReadCount = 0;
 
       await tester.pumpWidget(
         _GpsTestApp(
           location: const DeviceLocation(
-            latitude: _gpsRouteLatitude,
+            latitude: _gpsRouteLatitude + _gpsLateralOffset,
             longitude:
-                _gpsRouteStartLongitude + _selectedStageIndex * _gpsRouteStep,
+                _gpsRouteStartLongitude +
+                _forwardLocationDistanceKm * _gpsRoutePointStep,
             accuracyM: 5,
           ),
+          onLocationRead: () => locationReadCount++,
         ),
       );
       await tester.pumpAndSettle();
@@ -34,6 +40,16 @@ void main() {
       final gpsButton = find.byKey(const ValueKey('stage-gps-locate'));
       await tester.ensureVisible(gpsButton);
       await tester.pumpAndSettle();
+      final firstMarker = find.byKey(
+        const ValueKey('stage-marker-gps-stage-0'),
+      );
+      expect(
+        tester.getCenter(gpsButton).dx,
+        closeTo(tester.getCenter(firstMarker).dx, 0.01),
+      );
+      expect(find.text('Find my stage'), findsNothing);
+      expect(tester.widget<IconButton>(gpsButton).tooltip, 'Find my stage');
+      _expectGpsToggleState(tester, gpsButton, isToggled: false);
 
       final selectedCard = find.byKey(
         const ValueKey('stage-card-gps-stage-24'),
@@ -47,6 +63,7 @@ void main() {
       await tester.tap(gpsButton);
       await tester.pumpAndSettle();
 
+      expect(locationReadCount, 1);
       expect(scrollController.offset, greaterThan(offsetBeforeGps));
       expect(tester.getTopLeft(selectedCard).dy, greaterThanOrEqualTo(0));
       expect(tester.getBottomLeft(selectedCard).dy, lessThanOrEqualTo(900));
@@ -61,9 +78,87 @@ void main() {
         (selectedMarker.decoration! as BoxDecoration).color,
         const Color(0xFF1565C0),
       );
-      expect(find.text('Nearby stage: GPS stage 24'), findsOneWidget);
+      expect(find.textContaining('Nearby stage'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('stage-scroll-top')));
+      await tester.pumpAndSettle();
+      expect(gpsButton, findsOneWidget);
+      _expectGpsToggleState(tester, gpsButton, isToggled: true);
+      await tester.tap(gpsButton);
+      await tester.pumpAndSettle();
+
+      expect(locationReadCount, 1);
+      _expectGpsToggleState(tester, gpsButton, isToggled: false);
+      expect(tester.widget<Material>(selectedCard).color, Colors.white);
+      expect(
+        (tester
+                    .widget<Container>(
+                      find.byKey(const ValueKey('stage-marker-gps-stage-24')),
+                    )
+                    .decoration!
+                as BoxDecoration)
+            .color,
+        const Color(0xFF17201B),
+      );
+      semanticsHandle.dispose();
     },
   );
+
+  testWidgets('GPS selects the destination of a mid-leg position in reverse', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _GpsTestApp(
+        location: const DeviceLocation(
+          latitude: _gpsRouteLatitude + _gpsLateralOffset,
+          longitude:
+              _gpsRouteStartLongitude +
+              _reverseLocationDistanceKm * _gpsRoutePointStep,
+          accuracyM: 5,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('reverse-trail-direction')));
+    await tester.pumpAndSettle();
+
+    final gpsButton = find.byKey(const ValueKey('stage-gps-locate'));
+    await tester.ensureVisible(gpsButton);
+    await tester.pumpAndSettle();
+    final selectedCard = find.byKey(const ValueKey('stage-card-gps-stage-3'));
+    final adjacentCard = find.byKey(const ValueKey('stage-card-gps-stage-4'));
+    final scrollController = tester
+        .widget<CustomScrollView>(find.byType(CustomScrollView))
+        .controller!;
+    final offsetBeforeGps = scrollController.offset;
+    expect(tester.getTopLeft(selectedCard).dy, greaterThan(900));
+
+    await tester.tap(gpsButton);
+    await tester.pumpAndSettle();
+
+    expect(scrollController.offset, greaterThan(offsetBeforeGps));
+    expect(tester.getTopLeft(selectedCard).dy, greaterThanOrEqualTo(0));
+    expect(tester.getBottomLeft(selectedCard).dy, lessThanOrEqualTo(900));
+    expect(
+      tester.widget<Material>(selectedCard).color,
+      const Color(0xFFE8F1FC),
+    );
+    expect(tester.widget<Material>(adjacentCard).color, Colors.white);
+    expect(
+      (tester
+                  .widget<Container>(
+                    find.byKey(const ValueKey('stage-marker-gps-stage-3')),
+                  )
+                  .decoration!
+              as BoxDecoration)
+          .color,
+      const Color(0xFF1565C0),
+    );
+  });
 
   testWidgets(
     'GPS reports an off-trail location without highlighting a stage',
@@ -77,7 +172,8 @@ void main() {
           location: const DeviceLocation(
             latitude: _gpsRouteLatitude + 0.01,
             longitude:
-                _gpsRouteStartLongitude + _selectedStageIndex * _gpsRouteStep,
+                _gpsRouteStartLongitude +
+                _forwardLocationDistanceKm * _gpsRoutePointStep,
             accuracyM: 5,
           ),
         ),
@@ -106,16 +202,24 @@ void main() {
 }
 
 class _GpsTestApp extends StatelessWidget {
-  const _GpsTestApp({required this.location, this.locale = const Locale('en')});
+  const _GpsTestApp({
+    required this.location,
+    this.locale = const Locale('en'),
+    this.onLocationRead,
+  });
 
   final DeviceLocation location;
   final Locale locale;
+  final VoidCallback? onLocationRead;
 
   @override
   Widget build(BuildContext context) {
     return ProviderScope(
       overrides: [
-        deviceLocationReaderProvider.overrideWithValue(() async => location),
+        deviceLocationReaderProvider.overrideWithValue(() async {
+          onLocationRead?.call();
+          return location;
+        }),
         elevationProvider.overrideWith(_GpsElevationController.new),
         stagesProvider.overrideWith(_GpsStagesController.new),
         offlineMapProvider.overrideWith(_GpsOfflineMapController.new),
@@ -138,14 +242,14 @@ class _GpsTestApp extends StatelessWidget {
 class _GpsElevationController extends ElevationController {
   @override
   Future<List<RoutePoint>> build() async => List.generate(
-    _gpsStageCount,
+    _gpsRoutePointCount,
     (index) => RoutePoint(
       pointIndex: index,
       lat: _gpsRouteLatitude,
-      lng: _gpsRouteStartLongitude + index * _gpsRouteStep,
+      lng: _gpsRouteStartLongitude + index * _gpsRoutePointStep,
       altitudeM: index * 10,
       distanceKm: index.toDouble(),
-      reverseDistanceKm: (_gpsStageCount - 1 - index).toDouble(),
+      reverseDistanceKm: (_gpsTotalDistanceKm - index).toDouble(),
     ),
   );
 }
@@ -158,8 +262,8 @@ class _GpsStagesController extends StagesController {
       id: 'gps-stage-$index',
       sequence: _gpsStageCount - index,
       name: 'GPS stage $index',
-      accumulatedDistanceKm: index.toDouble(),
-      segmentLengthKm: index == 0 ? 0 : 1,
+      accumulatedDistanceKm: (index * _gpsStageSpacingKm).toDouble(),
+      segmentLengthKm: index == 0 ? 0 : _gpsStageSpacingKm.toDouble(),
       altitudeM: index * 10,
       services: const {},
     ),
@@ -172,8 +276,35 @@ class _GpsOfflineMapController extends OfflineMapController {
       const OfflineMapState.notDownloaded();
 }
 
+void _expectGpsToggleState(
+  WidgetTester tester,
+  Finder gpsButton, {
+  required bool isToggled,
+}) {
+  var semantics = tester.getSemantics(gpsButton);
+  while (semantics.flagsCollection.isToggled == Tristate.none &&
+      semantics.parent != null) {
+    semantics = semantics.parent!;
+  }
+  expect(
+    semantics.flagsCollection.isToggled,
+    isNot(Tristate.none),
+    reason: 'GPS button should expose toggle semantics',
+  );
+  expect(
+    semantics.flagsCollection.isToggled == Tristate.isTrue,
+    isToggled,
+    reason: 'GPS button toggle state',
+  );
+}
+
 const _gpsRouteLatitude = 35.0;
 const _gpsRouteStartLongitude = 33.0;
-const _gpsRouteStep = 0.001;
+const _gpsRoutePointStep = 0.0001;
+const _gpsLateralOffset = 0.00002;
 const _gpsStageCount = 28;
-const _selectedStageIndex = 24;
+const _gpsStageSpacingKm = 10;
+const _gpsTotalDistanceKm = (_gpsStageCount - 1) * _gpsStageSpacingKm;
+const _gpsRoutePointCount = _gpsTotalDistanceKm + 1;
+const _forwardLocationDistanceKm = 234.0;
+const _reverseLocationDistanceKm = 36.0;

@@ -849,7 +849,10 @@ void main() {
                   checkInTime: '14:00',
                   checkOutTime: '11:00',
                   website: 'https://booking.example.com/forest-inn',
-                  googleMapsUrl: 'https://maps.example.com/forest-inn',
+                  location: LodgingLocation(
+                    latitude: 34.915,
+                    longitude: 32.845,
+                  ),
                 ),
               ],
             }),
@@ -872,7 +875,8 @@ void main() {
     expect(booking, findsOneWidget);
     expect(find.text('Start point'), findsOneWidget);
     expect(find.text('0.0 km'), findsNothing);
-    expect(find.text('View accommodation'), findsOneWidget);
+    expect(find.text('View places to stay'), findsOneWidget);
+    expect(find.text('View accommodation'), findsNothing);
     expect(find.text('Coming soon'), findsNothing);
 
     await tester.tap(booking);
@@ -884,6 +888,24 @@ void main() {
     expect(find.text('Forest Inn'), findsOneWidget);
     expect(find.textContaining('Platres'), findsOneWidget);
     expect(find.text('0.4 km'), findsOneWidget);
+
+    final map = find.byKey(const ValueKey('map-lodging-forest-inn'));
+    await tester.scrollUntilVisible(
+      map,
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(map);
+    await tester.pumpAndSettle();
+
+    final mapScreen = tester.widget<MapScreen>(find.byType(MapScreen));
+    expect(mapScreen.initialLodging?.id, 'forest-inn');
+    expect(mapScreen.initialLodging?.location?.latitude, 34.915);
+    expect(mapScreen.initialLodging?.location?.longitude, 32.845);
+    expect(launchedUris, isEmpty);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
 
     final book = find.byKey(const ValueKey('book-lodging-forest-inn'));
     await tester.scrollUntilVisible(
@@ -911,6 +933,7 @@ void main() {
         stageId: 'stage-without-link',
         name: 'Mountain Shelter',
         website: 'not-a-valid-url',
+        googleMapsUrl: 'https://maps.example.com/mountain-shelter',
         checkInTime: '00:00',
         checkOutTime: '00:00',
       ),
@@ -929,6 +952,11 @@ void main() {
     expect(unavailable, findsOneWidget);
     expect(find.text('Booking link unavailable'), findsOneWidget);
     expect(find.text('00:00'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('map-lodging-mountain-shelter')),
+      findsNothing,
+    );
+    expect(find.text('View on map'), findsNothing);
     expect(tester.widget<FilledButton>(unavailable).onPressed, isNull);
 
     repository.lodgings = const [];
@@ -1097,6 +1125,24 @@ void main() {
     expect(find.text('Einstellungen'), findsOneWidget);
     expect(find.text('Sprache'), findsOneWidget);
     expect(find.text('Maßeinheiten'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('language-setting')));
+    await tester.pumpAndSettle();
+    expect(find.text('Italiano'), findsOneWidget);
+    expect(find.text('Français'), findsOneWidget);
+    await tester.tap(find.text('Italiano'));
+    await tester.pumpAndSettle();
+    expect(find.text('Impostazioni'), findsOneWidget);
+    expect(find.text('Lingua'), findsOneWidget);
+    expect(find.text('Unità di misura'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('language-setting')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Français'));
+    await tester.pumpAndSettle();
+    expect(find.text('Paramètres'), findsOneWidget);
+    expect(find.text('Langue'), findsOneWidget);
+    expect(find.text('Unités de mesure'), findsOneWidget);
   });
 
   testWidgets('elevation stage markers can be shown and hidden', (
@@ -1338,6 +1384,13 @@ class _FakeLodgingRepository implements LodgingRepository {
   final Map<String, List<Lodging>> lodgingsByStage;
 
   @override
+  Future<List<Lodging>> loadForTrail({required String trailId}) async {
+    return lodgingsByStage.values
+        .expand((lodgings) => lodgings)
+        .toList(growable: false);
+  }
+
+  @override
   Future<List<Lodging>> loadForStage({
     required String trailId,
     required String stageId,
@@ -1352,6 +1405,11 @@ class _MutableLodgingRepository implements LodgingRepository {
   List<Lodging> lodgings;
 
   @override
+  Future<List<Lodging>> loadForTrail({required String trailId}) async {
+    return lodgings;
+  }
+
+  @override
   Future<List<Lodging>> loadForStage({
     required String trailId,
     required String stageId,
@@ -1362,6 +1420,11 @@ class _MutableLodgingRepository implements LodgingRepository {
 
 class _RetryLodgingRepository implements LodgingRepository {
   int calls = 0;
+
+  @override
+  Future<List<Lodging>> loadForTrail({required String trailId}) async {
+    return const [];
+  }
 
   @override
   Future<List<Lodging>> loadForStage({

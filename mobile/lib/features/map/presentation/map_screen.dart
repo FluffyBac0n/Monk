@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 
+import '../../../core/links/external_url_launcher.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../accommodation/domain/lodging.dart';
+import '../../accommodation/presentation/accommodation_controller.dart';
 import '../../elevation/domain/route_point.dart';
 import '../../elevation/presentation/elevation_controller.dart';
 import '../../stages/domain/stage.dart';
@@ -24,15 +27,18 @@ const _red = Color(0xFFD14B45);
 const _sand = Color(0xFFF4F2EC);
 const _yellow = Color(0xFFF2C94C);
 const _routeBlue = Color(0xFF1565C0);
+const _accommodationBlue = Color(0xFF0288D1);
 
 class MapScreen extends ConsumerWidget {
   const MapScreen({
     this.initialStageIndex,
+    this.initialLodging,
     this.accessToken = mapboxAccessToken,
     super.key,
-  });
+  }) : assert(initialStageIndex == null || initialLodging == null);
 
   final int? initialStageIndex;
+  final Lodging? initialLodging;
   final String accessToken;
 
   @override
@@ -116,6 +122,7 @@ class MapScreen extends ConsumerWidget {
                       direction: direction,
                       formatter: formatter,
                       initialStageIndex: initialStageIndex,
+                      initialLodging: initialLodging,
                     ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (_, _) => _EmptyRouteState(
@@ -409,13 +416,14 @@ Future<void> _confirmOfflineMapDelete(
   }
 }
 
-class _RouteMap extends StatefulWidget {
+class _RouteMap extends ConsumerStatefulWidget {
   const _RouteMap({
     required this.points,
     required this.stages,
     required this.direction,
     required this.formatter,
     required this.initialStageIndex,
+    required this.initialLodging,
   });
 
   final List<RoutePoint> points;
@@ -423,25 +431,37 @@ class _RouteMap extends StatefulWidget {
   final TrailDirection direction;
   final MeasurementFormatter formatter;
   final int? initialStageIndex;
+  final Lodging? initialLodging;
 
   @override
-  State<_RouteMap> createState() => _RouteMapState();
+  ConsumerState<_RouteMap> createState() => _RouteMapState();
 }
 
-class _RouteMapState extends State<_RouteMap> {
+class _RouteMapState extends ConsumerState<_RouteMap> {
   late final CameraViewportState _initialViewport;
   MapboxMap? _map;
   CircleAnnotationManager? _stageManager;
   PointAnnotationManager? _stageLabelManager;
   Cancelable? _stageTapListener;
   final Map<String, int> _stageIndexByAnnotation = {};
+  CircleAnnotationManager? _lodgingManager;
+  Cancelable? _lodgingTapListener;
+  final Map<String, int> _lodgingIndexByAnnotation = {};
+  List<Lodging> _mappedLodgings = const [];
   int? _selectedStageIndex;
   Point? _selectedStagePoint;
   ScreenCoordinate? _selectedStageScreenPosition;
+  int? _selectedLodgingIndex;
+  Point? _selectedLodgingPoint;
+  ScreenCoordinate? _selectedLodgingScreenPosition;
   bool _locating = false;
   bool _stagesVisible = false;
   bool _stagesExplicitlyHidden = false;
   bool _changingStageVisibility = false;
+  bool _lodgingsVisible = false;
+  bool _changingLodgingVisibility = false;
+  bool _lodgingsLoaded = false;
+  bool _openingLodgingBooking = false;
   bool _initialCameraApplied = false;
   Size? _lastMapSize;
 
@@ -464,6 +484,7 @@ class _RouteMapState extends State<_RouteMap> {
   @override
   void dispose() {
     _stageTapListener?.cancel();
+    _lodgingTapListener?.cancel();
     super.dispose();
   }
 
@@ -476,6 +497,11 @@ class _RouteMapState extends State<_RouteMap> {
   Future<void> _onMapLoaded(MapLoadedEventData _) async {
     if (_initialCameraApplied || !mounted) return;
     _initialCameraApplied = true;
+    final initialLodging = widget.initialLodging;
+    if (initialLodging?.location != null) {
+      await _showInitialLodging(initialLodging!);
+      return;
+    }
     final initialIndex = widget.initialStageIndex;
     if (initialIndex != null &&
         initialIndex >= 0 &&
@@ -484,6 +510,83 @@ class _RouteMapState extends State<_RouteMap> {
       await _selectStage(initialIndex);
     } else {
       await _fitRoute();
+    }
+  }
+
+  Future<void> _showInitialLodging(Lodging lodging) async {
+    final map = _map;
+    final location = lodging.location;
+    if (map == null || location == null) return;
+    final point = Point(
+      coordinates: Position(location.longitude, location.latitude),
+    );
+    setState(() {
+      _mappedLodgings = [lodging];
+      _lodgingsVisible = true;
+      _selectedLodgingIndex = 0;
+      _selectedLodgingPoint = point;
+      _selectedLodgingScreenPosition = null;
+      _selectedStageIndex = null;
+      _selectedStagePoint = null;
+      _selectedStageScreenPosition = null;
+    });
+    await _drawLodgings(map);
+    await map.flyTo(
+      CameraOptions(center: point, zoom: 15, bearing: 0),
+      MapAnimationOptions(duration: 700, startDelay: 0),
+    );
+    await _updateSelectedLodgingPosition();
+    await _hydrateInitialLodgingLayer(lodging);
+  }
+
+  Future<void> _hydrateInitialLodgingLayer(Lodging initialLodging) async {
+    List<Lodging> lodgings;
+    try {
+      lodgings = await ref.read(lodgingsForTrailProvider.future);
+    } catch (_) {
+      if (mounted) ref.invalidate(lodgingsForTrailProvider);
+      return;
+    }
+    if (!mounted) return;
+
+    final lodgingsById = <String, Lodging>{
+      for (final lodging in lodgings)
+        if (lodging.location != null) lodging.id: lodging,
+    };
+    lodgingsById.putIfAbsent(initialLodging.id, () => initialLodging);
+    final mappedLodgings = lodgingsById.values.toList(growable: false);
+    final selectedId = switch (_selectedLodgingIndex) {
+      final index? when index >= 0 && index < _mappedLodgings.length =>
+        _mappedLodgings[index].id,
+      _ => null,
+    };
+    final selectedIndex = selectedId == null
+        ? -1
+        : mappedLodgings.indexWhere((lodging) => lodging.id == selectedId);
+    final selectedLocation = selectedIndex < 0
+        ? null
+        : mappedLodgings[selectedIndex].location;
+
+    setState(() {
+      _mappedLodgings = mappedLodgings;
+      _lodgingsLoaded = true;
+      _selectedLodgingIndex = selectedIndex < 0 ? null : selectedIndex;
+      _selectedLodgingPoint = selectedLocation == null
+          ? null
+          : Point(
+              coordinates: Position(
+                selectedLocation.longitude,
+                selectedLocation.latitude,
+              ),
+            );
+      if (selectedIndex < 0) {
+        _selectedLodgingScreenPosition = null;
+      }
+    });
+    final map = _map;
+    if (_lodgingsVisible && map != null) {
+      await _drawLodgings(map);
+      await _updateSelectedLodgingPosition();
     }
   }
 
@@ -645,6 +748,116 @@ class _RouteMapState extends State<_RouteMap> {
     );
   }
 
+  Future<void> _removeLodgingAnnotations(MapboxMap map) async {
+    _lodgingTapListener?.cancel();
+    _lodgingTapListener = null;
+    final previousManager = _lodgingManager;
+    _lodgingManager = null;
+    _lodgingIndexByAnnotation.clear();
+    if (previousManager != null) {
+      await map.annotations.removeAnnotationManager(previousManager);
+    }
+  }
+
+  Future<void> _drawLodgings(MapboxMap map) async {
+    await _removeLodgingAnnotations(map);
+    if (!_lodgingsVisible || _mappedLodgings.isEmpty) return;
+
+    final manager = await map.annotations.createCircleAnnotationManager();
+    _lodgingManager = manager;
+    final annotations = await manager.createMulti([
+      for (var index = 0; index < _mappedLodgings.length; index++)
+        CircleAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(
+              _mappedLodgings[index].location!.longitude,
+              _mappedLodgings[index].location!.latitude,
+            ),
+          ),
+          circleColor: _accommodationBlue.toARGB32(),
+          circleRadius: index == _selectedLodgingIndex ? 11 : 8,
+          circleStrokeColor: Colors.white.toARGB32(),
+          circleStrokeWidth: index == _selectedLodgingIndex ? 3 : 2,
+          customData: {
+            'lodgingIndex': index,
+            'name': _mappedLodgings[index].name ?? '',
+          },
+        ),
+    ]);
+
+    for (var index = 0; index < annotations.length; index++) {
+      final annotation = annotations[index];
+      if (annotation != null) {
+        _lodgingIndexByAnnotation[annotation.id] = index;
+      }
+    }
+    _lodgingTapListener = manager.tapEvents(
+      onTap: (annotation) {
+        final lodgingIndex = _lodgingIndexByAnnotation[annotation.id];
+        if (lodgingIndex == null || !mounted) return;
+        if (lodgingIndex == _selectedLodgingIndex) {
+          _openSelectedLodgingBooking();
+          return;
+        }
+        _selectLodging(lodgingIndex);
+      },
+    );
+  }
+
+  Future<void> _toggleLodgings() async {
+    final map = _map;
+    if (map == null || _changingLodgingVisibility) return;
+    setState(() => _changingLodgingVisibility = true);
+    try {
+      if (_lodgingsVisible) {
+        setState(() {
+          _lodgingsVisible = false;
+          _selectedLodgingIndex = null;
+          _selectedLodgingPoint = null;
+          _selectedLodgingScreenPosition = null;
+        });
+        await _removeLodgingAnnotations(map);
+        return;
+      }
+
+      if (!_lodgingsLoaded) {
+        final lodgings = await ref.read(lodgingsForTrailProvider.future);
+        if (!mounted) return;
+        _mappedLodgings = lodgings
+            .where((lodging) => lodging.location != null)
+            .toList(growable: false);
+        _lodgingsLoaded = true;
+      }
+      if (_mappedLodgings.isEmpty) {
+        _showMessage('No accommodation locations are available on the map.');
+        return;
+      }
+
+      setState(() => _lodgingsVisible = true);
+      await _drawLodgings(map);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _lodgingsVisible = false;
+          _selectedLodgingIndex = null;
+          _selectedLodgingPoint = null;
+          _selectedLodgingScreenPosition = null;
+        });
+        ref.invalidate(lodgingsForTrailProvider);
+        try {
+          await _removeLodgingAnnotations(map);
+        } catch (_) {
+          // The map layer may already have been removed by the native SDK.
+        }
+        _showMessage('Accommodation locations are currently unavailable.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _changingLodgingVisibility = false);
+      }
+    }
+  }
+
   Future<void> _toggleStages() async {
     final map = _map;
     if (map == null || _changingStageVisibility) return;
@@ -672,12 +885,19 @@ class _RouteMapState extends State<_RouteMap> {
     if (map == null || distance == null) return;
     final routePoint = routePointNearestDistance(widget.points, distance);
     final point = Point(coordinates: Position(routePoint.lng, routePoint.lat));
+    final lodgingWasSelected = _selectedLodgingIndex != null;
     setState(() {
       _selectedStageIndex = stageIndex;
       _selectedStagePoint = point;
       _selectedStageScreenPosition = null;
+      _selectedLodgingIndex = null;
+      _selectedLodgingPoint = null;
+      _selectedLodgingScreenPosition = null;
     });
     await _drawStages(map);
+    if (lodgingWasSelected && _lodgingsVisible) {
+      await _drawLodgings(map);
+    }
     await _updateSelectedStagePosition();
   }
 
@@ -701,6 +921,86 @@ class _RouteMapState extends State<_RouteMap> {
       return;
     }
     setState(() => _selectedStageScreenPosition = position);
+  }
+
+  Future<void> _selectLodging(int lodgingIndex) async {
+    final map = _map;
+    if (map == null ||
+        lodgingIndex < 0 ||
+        lodgingIndex >= _mappedLodgings.length) {
+      return;
+    }
+    final location = _mappedLodgings[lodgingIndex].location;
+    if (location == null) return;
+    final stageWasSelected = _selectedStageIndex != null;
+    final point = Point(
+      coordinates: Position(location.longitude, location.latitude),
+    );
+    setState(() {
+      _selectedLodgingIndex = lodgingIndex;
+      _selectedLodgingPoint = point;
+      _selectedLodgingScreenPosition = null;
+      _selectedStageIndex = null;
+      _selectedStagePoint = null;
+      _selectedStageScreenPosition = null;
+    });
+    if (stageWasSelected) {
+      await _drawStages(map);
+    }
+    await _drawLodgings(map);
+    await _updateSelectedLodgingPosition();
+  }
+
+  Future<void> _clearSelectedLodging() async {
+    setState(() {
+      _selectedLodgingIndex = null;
+      _selectedLodgingPoint = null;
+      _selectedLodgingScreenPosition = null;
+    });
+    final map = _map;
+    if (map != null && _lodgingsVisible) {
+      await _drawLodgings(map);
+    }
+  }
+
+  Future<void> _updateSelectedLodgingPosition() async {
+    if (!_lodgingsVisible) return;
+    final map = _map;
+    final point = _selectedLodgingPoint;
+    if (map == null || point == null) return;
+    final position = await map.pixelForCoordinate(point);
+    if (!mounted || !_lodgingsVisible || point != _selectedLodgingPoint) {
+      return;
+    }
+    setState(() => _selectedLodgingScreenPosition = position);
+  }
+
+  Future<void> _openSelectedLodgingBooking() async {
+    final lodgingIndex = _selectedLodgingIndex;
+    if (lodgingIndex == null ||
+        lodgingIndex < 0 ||
+        lodgingIndex >= _mappedLodgings.length ||
+        _openingLodgingBooking) {
+      return;
+    }
+    final bookingUri = _mappedLodgings[lodgingIndex].bookingUri;
+    if (bookingUri == null) {
+      _showMessage('Booking link unavailable');
+      return;
+    }
+
+    setState(() => _openingLodgingBooking = true);
+    var launched = false;
+    try {
+      launched = await ref.read(externalUrlLauncherProvider)(bookingUri);
+    } catch (_) {
+      launched = false;
+    } finally {
+      if (mounted) setState(() => _openingLodgingBooking = false);
+    }
+    if (!launched) {
+      _showMessage('Could not open this link.');
+    }
   }
 
   void _openSelectedStage() {
@@ -832,10 +1132,16 @@ class _RouteMapState extends State<_RouteMap> {
         if (_lastMapSize != constraints.biggest) {
           _lastMapSize = constraints.biggest;
           final selectedStageIndex = _selectedStageIndex;
-          if (selectedStageIndex != null && !_stagesExplicitlyHidden) {
+          final selectedLodgingIndex = _selectedLodgingIndex;
+          if ((selectedStageIndex != null && !_stagesExplicitlyHidden) ||
+              (selectedLodgingIndex != null && _lodgingsVisible)) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && _selectedStageIndex == selectedStageIndex) {
-                _focusStage(selectedStageIndex);
+                if (selectedStageIndex != null) {
+                  _focusStage(selectedStageIndex);
+                } else if (_selectedLodgingIndex == selectedLodgingIndex) {
+                  _updateSelectedLodgingPosition();
+                }
               }
             });
           }
@@ -848,7 +1154,10 @@ class _RouteMapState extends State<_RouteMap> {
               viewport: _initialViewport,
               onMapCreated: _onMapCreated,
               onMapLoadedListener: _onMapLoaded,
-              onMapIdleListener: (_) => _updateSelectedStagePosition(),
+              onMapIdleListener: (_) {
+                _updateSelectedStagePosition();
+                _updateSelectedLodgingPosition();
+              },
             ),
             if (_selectedStageIndex != null &&
                 _selectedStageScreenPosition != null)
@@ -864,11 +1173,24 @@ class _RouteMapState extends State<_RouteMap> {
                 onTap: _openSelectedStage,
                 onClose: _clearSelectedStage,
               ),
-            const Positioned(
+            if (_selectedLodgingIndex != null &&
+                _selectedLodgingScreenPosition != null)
+              _LodgingSummaryPopup(
+                lodging: _mappedLodgings[_selectedLodgingIndex!],
+                formatter: widget.formatter,
+                mapPosition: _selectedLodgingScreenPosition!,
+                mapSize: constraints.biggest,
+                onTap: _openSelectedLodgingBooking,
+                onClose: _clearSelectedLodging,
+              ),
+            Positioned(
               top: 36,
               left: 12,
               right: 68,
-              child: Align(alignment: Alignment.topLeft, child: _MapLegend()),
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: _MapLegend(showAccommodation: _lodgingsVisible),
+              ),
             ),
             Positioned(
               left: 12,
@@ -913,6 +1235,22 @@ class _RouteMapState extends State<_RouteMap> {
               child: Column(
                 children: [
                   _MapControl(
+                    key: const ValueKey('map-accommodation-toggle'),
+                    tooltip: context.l10n.t(
+                      _lodgingsVisible
+                          ? 'Hide accommodation'
+                          : 'Show accommodation',
+                    ),
+                    icon: _changingLodgingVisibility
+                        ? null
+                        : _lodgingsVisible
+                        ? Icons.hotel_rounded
+                        : Icons.hotel_outlined,
+                    isSelected: _lodgingsVisible,
+                    onPressed: _toggleLodgings,
+                  ),
+                  const SizedBox(height: 10),
+                  _MapControl(
                     key: const ValueKey('map-stage-toggle'),
                     tooltip: context.l10n.t(
                       _stagesVisible ? 'Hide stages' : 'Show stages',
@@ -947,7 +1285,9 @@ class _RouteMapState extends State<_RouteMap> {
 }
 
 class _MapLegend extends StatelessWidget {
-  const _MapLegend();
+  const _MapLegend({required this.showAccommodation});
+
+  final bool showAccommodation;
 
   @override
   Widget build(BuildContext context) {
@@ -980,6 +1320,12 @@ class _MapLegend extends StatelessWidget {
               selected: true,
             ),
             _MapLegendItem(color: _yellow, label: l10n.t('Other stages')),
+            if (showAccommodation)
+              _MapLegendItem(
+                color: _accommodationBlue,
+                label: l10n.t('Accommodation'),
+                selected: true,
+              ),
           ],
         ),
       ),
@@ -1138,33 +1484,184 @@ class _StageSummaryPopup extends StatelessWidget {
   }
 }
 
+class _LodgingSummaryPopup extends StatelessWidget {
+  const _LodgingSummaryPopup({
+    required this.lodging,
+    required this.formatter,
+    required this.mapPosition,
+    required this.mapSize,
+    required this.onTap,
+    required this.onClose,
+  });
+
+  static const double _width = 244;
+  static const double _height = 76;
+
+  final Lodging lodging;
+  final MeasurementFormatter formatter;
+  final ScreenCoordinate mapPosition;
+  final Size mapSize;
+  final VoidCallback onTap;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final left = (mapPosition.x - _width / 2).clamp(
+      8.0,
+      mapSize.width - _width - 8,
+    );
+    final top = (mapPosition.y - _height - 12).clamp(
+      8.0,
+      mapSize.height - _height - 8,
+    );
+    return Positioned(
+      left: left,
+      top: top,
+      width: _width,
+      height: _height,
+      child: LodgingMapSummaryCard(
+        lodging: lodging,
+        formatter: formatter,
+        onTap: onTap,
+        onClose: onClose,
+      ),
+    );
+  }
+}
+
+class LodgingMapSummaryCard extends StatelessWidget {
+  const LodgingMapSummaryCard({
+    required this.lodging,
+    required this.formatter,
+    required this.onTap,
+    required this.onClose,
+    super.key,
+  });
+
+  final Lodging lodging;
+  final MeasurementFormatter formatter;
+  final VoidCallback onTap;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final name = lodging.name?.trim();
+    final type = lodging.type?.trim();
+    final village = lodging.village?.trim();
+    final bookingAvailable = lodging.bookingUri != null;
+    final details = <String>[
+      if (type != null && type.isNotEmpty) l10n.t(type),
+      if (village != null && village.isNotEmpty) l10n.t(village),
+      if (lodging.distanceFromTrailKm case final distance?)
+        formatter.distance(distance),
+      if (!bookingAvailable) l10n.t('Booking link unavailable'),
+    ].join(' · ');
+
+    return Material(
+      color: Colors.white,
+      elevation: 5,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: ValueKey('lodging-map-summary-${lodging.id}'),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(11, 7, 3, 7),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.hotel_rounded,
+                size: 19,
+                color: _accommodationBlue,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name == null || name.isEmpty
+                          ? l10n.t('Accommodation')
+                          : l10n.t(name),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: _ink,
+                      ),
+                    ),
+                    if (details.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        details,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Icon(
+                bookingAvailable
+                    ? Icons.open_in_new_rounded
+                    : Icons.link_off_rounded,
+                size: 16,
+                color: bookingAvailable ? _accommodationBlue : Colors.black38,
+              ),
+              IconButton(
+                key: ValueKey('lodging-map-summary-close-${lodging.id}'),
+                tooltip: l10n.t('Close accommodation summary'),
+                visualDensity: VisualDensity.compact,
+                onPressed: onClose,
+                icon: const Icon(Icons.close_rounded, size: 17),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MapControl extends StatelessWidget {
   const _MapControl({
     super.key,
     required this.tooltip,
     required this.icon,
     required this.onPressed,
+    this.isSelected = false,
   });
 
   final String tooltip;
   final IconData? icon;
   final VoidCallback onPressed;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: isSelected ? _accommodationBlue : Colors.white,
       elevation: 3,
       shape: const CircleBorder(),
       child: IconButton(
         tooltip: tooltip,
         onPressed: onPressed,
         icon: icon == null
-            ? const SizedBox.square(
+            ? SizedBox.square(
                 dimension: 20,
-                child: CircularProgressIndicator(strokeWidth: 2.5),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: isSelected ? Colors.white : _ink,
+                ),
               )
-            : Icon(icon, color: _ink),
+            : Icon(icon, color: isSelected ? Colors.white : _ink),
       ),
     );
   }

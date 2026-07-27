@@ -18,6 +18,7 @@ void main() {
         'priceMinEur': 75,
         'priceMaxEur': 95.5,
         'distanceFromTrailKm': 0.4,
+        'location': {'latitude': 34.915, 'longitude': 32.845},
         'address': '1 Mountain Road',
         'contact': {
           'phone': '+357 99123456',
@@ -45,6 +46,8 @@ void main() {
       expect(lodging.priceMinEur, 75);
       expect(lodging.priceMaxEur, 95.5);
       expect(lodging.distanceFromTrailKm, 0.4);
+      expect(lodging.location?.latitude, 34.915);
+      expect(lodging.location?.longitude, 32.845);
       expect(lodging.address, '1 Mountain Road');
       expect(lodging.phone, '+357 99123456');
       expect(lodging.whatsapp, '+357 99123456');
@@ -78,6 +81,40 @@ void main() {
       expect(lodging.phone, isNull);
       expect(lodging.bookingUri, isNull);
       expect(lodging.mapsUri, isNull);
+    });
+
+    test('accepts finite string coordinates within geographic bounds', () {
+      final lodging = Lodging.fromFirestore('string-location', {
+        'location': {'latitude': ' 34.915 ', 'longitude': '32.845'},
+      });
+
+      expect(
+        lodging.location,
+        isA<LodgingLocation>()
+            .having((location) => location.latitude, 'latitude', 34.915)
+            .having((location) => location.longitude, 'longitude', 32.845),
+      );
+    });
+
+    test('rejects incomplete, non-finite, and out-of-range locations', () {
+      final invalidLocations = <Object?>[
+        null,
+        '34.9, 32.8',
+        {'latitude': 34.9},
+        {'latitude': double.nan, 'longitude': 32.8},
+        {'latitude': double.infinity, 'longitude': 32.8},
+        {'latitude': 90.01, 'longitude': 32.8},
+        {'latitude': -90.01, 'longitude': 32.8},
+        {'latitude': 34.9, 'longitude': 180.01},
+        {'latitude': 34.9, 'longitude': -180.01},
+      ];
+
+      for (final location in invalidLocations) {
+        final lodging = Lodging.fromFirestore('invalid-location', {
+          'location': location,
+        });
+        expect(lodging.location, isNull, reason: '$location');
+      }
     });
 
     test('ignores non-finite numeric values', () {
@@ -156,11 +193,31 @@ void main() {
     expect(repository.trailId, 'cyprus-e4');
     expect(repository.stageId, '42-forest-stage');
   });
+
+  test('trail provider delegates through the injectable repository', () async {
+    final repository = _RecordingLodgingRepository();
+    final container = ProviderContainer(
+      overrides: [lodgingRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+
+    final lodgings = await container.read(lodgingsForTrailProvider.future);
+
+    expect(lodgings.single.id, 'trail-result');
+    expect(repository.trailId, 'cyprus-e4');
+    expect(repository.stageId, isNull);
+  });
 }
 
 class _RecordingLodgingRepository implements LodgingRepository {
   String? trailId;
   String? stageId;
+
+  @override
+  Future<List<Lodging>> loadForTrail({required String trailId}) async {
+    this.trailId = trailId;
+    return const [Lodging(id: 'trail-result')];
+  }
 
   @override
   Future<List<Lodging>> loadForStage({

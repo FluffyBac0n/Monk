@@ -1,8 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monk_mobile/core/localization/app_localizations.dart';
+import 'package:monk_mobile/core/settings/app_settings.dart';
 
 void main() {
+  test('Italian and French are supported app languages', () {
+    expect(AppLanguage.fromCode('it'), AppLanguage.italian);
+    expect(AppLanguage.fromCode('fr'), AppLanguage.french);
+    expect(
+      AppLocalizations.supportedLocales.map((locale) => locale.languageCode),
+      containsAll(<String>['en', 'de', 'es', 'it', 'fr']),
+    );
+  });
+
+  test('every translated locale covers the complete UI catalog', () {
+    final referenceKeys = AppLocalizations.translationKeys(const Locale('de'));
+
+    for (final locale in const [Locale('es'), Locale('it'), Locale('fr')]) {
+      final translatedKeys = AppLocalizations.translationKeys(locale);
+      expect(
+        translatedKeys,
+        referenceKeys,
+        reason: '${locale.languageCode} should not fall back to English',
+      );
+    }
+  });
+
+  test('Italian and French localize representative app flows', () {
+    const italian = AppLocalizations(Locale('it'));
+    const french = AppLocalizations(Locale('fr'));
+
+    expect(italian.t('Settings'), 'Impostazioni');
+    expect(italian.t('Explore trails'), 'Esplora i sentieri');
+    expect(italian.t('Stage'), 'Tappa');
+    expect(italian.t('Accommodation'), 'Alloggi');
+    expect(italian.t('Offline map'), 'Mappa offline');
+    expect(italian.t('Find my stage'), 'Trova la mia tappa');
+
+    expect(french.t('Settings'), 'Paramètres');
+    expect(french.t('Explore trails'), 'Explorer les sentiers');
+    expect(french.t('Stage'), 'Étape');
+    expect(french.t('Accommodation'), 'Hébergements');
+    expect(french.t('Offline map'), 'Carte hors ligne');
+    expect(french.t('Find my stage'), 'Trouver mon étape');
+  });
+
   test('new offline, stage, and map copy is localized', () {
     const german = AppLocalizations(Locale('de'));
     const spanish = AppLocalizations(Locale('es'));
@@ -19,7 +61,23 @@ void main() {
     expect(german.t('Offline map'), 'Offline-Karte');
     expect(german.t('Map unavailable'), 'Karte nicht verfügbar');
     expect(german.t('Accommodation'), 'Unterkunft');
+    expect(german.t('Show accommodation'), 'Unterkünfte anzeigen');
+    expect(german.t('Hide accommodation'), 'Unterkünfte ausblenden');
+    expect(
+      german.t('Close accommodation summary'),
+      'Unterkunftsübersicht schließen',
+    );
+    expect(
+      german.t('Accommodation locations are currently unavailable.'),
+      'Unterkunftsstandorte sind derzeit nicht verfügbar.',
+    );
+    expect(
+      german.t('No accommodation locations are available on the map.'),
+      'Auf der Karte sind keine Unterkunftsstandorte verfügbar.',
+    );
     expect(german.t('Book accommodation'), 'Unterkunft buchen');
+    expect(german.t('View places to stay'), 'Unterkünfte ansehen');
+    expect(german.t('View on map'), 'Auf Karte anzeigen');
     expect(german.t('April - October'), 'April–Oktober');
     expect(
       german.t('Booking link unavailable'),
@@ -72,7 +130,6 @@ void main() {
       german.t('You are not on the trail.'),
       'Du befindest dich nicht auf dem Weg.',
     );
-    expect(german.nearbyStage('Platres'), 'Etappe in der Nähe: Platres');
 
     expect(spanish.t('EUROTREX'), 'EUROTREX');
     expect(
@@ -86,7 +143,23 @@ void main() {
     expect(spanish.t('Offline map'), 'Mapa sin conexión');
     expect(spanish.t('Map unavailable'), 'Mapa no disponible');
     expect(spanish.t('Accommodation'), 'Alojamiento');
+    expect(spanish.t('Show accommodation'), 'Mostrar alojamientos');
+    expect(spanish.t('Hide accommodation'), 'Ocultar alojamientos');
+    expect(
+      spanish.t('Close accommodation summary'),
+      'Cerrar resumen del alojamiento',
+    );
+    expect(
+      spanish.t('Accommodation locations are currently unavailable.'),
+      'Las ubicaciones de alojamientos no están disponibles en este momento.',
+    );
+    expect(
+      spanish.t('No accommodation locations are available on the map.'),
+      'No hay ubicaciones de alojamientos disponibles en el mapa.',
+    );
     expect(spanish.t('Book accommodation'), 'Reservar alojamiento');
+    expect(spanish.t('View places to stay'), 'Ver alojamientos');
+    expect(spanish.t('View on map'), 'Ver en el mapa');
     expect(spanish.t('April - October'), 'abril–octubre');
     expect(
       spanish.t('Booking link unavailable'),
@@ -139,6 +212,5 @@ void main() {
     expect(spanish.t('Version'), 'Versión');
     expect(spanish.t('Find my stage'), 'Encontrar mi etapa');
     expect(spanish.t('You are not on the trail.'), 'No estás en la ruta.');
-    expect(spanish.nearbyStage('Platres'), 'Etapa cercana: Platres');
   });
 }

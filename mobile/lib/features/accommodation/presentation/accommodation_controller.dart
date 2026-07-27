@@ -13,6 +13,14 @@ final lodgingRepositoryProvider = Provider<LodgingRepository>((ref) {
   );
 });
 
+final lodgingsForTrailProvider = FutureProvider.autoDispose<List<Lodging>>((
+  ref,
+) {
+  return ref
+      .watch(lodgingRepositoryProvider)
+      .loadForTrail(trailId: cyprusE4TrailId);
+});
+
 final lodgingsForStageProvider = FutureProvider.autoDispose
     .family<List<Lodging>, String>((ref, stageId) {
       return ref

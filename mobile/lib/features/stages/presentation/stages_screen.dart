@@ -31,6 +31,11 @@ const _sand = Color(0xFFF4F2EC);
 const _yellow = Color(0xFFF2C94C);
 const _bookingBlue = Color(0xFF1565C0);
 const _filterBlueTeal = Color(0xFF356F7A);
+const _timelineLineColor = Color(0xFFB9BDB8);
+const _timelineLeftInset = 12.0;
+const _timelineGutterWidth = 84.0;
+const _timelineLineColumnWidth = 20.0;
+const _gpsButtonSize = 40.0;
 const _filterServiceKeys = [
   'lodging',
   'tent',
@@ -144,6 +149,14 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
     ).showSnackBar(SnackBar(content: Text(context.l10n.t(message))));
   }
 
+  Future<void> _toggleGpsStage() async {
+    if (_gpsSelectedStageId != null) {
+      setState(() => _gpsSelectedStageId = null);
+      return;
+    }
+    await _findMyStage();
+  }
+
   Future<void> _findMyStage() async {
     if (_isLocatingStage) return;
     setState(() {
@@ -190,7 +203,8 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
         longitude: location.longitude,
         locationAccuracyM: location.accuracyM,
         routePoints: routePoints,
-        stages: orderedStages,
+        stages: sourceStages,
+        direction: direction,
       );
       if (match == null) {
         _showMessage('You are not on the trail.');
@@ -217,11 +231,6 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
           alignment: 0.16,
           duration: const Duration(milliseconds: 550),
           curve: Curves.easeOutCubic,
-        );
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.nearbyStage(stage.name))),
         );
       }
     } on LocationServicesDisabledException {
@@ -274,7 +283,6 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
               stage.accumulatedDistanceKm!,
               totalDistanceKm,
             ),
-      isFirst: filteredIndex == 0,
       isLast: filteredIndex == filteredItems.length - 1,
       isTrailStart: orderedIndex == 0,
       isTrailEnd: orderedIndex == orderedItems.length - 1,
@@ -336,13 +344,55 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 20, 12),
+                padding: const EdgeInsets.fromLTRB(
+                  _timelineLeftInset,
+                  16,
+                  20,
+                  0,
+                ),
                 child: Align(
-                  alignment: Alignment.centerRight,
-                  child: _GpsStageButton(
-                    isLocating: _isLocatingStage,
-                    hasSelection: _gpsSelectedStageId != null,
-                    onPressed: _findMyStage,
+                  alignment: Alignment.centerLeft,
+                  child: SizedBox(
+                    width: _timelineGutterWidth,
+                    height: _gpsButtonSize + 12,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Expanded(child: SizedBox.shrink()),
+                        SizedBox(
+                          width: _timelineLineColumnWidth,
+                          child: Column(
+                            children: [
+                              SizedBox(
+                                width: _timelineLineColumnWidth,
+                                height: _gpsButtonSize,
+                                child: OverflowBox(
+                                  minWidth: _gpsButtonSize,
+                                  maxWidth: _gpsButtonSize,
+                                  minHeight: _gpsButtonSize,
+                                  maxHeight: _gpsButtonSize,
+                                  child: _GpsStageButton(
+                                    isLocating: _isLocatingStage,
+                                    hasSelection: _gpsSelectedStageId != null,
+                                    onPressed: _toggleGpsStage,
+                                  ),
+                                ),
+                              ),
+                              const Expanded(
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 2,
+                                    child: ColoredBox(
+                                      color: _timelineLineColor,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -376,7 +426,12 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                         ),
                       )
                     : SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 20, 40),
+                        padding: const EdgeInsets.fromLTRB(
+                          _timelineLeftInset,
+                          0,
+                          20,
+                          40,
+                        ),
                         sliver: SliverToBoxAdapter(
                           child: Column(
                             children: [
@@ -429,25 +484,24 @@ class _GpsStageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton.icon(
-      key: const ValueKey('stage-gps-locate'),
-      onPressed: isLocating ? null : onPressed,
-      style: FilledButton.styleFrom(
-        backgroundColor: hasSelection ? _bookingBlue : _filterBlueTeal,
-        foregroundColor: Colors.white,
-        disabledBackgroundColor: _filterBlueTeal.withValues(alpha: 0.55),
-        disabledForegroundColor: Colors.white70,
-        minimumSize: const Size(0, 38),
-        padding: const EdgeInsets.symmetric(horizontal: 13),
-        visualDensity: VisualDensity.compact,
-      ),
-      icon: Icon(
-        isLocating ? Icons.hourglass_top_rounded : Icons.gps_fixed_rounded,
-        size: 18,
-      ),
-      label: Text(
-        context.l10n.t('Find my stage'),
-        style: const TextStyle(fontWeight: FontWeight.w800),
+    return Semantics(
+      toggled: hasSelection,
+      child: IconButton.filled(
+        key: const ValueKey('stage-gps-locate'),
+        tooltip: context.l10n.t('Find my stage'),
+        onPressed: isLocating ? null : onPressed,
+        style: IconButton.styleFrom(
+          backgroundColor: hasSelection ? _bookingBlue : _filterBlueTeal,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: _filterBlueTeal.withValues(alpha: 0.55),
+          disabledForegroundColor: Colors.white70,
+          fixedSize: const Size.square(_gpsButtonSize),
+          padding: EdgeInsets.zero,
+        ),
+        icon: Icon(
+          isLocating ? Icons.hourglass_top_rounded : Icons.gps_fixed_rounded,
+          size: 20,
+        ),
       ),
     );
   }
@@ -864,7 +918,6 @@ class _StageTimelineRow extends StatelessWidget {
     required this.descentM,
     required this.segmentLengthKm,
     required this.distanceKm,
-    required this.isFirst,
     required this.isLast,
     required this.isTrailStart,
     required this.isTrailEnd,
@@ -879,7 +932,6 @@ class _StageTimelineRow extends StatelessWidget {
   final double? descentM;
   final double? segmentLengthKm;
   final double? distanceKm;
-  final bool isFirst;
   final bool isLast;
   final bool isTrailStart;
   final bool isTrailEnd;
@@ -958,22 +1010,17 @@ class _StageTimelineRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(
-            width: 84,
+            width: _timelineGutterWidth,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(child: Center(child: sideContent)),
                 SizedBox(
-                  width: 20,
+                  width: _timelineLineColumnWidth,
                   child: Column(
                     children: [
                       Expanded(
-                        child: Container(
-                          width: 2,
-                          color: isFirst
-                              ? Colors.transparent
-                              : const Color(0xFFB9BDB8),
-                        ),
+                        child: Container(width: 2, color: _timelineLineColor),
                       ),
                       Container(
                         key: ValueKey('stage-marker-${stage.id}'),
@@ -993,7 +1040,7 @@ class _StageTimelineRow extends StatelessWidget {
                           width: 2,
                           color: isLast
                               ? Colors.transparent
-                              : const Color(0xFFB9BDB8),
+                              : _timelineLineColor,
                         ),
                       ),
                     ],
@@ -1539,13 +1586,13 @@ class _StageAccommodationSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final subtitle = lodgings.isLoading
+    final String? status = lodgings.isLoading
         ? l10n.t('Finding accommodation…')
         : lodgings.hasError
         ? l10n.t('Accommodation information is currently unavailable.')
         : lodgings.value?.isEmpty == true
         ? l10n.t('No accommodation is listed for this stage.')
-        : l10n.t('View places to stay');
+        : null;
 
     return _DetailSection(
       title: l10n.t('Accommodation'),
@@ -1572,21 +1619,23 @@ class _StageAccommodationSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        l10n.t('View accommodation'),
+                        l10n.t('View places to stay'),
                         style: const TextStyle(
                           color: _bookingBlue,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                      if (status != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          status,
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

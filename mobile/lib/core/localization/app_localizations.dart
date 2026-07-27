@@ -1,12 +1,21 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'translations_fr.dart';
+import 'translations_it.dart';
+
 class AppLocalizations {
   const AppLocalizations(this.locale);
 
   final Locale locale;
 
-  static const supportedLocales = [Locale('en'), Locale('de'), Locale('es')];
+  static const supportedLocales = [
+    Locale('en'),
+    Locale('de'),
+    Locale('es'),
+    Locale('it'),
+    Locale('fr'),
+  ];
 
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
@@ -24,10 +33,13 @@ class AppLocalizations {
 
   String routeDirection(String start, String end) => '$start  →  $end';
 
-  String nearbyStage(String stageName) => '${t('Nearby stage')}: $stageName';
-
   String get pafosAirport => t('Pafos Airport');
   String get larnakaAirport => t('Larnaka Airport');
+
+  @visibleForTesting
+  static Set<String> translationKeys(Locale locale) => Set.unmodifiable(
+    _translations[locale.languageCode]?.keys ?? const <String>{},
+  );
 }
 
 extension AppLocalizationsContext on BuildContext {
@@ -52,6 +64,8 @@ class _AppLocalizationsDelegate
 }
 
 const _translations = <String, Map<String, String>>{
+  'it': italianTranslations,
+  'fr': frenchTranslations,
   'de': {
     'EUROTREX': 'EUROTREX',
     'Co-funded by the European Union':
@@ -188,9 +202,15 @@ const _translations = <String, Map<String, String>>{
     'Download trail': 'Weg herunterladen',
     'Lodging': 'Unterkunft',
     'Accommodation': 'Unterkunft',
+    'Show accommodation': 'Unterkünfte anzeigen',
+    'Hide accommodation': 'Unterkünfte ausblenden',
+    'Close accommodation summary': 'Unterkunftsübersicht schließen',
+    'Accommodation locations are currently unavailable.':
+        'Unterkunftsstandorte sind derzeit nicht verfügbar.',
+    'No accommodation locations are available on the map.':
+        'Auf der Karte sind keine Unterkunftsstandorte verfügbar.',
     'Book accommodation': 'Unterkunft buchen',
     'Accommodation booking': 'Unterkunftsbuchung',
-    'View accommodation': 'Unterkunft ansehen',
     'View places to stay': 'Unterkünfte ansehen',
     'Places to stay near this stage': 'Unterkünfte in der Nähe dieser Etappe',
     'Finding accommodation…': 'Unterkünfte werden gesucht…',
@@ -316,7 +336,6 @@ const _translations = <String, Map<String, String>>{
         'Die Routendaten sind noch nicht auf diesem Gerät.',
     'Find my stage': 'Meine Etappe finden',
     'You are not on the trail.': 'Du befindest dich nicht auf dem Weg.',
-    'Nearby stage': 'Etappe in der Nähe',
     'Trail information': 'Weginformationen',
     'Trail guide': 'Wanderführer',
     'App preferences': 'App-Einstellungen',
@@ -481,9 +500,15 @@ const _translations = <String, Map<String, String>>{
     'Download trail': 'Descargar ruta',
     'Lodging': 'Alojamiento',
     'Accommodation': 'Alojamiento',
+    'Show accommodation': 'Mostrar alojamientos',
+    'Hide accommodation': 'Ocultar alojamientos',
+    'Close accommodation summary': 'Cerrar resumen del alojamiento',
+    'Accommodation locations are currently unavailable.':
+        'Las ubicaciones de alojamientos no están disponibles en este momento.',
+    'No accommodation locations are available on the map.':
+        'No hay ubicaciones de alojamientos disponibles en el mapa.',
     'Book accommodation': 'Reservar alojamiento',
     'Accommodation booking': 'Reserva de alojamiento',
-    'View accommodation': 'Ver alojamiento',
     'View places to stay': 'Ver alojamientos',
     'Places to stay near this stage': 'Alojamientos cerca de esta etapa',
     'Finding accommodation…': 'Buscando alojamiento…',
@@ -609,7 +634,6 @@ const _translations = <String, Map<String, String>>{
         'Los datos de la ruta aún no están en este dispositivo.',
     'Find my stage': 'Encontrar mi etapa',
     'You are not on the trail.': 'No estás en la ruta.',
-    'Nearby stage': 'Etapa cercana',
     'Trail information': 'Información de la ruta',
     'Trail guide': 'Guía de la ruta',
     'App preferences': 'Preferencias de la aplicación',

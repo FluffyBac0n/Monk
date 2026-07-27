@@ -1,3 +1,10 @@
+class LodgingLocation {
+  const LodgingLocation({required this.latitude, required this.longitude});
+
+  final double latitude;
+  final double longitude;
+}
+
 class Lodging {
   const Lodging({
     required this.id,
@@ -11,6 +18,7 @@ class Lodging {
     this.priceMinEur,
     this.priceMaxEur,
     this.distanceFromTrailKm,
+    this.location,
     this.address,
     this.phone,
     this.whatsapp,
@@ -36,6 +44,7 @@ class Lodging {
   final double? priceMinEur;
   final double? priceMaxEur;
   final double? distanceFromTrailKm;
+  final LodgingLocation? location;
   final String? address;
   final String? phone;
   final String? whatsapp;
@@ -67,6 +76,7 @@ class Lodging {
       priceMinEur: _doubleOrNull(json['priceMinEur']),
       priceMaxEur: _doubleOrNull(json['priceMaxEur']),
       distanceFromTrailKm: _doubleOrNull(json['distanceFromTrailKm']),
+      location: _locationOrNull(json['location']),
       address: _stringOrNull(json['address']),
       phone: _contactString(contact, 'phone'),
       whatsapp: _contactString(contact, 'whatsapp'),
@@ -81,6 +91,21 @@ class Lodging {
       checkOutTime: _stringOrNull(json['checkOutTime']),
     );
   }
+}
+
+LodgingLocation? _locationOrNull(Object? value) {
+  if (value is! Map) return null;
+  final latitude = _doubleOrNull(value['latitude']);
+  final longitude = _doubleOrNull(value['longitude']);
+  if (latitude == null ||
+      longitude == null ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180) {
+    return null;
+  }
+  return LodgingLocation(latitude: latitude, longitude: longitude);
 }
 
 String? _contactString(Object? contact, String key) {

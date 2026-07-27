@@ -3,6 +3,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monk_mobile/core/localization/app_localizations.dart';
+import 'package:monk_mobile/core/settings/app_settings.dart';
+import 'package:monk_mobile/core/settings/measurement_formatter.dart';
+import 'package:monk_mobile/features/accommodation/domain/lodging.dart';
 import 'package:monk_mobile/features/elevation/domain/route_point.dart';
 import 'package:monk_mobile/features/map/presentation/map_screen.dart';
 
@@ -66,4 +69,119 @@ void main() {
     expect(subtitle.overflow, TextOverflow.visible);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('lodging map summary localizes details and handles card tap', (
+    tester,
+  ) async {
+    var tapCount = 0;
+
+    await tester.pumpWidget(
+      _lodgingSummaryApp(
+        locale: const Locale('de'),
+        lodging: const Lodging(
+          id: 'forest-inn',
+          name: 'Pafos Airport',
+          type: 'Guesthouse',
+          village: 'Larnaka Airport',
+          distanceFromTrailKm: 0.4,
+          website: 'https://booking.example.com/forest-inn',
+        ),
+        onTap: () => tapCount++,
+      ),
+    );
+
+    expect(find.text('Flughafen Pafos'), findsOneWidget);
+    expect(find.text('Gästehaus · Flughafen Larnaka · 0.4 km'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('lodging-map-summary-forest-inn')),
+    );
+    expect(tapCount, 1);
+  });
+
+  testWidgets('lodging map summary localizes an unavailable booking link', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _lodgingSummaryApp(
+        locale: const Locale('es'),
+        lodging: const Lodging(
+          id: 'mountain-shelter',
+          name: 'Accommodation',
+          type: 'Guesthouse',
+          village: 'Pafos Airport',
+        ),
+      ),
+    );
+
+    expect(find.text('Alojamiento'), findsOneWidget);
+    expect(
+      find.text(
+        'Casa de huéspedes · Aeropuerto de Pafos · '
+        'Enlace de reserva no disponible',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.link_off_rounded), findsOneWidget);
+  });
+
+  testWidgets('lodging map summary close does not invoke the card tap', (
+    tester,
+  ) async {
+    var tapCount = 0;
+    var closeCount = 0;
+
+    await tester.pumpWidget(
+      _lodgingSummaryApp(
+        lodging: const Lodging(
+          id: 'village-hotel',
+          name: 'Village Hotel',
+          website: 'https://booking.example.com/village-hotel',
+        ),
+        onTap: () => tapCount++,
+        onClose: () => closeCount++,
+      ),
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('lodging-map-summary-close-village-hotel')),
+    );
+
+    expect(closeCount, 1);
+    expect(tapCount, 0);
+  });
 }
+
+Widget _lodgingSummaryApp({
+  required Lodging lodging,
+  Locale locale = const Locale('en'),
+  VoidCallback? onTap,
+  VoidCallback? onClose,
+}) {
+  return MaterialApp(
+    locale: locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: Scaffold(
+      body: Center(
+        child: SizedBox(
+          width: 320,
+          height: 76,
+          child: LodgingMapSummaryCard(
+            lodging: lodging,
+            formatter: const MeasurementFormatter(MeasurementSystem.metric),
+            onTap: onTap ?? _doNothing,
+            onClose: onClose ?? _doNothing,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+void _doNothing() {}

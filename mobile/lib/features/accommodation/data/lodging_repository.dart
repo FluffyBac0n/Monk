@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../domain/lodging.dart';
 
 abstract interface class LodgingRepository {
+  Future<List<Lodging>> loadForTrail({required String trailId});
+
   Future<List<Lodging>> loadForStage({
     required String trailId,
     required String stageId,
@@ -16,22 +18,33 @@ class FirestoreLodgingRepository implements LodgingRepository {
   final FirebaseFirestore? _firestore;
 
   @override
+  Future<List<Lodging>> loadForTrail({required String trailId}) async {
+    final snapshot = await _lodgingsCollection(trailId).get();
+    return _parseAndSort(snapshot);
+  }
+
+  @override
   Future<List<Lodging>> loadForStage({
     required String trailId,
     required String stageId,
   }) async {
+    final snapshot = await _lodgingsCollection(
+      trailId,
+    ).where('stageId', isEqualTo: stageId).get();
+    return _parseAndSort(snapshot);
+  }
+
+  CollectionReference<Map<String, dynamic>> _lodgingsCollection(
+    String trailId,
+  ) {
     final firestore = _firestore;
     if (firestore == null) {
       throw StateError('Firebase is not configured for this build.');
     }
+    return firestore.collection('trails').doc(trailId).collection('lodgings');
+  }
 
-    final snapshot = await firestore
-        .collection('trails')
-        .doc(trailId)
-        .collection('lodgings')
-        .where('stageId', isEqualTo: stageId)
-        .get();
-
+  List<Lodging> _parseAndSort(QuerySnapshot<Map<String, dynamic>> snapshot) {
     return sortLodgingsForDisplay(
       snapshot.docs.map(
         (document) => Lodging.fromFirestore(document.id, document.data()),
