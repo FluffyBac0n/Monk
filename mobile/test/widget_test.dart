@@ -108,22 +108,31 @@ void main() {
     expect(find.text('Explore trails'), findsOneWidget);
     expect(find.text('Cyprus E4'), findsOneWidget);
     final cyprusCard = find.byKey(const ValueKey('explore-cyprus-e4'));
+    final trailHeader = find.byKey(
+      const ValueKey('trail-card-header-cyprus-e4'),
+    );
+    final trailKind = find.byKey(const ValueKey('trail-card-kind-cyprus-e4'));
+    final trailDataStatus = find.byKey(
+      const ValueKey('trail-data-status-badge-cyprus-e4'),
+    );
     expect(
-      tester
-          .widget<Container>(
-            find.byKey(const ValueKey('trail-card-header-cyprus-e4')),
-          )
-          .padding,
+      tester.widget<Container>(trailHeader).padding,
       const EdgeInsets.all(16),
     );
     expect(
-      tester
-          .widget<Container>(
-            find.byKey(const ValueKey('trail-card-kind-cyprus-e4')),
-          )
-          .padding,
+      tester.widget<Container>(trailKind).padding,
       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
     );
+    expect(
+      find.descendant(of: trailHeader, matching: trailDataStatus),
+      findsOneWidget,
+    );
+    expect(
+      (tester.getCenter(trailKind).dy - tester.getCenter(trailDataStatus).dy)
+          .abs(),
+      lessThan(1),
+    );
+    expect(find.text('TRAIL DATA NOT DOWNLOADED'), findsOneWidget);
     expect(
       tester
           .widget<Padding>(
@@ -384,6 +393,40 @@ void main() {
       tester.getCenter(mapAction).dx,
       lessThan(tester.getCenter(elevationAction).dx),
     );
+  });
+
+  testWidgets('map preview replaces trail position copy on every stage', (
+    tester,
+  ) async {
+    final stages = List.generate(
+      8,
+      (index) => TrailStage(
+        id: 'stage-$index',
+        sequence: 8 - index,
+        name: index == 0 ? 'Start' : 'Stage $index',
+        accumulatedDistanceKm: index * 5,
+        services: const {},
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: StageDetailScreen(stages: stages, initialIndex: 0),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('stage-map-preview')), findsNothing);
+    expect(find.byKey(const Key('stage-trail-position-copy')), findsOneWidget);
+
+    for (var stageIndex = 1; stageIndex < stages.length; stageIndex++) {
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Stage $stageIndex'), findsOneWidget);
+      expect(find.byKey(const Key('stage-map-preview')), findsOneWidget);
+      expect(find.byKey(const Key('stage-trail-position-copy')), findsNothing);
+    }
   });
 
   testWidgets('stage detail shortcut returns past the map to stages', (
@@ -885,11 +928,29 @@ void main() {
       find.byKey(const ValueKey('accommodation-screen-lodging-stage')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const ValueKey('lodging-type-icon-lodging')),
+      findsOneWidget,
+    );
+    final marker = tester.widget<Container>(
+      find.byKey(const ValueKey('lodging-type-marker-forest-inn')),
+    );
+    expect(
+      marker.decoration,
+      isA<BoxDecoration>()
+          .having(
+            (decoration) => decoration.color,
+            'color',
+            const Color(0xFF8C727B),
+          )
+          .having((decoration) => decoration.shape, 'shape', BoxShape.circle),
+    );
     expect(find.text('Forest Inn'), findsOneWidget);
     expect(find.textContaining('Platres'), findsOneWidget);
     expect(find.text('0.4 km'), findsOneWidget);
 
-    final map = find.byKey(const ValueKey('map-lodging-forest-inn'));
+    expect(find.text('View on map'), findsNothing);
+    final map = find.byKey(const ValueKey('map-location-lodging-forest-inn'));
     await tester.scrollUntilVisible(
       map,
       250,
@@ -949,15 +1010,14 @@ void main() {
     final unavailable = find.byKey(
       const ValueKey('book-lodging-mountain-shelter'),
     );
-    expect(unavailable, findsOneWidget);
-    expect(find.text('Booking link unavailable'), findsOneWidget);
+    expect(unavailable, findsNothing);
+    expect(find.text('Booking link unavailable'), findsNothing);
     expect(find.text('00:00'), findsNothing);
     expect(
-      find.byKey(const ValueKey('map-lodging-mountain-shelter')),
+      find.byKey(const ValueKey('map-location-lodging-mountain-shelter')),
       findsNothing,
     );
     expect(find.text('View on map'), findsNothing);
-    expect(tester.widget<FilledButton>(unavailable).onPressed, isNull);
 
     repository.lodgings = const [];
     final container = ProviderScope.containerOf(

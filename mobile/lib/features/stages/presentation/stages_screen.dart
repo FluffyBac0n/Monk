@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 
 import '../../../core/location/device_location.dart';
 import '../../../core/localization/app_localizations.dart';
@@ -293,6 +294,9 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
             stages: orderedItems,
             initialIndex: orderedIndex,
             direction: direction,
+            locationStageId: stage.id == _gpsSelectedStageId
+                ? _gpsSelectedStageId
+                : null,
           ),
         ),
       ),
@@ -1268,12 +1272,14 @@ class StageDetailScreen extends ConsumerStatefulWidget {
     required this.stages,
     required this.initialIndex,
     this.direction = TrailDirection.pafosToLarnaka,
+    this.locationStageId,
     super.key,
   });
 
   final List<TrailStage> stages;
   final int initialIndex;
   final TrailDirection direction;
+  final String? locationStageId;
 
   @override
   ConsumerState<StageDetailScreen> createState() => _StageDetailScreenState();
@@ -1284,12 +1290,31 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
 
   TrailStage get stage => widget.stages[index];
 
+  void _openMap() {
+    final locationStageId = stage.id == widget.locationStageId
+        ? widget.locationStageId
+        : null;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MapScreen(
+          initialStageIndex: index,
+          locationStageId: locationStageId,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final formatter = MeasurementFormatter(
       ref.watch(appSettingsProvider).measurementSystem,
     );
+    final hasMapPreview = index > 0;
+    final showUserLocation = stage.id == widget.locationStageId;
+    final previewRoute = hasMapPreview
+        ? ref.watch(elevationProvider).value
+        : null;
     final lodgings = ref.watch(lodgingsForStageProvider(stage.id));
     final isMapOffline = ref.watch(offlineMapProvider).value?.isReady == true;
     final services = stage.services.entries
@@ -1369,11 +1394,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
           IconButton(
             key: const ValueKey('stage-detail-map'),
             tooltip: l10n.t('Show on map'),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => MapScreen(initialStageIndex: index),
-              ),
-            ),
+            onPressed: _openMap,
             icon: const Icon(Icons.map_outlined),
           ),
           IconButton(
@@ -1528,22 +1549,32 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
             ),
           ],
           const SizedBox(height: 12),
-          _DetailSection(
-            title: l10n.t('Trail position'),
-            child: Column(
-              children: [
-                _PositionRow(
-                  icon: Icons.hiking_rounded,
-                  title: l10n.t('Following the Cyprus E4'),
-                  subtitle: l10n.t(
-                    isMapOffline
-                        ? 'Trail data and background map are available offline.'
-                        : 'Trail data is available offline. Download the offline map to see map details without a connection.',
+          if (hasMapPreview)
+            _StageMapPreview(
+              routePoints: previewRoute ?? const [],
+              startDistanceKm: widget.stages[index - 1].accumulatedDistanceKm,
+              finishDistanceKm: stage.accumulatedDistanceKm,
+              showUserLocation: showUserLocation,
+              onTap: _openMap,
+            )
+          else
+            _DetailSection(
+              key: const Key('stage-trail-position-copy'),
+              title: l10n.t('Trail position'),
+              child: Column(
+                children: [
+                  _PositionRow(
+                    icon: Icons.hiking_rounded,
+                    title: l10n.t('Following the Cyprus E4'),
+                    subtitle: l10n.t(
+                      isMapOffline
+                          ? 'Trail data and background map are available offline.'
+                          : 'Trail data is available offline. Download the offline map to see map details without a connection.',
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           const SizedBox(height: 18),
           Row(
             children: [
@@ -1696,7 +1727,7 @@ class _DetailMetric extends StatelessWidget {
 }
 
 class _DetailSection extends StatelessWidget {
-  const _DetailSection({required this.title, required this.child});
+  const _DetailSection({required this.title, required this.child, super.key});
 
   final String title;
   final Widget child;
@@ -1720,6 +1751,273 @@ class _DetailSection extends StatelessWidget {
           child,
         ],
       ),
+    );
+  }
+}
+
+class _StageMapPreview extends StatelessWidget {
+  const _StageMapPreview({
+    required this.routePoints,
+    required this.startDistanceKm,
+    required this.finishDistanceKm,
+    required this.showUserLocation,
+    required this.onTap,
+  });
+
+  final List<RoutePoint> routePoints;
+  final double? startDistanceKm;
+  final double? finishDistanceKm;
+  final bool showUserLocation;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final preview = _stageMapPreviewData(
+      routePoints: routePoints,
+      startDistanceKm: startDistanceKm,
+      finishDistanceKm: finishDistanceKm,
+    );
+    return Semantics(
+      key: showUserLocation
+          ? const Key('stage-map-user-location-enabled')
+          : null,
+      label: context.l10n.t('Trail map'),
+      image: true,
+      button: true,
+      onTap: onTap,
+      child: Container(
+        key: const Key('stage-map-preview'),
+        height: 220,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: _mint,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _green.withValues(alpha: 0.16)),
+        ),
+        child: mapboxAccessToken.isEmpty || preview == null
+            ? GestureDetector(
+                key: const Key('stage-map-open'),
+                behavior: HitTestBehavior.opaque,
+                onTap: onTap,
+                child: const Center(
+                  child: Icon(Icons.map_outlined, color: _green, size: 36),
+                ),
+              )
+            : _StageMapSnapshot(
+                key: ValueKey(
+                  'stage-map-${preview.startPoint.pointIndex}-'
+                  '${preview.finishPoint.pointIndex}',
+                ),
+                routePoints: preview.routePoints,
+                startPoint: preview.startPoint,
+                finishPoint: preview.finishPoint,
+                showUserLocation: showUserLocation,
+                onTap: onTap,
+              ),
+      ),
+    );
+  }
+}
+
+typedef _StageMapPreviewData = ({
+  List<RoutePoint> routePoints,
+  RoutePoint startPoint,
+  RoutePoint finishPoint,
+});
+
+_StageMapPreviewData? _stageMapPreviewData({
+  required List<RoutePoint> routePoints,
+  required double? startDistanceKm,
+  required double? finishDistanceKm,
+}) {
+  if (routePoints.isEmpty ||
+      startDistanceKm == null ||
+      finishDistanceKm == null) {
+    return null;
+  }
+
+  final startIndex = _nearestRoutePointIndex(routePoints, startDistanceKm);
+  final finishIndex = _nearestRoutePointIndex(routePoints, finishDistanceKm);
+  final lowerIndex = startIndex < finishIndex ? startIndex : finishIndex;
+  final upperIndex = startIndex > finishIndex ? startIndex : finishIndex;
+  final segment = routePoints.sublist(lowerIndex, upperIndex + 1);
+  return (
+    routePoints: segment,
+    startPoint: routePoints[startIndex],
+    finishPoint: routePoints[finishIndex],
+  );
+}
+
+int _nearestRoutePointIndex(List<RoutePoint> routePoints, double distanceKm) {
+  var nearestIndex = 0;
+  var nearestDifference = (routePoints.first.distanceKm - distanceKm).abs();
+  for (var index = 1; index < routePoints.length; index++) {
+    final difference = (routePoints[index].distanceKm - distanceKm).abs();
+    if (difference < nearestDifference) {
+      nearestIndex = index;
+      nearestDifference = difference;
+    }
+  }
+  return nearestIndex;
+}
+
+class _StageMapSnapshot extends StatefulWidget {
+  const _StageMapSnapshot({
+    required this.routePoints,
+    required this.startPoint,
+    required this.finishPoint,
+    required this.showUserLocation,
+    required this.onTap,
+    super.key,
+  });
+
+  final List<RoutePoint> routePoints;
+  final RoutePoint startPoint;
+  final RoutePoint finishPoint;
+  final bool showUserLocation;
+  final VoidCallback onTap;
+
+  @override
+  State<_StageMapSnapshot> createState() => _StageMapSnapshotState();
+}
+
+class _StageMapSnapshotState extends State<_StageMapSnapshot> {
+  static const _mapTapInteractionId = 'stage-preview-open-map';
+
+  late final ViewportState _initialViewport;
+  MapboxMap? _map;
+  bool _loadFailed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final center = widget.routePoints[widget.routePoints.length ~/ 2];
+    final stageDistanceKm =
+        (widget.finishPoint.distanceKm - widget.startPoint.distanceKm).abs();
+    _initialViewport = widget.routePoints.length == 1
+        ? CameraViewportState(
+            center: Point(coordinates: Position(center.lng, center.lat)),
+            zoom: 12.5,
+            bearing: 0,
+            pitch: 0,
+          )
+        : OverviewViewportState(
+            geometry: LineString(
+              coordinates: [
+                for (final point in widget.routePoints)
+                  Position(point.lng, point.lat),
+              ],
+            ),
+            geometryPadding: stageDistanceKm > 6
+                ? const EdgeInsets.fromLTRB(82, 68, 74, 92)
+                : const EdgeInsets.fromLTRB(72, 58, 64, 80),
+            bearing: 0,
+            pitch: 0,
+            maxZoom: 14,
+            animationDuration: Duration.zero,
+          );
+  }
+
+  Future<void> _onMapCreated(MapboxMap map) async {
+    _map = map;
+    map.addInteraction(
+      TapInteraction.onMap((_) {
+        if (mounted) widget.onTap();
+      }),
+      interactionID: _mapTapInteractionId,
+    );
+    await map.gestures.updateSettings(
+      GesturesSettings(
+        rotateEnabled: false,
+        pinchToZoomEnabled: false,
+        scrollEnabled: false,
+        simultaneousRotateAndPinchToZoomEnabled: false,
+        pitchEnabled: false,
+        doubleTapToZoomInEnabled: false,
+        doubleTouchToZoomOutEnabled: false,
+        quickZoomEnabled: false,
+        pinchPanEnabled: false,
+      ),
+    );
+    await map.compass.updateSettings(CompassSettings(enabled: false));
+    await map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
+    if (widget.showUserLocation) {
+      try {
+        await map.location.updateSettings(
+          LocationComponentSettings(
+            enabled: true,
+            puckBearingEnabled: true,
+            pulsingEnabled: true,
+            showAccuracyRing: true,
+          ),
+        );
+      } catch (_) {
+        // The stage preview remains useful if location rendering is unavailable.
+      }
+    }
+
+    final routeManager = await map.annotations
+        .createPolylineAnnotationManager();
+    await routeManager.create(
+      PolylineAnnotationOptions(
+        geometry: LineString(
+          coordinates: [
+            for (final point in widget.routePoints)
+              Position(point.lng, point.lat),
+          ],
+        ),
+        lineColor: _bookingBlue.toARGB32(),
+        lineWidth: 5,
+        lineBorderColor: Colors.white.toARGB32(),
+        lineBorderWidth: 1.5,
+        lineOpacity: 0.95,
+      ),
+    );
+
+    final markerManager = await map.annotations.createCircleAnnotationManager();
+    await markerManager.createMulti([
+      CircleAnnotationOptions(
+        geometry: Point(
+          coordinates: Position(widget.startPoint.lng, widget.startPoint.lat),
+        ),
+        circleColor: _green.toARGB32(),
+        circleRadius: 8,
+        circleStrokeColor: Colors.white.toARGB32(),
+        circleStrokeWidth: 2,
+      ),
+      CircleAnnotationOptions(
+        geometry: Point(
+          coordinates: Position(widget.finishPoint.lng, widget.finishPoint.lat),
+        ),
+        circleColor: _red.toARGB32(),
+        circleRadius: 8,
+        circleStrokeColor: Colors.white.toARGB32(),
+        circleStrokeWidth: 2,
+      ),
+    ]);
+  }
+
+  @override
+  void dispose() {
+    _map?.removeInteraction(_mapTapInteractionId);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loadFailed) {
+      return const Center(
+        child: Icon(Icons.map_outlined, color: _green, size: 36),
+      );
+    }
+    return MapWidget(
+      key: const ValueKey('stage-map-widget'),
+      styleUri: MapboxStyles.OUTDOORS,
+      viewport: _initialViewport,
+      onMapCreated: _onMapCreated,
+      onMapLoadErrorListener: (_) {
+        if (mounted) setState(() => _loadFailed = true);
+      },
     );
   }
 }

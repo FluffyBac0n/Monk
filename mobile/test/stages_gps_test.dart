@@ -9,6 +9,7 @@ import 'package:monk_mobile/core/location/device_location.dart';
 import 'package:monk_mobile/features/elevation/domain/route_point.dart';
 import 'package:monk_mobile/features/elevation/presentation/elevation_controller.dart';
 import 'package:monk_mobile/features/map/domain/offline_map_state.dart';
+import 'package:monk_mobile/features/map/presentation/map_screen.dart';
 import 'package:monk_mobile/features/map/presentation/offline_map_controller.dart';
 import 'package:monk_mobile/features/stages/domain/stage.dart';
 import 'package:monk_mobile/features/stages/presentation/stages_controller.dart';
@@ -79,6 +80,38 @@ void main() {
         const Color(0xFF1565C0),
       );
       expect(find.textContaining('Nearby stage'), findsNothing);
+
+      await tester.tap(selectedCard);
+      await tester.pumpAndSettle();
+
+      final detail = tester.widget<StageDetailScreen>(
+        find.byType(StageDetailScreen),
+      );
+      expect(detail.locationStageId, 'gps-stage-24');
+
+      final preview = find.byKey(const Key('stage-map-preview'));
+      await tester.scrollUntilVisible(
+        preview,
+        300,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('stage-map-user-location-enabled')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('stage-map-open')));
+      await tester.pumpAndSettle();
+
+      final mapScreen = tester.widget<MapScreen>(find.byType(MapScreen));
+      expect(mapScreen.initialStageIndex, 24);
+      expect(mapScreen.locationStageId, 'gps-stage-24');
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('stage-scroll-top')));
       await tester.pumpAndSettle();

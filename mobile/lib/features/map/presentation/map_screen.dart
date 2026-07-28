@@ -9,6 +9,7 @@ import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
 import '../../accommodation/domain/lodging.dart';
 import '../../accommodation/presentation/accommodation_controller.dart';
+import '../../accommodation/presentation/lodging_type_icon.dart';
 import '../../elevation/domain/route_point.dart';
 import '../../elevation/presentation/elevation_controller.dart';
 import '../../stages/domain/stage.dart';
@@ -28,17 +29,23 @@ const _sand = Color(0xFFF4F2EC);
 const _yellow = Color(0xFFF2C94C);
 const _routeBlue = Color(0xFF1565C0);
 const _accommodationBlue = Color(0xFF0288D1);
+const _markerEntranceSteps = 10;
+const _markerEntranceFrame = Duration(milliseconds: 24);
+const _stageDropDistance = 20.0;
+const _lodgingDropDistance = 28.0;
 
 class MapScreen extends ConsumerWidget {
   const MapScreen({
     this.initialStageIndex,
     this.initialLodging,
+    this.locationStageId,
     this.accessToken = mapboxAccessToken,
     super.key,
   }) : assert(initialStageIndex == null || initialLodging == null);
 
   final int? initialStageIndex;
   final Lodging? initialLodging;
+  final String? locationStageId;
   final String accessToken;
 
   @override
@@ -123,6 +130,7 @@ class MapScreen extends ConsumerWidget {
                       formatter: formatter,
                       initialStageIndex: initialStageIndex,
                       initialLodging: initialLodging,
+                      locationStageId: locationStageId,
                     ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (_, _) => _EmptyRouteState(
@@ -424,6 +432,7 @@ class _RouteMap extends ConsumerStatefulWidget {
     required this.formatter,
     required this.initialStageIndex,
     required this.initialLodging,
+    required this.locationStageId,
   });
 
   final List<RoutePoint> points;
@@ -432,6 +441,7 @@ class _RouteMap extends ConsumerStatefulWidget {
   final MeasurementFormatter formatter;
   final int? initialStageIndex;
   final Lodging? initialLodging;
+  final String? locationStageId;
 
   @override
   ConsumerState<_RouteMap> createState() => _RouteMapState();
@@ -444,9 +454,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   PointAnnotationManager? _stageLabelManager;
   Cancelable? _stageTapListener;
   final Map<String, int> _stageIndexByAnnotation = {};
-  CircleAnnotationManager? _lodgingManager;
+  PointAnnotationManager? _lodgingManager;
   Cancelable? _lodgingTapListener;
   final Map<String, int> _lodgingIndexByAnnotation = {};
+  final Map<String, String?> _lodgingStyleImages = {};
   List<Lodging> _mappedLodgings = const [];
   int? _selectedStageIndex;
   Point? _selectedStagePoint;
@@ -464,6 +475,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   bool _openingLodgingBooking = false;
   bool _initialCameraApplied = false;
   Size? _lastMapSize;
+  int _stageAnimationGeneration = 0;
+  int _lodgingAnimationGeneration = 0;
 
   @override
   void initState() {
@@ -483,6 +496,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
   @override
   void dispose() {
+    _stageAnimationGeneration++;
+    _lodgingAnimationGeneration++;
     _stageTapListener?.cancel();
     _lodgingTapListener?.cancel();
     super.dispose();
@@ -491,12 +506,19 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   Future<void> _onMapCreated(MapboxMap map) async {
     _map = map;
     await _drawRoute(map);
-    await _drawStages(map);
+    await _drawStages(map, animate: true);
   }
 
   Future<void> _onMapLoaded(MapLoadedEventData _) async {
     if (_initialCameraApplied || !mounted) return;
     _initialCameraApplied = true;
+    if (widget.locationStageId != null) {
+      try {
+        await _enableLocationPuck();
+      } catch (_) {
+        // Keep the selected stage usable if location rendering is unavailable.
+      }
+    }
     final initialLodging = widget.initialLodging;
     if (initialLodging?.location != null) {
       await _showInitialLodging(initialLodging!);
@@ -530,7 +552,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       _selectedStagePoint = null;
       _selectedStageScreenPosition = null;
     });
-    await _drawLodgings(map);
+    await _drawLodgings(map, animate: true);
     await map.flyTo(
       CameraOptions(center: point, zoom: 15, bearing: 0),
       MapAnimationOptions(duration: 700, startDelay: 0),
@@ -608,8 +630,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     );
   }
 
-  Future<void> _drawStages(MapboxMap map) async {
+  Future<void> _drawStages(MapboxMap map, {bool animate = false}) async {
     final l10n = context.l10n;
+    final animationGeneration = ++_stageAnimationGeneration;
+    final shouldAnimate = animate && !MediaQuery.disableAnimationsOf(context);
     _stageTapListener?.cancel();
     _stageTapListener = null;
     final previousManager = _stageManager;
@@ -666,6 +690,14 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
     final manager = await map.annotations.createCircleAnnotationManager();
     _stageManager = manager;
+    if (shouldAnimate) {
+      await Future.wait([
+        manager.setCircleTranslateAnchor(CircleTranslateAnchor.VIEWPORT),
+        manager.setCircleTranslate([0, -_stageDropDistance]),
+        manager.setCircleOpacity(0),
+        manager.setCircleStrokeOpacity(0),
+      ]);
+    }
     final annotations = await manager.createMulti([
       for (final item in displayedStages)
         CircleAnnotationOptions(
@@ -696,6 +728,13 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     _stageLabelManager = labelManager;
     await labelManager.setTextAllowOverlap(true);
     await labelManager.setTextIgnorePlacement(true);
+    if (shouldAnimate) {
+      await Future.wait([
+        labelManager.setTextTranslateAnchor(TextTranslateAnchor.VIEWPORT),
+        labelManager.setTextTranslate([0, -_stageDropDistance]),
+        labelManager.setTextOpacity(0),
+      ]);
+    }
     await labelManager.createMulti([
       for (final item in displayedStages)
         PointAnnotationOptions(
@@ -746,9 +785,13 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         _selectStage(stageIndex);
       },
     );
+    if (shouldAnimate) {
+      await _animateStageEntrance(manager, labelManager, animationGeneration);
+    }
   }
 
   Future<void> _removeLodgingAnnotations(MapboxMap map) async {
+    _lodgingAnimationGeneration++;
     _lodgingTapListener?.cancel();
     _lodgingTapListener = null;
     final previousManager = _lodgingManager;
@@ -759,30 +802,70 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     }
   }
 
-  Future<void> _drawLodgings(MapboxMap map) async {
+  Future<void> _drawLodgings(MapboxMap map, {bool animate = false}) async {
+    final animationsDisabled = MediaQuery.disableAnimationsOf(context);
     await _removeLodgingAnnotations(map);
     if (!_lodgingsVisible || _mappedLodgings.isEmpty) return;
+    final animationGeneration = _lodgingAnimationGeneration;
+    final shouldAnimate = animate && !animationsDisabled;
 
-    final manager = await map.annotations.createCircleAnnotationManager();
+    final makiIconNames = {
+      for (final lodging in _mappedLodgings) lodgingMakiIconName(lodging.type),
+    };
+    final styleImages = <String, String?>{};
+    for (final iconName in makiIconNames) {
+      styleImages[iconName] = await _resolveLodgingStyleImage(map, iconName);
+    }
+
+    final manager = await map.annotations.createPointAnnotationManager();
     _lodgingManager = manager;
+    await manager.setIconAllowOverlap(true);
+    await manager.setIconIgnorePlacement(true);
+    await manager.setTextAllowOverlap(true);
+    await manager.setTextIgnorePlacement(true);
+    if (shouldAnimate) {
+      await Future.wait([
+        manager.setIconTranslateAnchor(IconTranslateAnchor.VIEWPORT),
+        manager.setIconTranslate([0, -_lodgingDropDistance]),
+        manager.setIconOpacity(0),
+        manager.setTextTranslateAnchor(TextTranslateAnchor.VIEWPORT),
+        manager.setTextTranslate([0, -_lodgingDropDistance]),
+        manager.setTextOpacity(0),
+      ]);
+    }
     final annotations = await manager.createMulti([
-      for (var index = 0; index < _mappedLodgings.length; index++)
-        CircleAnnotationOptions(
+      for (var index = 0; index < _mappedLodgings.length; index++) ...[
+        PointAnnotationOptions(
           geometry: Point(
             coordinates: Position(
               _mappedLodgings[index].location!.longitude,
               _mappedLodgings[index].location!.latitude,
             ),
           ),
-          circleColor: _accommodationBlue.toARGB32(),
-          circleRadius: index == _selectedLodgingIndex ? 11 : 8,
-          circleStrokeColor: Colors.white.toARGB32(),
-          circleStrokeWidth: index == _selectedLodgingIndex ? 3 : 2,
+          iconImage:
+              styleImages[lodgingMakiIconName(_mappedLodgings[index].type)],
+          iconSize: index == _selectedLodgingIndex ? 1.65 : 1.4,
+          iconColor: _accommodationBlue.toARGB32(),
+          iconHaloColor: Colors.white.toARGB32(),
+          iconHaloWidth: index == _selectedLodgingIndex ? 3.5 : 2,
+          iconHaloBlur: 0.5,
+          textField:
+              styleImages[lodgingMakiIconName(_mappedLodgings[index].type)] ==
+                  null
+              ? '●'
+              : null,
+          textSize: index == _selectedLodgingIndex ? 25 : 21,
+          textColor: _accommodationBlue.toARGB32(),
+          textHaloColor: Colors.white.toARGB32(),
+          textHaloWidth: index == _selectedLodgingIndex ? 3.5 : 2,
+          symbolSortKey: index == _selectedLodgingIndex ? 2 : 1,
           customData: {
             'lodgingIndex': index,
             'name': _mappedLodgings[index].name ?? '',
+            'maki': lodgingMakiIconName(_mappedLodgings[index].type),
           },
         ),
+      ],
     ]);
 
     for (var index = 0; index < annotations.length; index++) {
@@ -802,6 +885,100 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         _selectLodging(lodgingIndex);
       },
     );
+    if (shouldAnimate) {
+      await _animateLodgingEntrance(manager, animationGeneration);
+    }
+  }
+
+  Future<void> _animateStageEntrance(
+    CircleAnnotationManager manager,
+    PointAnnotationManager labelManager,
+    int generation,
+  ) async {
+    for (var step = 1; step <= _markerEntranceSteps; step++) {
+      if (!mounted ||
+          generation != _stageAnimationGeneration ||
+          _stageManager != manager ||
+          _stageLabelManager != labelManager) {
+        return;
+      }
+      final progress = step / _markerEntranceSteps;
+      final opacity = Curves.easeOut.transform(progress);
+      final drop = Curves.easeOutBack.transform(progress);
+      final offset = -_stageDropDistance * (1 - drop);
+      try {
+        await Future.wait([
+          manager.setCircleTranslate([0, offset]),
+          manager.setCircleOpacity(opacity),
+          manager.setCircleStrokeOpacity(opacity),
+          labelManager.setTextTranslate([0, offset]),
+          labelManager.setTextOpacity(opacity),
+        ]);
+      } catch (_) {
+        return;
+      }
+      if (step < _markerEntranceSteps) {
+        await Future<void>.delayed(_markerEntranceFrame);
+      }
+    }
+  }
+
+  Future<void> _animateLodgingEntrance(
+    PointAnnotationManager manager,
+    int generation,
+  ) async {
+    for (var step = 1; step <= _markerEntranceSteps; step++) {
+      if (!mounted ||
+          generation != _lodgingAnimationGeneration ||
+          _lodgingManager != manager) {
+        return;
+      }
+      final progress = step / _markerEntranceSteps;
+      final opacity = Curves.easeOut.transform(progress);
+      final drop = Curves.easeOutBack.transform(progress);
+      final offset = -_lodgingDropDistance * (1 - drop);
+      try {
+        await Future.wait([
+          manager.setIconTranslate([0, offset]),
+          manager.setIconOpacity(opacity),
+          manager.setTextTranslate([0, offset]),
+          manager.setTextOpacity(opacity),
+        ]);
+      } catch (_) {
+        return;
+      }
+      if (step < _markerEntranceSteps) {
+        await Future<void>.delayed(_markerEntranceFrame);
+      }
+    }
+  }
+
+  Future<String?> _resolveLodgingStyleImage(
+    MapboxMap map,
+    String makiIconName,
+  ) async {
+    if (_lodgingStyleImages.containsKey(makiIconName)) {
+      return _lodgingStyleImages[makiIconName];
+    }
+    for (final candidate in [
+      '$makiIconName-15',
+      makiIconName,
+      '$makiIconName-11',
+    ]) {
+      try {
+        if (await map.style.getStyleImage(candidate) != null) {
+          _lodgingStyleImages[makiIconName] = candidate;
+          return candidate;
+        }
+      } catch (_) {
+        // Try the next sprite naming convention.
+      }
+    }
+    final fallback = makiIconName == 'lodging'
+        ? null
+        : await _resolveLodgingStyleImage(map, 'lodging');
+    _lodgingStyleImages[makiIconName] = fallback;
+    return fallback;
   }
 
   Future<void> _toggleLodgings() async {
@@ -834,7 +1011,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       }
 
       setState(() => _lodgingsVisible = true);
-      await _drawLodgings(map);
+      await _drawLodgings(map, animate: true);
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -870,7 +1047,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
           _selectedStageScreenPosition = null;
         }
       });
-      await _drawStages(map);
+      await _drawStages(map, animate: _stagesVisible);
       if (_stagesVisible && _selectedStageIndex != null) {
         await _updateSelectedStagePosition();
       }
@@ -1012,6 +1189,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
           stages: widget.stages,
           initialIndex: stageIndex,
           direction: widget.direction,
+          locationStageId:
+              widget.stages[stageIndex].id == widget.locationStageId
+              ? widget.locationStageId
+              : null,
         ),
       ),
     );
@@ -1093,14 +1274,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       );
       final map = _map;
       if (map == null) return;
-      await map.location.updateSettings(
-        LocationComponentSettings(
-          enabled: true,
-          puckBearingEnabled: true,
-          pulsingEnabled: true,
-          showAccuracyRing: true,
-        ),
-      );
+      await _enableLocationPuck();
       await map.flyTo(
         CameraOptions(
           center: Point(
@@ -1116,6 +1290,19 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     } finally {
       if (mounted) setState(() => _locating = false);
     }
+  }
+
+  Future<void> _enableLocationPuck() async {
+    final map = _map;
+    if (map == null) return;
+    await map.location.updateSettings(
+      LocationComponentSettings(
+        enabled: true,
+        puckBearingEnabled: true,
+        pulsingEnabled: true,
+        showAccuracyRing: true,
+      ),
+    );
   }
 
   void _showMessage(String message) {
@@ -1184,48 +1371,43 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
                 onClose: _clearSelectedLodging,
               ),
             Positioned(
-              top: 36,
-              left: 12,
-              right: 68,
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: _MapLegend(showAccommodation: _lodgingsVisible),
-              ),
-            ),
-            Positioned(
-              left: 12,
+              left: 64,
+              right: 64,
               bottom: 28,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: _ink.withValues(alpha: 0.88),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 22,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: _routeBlue,
-                        borderRadius: BorderRadius.circular(2),
-                        border: Border.all(color: Colors.white, width: 0.7),
+              child: Center(
+                child: Container(
+                  key: const ValueKey('map-trail-summary'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _ink.withValues(alpha: 0.88),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 22,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: _routeBlue,
+                          borderRadius: BorderRadius.circular(2),
+                          border: Border.all(color: Colors.white, width: 0.7),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Cyprus E4 · ${widget.formatter.distance(widget.points.last.distanceKm, decimals: 0)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                      const SizedBox(width: 8),
+                      Text(
+                        'Cyprus E4 · ${widget.formatter.distance(widget.points.last.distanceKm, decimals: 0)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1280,107 +1462,6 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
           ],
         );
       },
-    );
-  }
-}
-
-class _MapLegend extends StatelessWidget {
-  const _MapLegend({required this.showAccommodation});
-
-  final bool showAccommodation;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return Semantics(
-      container: true,
-      child: Container(
-        key: const ValueKey('map-legend'),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.94),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x26000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Wrap(
-          spacing: 12,
-          runSpacing: 6,
-          children: [
-            _MapLegendItem(color: _green, label: l10n.t('Start')),
-            _MapLegendItem(color: _red, label: l10n.t('Finish')),
-            _MapLegendItem(
-              color: _routeBlue,
-              label: l10n.t('Selected stage'),
-              selected: true,
-            ),
-            _MapLegendItem(color: _yellow, label: l10n.t('Other stages')),
-            if (showAccommodation)
-              _MapLegendItem(
-                color: _accommodationBlue,
-                label: l10n.t('Accommodation'),
-                selected: true,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MapLegendItem extends StatelessWidget {
-  const _MapLegendItem({
-    required this.color,
-    required this.label,
-    this.selected = false,
-  });
-
-  final Color color;
-  final String label;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: selected ? 11 : 10,
-          height: selected ? 11 : 10,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: selected ? Colors.white : _ink,
-              width: selected ? 2 : 1,
-            ),
-            boxShadow: selected
-                ? const [
-                    BoxShadow(
-                      color: Color(0x50000000),
-                      blurRadius: 1,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
-          ),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: const TextStyle(
-            color: _ink,
-            fontSize: 10,
-            height: 1.1,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
     );
   }
 }

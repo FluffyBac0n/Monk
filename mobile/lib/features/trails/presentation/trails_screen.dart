@@ -258,25 +258,36 @@ class _TrailCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    key: ValueKey('trail-card-kind-${trail.id}'),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _yellow,
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-                    child: Text(
-                      l10n.t('LONG DISTANCE'),
-                      style: const TextStyle(
-                        color: _ink,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.9,
+                  Row(
+                    children: [
+                      Container(
+                        key: ValueKey('trail-card-kind-${trail.id}'),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _yellow,
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: Text(
+                          l10n.t('LONG DISTANCE'),
+                          style: const TextStyle(
+                            color: _ink,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.9,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: _TrailDataStatusBadge(
+                          trailId: trail.id,
+                          isOffline: isOffline,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -325,44 +336,77 @@ class _TrailCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(
-                        isOffline
-                            ? Icons.offline_pin_rounded
-                            : Icons.cloud_download_outlined,
-                        size: 19,
-                        color: isOffline ? _green : Colors.black45,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          l10n.t(
-                            isOffline
-                                ? 'Trail data available offline'
-                                : 'Trail data not downloaded',
-                          ),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.icon(
+                      onPressed: onExplore,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
                         ),
+                        visualDensity: VisualDensity.compact,
                       ),
-                      FilledButton.icon(
-                        onPressed: onExplore,
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                        label: Text(l10n.t('Explore trail')),
-                      ),
-                    ],
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                      label: Text(l10n.t('Explore trail')),
+                    ),
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TrailDataStatusBadge extends StatelessWidget {
+  const _TrailDataStatusBadge({required this.trailId, required this.isOffline});
+
+  final String trailId;
+  final bool isOffline;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.t(
+      isOffline ? 'Trail data available offline' : 'Trail data not downloaded',
+    );
+    final foreground = isOffline ? _green : Colors.white70;
+    final background = isOffline
+        ? const Color(0xFFE1F1E8)
+        : Colors.white.withValues(alpha: 0.12);
+    return Tooltip(
+      message: label,
+      child: Container(
+        key: ValueKey('trail-data-status-badge-$trailId'),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isOffline
+                  ? Icons.check_circle_rounded
+                  : Icons.info_outline_rounded,
+              color: foreground,
+              size: 13,
+            ),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.7,
+                ),
               ),
             ),
           ],

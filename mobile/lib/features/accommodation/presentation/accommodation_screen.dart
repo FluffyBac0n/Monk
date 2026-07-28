@@ -9,6 +9,7 @@ import '../../map/presentation/map_screen.dart';
 import '../../stages/domain/stage.dart';
 import '../domain/lodging.dart';
 import 'accommodation_controller.dart';
+import 'lodging_type_icon.dart';
 
 const _ink = Color(0xFF17201B);
 const _green = Color(0xFF277653);
@@ -163,6 +164,11 @@ class _LodgingCard extends ConsumerWidget {
     final whatsapp = lodging.whatsapp?.trim();
     final email = lodging.email?.trim();
     final bookingUri = lodging.bookingUri;
+    final markerColor = lodgingMakiMarkerColor(type);
+    final locationText = [
+      if (address != null && address.isNotEmpty) address,
+      if (village != null && village.isNotEmpty && village != address) village,
+    ].join(' · ');
     final facts = <_LodgingFactData>[
       if (_formatPrice(lodging, l10n) case final price?)
         _LodgingFactData(
@@ -222,13 +228,20 @@ class _LodgingCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
+                  key: ValueKey('lodging-type-marker-${lodging.id}'),
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: _bookingBlue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(13),
+                    color: markerColor,
+                    shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.hotel_rounded, color: _bookingBlue),
+                  child: Center(
+                    child: LodgingTypeIcon(
+                      type: type,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -247,8 +260,8 @@ class _LodgingCard extends ConsumerWidget {
                         const SizedBox(height: 2),
                         Text(
                           l10n.t(type),
-                          style: const TextStyle(
-                            color: _bookingBlue,
+                          style: TextStyle(
+                            color: markerColor,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -258,48 +271,61 @@ class _LodgingCard extends ConsumerWidget {
                 ),
               ],
             ),
-            if (village != null ||
+            if (lodging.location != null ||
+                village != null ||
                 address != null ||
                 phone != null ||
                 whatsapp != null ||
                 email != null) ...[
               const SizedBox(height: 14),
-              SelectionArea(
-                child: Column(
-                  children: [
-                    if (village != null || address != null)
-                      _ContactRow(
-                        icon: Icons.location_on_outlined,
-                        value: [
-                          if (address != null && address.isNotEmpty) address,
-                          if (village != null &&
-                              village.isNotEmpty &&
-                              village != address)
-                            village,
-                        ].join(' · '),
+              Column(
+                children: [
+                  if (lodging.location != null)
+                    _ContactRow(
+                      key: ValueKey('map-location-lodging-${lodging.id}'),
+                      icon: Icons.location_on_outlined,
+                      value: locationText.isNotEmpty
+                          ? locationText
+                          : l10n.t('Show on map'),
+                      actionLabel: l10n.t('Show on map'),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => MapScreen(initialLodging: lodging),
+                        ),
                       ),
-                    if (phone != null && phone.isNotEmpty)
-                      _ContactRow(
-                        icon: Icons.phone_outlined,
-                        label: l10n.t('Phone'),
-                        value: phone,
-                      ),
-                    if (whatsapp != null &&
-                        whatsapp.isNotEmpty &&
-                        whatsapp != phone)
-                      _ContactRow(
-                        icon: Icons.chat_outlined,
-                        label: l10n.t('WhatsApp'),
-                        value: whatsapp,
-                      ),
-                    if (email != null && email.isNotEmpty)
-                      _ContactRow(
-                        icon: Icons.email_outlined,
-                        label: l10n.t('Email'),
-                        value: email,
-                      ),
-                  ],
-                ),
+                    )
+                  else if (village != null || address != null)
+                    _ContactRow(
+                      icon: Icons.location_on_outlined,
+                      value: locationText,
+                    ),
+                  SelectionArea(
+                    child: Column(
+                      children: [
+                        if (phone != null && phone.isNotEmpty)
+                          _ContactRow(
+                            icon: Icons.phone_outlined,
+                            label: l10n.t('Phone'),
+                            value: phone,
+                          ),
+                        if (whatsapp != null &&
+                            whatsapp.isNotEmpty &&
+                            whatsapp != phone)
+                          _ContactRow(
+                            icon: Icons.chat_outlined,
+                            label: l10n.t('WhatsApp'),
+                            value: whatsapp,
+                          ),
+                        if (email != null && email.isNotEmpty)
+                          _ContactRow(
+                            icon: Icons.email_outlined,
+                            label: l10n.t('Email'),
+                            value: email,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
             if (facts.isNotEmpty) ...[
@@ -310,51 +336,23 @@ class _LodgingCard extends ConsumerWidget {
                 children: [for (final fact in facts) _LodgingFact(data: fact)],
               ),
             ],
-            const SizedBox(height: 16),
-            if (lodging.location != null) ...[
+            if (bookingUri != null) ...[
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton.icon(
-                  key: ValueKey('map-lodging-${lodging.id}'),
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => MapScreen(initialLodging: lodging),
-                    ),
+                child: FilledButton.icon(
+                  key: ValueKey('book-lodging-${lodging.id}'),
+                  onPressed: () => _openExternal(context, ref, bookingUri),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _bookingBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
                   ),
-                  icon: const Icon(Icons.map_outlined),
-                  label: Text(l10n.t('View on map')),
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  label: Text(l10n.t('Book accommodation')),
                 ),
               ),
-              const SizedBox(height: 8),
             ],
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                key: ValueKey('book-lodging-${lodging.id}'),
-                onPressed: bookingUri == null
-                    ? null
-                    : () => _openExternal(context, ref, bookingUri),
-                style: FilledButton.styleFrom(
-                  backgroundColor: _bookingBlue,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.black12,
-                  disabledForegroundColor: Colors.black45,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                ),
-                icon: Icon(
-                  bookingUri == null
-                      ? Icons.link_off_rounded
-                      : Icons.open_in_new_rounded,
-                ),
-                label: Text(
-                  l10n.t(
-                    bookingUri == null
-                        ? 'Booking link unavailable'
-                        : 'Book accommodation',
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -363,21 +361,33 @@ class _LodgingCard extends ConsumerWidget {
 }
 
 class _ContactRow extends StatelessWidget {
-  const _ContactRow({required this.icon, required this.value, this.label});
+  const _ContactRow({
+    required this.icon,
+    required this.value,
+    this.label,
+    this.actionLabel,
+    this.onTap,
+    super.key,
+  });
 
   final IconData icon;
   final String value;
   final String? label;
+  final String? actionLabel;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     if (value.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+    final isAction = onTap != null;
+    final content = Padding(
+      padding: isAction
+          ? const EdgeInsets.symmetric(horizontal: 10, vertical: 10)
+          : const EdgeInsets.only(bottom: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: _green),
+          Icon(icon, size: 18, color: isAction ? _bookingBlue : _green),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -385,7 +395,29 @@ class _ContactRow extends StatelessWidget {
               style: const TextStyle(color: Colors.black87),
             ),
           ),
+          if (isAction) ...[
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: _bookingBlue,
+            ),
+          ],
         ],
+      ),
+    );
+    if (!isAction) return content;
+    return Semantics(
+      button: true,
+      label: actionLabel,
+      child: Material(
+        color: _bookingBlue.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: content,
+        ),
       ),
     );
   }

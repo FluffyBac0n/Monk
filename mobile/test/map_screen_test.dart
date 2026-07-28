@@ -6,6 +6,7 @@ import 'package:monk_mobile/core/localization/app_localizations.dart';
 import 'package:monk_mobile/core/settings/app_settings.dart';
 import 'package:monk_mobile/core/settings/measurement_formatter.dart';
 import 'package:monk_mobile/features/accommodation/domain/lodging.dart';
+import 'package:monk_mobile/features/accommodation/presentation/lodging_type_icon.dart';
 import 'package:monk_mobile/features/elevation/domain/route_point.dart';
 import 'package:monk_mobile/features/map/presentation/map_screen.dart';
 
@@ -33,6 +34,31 @@ void main() {
 
   test('whole-route fit stays north-up on a landscape map', () {
     expect(routeFitBearing(const [west, east], const Size(760, 390)), 0);
+  });
+
+  test('lodging types use matching Mapbox Maki POI icons', () {
+    expect(lodgingMakiIconName('Picnic site'), 'picnic-site');
+    expect(lodgingMakiIconName('Campsite'), 'campsite');
+    expect(lodgingMakiIconName('Mountain shelter'), 'shelter');
+    expect(lodgingMakiIconName('Agrotourism'), 'farm');
+    expect(lodgingMakiIconName('Religious'), 'place-of-worship');
+    expect(lodgingMakiIconName('Municipal'), 'town-hall');
+    expect(lodgingMakiIconName('Apartment'), 'residential-community');
+    expect(lodgingMakiIconName('Hostel'), 'suitcase');
+    expect(lodgingMakiIconName('Guesthouse'), 'home');
+    expect(lodgingMakiIconName('Bed & Breakfast'), 'home');
+    expect(lodgingMakiIconName('Hotel'), 'lodging');
+    expect(lodgingMakiIconName(null), 'lodging');
+  });
+
+  test('lodging types use the Mapbox Outdoors marker palette', () {
+    expect(
+      lodgingMakiMarkerColor('Picnic site'),
+      mapboxOutdoorAccommodationGreen,
+    );
+    expect(lodgingMakiMarkerColor('Campsite'), mapboxOutdoorAccommodationGreen);
+    expect(lodgingMakiMarkerColor('Hotel'), mapboxLodgingMauve);
+    expect(lodgingMakiMarkerColor('Apartment'), mapboxLodgingMauve);
   });
 
   testWidgets('map route direction remains readable on a narrow screen', (
