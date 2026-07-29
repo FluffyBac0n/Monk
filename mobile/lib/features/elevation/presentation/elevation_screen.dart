@@ -142,7 +142,7 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
       ),
       body: elevation.when(
         data: (points) {
-          if (points.isNotEmpty) {
+          if (points.isNotEmpty && stagesValue.hasValue) {
             _focusInitialStage(stages, direction, points.last.distanceKm);
           }
           return points.isEmpty

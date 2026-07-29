@@ -9,6 +9,9 @@ import 'package:monk_mobile/features/accommodation/domain/lodging.dart';
 import 'package:monk_mobile/features/accommodation/presentation/lodging_type_icon.dart';
 import 'package:monk_mobile/features/elevation/domain/route_point.dart';
 import 'package:monk_mobile/features/map/presentation/map_screen.dart';
+import 'package:monk_mobile/features/stages/domain/stage.dart';
+import 'package:monk_mobile/features/stages/presentation/stages_screen.dart';
+import 'package:monk_mobile/features/trail/domain/trail_direction.dart';
 
 void main() {
   const west = RoutePoint(
@@ -27,6 +30,111 @@ void main() {
     distanceKm: 100,
     reverseDistanceKm: 0,
   );
+
+  test('map endpoint flags swap roles with the trail direction', () {
+    const stages = [
+      TrailStage(
+        id: 'pafos',
+        sequence: 3,
+        name: 'Pafos',
+        accumulatedDistanceKm: 0,
+        services: {},
+      ),
+      TrailStage(
+        id: 'middle',
+        sequence: 2,
+        name: 'Middle',
+        accumulatedDistanceKm: 50,
+        services: {},
+      ),
+      TrailStage(
+        id: 'larnaka',
+        sequence: 1,
+        name: 'Larnaka',
+        accumulatedDistanceKm: 100,
+        services: {},
+      ),
+    ];
+
+    expect(mapStageEndpointIndexes(stages, TrailDirection.pafosToLarnaka), (
+      startIndex: 0,
+      finishIndex: 2,
+    ));
+    expect(mapStageEndpointIndexes(stages, TrailDirection.larnakaToPafos), (
+      startIndex: 2,
+      finishIndex: 0,
+    ));
+  });
+
+  test('map endpoint flags remain visible when stages are hidden', () {
+    expect(
+      mapVisibleStageIndexes(
+        locatedStageIndexes: const [0, 1, 2, 3],
+        endpointIndexes: (startIndex: 3, finishIndex: 0),
+        stagesVisible: false,
+        stagesExplicitlyHidden: true,
+        initialStageIndex: 2,
+      ),
+      [0, 3],
+    );
+    expect(
+      mapVisibleStageIndexes(
+        locatedStageIndexes: const [0, 1, 2, 3],
+        endpointIndexes: (startIndex: 3, finishIndex: 0),
+        stagesVisible: true,
+        stagesExplicitlyHidden: false,
+        initialStageIndex: 2,
+      ),
+      [0, 1, 2, 3],
+    );
+  });
+
+  test('stage toggle changes only intermediate map markers', () {
+    expect(
+      mapVisibleIntermediateStageIndexes(
+        locatedStageIndexes: const [0, 1, 2, 3],
+        endpointIndexes: (startIndex: 3, finishIndex: 0),
+        stagesVisible: false,
+        stagesExplicitlyHidden: true,
+        initialStageIndex: 2,
+      ),
+      isEmpty,
+    );
+    expect(
+      mapVisibleIntermediateStageIndexes(
+        locatedStageIndexes: const [0, 1, 2, 3],
+        endpointIndexes: (startIndex: 3, finishIndex: 0),
+        stagesVisible: true,
+        stagesExplicitlyHidden: false,
+        initialStageIndex: 2,
+      ),
+      [1, 2],
+    );
+  });
+
+  test('stage snapshot keeps start and finish ordered in reverse', () {
+    expect(
+      stageMapEndpointIndexes(
+        routePoints: const [west, east],
+        startDistanceKm: 0,
+        finishDistanceKm: 100,
+      ),
+      (startIndex: 0, finishIndex: 1),
+    );
+    expect(
+      stageMapEndpointIndexes(
+        routePoints: const [west, east],
+        startDistanceKm: 100,
+        finishDistanceKm: 0,
+      ),
+      (startIndex: 1, finishIndex: 0),
+    );
+  });
+
+  test('first stage preview suppresses only its finish flag', () {
+    expect(stagePreviewShowsFinishFlag(0), isFalse);
+    expect(stagePreviewShowsFinishFlag(1), isTrue);
+  });
 
   test('whole-route fit stays north-up on a portrait map', () {
     expect(routeFitBearing(const [west, east], const Size(390, 760)), 0);

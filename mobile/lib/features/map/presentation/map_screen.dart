@@ -18,6 +18,7 @@ import '../../stages/presentation/stages_screen.dart';
 import '../../trail/domain/trail_direction.dart';
 import '../../trail/presentation/trail_direction_controller.dart';
 import '../domain/offline_map_state.dart';
+import 'map_flag_marker.dart';
 import 'offline_map_controller.dart';
 
 const mapboxAccessToken = String.fromEnvironment('MAPBOX_ACCESS_TOKEN');
@@ -26,7 +27,7 @@ const _ink = Color(0xFF17201B);
 const _green = Color(0xFF277653);
 const _red = Color(0xFFD14B45);
 const _sand = Color(0xFFF4F2EC);
-const _yellow = Color(0xFFF2C94C);
+const _stageMarkerGold = Color(0xFFE6B72E);
 const _routeBlue = Color(0xFF1565C0);
 const _accommodationBlue = Color(0xFF0288D1);
 const _markerEntranceSteps = 10;
@@ -34,17 +35,93 @@ const _markerEntranceFrame = Duration(milliseconds: 24);
 const _stageDropDistance = 20.0;
 const _lodgingDropDistance = 28.0;
 
+({int startIndex, int finishIndex}) mapStageEndpointIndexes(
+  List<TrailStage> stages,
+  TrailDirection direction,
+) {
+  var startIndex = -1;
+  var finishIndex = -1;
+  double? startDistance;
+  double? finishDistance;
+  for (var index = 0; index < stages.length; index++) {
+    final distance = stages[index].accumulatedDistanceKm;
+    if (distance == null) continue;
+    final startsEarlier =
+        startDistance == null ||
+        (direction.isReversed
+            ? distance > startDistance
+            : distance < startDistance);
+    if (startsEarlier) {
+      startIndex = index;
+      startDistance = distance;
+    }
+    final finishesLater =
+        finishDistance == null ||
+        (direction.isReversed
+            ? distance < finishDistance
+            : distance > finishDistance);
+    if (finishesLater) {
+      finishIndex = index;
+      finishDistance = distance;
+    }
+  }
+  return (startIndex: startIndex, finishIndex: finishIndex);
+}
+
+List<int> mapVisibleStageIndexes({
+  required List<int> locatedStageIndexes,
+  required ({int startIndex, int finishIndex}) endpointIndexes,
+  required bool stagesVisible,
+  required bool stagesExplicitlyHidden,
+  int? initialStageIndex,
+}) {
+  if (stagesVisible) return List.unmodifiable(locatedStageIndexes);
+  return locatedStageIndexes
+      .where(
+        (index) =>
+            index == endpointIndexes.startIndex ||
+            index == endpointIndexes.finishIndex ||
+            (!stagesExplicitlyHidden && index == initialStageIndex),
+      )
+      .toList(growable: false);
+}
+
+List<int> mapVisibleIntermediateStageIndexes({
+  required List<int> locatedStageIndexes,
+  required ({int startIndex, int finishIndex}) endpointIndexes,
+  required bool stagesVisible,
+  required bool stagesExplicitlyHidden,
+  int? initialStageIndex,
+}) {
+  return mapVisibleStageIndexes(
+        locatedStageIndexes: locatedStageIndexes,
+        endpointIndexes: endpointIndexes,
+        stagesVisible: stagesVisible,
+        stagesExplicitlyHidden: stagesExplicitlyHidden,
+        initialStageIndex: initialStageIndex,
+      )
+      .where(
+        (index) =>
+            index != endpointIndexes.startIndex &&
+            index != endpointIndexes.finishIndex,
+      )
+      .toList(growable: false);
+}
+
 class MapScreen extends ConsumerWidget {
   const MapScreen({
     this.initialStageIndex,
     this.initialLodging,
+    this.initialLodgings = const [],
     this.locationStageId,
     this.accessToken = mapboxAccessToken,
     super.key,
-  }) : assert(initialStageIndex == null || initialLodging == null);
+  }) : assert(initialStageIndex == null || initialLodging == null),
+       assert(initialLodging == null || initialLodgings.length == 0);
 
   final int? initialStageIndex;
   final Lodging? initialLodging;
+  final List<Lodging> initialLodgings;
   final String? locationStageId;
   final String accessToken;
 
@@ -130,6 +207,7 @@ class MapScreen extends ConsumerWidget {
                       formatter: formatter,
                       initialStageIndex: initialStageIndex,
                       initialLodging: initialLodging,
+                      initialLodgings: initialLodgings,
                       locationStageId: locationStageId,
                     ),
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -432,6 +510,7 @@ class _RouteMap extends ConsumerStatefulWidget {
     required this.formatter,
     required this.initialStageIndex,
     required this.initialLodging,
+    required this.initialLodgings,
     required this.locationStageId,
   });
 
@@ -441,6 +520,7 @@ class _RouteMap extends ConsumerStatefulWidget {
   final MeasurementFormatter formatter;
   final int? initialStageIndex;
   final Lodging? initialLodging;
+  final List<Lodging> initialLodgings;
   final String? locationStageId;
 
   @override
@@ -450,10 +530,14 @@ class _RouteMap extends ConsumerStatefulWidget {
 class _RouteMapState extends ConsumerState<_RouteMap> {
   late final CameraViewportState _initialViewport;
   MapboxMap? _map;
-  CircleAnnotationManager? _stageManager;
-  PointAnnotationManager? _stageLabelManager;
+  PointAnnotationManager? _endpointManager;
+  PointAnnotationManager? _endpointLabelManager;
+  Cancelable? _endpointTapListener;
+  final Map<String, int> _endpointIndexByAnnotation = {};
+  PointAnnotationManager? _stageManager;
   Cancelable? _stageTapListener;
   final Map<String, int> _stageIndexByAnnotation = {};
+  final Map<String, String?> _stageStyleImages = {};
   PointAnnotationManager? _lodgingManager;
   Cancelable? _lodgingTapListener;
   final Map<String, int> _lodgingIndexByAnnotation = {};
@@ -498,6 +582,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   void dispose() {
     _stageAnimationGeneration++;
     _lodgingAnimationGeneration++;
+    _endpointTapListener?.cancel();
     _stageTapListener?.cancel();
     _lodgingTapListener?.cancel();
     super.dispose();
@@ -506,12 +591,15 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   Future<void> _onMapCreated(MapboxMap map) async {
     _map = map;
     await _drawRoute(map);
-    await _drawStages(map, animate: true);
   }
 
   Future<void> _onMapLoaded(MapLoadedEventData _) async {
     if (_initialCameraApplied || !mounted) return;
+    final map = _map;
+    if (map == null) return;
     _initialCameraApplied = true;
+    await _drawEndpoints(map);
+    await _drawStages(map, animate: true);
     if (widget.locationStageId != null) {
       try {
         await _enableLocationPuck();
@@ -524,15 +612,39 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       await _showInitialLodging(initialLodging!);
       return;
     }
+    final initialLodgings = widget.initialLodgings
+        .where((lodging) => lodging.location != null)
+        .toList(growable: false);
+    if (initialLodgings.isNotEmpty) {
+      await _showInitialLodgings(initialLodgings);
+    }
     final initialIndex = widget.initialStageIndex;
     if (initialIndex != null &&
         initialIndex >= 0 &&
         initialIndex < widget.stages.length) {
-      await _focusStage(initialIndex);
+      if (initialLodgings.isEmpty) {
+        await _focusStage(initialIndex);
+      } else {
+        await _focusStageWithLodgings(initialIndex, initialLodgings);
+      }
       await _selectStage(initialIndex);
     } else {
       await _fitRoute();
     }
+  }
+
+  Future<void> _showInitialLodgings(List<Lodging> lodgings) async {
+    final map = _map;
+    if (map == null || lodgings.isEmpty) return;
+    setState(() {
+      _mappedLodgings = lodgings;
+      _lodgingsVisible = true;
+      _lodgingsLoaded = false;
+      _selectedLodgingIndex = null;
+      _selectedLodgingPoint = null;
+      _selectedLodgingScreenPosition = null;
+    });
+    await _drawLodgings(map, animate: true);
   }
 
   Future<void> _showInitialLodging(Lodging lodging) async {
@@ -630,24 +742,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     );
   }
 
-  Future<void> _drawStages(MapboxMap map, {bool animate = false}) async {
-    final l10n = context.l10n;
-    final animationGeneration = ++_stageAnimationGeneration;
-    final shouldAnimate = animate && !MediaQuery.disableAnimationsOf(context);
-    _stageTapListener?.cancel();
-    _stageTapListener = null;
-    final previousManager = _stageManager;
-    if (previousManager != null) {
-      await map.annotations.removeAnnotationManager(previousManager);
-    }
-    final previousLabelManager = _stageLabelManager;
-    if (previousLabelManager != null) {
-      await map.annotations.removeAnnotationManager(previousLabelManager);
-    }
-    _stageManager = null;
-    _stageLabelManager = null;
-    _stageIndexByAnnotation.clear();
-
+  List<({int index, TrailStage stage, RoutePoint point})> _locatedStages() {
     final locatedStages = <({int index, TrailStage stage, RoutePoint point})>[];
     for (var index = 0; index < widget.stages.length; index++) {
       final stage = widget.stages[index];
@@ -659,116 +754,173 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         point: routePointNearestDistance(widget.points, distance),
       ));
     }
-    if (locatedStages.isEmpty) return;
-    final startStage = locatedStages.reduce((a, b) {
-      final aDistance = a.stage.accumulatedDistanceKm!;
-      final bDistance = b.stage.accumulatedDistanceKm!;
-      return widget.direction.isReversed
-          ? (aDistance > bDistance ? a : b)
-          : (aDistance < bDistance ? a : b);
-    });
-    final endStage = locatedStages.reduce((a, b) {
-      final aDistance = a.stage.accumulatedDistanceKm!;
-      final bDistance = b.stage.accumulatedDistanceKm!;
-      return widget.direction.isReversed
-          ? (aDistance < bDistance ? a : b)
-          : (aDistance > bDistance ? a : b);
-    });
-    final displayedStages = _stagesVisible
-        ? locatedStages
-        : _stagesExplicitlyHidden
-        ? const <({int index, TrailStage stage, RoutePoint point})>[]
-        : locatedStages
-              .where(
-                (item) =>
-                    item.index == startStage.index ||
-                    item.index == endStage.index ||
-                    item.index == widget.initialStageIndex,
-              )
-              .toList(growable: false);
-    if (displayedStages.isEmpty) return;
+    return locatedStages;
+  }
 
-    final manager = await map.annotations.createCircleAnnotationManager();
-    _stageManager = manager;
-    if (shouldAnimate) {
-      await Future.wait([
-        manager.setCircleTranslateAnchor(CircleTranslateAnchor.VIEWPORT),
-        manager.setCircleTranslate([0, -_stageDropDistance]),
-        manager.setCircleOpacity(0),
-        manager.setCircleStrokeOpacity(0),
-      ]);
+  Future<void> _drawEndpoints(MapboxMap map) async {
+    final l10n = context.l10n;
+    _endpointTapListener?.cancel();
+    _endpointTapListener = null;
+    final previousManager = _endpointManager;
+    if (previousManager != null) {
+      await map.annotations.removeAnnotationManager(previousManager);
     }
+    final previousLabelManager = _endpointLabelManager;
+    if (previousLabelManager != null) {
+      await map.annotations.removeAnnotationManager(previousLabelManager);
+    }
+    _endpointManager = null;
+    _endpointLabelManager = null;
+    _endpointIndexByAnnotation.clear();
+
+    final locatedStages = _locatedStages();
+    if (locatedStages.isEmpty) return;
+    final endpointIndexes = mapStageEndpointIndexes(
+      widget.stages,
+      widget.direction,
+    );
+    final startStage = locatedStages.firstWhere(
+      (item) => item.index == endpointIndexes.startIndex,
+    );
+    final endStage = locatedStages.firstWhere(
+      (item) => item.index == endpointIndexes.finishIndex,
+    );
+    final endpointStages = startStage.index == endStage.index
+        ? [startStage]
+        : [startStage, endStage];
+    final endpointFlags = await Future.wait([
+      mapFlagMarkerImage(_green),
+      mapFlagMarkerImage(_red),
+    ]);
+    final manager = await map.annotations.createPointAnnotationManager();
+    _endpointManager = manager;
+    await manager.setIconAllowOverlap(true);
+    await manager.setIconIgnorePlacement(true);
     final annotations = await manager.createMulti([
-      for (final item in displayedStages)
-        CircleAnnotationOptions(
+      for (final item in endpointStages)
+        PointAnnotationOptions(
           geometry: Point(
             coordinates: Position(item.point.lng, item.point.lat),
           ),
-          circleColor: item.index == _selectedStageIndex
-              ? _routeBlue.toARGB32()
-              : item.index == startStage.index
-              ? _green.toARGB32()
-              : item.index == endStage.index
-              ? _red.toARGB32()
-              : _yellow.toARGB32(),
-          circleRadius: item.index == _selectedStageIndex
-              ? 11
-              : item.index == startStage.index || item.index == endStage.index
-              ? 9
-              : 8,
-          circleStrokeColor: item.index == _selectedStageIndex
-              ? Colors.white.toARGB32()
-              : _ink.toARGB32(),
-          circleStrokeWidth: item.index == _selectedStageIndex ? 3 : 1.5,
+          image: item.index == startStage.index
+              ? endpointFlags[0]
+              : endpointFlags[1],
+          iconAnchor: IconAnchor.BOTTOM,
+          iconSize: 1.75,
+          symbolSortKey: 3,
           customData: {'stageIndex': item.index, 'name': item.stage.name},
         ),
     ]);
+    for (var index = 0; index < annotations.length; index++) {
+      final annotation = annotations[index];
+      if (annotation != null) {
+        _endpointIndexByAnnotation[annotation.id] = endpointStages[index].index;
+      }
+    }
+    _endpointTapListener = manager.tapEvents(
+      onTap: (annotation) {
+        final stageIndex = _endpointIndexByAnnotation[annotation.id];
+        if (stageIndex == null || !mounted) return;
+        _selectStage(stageIndex);
+      },
+    );
 
     final labelManager = await map.annotations.createPointAnnotationManager();
-    _stageLabelManager = labelManager;
+    _endpointLabelManager = labelManager;
     await labelManager.setTextAllowOverlap(true);
     await labelManager.setTextIgnorePlacement(true);
-    if (shouldAnimate) {
-      await Future.wait([
-        labelManager.setTextTranslateAnchor(TextTranslateAnchor.VIEWPORT),
-        labelManager.setTextTranslate([0, -_stageDropDistance]),
-        labelManager.setTextOpacity(0),
-      ]);
-    }
     await labelManager.createMulti([
-      for (final item in displayedStages)
+      for (final item in endpointStages)
         PointAnnotationOptions(
           geometry: Point(
             coordinates: Position(item.point.lng, item.point.lat),
           ),
           textField: item.index == startStage.index
               ? l10n.t('Start').toUpperCase()
-              : item.index == endStage.index
-              ? l10n.t('Finish').toUpperCase()
-              : '${item.stage.sequence}',
-          textAnchor:
-              item.index == startStage.index || item.index == endStage.index
-              ? TextAnchor.TOP
-              : TextAnchor.CENTER,
-          textOffset:
-              item.index == startStage.index || item.index == endStage.index
-              ? [0, 1.1]
-              : [0, 0],
-          textSize:
-              item.index == startStage.index || item.index == endStage.index
-              ? 11
-              : 10,
-          textColor:
-              item.index == startStage.index || item.index == endStage.index
-              ? _ink.toARGB32()
-              : item.index == _selectedStageIndex
-              ? Colors.white.toARGB32()
-              : _ink.toARGB32(),
+              : l10n.t('Finish').toUpperCase(),
+          textAnchor: TextAnchor.TOP,
+          textOffset: [0, 1.2],
+          textSize: 11,
+          textColor: _ink.toARGB32(),
           textHaloColor: Colors.white.toARGB32(),
-          textHaloWidth:
-              item.index == startStage.index || item.index == endStage.index
-              ? 1.5
-              : 0,
+          textHaloWidth: 1.5,
+        ),
+    ]);
+  }
+
+  Future<void> _drawStages(MapboxMap map, {bool animate = false}) async {
+    final animationGeneration = ++_stageAnimationGeneration;
+    final shouldAnimate = animate && !MediaQuery.disableAnimationsOf(context);
+    _stageTapListener?.cancel();
+    _stageTapListener = null;
+    final previousManager = _stageManager;
+    if (previousManager != null) {
+      await map.annotations.removeAnnotationManager(previousManager);
+    }
+    _stageManager = null;
+    _stageIndexByAnnotation.clear();
+
+    final locatedStages = _locatedStages();
+    if (locatedStages.isEmpty) return;
+    final endpointIndexes = mapStageEndpointIndexes(
+      widget.stages,
+      widget.direction,
+    );
+    final visibleStageIndexes = mapVisibleIntermediateStageIndexes(
+      locatedStageIndexes: [
+        for (final locatedStage in locatedStages) locatedStage.index,
+      ],
+      endpointIndexes: endpointIndexes,
+      stagesVisible: _stagesVisible,
+      stagesExplicitlyHidden: _stagesExplicitlyHidden,
+      initialStageIndex: widget.initialStageIndex,
+    ).toSet();
+    final displayedStages = locatedStages
+        .where((item) => visibleStageIndexes.contains(item.index))
+        .toList(growable: false);
+    if (displayedStages.isEmpty) return;
+
+    final stageIcon = await _resolveStageStyleImage(map, 'marker-stroked');
+    final manager = await map.annotations.createPointAnnotationManager();
+    _stageManager = manager;
+    await manager.setIconAllowOverlap(true);
+    await manager.setIconIgnorePlacement(true);
+    await manager.setTextAllowOverlap(true);
+    await manager.setTextIgnorePlacement(true);
+    if (shouldAnimate) {
+      await Future.wait([
+        manager.setIconTranslateAnchor(IconTranslateAnchor.VIEWPORT),
+        manager.setIconTranslate([0, -_stageDropDistance]),
+        manager.setIconOpacity(0),
+        manager.setTextTranslateAnchor(TextTranslateAnchor.VIEWPORT),
+        manager.setTextTranslate([0, -_stageDropDistance]),
+        manager.setTextOpacity(0),
+      ]);
+    }
+    final annotations = await manager.createMulti([
+      for (final item in displayedStages)
+        PointAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(item.point.lng, item.point.lat),
+          ),
+          iconImage: stageIcon,
+          iconAnchor: IconAnchor.BOTTOM,
+          iconSize: item.index == _selectedStageIndex ? 1.65 : 1.35,
+          iconColor: item.index == _selectedStageIndex
+              ? _routeBlue.toARGB32()
+              : _stageMarkerGold.toARGB32(),
+          iconHaloColor: Colors.white.toARGB32(),
+          iconHaloWidth: item.index == _selectedStageIndex ? 3.5 : 2.25,
+          iconHaloBlur: 0.5,
+          textField: stageIcon == null ? '●' : null,
+          textSize: item.index == _selectedStageIndex ? 25 : 21,
+          textColor: item.index == _selectedStageIndex
+              ? _routeBlue.toARGB32()
+              : _stageMarkerGold.toARGB32(),
+          textHaloColor: Colors.white.toARGB32(),
+          textHaloWidth: item.index == _selectedStageIndex ? 3.5 : 2.25,
+          symbolSortKey: item.index == _selectedStageIndex ? 2 : 1,
+          customData: {'stageIndex': item.index, 'name': item.stage.name},
         ),
     ]);
 
@@ -786,7 +938,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       },
     );
     if (shouldAnimate) {
-      await _animateStageEntrance(manager, labelManager, animationGeneration);
+      await _animateStageEntrance(manager, animationGeneration);
     }
   }
 
@@ -891,15 +1043,13 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }
 
   Future<void> _animateStageEntrance(
-    CircleAnnotationManager manager,
-    PointAnnotationManager labelManager,
+    PointAnnotationManager manager,
     int generation,
   ) async {
     for (var step = 1; step <= _markerEntranceSteps; step++) {
       if (!mounted ||
           generation != _stageAnimationGeneration ||
-          _stageManager != manager ||
-          _stageLabelManager != labelManager) {
+          _stageManager != manager) {
         return;
       }
       final progress = step / _markerEntranceSteps;
@@ -908,11 +1058,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       final offset = -_stageDropDistance * (1 - drop);
       try {
         await Future.wait([
-          manager.setCircleTranslate([0, offset]),
-          manager.setCircleOpacity(opacity),
-          manager.setCircleStrokeOpacity(opacity),
-          labelManager.setTextTranslate([0, offset]),
-          labelManager.setTextOpacity(opacity),
+          manager.setIconTranslate([0, offset]),
+          manager.setIconOpacity(opacity),
+          manager.setTextTranslate([0, offset]),
+          manager.setTextOpacity(opacity),
         ]);
       } catch (_) {
         return;
@@ -921,6 +1070,31 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         await Future<void>.delayed(_markerEntranceFrame);
       }
     }
+  }
+
+  Future<String?> _resolveStageStyleImage(
+    MapboxMap map,
+    String makiIconName,
+  ) async {
+    if (_stageStyleImages.containsKey(makiIconName)) {
+      return _stageStyleImages[makiIconName];
+    }
+    for (final candidate in [
+      '$makiIconName-15',
+      makiIconName,
+      '$makiIconName-11',
+    ]) {
+      try {
+        if (await map.style.getStyleImage(candidate) != null) {
+          _stageStyleImages[makiIconName] = candidate;
+          return candidate;
+        }
+      } catch (_) {
+        // Try the next sprite naming convention.
+      }
+    }
+    _stageStyleImages[makiIconName] = null;
+    return null;
   }
 
   Future<void> _animateLodgingEntrance(
@@ -1043,12 +1217,13 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       setState(() {
         _stagesVisible = !_stagesVisible;
         _stagesExplicitlyHidden = !_stagesVisible;
-        if (!_stagesVisible) {
+        if (!_stagesVisible && !_isEndpointStageIndex(_selectedStageIndex)) {
           _selectedStageScreenPosition = null;
         }
       });
       await _drawStages(map, animate: _stagesVisible);
-      if (_stagesVisible && _selectedStageIndex != null) {
+      if (_selectedStageIndex != null &&
+          (_stagesVisible || _isEndpointStageIndex(_selectedStageIndex))) {
         await _updateSelectedStagePosition();
       }
     } finally {
@@ -1088,13 +1263,26 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     if (map != null) await _drawStages(map);
   }
 
+  bool _isEndpointStageIndex(int? stageIndex) {
+    if (stageIndex == null || widget.stages.isEmpty) return false;
+    final endpointIndexes = mapStageEndpointIndexes(
+      widget.stages,
+      widget.direction,
+    );
+    return stageIndex == endpointIndexes.startIndex ||
+        stageIndex == endpointIndexes.finishIndex;
+  }
+
   Future<void> _updateSelectedStagePosition() async {
-    if (_stagesExplicitlyHidden) return;
+    final endpointSelected = _isEndpointStageIndex(_selectedStageIndex);
+    if (_stagesExplicitlyHidden && !endpointSelected) return;
     final map = _map;
     final point = _selectedStagePoint;
     if (map == null || point == null) return;
     final position = await map.pixelForCoordinate(point);
-    if (!mounted || _stagesExplicitlyHidden || point != _selectedStagePoint) {
+    if (!mounted ||
+        (_stagesExplicitlyHidden && !endpointSelected) ||
+        point != _selectedStagePoint) {
       return;
     }
     setState(() => _selectedStageScreenPosition = position);
@@ -1246,6 +1434,52 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       ),
       MapAnimationOptions(duration: 700, startDelay: 0),
     );
+  }
+
+  Future<void> _focusStageWithLodgings(
+    int stageIndex,
+    List<Lodging> lodgings,
+  ) async {
+    final map = _map;
+    final distance = widget.stages[stageIndex].accumulatedDistanceKm;
+    if (map == null || distance == null) return;
+    final stagePoint = routePointNearestDistance(widget.points, distance);
+    final coordinates = <Position>[
+      Position(stagePoint.lng, stagePoint.lat),
+      for (final lodging in lodgings)
+        if (lodging.location case final location?)
+          Position(location.longitude, location.latitude),
+    ];
+    var minLng = coordinates.first.lng.toDouble();
+    var maxLng = minLng;
+    var minLat = coordinates.first.lat.toDouble();
+    var maxLat = minLat;
+    for (final coordinate in coordinates.skip(1)) {
+      final lng = coordinate.lng.toDouble();
+      final lat = coordinate.lat.toDouble();
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+    if ((maxLng - minLng).abs() < 0.00001 &&
+        (maxLat - minLat).abs() < 0.00001) {
+      await _focusStage(stageIndex);
+      return;
+    }
+    final camera = await map.cameraForCoordinateBounds(
+      CoordinateBounds(
+        southwest: Point(coordinates: Position(minLng, minLat)),
+        northeast: Point(coordinates: Position(maxLng, maxLat)),
+        infiniteBounds: false,
+      ),
+      MbxEdgeInsets(top: 96, left: 64, bottom: 130, right: 80),
+      0,
+      0,
+      14,
+      null,
+    );
+    await map.flyTo(camera, MapAnimationOptions(duration: 700, startDelay: 0));
   }
 
   Future<void> _showCurrentLocation() async {

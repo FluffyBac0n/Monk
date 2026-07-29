@@ -159,6 +159,32 @@ void main() {
     });
   });
 
+  test('normalizes Cyprus phone numbers and exposes contact URIs', () {
+    expect(normalizePhoneForDialing('99 123 456'), '+35799123456');
+    expect(normalizePhoneForDialing('099 123 456'), '+35799123456');
+    expect(normalizePhoneForDialing('357 99 123 456'), '+35799123456');
+    expect(normalizePhoneForDialing('00357 99 123 456'), '+35799123456');
+    expect(normalizePhoneForDialing('+44 20 1234 5678'), '+442012345678');
+    expect(normalizePhoneForDialing('not a phone'), isNull);
+
+    const lodging = Lodging(
+      id: 'contactable',
+      phone: '99 123 456',
+      email: 'stay@example.com',
+    );
+    expect(lodging.dialingPhoneNumber, '+35799123456');
+    expect(lodging.phoneUri, Uri.parse('tel:+35799123456'));
+    expect(lodging.emailUri, Uri.parse('mailto:stay@example.com'));
+
+    const invalid = Lodging(
+      id: 'invalid-contact',
+      phone: ' ',
+      email: 'not an email',
+    );
+    expect(invalid.phoneUri, isNull);
+    expect(invalid.emailUri, isNull);
+  });
+
   test('sorts by trail distance, then name, with missing distances last', () {
     const lodgings = [
       Lodging(id: 'unknown', name: 'Nearby but unknown'),

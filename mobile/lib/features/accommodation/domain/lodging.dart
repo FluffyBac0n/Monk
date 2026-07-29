@@ -62,6 +62,15 @@ class Lodging {
 
   Uri? get mapsUri => _httpUri(googleMapsUrl);
 
+  String? get dialingPhoneNumber => normalizePhoneForDialing(phone);
+
+  Uri? get phoneUri {
+    final number = dialingPhoneNumber;
+    return number == null ? null : Uri(scheme: 'tel', path: number);
+  }
+
+  Uri? get emailUri => _emailUri(email);
+
   factory Lodging.fromFirestore(String id, Map<String, dynamic> json) {
     final contact = json['contact'];
     return Lodging(
@@ -143,4 +152,39 @@ Uri? _httpUri(String? value) {
   if (uri == null || !uri.hasAuthority || uri.host.isEmpty) return null;
   if (uri.scheme != 'http' && uri.scheme != 'https') return null;
   return uri;
+}
+
+String? normalizePhoneForDialing(String? value) {
+  if (value == null) return null;
+  var raw = value.trim();
+  if (raw.toLowerCase().startsWith('tel:')) {
+    raw = raw.substring(4).trim();
+  }
+  if (raw.isEmpty || raw.contains(RegExp(r'[\r\n]'))) return null;
+
+  final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+  if (digits.isEmpty) return null;
+  if (raw.startsWith('+')) return '+$digits';
+  if (digits.startsWith('00') && digits.length > 2) {
+    return '+${digits.substring(2)}';
+  }
+  if (digits.startsWith('357') && digits.length > 3) return '+$digits';
+
+  final nationalNumber = digits.startsWith('0') && digits.length > 1
+      ? digits.substring(1)
+      : digits;
+  return nationalNumber.isEmpty ? null : '+357$nationalNumber';
+}
+
+Uri? _emailUri(String? value) {
+  final email = value?.trim();
+  if (email == null ||
+      email.isEmpty ||
+      email.contains(RegExp(r'[\s\r\n]')) ||
+      email.indexOf('@') <= 0 ||
+      email.lastIndexOf('@') != email.indexOf('@') ||
+      email.endsWith('@')) {
+    return null;
+  }
+  return Uri(scheme: 'mailto', path: email);
 }

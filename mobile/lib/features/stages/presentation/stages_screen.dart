@@ -9,9 +9,11 @@ import '../../../core/settings/measurement_formatter.dart';
 import '../../accommodation/domain/lodging.dart';
 import '../../accommodation/presentation/accommodation_controller.dart';
 import '../../accommodation/presentation/accommodation_screen.dart';
+import '../../accommodation/presentation/lodging_type_icon.dart';
 import '../../elevation/domain/route_point.dart';
 import '../../elevation/presentation/elevation_controller.dart';
 import '../../elevation/presentation/elevation_screen.dart';
+import '../../map/presentation/map_flag_marker.dart';
 import '../../map/presentation/map_screen.dart';
 import '../../map/presentation/offline_map_controller.dart';
 import '../../settings/presentation/settings_screen.dart';
@@ -31,6 +33,7 @@ const _mint = Color(0xFFE1F1E8);
 const _sand = Color(0xFFF4F2EC);
 const _yellow = Color(0xFFF2C94C);
 const _bookingBlue = Color(0xFF1565C0);
+const _accommodationBlue = Color(0xFF0288D1);
 const _filterBlueTeal = Color(0xFF356F7A);
 const _timelineLineColor = Color(0xFFB9BDB8);
 const _timelineLeftInset = 12.0;
@@ -792,7 +795,7 @@ class _TrailDashboard extends ConsumerWidget {
             children: [
               Expanded(
                 child: _DashboardAction(
-                  icon: Icons.route_rounded,
+                  icon: Icons.filter_alt_outlined,
                   label: l10n.t('Filter'),
                   color: _filterBlueTeal,
                   badgeCount: selectedServiceCount,
@@ -1290,7 +1293,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
 
   TrailStage get stage => widget.stages[index];
 
-  void _openMap() {
+  void _openMap({List<Lodging> lodgings = const []}) {
     final locationStageId = stage.id == widget.locationStageId
         ? widget.locationStageId
         : null;
@@ -1298,6 +1301,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
       MaterialPageRoute<void>(
         builder: (_) => MapScreen(
           initialStageIndex: index,
+          initialLodgings: lodgings,
           locationStageId: locationStageId,
         ),
       ),
@@ -1310,13 +1314,20 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
     final formatter = MeasurementFormatter(
       ref.watch(appSettingsProvider).measurementSystem,
     );
-    final hasMapPreview = index > 0;
     final showUserLocation = stage.id == widget.locationStageId;
-    final previewRoute = hasMapPreview
-        ? ref.watch(elevationProvider).value
-        : null;
+    final previewRoute = ref.watch(elevationProvider).value;
+    final previewStartDistanceKm = index == 0
+        ? stage.accumulatedDistanceKm
+        : widget.stages[index - 1].accumulatedDistanceKm;
+    final previewFinishDistanceKm = index == 0 && widget.stages.length > 1
+        ? widget.stages[1].accumulatedDistanceKm
+        : stage.accumulatedDistanceKm;
     final lodgings = ref.watch(lodgingsForStageProvider(stage.id));
-    final isMapOffline = ref.watch(offlineMapProvider).value?.isReady == true;
+    final mappedLodgings =
+        lodgings.value
+            ?.where((lodging) => lodging.location != null)
+            .toList(growable: false) ??
+        const <Lodging>[];
     final services = stage.services.entries
         .where((entry) => entry.value)
         .toList();
@@ -1394,7 +1405,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
           IconButton(
             key: const ValueKey('stage-detail-map'),
             tooltip: l10n.t('Show on map'),
-            onPressed: _openMap,
+            onPressed: () => _openMap(lodgings: mappedLodgings),
             icon: const Icon(Icons.map_outlined),
           ),
           IconButton(
@@ -1549,32 +1560,15 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
             ),
           ],
           const SizedBox(height: 12),
-          if (hasMapPreview)
-            _StageMapPreview(
-              routePoints: previewRoute ?? const [],
-              startDistanceKm: widget.stages[index - 1].accumulatedDistanceKm,
-              finishDistanceKm: stage.accumulatedDistanceKm,
-              showUserLocation: showUserLocation,
-              onTap: _openMap,
-            )
-          else
-            _DetailSection(
-              key: const Key('stage-trail-position-copy'),
-              title: l10n.t('Trail position'),
-              child: Column(
-                children: [
-                  _PositionRow(
-                    icon: Icons.hiking_rounded,
-                    title: l10n.t('Following the Cyprus E4'),
-                    subtitle: l10n.t(
-                      isMapOffline
-                          ? 'Trail data and background map are available offline.'
-                          : 'Trail data is available offline. Download the offline map to see map details without a connection.',
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          _StageMapPreview(
+            routePoints: previewRoute ?? const [],
+            startDistanceKm: previewStartDistanceKm,
+            finishDistanceKm: previewFinishDistanceKm,
+            showFinishFlag: stagePreviewShowsFinishFlag(index),
+            lodgings: mappedLodgings,
+            showUserLocation: showUserLocation,
+            onTap: () => _openMap(lodgings: mappedLodgings),
+          ),
           const SizedBox(height: 18),
           Row(
             children: [
@@ -1727,7 +1721,7 @@ class _DetailMetric extends StatelessWidget {
 }
 
 class _DetailSection extends StatelessWidget {
-  const _DetailSection({required this.title, required this.child, super.key});
+  const _DetailSection({required this.title, required this.child});
 
   final String title;
   final Widget child;
@@ -1760,6 +1754,8 @@ class _StageMapPreview extends StatelessWidget {
     required this.routePoints,
     required this.startDistanceKm,
     required this.finishDistanceKm,
+    required this.showFinishFlag,
+    required this.lodgings,
     required this.showUserLocation,
     required this.onTap,
   });
@@ -1767,6 +1763,8 @@ class _StageMapPreview extends StatelessWidget {
   final List<RoutePoint> routePoints;
   final double? startDistanceKm;
   final double? finishDistanceKm;
+  final bool showFinishFlag;
+  final List<Lodging> lodgings;
   final bool showUserLocation;
   final VoidCallback onTap;
 
@@ -1806,11 +1804,15 @@ class _StageMapPreview extends StatelessWidget {
             : _StageMapSnapshot(
                 key: ValueKey(
                   'stage-map-${preview.startPoint.pointIndex}-'
-                  '${preview.finishPoint.pointIndex}',
+                  '${preview.finishPoint.pointIndex}-'
+                  'finish-$showFinishFlag-'
+                  '${lodgings.map((lodging) => lodging.id).join(',')}',
                 ),
                 routePoints: preview.routePoints,
                 startPoint: preview.startPoint,
                 finishPoint: preview.finishPoint,
+                showFinishFlag: showFinishFlag,
+                lodgings: lodgings,
                 showUserLocation: showUserLocation,
                 onTap: onTap,
               ),
@@ -1825,6 +1827,19 @@ typedef _StageMapPreviewData = ({
   RoutePoint finishPoint,
 });
 
+({int startIndex, int finishIndex}) stageMapEndpointIndexes({
+  required List<RoutePoint> routePoints,
+  required double startDistanceKm,
+  required double finishDistanceKm,
+}) {
+  return (
+    startIndex: _nearestRoutePointIndex(routePoints, startDistanceKm),
+    finishIndex: _nearestRoutePointIndex(routePoints, finishDistanceKm),
+  );
+}
+
+bool stagePreviewShowsFinishFlag(int stageIndex) => stageIndex > 0;
+
 _StageMapPreviewData? _stageMapPreviewData({
   required List<RoutePoint> routePoints,
   required double? startDistanceKm,
@@ -1836,8 +1851,13 @@ _StageMapPreviewData? _stageMapPreviewData({
     return null;
   }
 
-  final startIndex = _nearestRoutePointIndex(routePoints, startDistanceKm);
-  final finishIndex = _nearestRoutePointIndex(routePoints, finishDistanceKm);
+  final endpointIndexes = stageMapEndpointIndexes(
+    routePoints: routePoints,
+    startDistanceKm: startDistanceKm,
+    finishDistanceKm: finishDistanceKm,
+  );
+  final startIndex = endpointIndexes.startIndex;
+  final finishIndex = endpointIndexes.finishIndex;
   final lowerIndex = startIndex < finishIndex ? startIndex : finishIndex;
   final upperIndex = startIndex > finishIndex ? startIndex : finishIndex;
   final segment = routePoints.sublist(lowerIndex, upperIndex + 1);
@@ -1866,6 +1886,8 @@ class _StageMapSnapshot extends StatefulWidget {
     required this.routePoints,
     required this.startPoint,
     required this.finishPoint,
+    required this.showFinishFlag,
+    required this.lodgings,
     required this.showUserLocation,
     required this.onTap,
     super.key,
@@ -1874,6 +1896,8 @@ class _StageMapSnapshot extends StatefulWidget {
   final List<RoutePoint> routePoints;
   final RoutePoint startPoint;
   final RoutePoint finishPoint;
+  final bool showFinishFlag;
+  final List<Lodging> lodgings;
   final bool showUserLocation;
   final VoidCallback onTap;
 
@@ -1886,6 +1910,8 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
 
   late final ViewportState _initialViewport;
   MapboxMap? _map;
+  Cancelable? _lodgingTapListener;
+  final Map<String, String?> _lodgingStyleImages = {};
   bool _loadFailed = false;
 
   @override
@@ -1894,7 +1920,13 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
     final center = widget.routePoints[widget.routePoints.length ~/ 2];
     final stageDistanceKm =
         (widget.finishPoint.distanceKm - widget.startPoint.distanceKm).abs();
-    _initialViewport = widget.routePoints.length == 1
+    final viewportCoordinates = <Position>[
+      for (final point in widget.routePoints) Position(point.lng, point.lat),
+      for (final lodging in widget.lodgings)
+        if (lodging.location case final location?)
+          Position(location.longitude, location.latitude),
+    ];
+    _initialViewport = viewportCoordinates.length == 1
         ? CameraViewportState(
             center: Point(coordinates: Position(center.lng, center.lat)),
             zoom: 12.5,
@@ -1902,12 +1934,7 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
             pitch: 0,
           )
         : OverviewViewportState(
-            geometry: LineString(
-              coordinates: [
-                for (final point in widget.routePoints)
-                  Position(point.lng, point.lat),
-              ],
-            ),
+            geometry: LineString(coordinates: viewportCoordinates),
             geometryPadding: stageDistanceKm > 6
                 ? const EdgeInsets.fromLTRB(82, 68, 74, 92)
                 : const EdgeInsets.fromLTRB(72, 58, 64, 80),
@@ -1956,49 +1983,158 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
       }
     }
 
-    final routeManager = await map.annotations
-        .createPolylineAnnotationManager();
-    await routeManager.create(
-      PolylineAnnotationOptions(
-        geometry: LineString(
-          coordinates: [
-            for (final point in widget.routePoints)
-              Position(point.lng, point.lat),
-          ],
+    if (widget.routePoints.length > 1) {
+      final routeManager = await map.annotations
+          .createPolylineAnnotationManager();
+      await routeManager.create(
+        PolylineAnnotationOptions(
+          geometry: LineString(
+            coordinates: [
+              for (final point in widget.routePoints)
+                Position(point.lng, point.lat),
+            ],
+          ),
+          lineColor: _bookingBlue.toARGB32(),
+          lineWidth: 5,
+          lineBorderColor: Colors.white.toARGB32(),
+          lineBorderWidth: 1.5,
+          lineOpacity: 0.95,
         ),
-        lineColor: _bookingBlue.toARGB32(),
-        lineWidth: 5,
-        lineBorderColor: Colors.white.toARGB32(),
-        lineBorderWidth: 1.5,
-        lineOpacity: 0.95,
-      ),
-    );
+      );
+    }
 
-    final markerManager = await map.annotations.createCircleAnnotationManager();
+    final flags = await Future.wait([
+      mapFlagMarkerImage(_green),
+      mapFlagMarkerImage(_red),
+    ]);
+    final markerManager = await map.annotations.createPointAnnotationManager();
+    await markerManager.setIconAllowOverlap(true);
+    await markerManager.setIconIgnorePlacement(true);
     await markerManager.createMulti([
-      CircleAnnotationOptions(
+      PointAnnotationOptions(
         geometry: Point(
           coordinates: Position(widget.startPoint.lng, widget.startPoint.lat),
         ),
-        circleColor: _green.toARGB32(),
-        circleRadius: 8,
-        circleStrokeColor: Colors.white.toARGB32(),
-        circleStrokeWidth: 2,
+        image: flags[0],
+        iconAnchor: IconAnchor.BOTTOM,
+        iconSize: 1.75,
+        customData: {
+          'role': 'start',
+          'distanceKm': widget.startPoint.distanceKm,
+        },
       ),
-      CircleAnnotationOptions(
-        geometry: Point(
-          coordinates: Position(widget.finishPoint.lng, widget.finishPoint.lat),
+      if (widget.showFinishFlag &&
+          widget.finishPoint.pointIndex != widget.startPoint.pointIndex)
+        PointAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(
+              widget.finishPoint.lng,
+              widget.finishPoint.lat,
+            ),
+          ),
+          image: flags[1],
+          iconAnchor: IconAnchor.BOTTOM,
+          iconSize: 1.75,
+          customData: {
+            'role': 'finish',
+            'distanceKm': widget.finishPoint.distanceKm,
+          },
         ),
-        circleColor: _red.toARGB32(),
-        circleRadius: 8,
-        circleStrokeColor: Colors.white.toARGB32(),
-        circleStrokeWidth: 2,
-      ),
     ]);
+  }
+
+  Future<void> _onMapLoaded(MapLoadedEventData _) async {
+    final map = _map;
+    if (map == null) return;
+    final mappedLodgings = widget.lodgings
+        .where((lodging) => lodging.location != null)
+        .toList(growable: false);
+    if (mappedLodgings.isEmpty) return;
+
+    final iconNames = {
+      for (final lodging in mappedLodgings) lodgingMakiIconName(lodging.type),
+    };
+    final styleImages = <String, String?>{};
+    for (final iconName in iconNames) {
+      styleImages[iconName] = await _resolveLodgingStyleImage(map, iconName);
+    }
+    final manager = await map.annotations.createPointAnnotationManager();
+    await manager.setIconAllowOverlap(true);
+    await manager.setIconIgnorePlacement(true);
+    await manager.setTextAllowOverlap(true);
+    await manager.setTextIgnorePlacement(true);
+    final annotations = await manager.createMulti([
+      for (var index = 0; index < mappedLodgings.length; index++)
+        PointAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(
+              mappedLodgings[index].location!.longitude,
+              mappedLodgings[index].location!.latitude,
+            ),
+          ),
+          iconImage:
+              styleImages[lodgingMakiIconName(mappedLodgings[index].type)],
+          iconSize: 1.25,
+          iconColor: _accommodationBlue.toARGB32(),
+          iconHaloColor: Colors.white.toARGB32(),
+          iconHaloWidth: 2,
+          iconHaloBlur: 0.5,
+          textField:
+              styleImages[lodgingMakiIconName(mappedLodgings[index].type)] ==
+                  null
+              ? '●'
+              : null,
+          textSize: 20,
+          textColor: _accommodationBlue.toARGB32(),
+          textHaloColor: Colors.white.toARGB32(),
+          textHaloWidth: 2,
+          customData: {
+            'lodgingIndex': index,
+            'name': mappedLodgings[index].name ?? '',
+          },
+        ),
+    ]);
+    if (!mounted || annotations.isEmpty) return;
+    _lodgingTapListener = manager.tapEvents(
+      onTap: (_) {
+        if (mounted) widget.onTap();
+      },
+    );
+  }
+
+  Future<String?> _resolveLodgingStyleImage(
+    MapboxMap map,
+    String makiIconName,
+  ) async {
+    if (_lodgingStyleImages.containsKey(makiIconName)) {
+      return _lodgingStyleImages[makiIconName];
+    }
+    for (final candidate in [
+      '$makiIconName-15',
+      makiIconName,
+      '$makiIconName-11',
+    ]) {
+      try {
+        if (await map.style.getStyleImage(candidate) != null) {
+          _lodgingStyleImages[makiIconName] = candidate;
+          return candidate;
+        }
+      } catch (_) {
+        // Try the next sprite naming convention.
+      }
+    }
+    if (makiIconName != 'lodging') {
+      final fallback = await _resolveLodgingStyleImage(map, 'lodging');
+      _lodgingStyleImages[makiIconName] = fallback;
+      return fallback;
+    }
+    _lodgingStyleImages[makiIconName] = null;
+    return null;
   }
 
   @override
   void dispose() {
+    _lodgingTapListener?.cancel();
     _map?.removeInteraction(_mapTapInteractionId);
     super.dispose();
   }
@@ -2015,41 +2151,10 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
       styleUri: MapboxStyles.OUTDOORS,
       viewport: _initialViewport,
       onMapCreated: _onMapCreated,
+      onMapLoadedListener: _onMapLoaded,
       onMapLoadErrorListener: (_) {
         if (mounted) setState(() => _loadFailed = true);
       },
-    );
-  }
-}
-
-class _PositionRow extends StatelessWidget {
-  const _PositionRow({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: _green),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 2),
-              Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

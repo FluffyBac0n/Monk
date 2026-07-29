@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/links/external_url_launcher.dart';
 import '../../../core/localization/app_localizations.dart';
@@ -160,9 +161,12 @@ class _LodgingCard extends ConsumerWidget {
     final type = lodging.type?.trim();
     final village = lodging.village?.trim();
     final address = lodging.address?.trim();
-    final phone = lodging.phone?.trim();
+    final rawPhone = lodging.phone?.trim();
+    final phone = lodging.dialingPhoneNumber;
     final whatsapp = lodging.whatsapp?.trim();
     final email = lodging.email?.trim();
+    final phoneUri = lodging.phoneUri;
+    final emailUri = lodging.emailUri;
     final bookingUri = lodging.bookingUri;
     final markerColor = lodgingMakiMarkerColor(type);
     final locationText = [
@@ -274,7 +278,7 @@ class _LodgingCard extends ConsumerWidget {
             if (lodging.location != null ||
                 village != null ||
                 address != null ||
-                phone != null ||
+                rawPhone != null ||
                 whatsapp != null ||
                 email != null) ...[
               const SizedBox(height: 14),
@@ -302,15 +306,28 @@ class _LodgingCard extends ConsumerWidget {
                   SelectionArea(
                     child: Column(
                       children: [
-                        if (phone != null && phone.isNotEmpty)
+                        if (rawPhone != null && rawPhone.isNotEmpty)
                           _ContactRow(
+                            key: ValueKey('call-lodging-${lodging.id}'),
                             icon: Icons.phone_outlined,
-                            label: l10n.t('Phone'),
-                            value: phone,
+                            value: phone == null
+                                ? rawPhone
+                                : _formatPhoneForDisplay(phone),
+                            valuePrefix: _CyprusCountryFlag(
+                              key: ValueKey(
+                                'cyprus-country-flag-${lodging.id}',
+                              ),
+                            ),
+                            actionLabel: phone == null
+                                ? null
+                                : '${l10n.t('Phone')}: ${_formatPhoneForDisplay(phone)}',
+                            onTap: phoneUri == null
+                                ? null
+                                : () => _openExternal(context, ref, phoneUri),
                           ),
                         if (whatsapp != null &&
                             whatsapp.isNotEmpty &&
-                            whatsapp != phone)
+                            whatsapp != rawPhone)
                           _ContactRow(
                             icon: Icons.chat_outlined,
                             label: l10n.t('WhatsApp'),
@@ -318,9 +335,15 @@ class _LodgingCard extends ConsumerWidget {
                           ),
                         if (email != null && email.isNotEmpty)
                           _ContactRow(
+                            key: ValueKey('email-lodging-${lodging.id}'),
                             icon: Icons.email_outlined,
-                            label: l10n.t('Email'),
                             value: email,
+                            actionLabel: emailUri == null
+                                ? null
+                                : '${l10n.t('Email')}: $email',
+                            onTap: emailUri == null
+                                ? null
+                                : () => _openExternal(context, ref, emailUri),
                           ),
                       ],
                     ),
@@ -365,6 +388,7 @@ class _ContactRow extends StatelessWidget {
     required this.icon,
     required this.value,
     this.label,
+    this.valuePrefix,
     this.actionLabel,
     this.onTap,
     super.key,
@@ -373,6 +397,7 @@ class _ContactRow extends StatelessWidget {
   final IconData icon;
   final String value;
   final String? label;
+  final Widget? valuePrefix;
   final String? actionLabel;
   final VoidCallback? onTap;
 
@@ -390,9 +415,20 @@ class _ContactRow extends StatelessWidget {
           Icon(icon, size: 18, color: isAction ? _bookingBlue : _green),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              label == null ? value : '${label!}: $value',
-              style: const TextStyle(color: Colors.black87),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (valuePrefix != null) ...[
+                  valuePrefix!,
+                  const SizedBox(width: 7),
+                ],
+                Expanded(
+                  child: Text(
+                    label == null ? value : '${label!}: $value',
+                    style: const TextStyle(color: Colors.black87),
+                  ),
+                ),
+              ],
             ),
           ),
           if (isAction) ...[
@@ -407,17 +443,42 @@ class _ContactRow extends StatelessWidget {
       ),
     );
     if (!isAction) return content;
-    return Semantics(
-      button: true,
-      label: actionLabel,
-      child: Material(
-        color: _bookingBlue.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: onTap,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Semantics(
+        button: true,
+        label: actionLabel,
+        child: Material(
+          color: _bookingBlue.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(12),
-          child: content,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: content,
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _CyprusCountryFlag extends StatelessWidget {
+  const _CyprusCountryFlag({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 28,
+      height: 20,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: SvgPicture.asset(
+        'assets/branding/cyprus_flag.svg',
+        fit: BoxFit.cover,
       ),
     );
   }
@@ -577,3 +638,11 @@ String _formatNumber(double value, AppLocalizations l10n) {
 
 bool _usesPostfixedEuro(String languageCode) =>
     const {'de', 'es', 'it', 'fr'}.contains(languageCode);
+
+String _formatPhoneForDisplay(String number) {
+  if (!number.startsWith('+357')) return number;
+  final national = number.substring(4);
+  if (national.length != 8) return '+357 $national';
+  return '+357 ${national.substring(0, 2)} '
+      '${national.substring(2, 5)} ${national.substring(5)}';
+}

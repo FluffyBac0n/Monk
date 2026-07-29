@@ -395,7 +395,7 @@ void main() {
     );
   });
 
-  testWidgets('map preview replaces trail position copy on every stage', (
+  testWidgets('map preview appears on every stage including the start', (
     tester,
   ) async {
     final stages = List.generate(
@@ -416,8 +416,8 @@ void main() {
       ),
     );
 
-    expect(find.byKey(const Key('stage-map-preview')), findsNothing);
-    expect(find.byKey(const Key('stage-trail-position-copy')), findsOneWidget);
+    expect(find.byKey(const Key('stage-map-preview')), findsOneWidget);
+    expect(find.byKey(const Key('stage-trail-position-copy')), findsNothing);
 
     for (var stageIndex = 1; stageIndex < stages.length; stageIndex++) {
       await tester.tap(find.text('Next'));
@@ -427,6 +427,64 @@ void main() {
       expect(find.byKey(const Key('stage-map-preview')), findsOneWidget);
       expect(find.byKey(const Key('stage-trail-position-copy')), findsNothing);
     }
+  });
+
+  testWidgets('stage map preview carries its accommodation into the map', (
+    tester,
+  ) async {
+    const stages = [
+      TrailStage(
+        id: 'preview-start',
+        sequence: 2,
+        name: 'Preview start',
+        accumulatedDistanceKm: 0,
+        services: {},
+      ),
+      TrailStage(
+        id: 'preview-stage',
+        sequence: 1,
+        name: 'Preview stage',
+        accumulatedDistanceKm: 10,
+        services: {},
+      ),
+    ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          elevationProvider.overrideWith(_FakeElevationController.new),
+          lodgingRepositoryProvider.overrideWithValue(
+            const _FakeLodgingRepository({
+              'preview-stage': [
+                Lodging(
+                  id: 'preview-hotel',
+                  stageId: 'preview-stage',
+                  name: 'Preview Hotel',
+                  type: 'Hotel',
+                  location: LodgingLocation(latitude: 34.76, longitude: 32.46),
+                ),
+              ],
+            }),
+          ),
+        ],
+        child: const MaterialApp(
+          home: StageDetailScreen(stages: stages, initialIndex: 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final preview = find.byKey(const Key('stage-map-open'));
+    await tester.scrollUntilVisible(
+      preview,
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(preview);
+    await tester.pumpAndSettle();
+
+    final map = tester.widget<MapScreen>(find.byType(MapScreen));
+    expect(map.initialStageIndex, 1);
+    expect(map.initialLodgings.map((lodging) => lodging.id), ['preview-hotel']);
   });
 
   testWidgets('stage detail shortcut returns past the map to stages', (
@@ -841,6 +899,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.byIcon(Icons.filter_alt_outlined), findsOneWidget);
     await tester.tap(find.text('Filter'));
     await tester.pumpAndSettle();
     expect(find.text('Filter by services'), findsOneWidget);
@@ -948,6 +1007,34 @@ void main() {
     expect(find.text('Forest Inn'), findsOneWidget);
     expect(find.textContaining('Platres'), findsOneWidget);
     expect(find.text('0.4 km'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('cyprus-country-flag-forest-inn')),
+      findsOneWidget,
+    );
+    expect(find.text('+357 99 123 456'), findsOneWidget);
+
+    final call = find.byKey(const ValueKey('call-lodging-forest-inn'));
+    await tester.scrollUntilVisible(
+      call,
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(call);
+    await tester.pumpAndSettle();
+
+    final email = find.byKey(const ValueKey('email-lodging-forest-inn'));
+    await tester.scrollUntilVisible(
+      email,
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(email);
+    await tester.pumpAndSettle();
+    expect(launchedUris, [
+      Uri.parse('tel:+35799123456'),
+      Uri.parse('mailto:stay@example.com'),
+    ]);
+    launchedUris.clear();
 
     expect(find.text('View on map'), findsNothing);
     final map = find.byKey(const ValueKey('map-location-lodging-forest-inn'));
