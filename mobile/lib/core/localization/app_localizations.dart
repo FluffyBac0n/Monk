@@ -100,6 +100,7 @@ const _translations = <String, Map<String, String>>{
     'Current trails': 'Aktuelle Wanderwege',
     'available': 'verfügbar',
     'LONG DISTANCE': 'FERNWANDERWEG',
+    'E4': 'E4',
     'A long-distance journey linking the coast, forests and Troodos mountains.':
         'Eine Fernwanderung, die Küste, Wälder und das Troodos-Gebirge verbindet.',
     'Trail data not downloaded': 'Wegdaten nicht heruntergeladen',
@@ -398,6 +399,7 @@ const _translations = <String, Map<String, String>>{
     'Current trails': 'Rutas actuales',
     'available': 'disponible',
     'LONG DISTANCE': 'GRAN RECORRIDO',
+    'E4': 'E4',
     'A long-distance journey linking the coast, forests and Troodos mountains.':
         'Una travesía de larga distancia que une la costa, los bosques y las montañas de Troodos.',
     'Trail data not downloaded': 'Datos de la ruta no descargados',

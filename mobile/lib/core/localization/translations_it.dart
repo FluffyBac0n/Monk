@@ -32,6 +32,7 @@ const italianTranslations = <String, String>{
   'Current trails': 'Sentieri disponibili',
   'available': 'disponibile',
   'LONG DISTANCE': 'LUNGA PERCORRENZA',
+  'E4': 'E4',
   'A long-distance journey linking the coast, forests and Troodos mountains.':
       'Un itinerario a lunga percorrenza che collega la costa, le foreste e i monti Troodos.',
   'Trail data not downloaded': 'Dati del sentiero non scaricati',

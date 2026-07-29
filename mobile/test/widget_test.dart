@@ -25,7 +25,7 @@ import 'package:monk_mobile/features/trail/domain/trail_direction.dart';
 import 'package:monk_mobile/features/trail/presentation/trail_information_screen.dart';
 
 void main() {
-  testWidgets('trail information opens beside the reverse control', (
+  testWidgets('trail information stays in the header and reverse moves below', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -69,15 +69,17 @@ void main() {
     final information = find.byKey(const ValueKey('trail-information'));
     final reverse = find.byKey(const ValueKey('reverse-trail-direction'));
     final refresh = find.byKey(const ValueKey('refresh-offline-trail'));
-    expect(information, findsOneWidget);
-    expect(refresh, findsOneWidget);
-    expect(
-      tester.getCenter(information).dx,
-      lessThan(tester.getCenter(reverse).dx),
+    final toolbar = find.byKey(const ValueKey('trail-toolbar-actions'));
+    final bottomNavigation = find.byKey(
+      const ValueKey('stage-bottom-navigation'),
     );
+    expect(information, findsOneWidget);
+    expect(reverse, findsOneWidget);
+    expect(refresh, findsOneWidget);
+    expect(find.descendant(of: toolbar, matching: reverse), findsNothing);
     expect(
-      tester.getCenter(reverse).dx,
-      lessThan(tester.getCenter(refresh).dx),
+      find.descendant(of: bottomNavigation, matching: reverse),
+      findsOneWidget,
     );
     expect(find.text('Stage by stage'), findsNothing);
 
@@ -890,7 +892,9 @@ void main() {
     expect(find.byKey(const Key('stage-detail-walking-time')), findsNothing);
   });
 
-  testWidgets('dashboard filters stages by selected services', (tester) async {
+  testWidgets('bottom navigation filters stages by selected services', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [stagesProvider.overrideWith(_FakeStagesController.new)],
@@ -899,8 +903,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.filter_alt_outlined), findsOneWidget);
-    await tester.tap(find.text('Filter'));
+    expect(
+      find.byKey(const ValueKey('stage-bottom-navigation')),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.filter_list_rounded), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-gps-locate')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
     await tester.pumpAndSettle();
     expect(find.text('Filter by services'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('service-filter-lodging')));
@@ -914,6 +923,92 @@ void main() {
     await tester.tap(clearFilters);
     await tester.pumpAndSettle();
     expect(find.text('No stages match these services.'), findsNothing);
+  });
+
+  testWidgets('stage bottom navigation stays visible and opens trail views', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          stagesProvider.overrideWith(_ManyStagesController.new),
+          elevationProvider.overrideWith(_FakeElevationController.new),
+        ],
+        child: const MaterialApp(home: StagesScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final bottomNavigation = find.byKey(
+      const ValueKey('stage-bottom-navigation'),
+    );
+    expect(bottomNavigation, findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-bottom-filter')), findsOneWidget);
+    expect(find.byIcon(Icons.filter_list_rounded), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('reverse-trail-direction')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('stage-bottom-gps')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-bottom-map')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('stage-bottom-elevation')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('stage-e4-waymark')), findsOneWidget);
+    expect(
+      find.descendant(of: bottomNavigation, matching: find.text('Filter')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: bottomNavigation, matching: find.text('Map')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: bottomNavigation, matching: find.text('Elevation')),
+      findsNothing,
+    );
+    expect(
+      tester.widget<Material>(bottomNavigation).color,
+      const Color(0xFFF4F2EC),
+    );
+
+    final navigationSize = find.byKey(
+      const ValueKey('stage-bottom-navigation-size'),
+    );
+    final filter = find.byKey(const ValueKey('stage-bottom-filter'));
+    final reverse = find.byKey(const ValueKey('reverse-trail-direction'));
+    final gps = find.byKey(const ValueKey('stage-bottom-gps'));
+    final initialBottom = tester.getBottomLeft(bottomNavigation).dy;
+    expect(tester.getSize(navigationSize), const Size(800, 36));
+    expect(tester.getCenter(filter).dx, lessThan(tester.getCenter(reverse).dx));
+    expect(tester.getCenter(reverse).dx, lessThan(tester.getCenter(gps).dx));
+    expect(
+      tester.getCenter(gps).dx,
+      moreOrLessEquals(tester.getCenter(bottomNavigation).dx, epsilon: 0.1),
+    );
+
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(navigationSize), const Size(800, 36));
+    expect(tester.getBottomLeft(bottomNavigation).dy, initialBottom);
+
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, 300));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(navigationSize), const Size(800, 36));
+    expect(tester.getBottomLeft(bottomNavigation).dy, initialBottom);
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-map')));
+    await tester.pumpAndSettle();
+    expect(find.byType(MapScreen), findsOneWidget);
+    expect(bottomNavigation, findsNothing);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-elevation')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ElevationScreen), findsOneWidget);
+    expect(bottomNavigation, findsNothing);
   });
 
   testWidgets('stage accommodation opens and launches its booking website', (
@@ -1189,33 +1284,6 @@ void main() {
     await tester.pump();
 
     expect(find.text('Could not open this link.'), findsOneWidget);
-  });
-
-  testWidgets('stage controls jump to the end and back to the top', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [stagesProvider.overrideWith(_ManyStagesController.new)],
-        child: const MaterialApp(home: StagesScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final scrollView = tester.widget<CustomScrollView>(
-      find.byType(CustomScrollView),
-    );
-    final controller = scrollView.controller!;
-    expect(controller.offset, 0);
-
-    await tester.tap(find.byKey(const Key('stage-scroll-end')));
-    await tester.pumpAndSettle();
-    expect(controller.offset, greaterThan(0));
-    expect(controller.offset, controller.position.maxScrollExtent);
-
-    await tester.tap(find.byKey(const Key('stage-scroll-top')));
-    await tester.pumpAndSettle();
-    expect(controller.offset, controller.position.minScrollExtent);
   });
 
   testWidgets('settings change language and measurement system app-wide', (

@@ -1,5 +1,3 @@
-import 'dart:ui' show Tristate;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,18 +36,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final gpsButton = find.byKey(const ValueKey('stage-gps-locate'));
-      await tester.ensureVisible(gpsButton);
-      await tester.pumpAndSettle();
-      final firstMarker = find.byKey(
-        const ValueKey('stage-marker-gps-stage-0'),
-      );
-      expect(
-        tester.getCenter(gpsButton).dx,
-        closeTo(tester.getCenter(firstMarker).dx, 0.01),
+      final gpsButton = find.byKey(const ValueKey('stage-bottom-gps'));
+      expect(find.byKey(const ValueKey('stage-gps-locate')), findsNothing);
+      final gpsTooltip = tester.widget<Tooltip>(
+        find.descendant(of: gpsButton, matching: find.byType(Tooltip)),
       );
       expect(find.text('Find my stage'), findsNothing);
-      expect(tester.widget<IconButton>(gpsButton).tooltip, 'Find my stage');
+      expect(gpsTooltip.message, 'Find my stage');
       _expectGpsToggleState(tester, gpsButton, isToggled: false);
 
       final selectedCard = find.byKey(
@@ -113,8 +106,6 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('stage-scroll-top')));
-      await tester.pumpAndSettle();
       expect(gpsButton, findsOneWidget);
       _expectGpsToggleState(tester, gpsButton, isToggled: true);
       await tester.tap(gpsButton);
@@ -159,9 +150,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('reverse-trail-direction')));
     await tester.pumpAndSettle();
 
-    final gpsButton = find.byKey(const ValueKey('stage-gps-locate'));
-    await tester.ensureVisible(gpsButton);
-    await tester.pumpAndSettle();
+    final gpsButton = find.byKey(const ValueKey('stage-bottom-gps'));
     final selectedCard = find.byKey(const ValueKey('stage-card-gps-stage-3'));
     final adjacentCard = find.byKey(const ValueKey('stage-card-gps-stage-4'));
     final scrollController = tester
@@ -213,9 +202,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final gpsButton = find.byKey(const ValueKey('stage-gps-locate'));
-      await tester.ensureVisible(gpsButton);
-      await tester.pumpAndSettle();
+      final gpsButton = find.byKey(const ValueKey('stage-bottom-gps'));
       await tester.tap(gpsButton);
       await tester.pumpAndSettle();
 
@@ -314,18 +301,14 @@ void _expectGpsToggleState(
   Finder gpsButton, {
   required bool isToggled,
 }) {
-  var semantics = tester.getSemantics(gpsButton);
-  while (semantics.flagsCollection.isToggled == Tristate.none &&
-      semantics.parent != null) {
-    semantics = semantics.parent!;
-  }
+  final toggleSemantics = tester
+      .widgetList<Semantics>(
+        find.descendant(of: gpsButton, matching: find.byType(Semantics)),
+      )
+      .where((semantics) => semantics.properties.toggled != null)
+      .single;
   expect(
-    semantics.flagsCollection.isToggled,
-    isNot(Tristate.none),
-    reason: 'GPS button should expose toggle semantics',
-  );
-  expect(
-    semantics.flagsCollection.isToggled == Tristate.isTrue,
+    toggleSemantics.properties.toggled,
     isToggled,
     reason: 'GPS button toggle state',
   );
