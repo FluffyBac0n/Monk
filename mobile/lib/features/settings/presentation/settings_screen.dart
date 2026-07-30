@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/database/database_provider.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/app_settings_controller.dart';
@@ -8,11 +10,14 @@ import '../../elevation/presentation/elevation_controller.dart';
 import '../../map/domain/offline_map_state.dart';
 import '../../map/presentation/offline_map_controller.dart';
 import '../../stages/presentation/stages_controller.dart';
+import '../../trail/domain/trail_preferences.dart';
 
 const _ink = Color(0xFF17201B);
 const _green = Color(0xFF277653);
 const _red = Color(0xFFD14B45);
 const _sand = Color(0xFFF4F2EC);
+
+enum DebugHintReset { e4Information, stageDetails }
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -95,6 +100,73 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
           const _OfflineAccessSetting(),
+          if (kDebugMode) ...[
+            const SizedBox(height: 14),
+            _SettingsCard(
+              icon: Icons.science_outlined,
+              title: l10n.t('Developer tools'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.t('Show the pulsing E4 trail information hint again.'),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    key: const ValueKey('reset-e4-information-hint'),
+                    onPressed: () async {
+                      try {
+                        await ref
+                            .read(appDatabaseProvider)
+                            .writeSetting(
+                              cyprusE4TrailInformationSeenSetting,
+                              'false',
+                            );
+                      } catch (_) {
+                        // The current Stages session can still reset the hint.
+                      }
+                      if (context.mounted) {
+                        Navigator.of(context).pop(DebugHintReset.e4Information);
+                      }
+                    },
+                    icon: const Icon(Icons.replay_rounded),
+                    label: Text(l10n.t('Reset E4 hint')),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    l10n.t('Show the stage details helper again.'),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    key: const ValueKey('reset-stage-details-hint'),
+                    onPressed: () async {
+                      try {
+                        await ref
+                            .read(appDatabaseProvider)
+                            .writeSetting(
+                              cyprusE4StageDetailsHintSeenSetting,
+                              'false',
+                            );
+                      } catch (_) {
+                        // The current Stages session can still reset the hint.
+                      }
+                      if (context.mounted) {
+                        Navigator.of(context).pop(DebugHintReset.stageDetails);
+                      }
+                    },
+                    icon: const Icon(Icons.replay_rounded),
+                    label: Text(l10n.t('Reset stage hint')),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           Text(
             l10n.t('Changes apply throughout the app.'),

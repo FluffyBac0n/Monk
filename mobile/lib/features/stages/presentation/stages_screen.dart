@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 
+import '../../../core/database/database_provider.dart';
 import '../../../core/location/device_location.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
@@ -17,6 +20,7 @@ import '../../map/presentation/map_flag_marker.dart';
 import '../../map/presentation/map_screen.dart';
 import '../../map/presentation/offline_map_controller.dart';
 import '../../settings/presentation/settings_screen.dart';
+import '../../trail/domain/trail_preferences.dart';
 import '../../trail/domain/trail_direction.dart';
 import '../../trail/presentation/trail_direction_controller.dart';
 import '../../trail/presentation/trail_information_screen.dart';
@@ -32,6 +36,7 @@ const _red = Color(0xFFD14B45);
 const _mint = Color(0xFFE1F1E8);
 const _sand = Color(0xFFF4F2EC);
 const _yellow = Color(0xFFF2C94C);
+const _trailPulseBlue = Color(0xFF73BCE8);
 const _bookingBlue = Color(0xFF1565C0);
 const _accommodationBlue = Color(0xFF0288D1);
 const _filterBlueTeal = Color(0xFF356F7A);
@@ -114,6 +119,14 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
   Set<String> selectedServices = {};
   String? _gpsSelectedStageId;
   bool _isLocatingStage = false;
+  bool? _hasSeenTrailInformation;
+  bool? _hasSeenStageDetailsHint;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_restoreGuidanceSeen());
+  }
 
   @override
   void dispose() {
@@ -130,6 +143,65 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
     );
     if (selection != null && mounted) {
       setState(() => selectedServices = selection);
+    }
+  }
+
+  Future<void> _restoreGuidanceSeen() async {
+    var hasSeenTrailInformation = false;
+    var hasSeenStageDetailsHint = false;
+    try {
+      final settings = await ref.read(appDatabaseProvider).readSettings();
+      hasSeenTrailInformation =
+          settings[cyprusE4TrailInformationSeenSetting] == 'true';
+      hasSeenStageDetailsHint =
+          settings[cyprusE4StageDetailsHintSeenSetting] == 'true';
+    } catch (_) {
+      // Keep the guidance available when persistence cannot be read.
+    }
+    if (!mounted) return;
+    setState(() {
+      if (_hasSeenTrailInformation != true) {
+        _hasSeenTrailInformation = hasSeenTrailInformation;
+      }
+      if (_hasSeenStageDetailsHint != true) {
+        _hasSeenStageDetailsHint = hasSeenStageDetailsHint;
+      }
+    });
+  }
+
+  void _openTrailInformation() {
+    if (_hasSeenTrailInformation != true) {
+      setState(() => _hasSeenTrailInformation = true);
+      unawaited(_persistTrailInformationSeen());
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const TrailInformationScreen()),
+    );
+  }
+
+  Future<void> _persistTrailInformationSeen() async {
+    try {
+      await ref
+          .read(appDatabaseProvider)
+          .writeSetting(cyprusE4TrailInformationSeenSetting, 'true');
+    } catch (_) {
+      // The prompt still stops for the current session if persistence fails.
+    }
+  }
+
+  void _markStageDetailsHintSeen() {
+    if (_hasSeenStageDetailsHint == true) return;
+    setState(() => _hasSeenStageDetailsHint = true);
+    unawaited(_persistStageDetailsHintSeen());
+  }
+
+  Future<void> _persistStageDetailsHintSeen() async {
+    try {
+      await ref
+          .read(appDatabaseProvider)
+          .writeSetting(cyprusE4StageDetailsHintSeenSetting, 'true');
+    } catch (_) {
+      // The helper still stays dismissed for the current session.
     }
   }
 
@@ -281,18 +353,22 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
       isTrailStart: orderedIndex == 0,
       isTrailEnd: orderedIndex == orderedItems.length - 1,
       isSelected: stage.id == _gpsSelectedStageId,
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => StageDetailScreen(
-            stages: orderedItems,
-            initialIndex: orderedIndex,
-            direction: direction,
-            locationStageId: stage.id == _gpsSelectedStageId
-                ? _gpsSelectedStageId
-                : null,
+      showDetailsHint: filteredIndex == 0 && _hasSeenStageDetailsHint == false,
+      onTap: () {
+        _markStageDetailsHintSeen();
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => StageDetailScreen(
+              stages: orderedItems,
+              initialIndex: orderedIndex,
+              direction: direction,
+              locationStageId: stage.id == _gpsSelectedStageId
+                  ? _gpsSelectedStageId
+                  : null,
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -331,6 +407,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
         ),
       ),
       body: RefreshIndicator(
+        key: const ValueKey('stage-pull-to-refresh'),
         onRefresh: () => ref.read(stagesProvider.notifier).sync(),
         child: CustomScrollView(
           controller: scrollController,
@@ -338,9 +415,10 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
           slivers: [
             _TrailAppBar(
               direction: direction,
-              onRefresh: stages.isLoading
-                  ? null
-                  : () => ref.read(stagesProvider.notifier).sync(),
+              onTrailInformationHintReset: () =>
+                  setState(() => _hasSeenTrailInformation = false),
+              onStageDetailsHintReset: () =>
+                  setState(() => _hasSeenStageDetailsHint = false),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 12)),
             stages.when(
@@ -381,7 +459,10 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                         sliver: SliverToBoxAdapter(
                           child: Column(
                             children: [
-                              const _TrailTimelineWaymark(),
+                              _TrailTimelineWaymark(
+                                shouldPulse: _hasSeenTrailInformation == false,
+                                onTap: _openTrailInformation,
+                              ),
                               for (
                                 var index = 0;
                                 index < filteredItems.length;
@@ -451,7 +532,7 @@ class _StageBottomNavigationBar extends StatelessWidget {
         top: false,
         child: Container(
           key: const ValueKey('stage-bottom-navigation-size'),
-          height: 36,
+          height: 48,
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: Colors.black12)),
           ),
@@ -468,7 +549,7 @@ class _StageBottomNavigationBar extends StatelessWidget {
               ),
               _StageBottomAction(
                 key: const ValueKey('reverse-trail-direction'),
-                icon: Icons.swap_vert_rounded,
+                icon: Icons.swap_horiz_rounded,
                 label: l10n.t(
                   isReversed
                       ? 'Walk from Pafos to Larnaka'
@@ -486,6 +567,7 @@ class _StageBottomNavigationBar extends StatelessWidget {
                 label: l10n.t('Find my stage'),
                 isActive: hasGpsSelection,
                 isToggle: true,
+                isPrimary: true,
                 onTap: isLocating ? null : onGps,
               ),
               _StageBottomAction(
@@ -515,6 +597,7 @@ class _StageBottomAction extends StatelessWidget {
     required this.onTap,
     this.isActive = false,
     this.isToggle = false,
+    this.isPrimary = false,
     this.badgeCount = 0,
     super.key,
   });
@@ -524,12 +607,15 @@ class _StageBottomAction extends StatelessWidget {
   final VoidCallback? onTap;
   final bool isActive;
   final bool isToggle;
+  final bool isPrimary;
   final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
     final foreground = onTap == null
         ? Colors.black26
+        : isPrimary && isActive
+        ? Colors.white
         : isActive
         ? Colors.black87
         : Colors.black54;
@@ -547,24 +633,39 @@ class _StageBottomAction extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Badge(
-                      isLabelVisible: badgeCount > 0,
-                      backgroundColor: _ink,
-                      textColor: _sand,
-                      label: Text('$badgeCount'),
-                      child: AnimatedSize(
-                        duration: const Duration(milliseconds: 180),
-                        curve: Curves.easeOutCubic,
-                        child: SizedBox.square(
-                          dimension: 24,
-                          child: Center(
-                            child: Icon(icon, color: foreground, size: 22),
+                  child: Badge(
+                    isLabelVisible: badgeCount > 0,
+                    backgroundColor: _ink,
+                    textColor: _sand,
+                    label: Text('$badgeCount'),
+                    child: isPrimary
+                        ? AnimatedContainer(
+                            key: const ValueKey('stage-bottom-gps-surface'),
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOutCubic,
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? _ink
+                                  : Colors.black.withValues(alpha: 0.055),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isActive
+                                    ? Colors.transparent
+                                    : Colors.black12,
+                              ),
+                            ),
+                            child: Center(
+                              child: Icon(icon, color: foreground, size: 22),
+                            ),
+                          )
+                        : SizedBox.square(
+                            dimension: 24,
+                            child: Center(
+                              child: Icon(icon, color: foreground, size: 22),
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
                   ),
                 ),
               ],
@@ -577,10 +678,15 @@ class _StageBottomAction extends StatelessWidget {
 }
 
 class _TrailAppBar extends StatelessWidget {
-  const _TrailAppBar({required this.direction, required this.onRefresh});
+  const _TrailAppBar({
+    required this.direction,
+    required this.onTrailInformationHintReset,
+    required this.onStageDetailsHintReset,
+  });
 
   final TrailDirection direction;
-  final VoidCallback? onRefresh;
+  final VoidCallback onTrailInformationHintReset;
+  final VoidCallback onStageDetailsHintReset;
 
   @override
   Widget build(BuildContext context) {
@@ -597,31 +703,26 @@ class _TrailAppBar extends StatelessWidget {
       titleSpacing: 0,
       title: Row(
         key: const ValueKey('trail-toolbar-actions'),
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
           IconButton(
-            key: const ValueKey('trail-information'),
-            tooltip: l10n.t('Trail information'),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const TrailInformationScreen(),
-              ),
-            ),
-            icon: const Icon(Icons.signpost_rounded),
-          ),
-          IconButton(
-            key: const ValueKey('refresh-offline-trail'),
-            tooltip: l10n.t('Refresh offline trail'),
-            onPressed: onRefresh,
-            icon: const Icon(Icons.sync_rounded),
-          ),
-          IconButton(
+            key: const ValueKey('trail-settings'),
             tooltip: l10n.t('Settings'),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-            ),
+            onPressed: () async {
+              final reset = await Navigator.of(context).push<DebugHintReset>(
+                MaterialPageRoute<DebugHintReset>(
+                  builder: (_) => const SettingsScreen(),
+                ),
+              );
+              if (reset == DebugHintReset.e4Information) {
+                onTrailInformationHintReset();
+              } else if (reset == DebugHintReset.stageDetails) {
+                onStageDetailsHintReset();
+              }
+            },
             icon: const Icon(Icons.tune_rounded),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       flexibleSpace: FlexibleSpaceBar(
@@ -767,14 +868,89 @@ class _OfflineMapStatusBadge extends ConsumerWidget {
   }
 }
 
-class _TrailTimelineWaymark extends StatelessWidget {
-  const _TrailTimelineWaymark();
+class _TrailTimelineWaymark extends StatefulWidget {
+  const _TrailTimelineWaymark({required this.shouldPulse, required this.onTap});
+
+  final bool shouldPulse;
+  final VoidCallback onTap;
+
+  @override
+  State<_TrailTimelineWaymark> createState() => _TrailTimelineWaymarkState();
+}
+
+class _TrailTimelineWaymarkState extends State<_TrailTimelineWaymark>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseController;
+  late final Animation<double> _scale;
+  Timer? _pulseTimer;
+  bool _isPulsing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    );
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 1.1,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 45,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.1,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeInOutCubic)),
+        weight: 55,
+      ),
+    ]).animate(_pulseController);
+    if (widget.shouldPulse) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _runPulse());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _TrailTimelineWaymark oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.shouldPulse == widget.shouldPulse) return;
+    if (widget.shouldPulse) {
+      _runPulse();
+    } else {
+      _pulseTimer?.cancel();
+      _pulseController.stop();
+      _pulseController.value = 0;
+    }
+  }
+
+  Future<void> _runPulse() async {
+    if (!mounted || !widget.shouldPulse || _isPulsing) return;
+    _isPulsing = true;
+    try {
+      await _pulseController.forward(from: 0).orCancel;
+    } on TickerCanceled {
+      // The widget stopped pulsing or was disposed.
+    } finally {
+      _isPulsing = false;
+    }
+    if (!mounted || !widget.shouldPulse) return;
+    _pulseTimer = Timer(const Duration(milliseconds: 1400), _runPulse);
+  }
+
+  @override
+  void dispose() {
+    _pulseTimer?.cancel();
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      key: const ValueKey('stage-e4-waymark'),
-      height: 40,
+      height: 48,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -789,26 +965,121 @@ class _TrailTimelineWaymark extends StatelessWidget {
                   child: Column(
                     children: [
                       SizedBox(
-                        height: 26,
+                        height: 40,
                         child: OverflowBox(
-                          maxWidth: 36,
-                          maxHeight: 26,
-                          child: Container(
-                            width: 34,
-                            height: 26,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: _yellow,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: _ink, width: 2),
-                            ),
-                            child: Text(
-                              context.l10n.t('E4'),
-                              style: const TextStyle(
-                                color: _ink,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.4,
+                          maxWidth: 48,
+                          maxHeight: 40,
+                          child: SizedBox(
+                            width: 44,
+                            height: 40,
+                            child: Tooltip(
+                              message: context.l10n.t('Trail information'),
+                              child: Semantics(
+                                button: true,
+                                label: context.l10n.t('Trail information'),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    key: const ValueKey('stage-e4-waymark'),
+                                    onTap: widget.onTap,
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Center(
+                                      child: KeyedSubtree(
+                                        key: ValueKey(
+                                          widget.shouldPulse
+                                              ? 'stage-e4-waymark-pulsing'
+                                              : 'stage-e4-waymark-seen',
+                                        ),
+                                        child: AnimatedBuilder(
+                                          animation: _pulseController,
+                                          builder: (context, child) {
+                                            final progress =
+                                                _pulseController.value;
+                                            return SizedBox(
+                                              width: 44,
+                                              height: 36,
+                                              child: Stack(
+                                                clipBehavior: Clip.none,
+                                                alignment: Alignment.center,
+                                                children: [
+                                                  if (widget.shouldPulse)
+                                                    Opacity(
+                                                      key: const ValueKey(
+                                                        'stage-e4-waymark-halo',
+                                                      ),
+                                                      opacity: 1 - progress,
+                                                      child: Transform.scale(
+                                                        scale:
+                                                            1 +
+                                                            (progress * 0.38),
+                                                        child: Container(
+                                                          width: 34,
+                                                          height: 26,
+                                                          decoration: BoxDecoration(
+                                                            color:
+                                                                _trailPulseBlue
+                                                                    .withValues(
+                                                                      alpha:
+                                                                          0.28,
+                                                                    ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  7,
+                                                                ),
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: _trailPulseBlue
+                                                                    .withValues(
+                                                                      alpha:
+                                                                          0.42,
+                                                                    ),
+                                                                blurRadius: 9,
+                                                                spreadRadius: 2,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ScaleTransition(
+                                                    scale: _scale,
+                                                    child: Container(
+                                                      width: 34,
+                                                      height: 26,
+                                                      alignment:
+                                                          Alignment.center,
+                                                      decoration: BoxDecoration(
+                                                        color: _yellow,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              6,
+                                                            ),
+                                                        border: Border.all(
+                                                          color: _ink,
+                                                          width: 2,
+                                                        ),
+                                                      ),
+                                                      child: Text(
+                                                        context.l10n.t('E4'),
+                                                        style: const TextStyle(
+                                                          color: _ink,
+                                                          fontSize: 13,
+                                                          fontWeight:
+                                                              FontWeight.w900,
+                                                          letterSpacing: 0.4,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -842,6 +1113,7 @@ class _StageTimelineRow extends StatelessWidget {
     required this.isTrailStart,
     required this.isTrailEnd,
     required this.isSelected,
+    required this.showDetailsHint,
     required this.onTap,
     super.key,
   });
@@ -856,6 +1128,7 @@ class _StageTimelineRow extends StatelessWidget {
   final bool isTrailStart;
   final bool isTrailEnd;
   final bool isSelected;
+  final bool showDetailsHint;
   final VoidCallback onTap;
 
   @override
@@ -898,7 +1171,7 @@ class _StageTimelineRow extends StatelessWidget {
         ),
         _StageSideMetric(
           key: ValueKey('stage-length-${stage.id}'),
-          icon: Icons.straighten_rounded,
+          icon: null,
           value: segmentLengthKm == null
               ? '—'
               : _compactMeasurement(formatter.distance(segmentLengthKm!)),
@@ -980,21 +1253,64 @@ class _StageTimelineRow extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                     side: BorderSide(
-                      color: isSelected ? _bookingBlue : Colors.transparent,
-                      width: isSelected ? 2 : 0,
+                      color: isSelected
+                          ? _bookingBlue
+                          : showDetailsHint
+                          ? _trailPulseBlue
+                          : Colors.transparent,
+                      width: isSelected || showDetailsHint ? 2 : 0,
                     ),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
                     onTap: onTap,
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(15, 13, 10, 13),
+                      padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
                       child: Row(
                         children: [
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                if (showDetailsHint) ...[
+                                  Container(
+                                    key: const ValueKey('stage-details-helper'),
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _trailPulseBlue.withValues(
+                                        alpha: 0.14,
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.touch_app_outlined,
+                                          color: _bookingBlue,
+                                          size: 17,
+                                        ),
+                                        const SizedBox(width: 7),
+                                        Expanded(
+                                          child: Text(
+                                            context.l10n.t(
+                                              'Tap a stage to see its details.',
+                                            ),
+                                            style: const TextStyle(
+                                              color: _ink,
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                ],
                                 Text(
                                   stage.name,
                                   style: const TextStyle(
@@ -1069,11 +1385,6 @@ class _StageTimelineRow extends StatelessWidget {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.chevron_right_rounded,
-                            color: Colors.black45,
-                          ),
                         ],
                       ),
                     ),
@@ -1099,7 +1410,7 @@ class _StageSideMetric extends StatelessWidget {
     super.key,
   });
 
-  final IconData icon;
+  final IconData? icon;
   final String value;
   final String tooltip;
   final Color color;
@@ -1111,8 +1422,10 @@ class _StageSideMetric extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 3),
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 3),
+          ],
           Text(
             value,
             style: const TextStyle(

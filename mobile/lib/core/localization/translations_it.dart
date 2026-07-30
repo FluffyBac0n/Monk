@@ -25,6 +25,13 @@ const italianTranslations = <String, String>{
   'Crete E4': 'Creta E4',
   'Peloponnese E4': 'Peloponneso E4',
   'Settings': 'Impostazioni',
+  'Developer tools': 'Strumenti di sviluppo',
+  'Reset E4 hint': 'Reimposta suggerimento E4',
+  'Reset stage hint': 'Reimposta suggerimento tappa',
+  'Show the pulsing E4 trail information hint again.':
+      'Mostra di nuovo il suggerimento pulsante con le informazioni sul sentiero E4.',
+  'Show the stage details helper again.':
+      'Mostra di nuovo il suggerimento sui dettagli della tappa.',
   'TRAIL LIBRARY': 'RACCOLTA SENTIERI',
   'Explore trails': 'Esplora i sentieri',
   'Choose a trail to view its stages and maps.':
@@ -110,6 +117,8 @@ const italianTranslations = <String, String>{
   'Download profile': 'Scarica profilo',
   'Close stage summary': 'Chiudi il riepilogo della tappa',
   'Stage': 'Tappa',
+  'Tap a stage to see its details.':
+      'Tocca una tappa per visualizzarne i dettagli.',
   'Start point': 'Punto di partenza',
   'Finish point': 'Punto di arrivo',
   'From': 'Da',

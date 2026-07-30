@@ -36,6 +36,10 @@ void main() {
     expect(italian.t('Accommodation'), 'Alloggi');
     expect(italian.t('Offline map'), 'Mappa offline');
     expect(italian.t('Find my stage'), 'Trova la mia tappa');
+    expect(
+      italian.t('Tap a stage to see its details.'),
+      'Tocca una tappa per visualizzarne i dettagli.',
+    );
 
     expect(french.t('Settings'), 'Paramètres');
     expect(french.t('Explore trails'), 'Explorer les sentiers');
@@ -43,6 +47,10 @@ void main() {
     expect(french.t('Accommodation'), 'Hébergements');
     expect(french.t('Offline map'), 'Carte hors ligne');
     expect(french.t('Find my stage'), 'Trouver mon étape');
+    expect(
+      french.t('Tap a stage to see its details.'),
+      'Touchez une étape pour voir ses détails.',
+    );
   });
 
   test('new offline, stage, and map copy is localized', () {

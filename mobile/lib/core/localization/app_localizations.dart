@@ -93,6 +93,13 @@ const _translations = <String, Map<String, String>>{
     'Crete E4': 'Crete E4',
     'Peloponnese E4': 'Peloponnes E4',
     'Settings': 'Einstellungen',
+    'Developer tools': 'Entwicklertools',
+    'Reset E4 hint': 'E4-Hinweis zurücksetzen',
+    'Reset stage hint': 'Etappenhinweis zurücksetzen',
+    'Show the pulsing E4 trail information hint again.':
+        'Den pulsierenden E4-Weginformationshinweis erneut anzeigen.',
+    'Show the stage details helper again.':
+        'Die Hilfe zu den Etappendetails erneut anzeigen.',
     'TRAIL LIBRARY': 'WEGBIBLIOTHEK',
     'Explore trails': 'Wanderwege entdecken',
     'Choose a trail to view its stages and maps.':
@@ -178,6 +185,8 @@ const _translations = <String, Map<String, String>>{
     'Download profile': 'Profil herunterladen',
     'Close stage summary': 'Etappenübersicht schließen',
     'Stage': 'Etappe',
+    'Tap a stage to see its details.':
+        'Tippe auf eine Etappe, um ihre Details anzusehen.',
     'Start point': 'Startpunkt',
     'Finish point': 'Zielpunkt',
     'From': 'Ab',
@@ -392,6 +401,13 @@ const _translations = <String, Map<String, String>>{
     'Crete E4': 'Crete E4',
     'Peloponnese E4': 'Peloponeso E4',
     'Settings': 'Ajustes',
+    'Developer tools': 'Herramientas de desarrollo',
+    'Reset E4 hint': 'Restablecer aviso E4',
+    'Reset stage hint': 'Restablecer aviso de etapa',
+    'Show the pulsing E4 trail information hint again.':
+        'Volver a mostrar el aviso pulsante de información del sendero E4.',
+    'Show the stage details helper again.':
+        'Volver a mostrar la ayuda sobre los detalles de las etapas.',
     'TRAIL LIBRARY': 'BIBLIOTECA DE RUTAS',
     'Explore trails': 'Explorar rutas',
     'Choose a trail to view its stages and maps.':
@@ -477,6 +493,7 @@ const _translations = <String, Map<String, String>>{
     'Download profile': 'Descargar perfil',
     'Close stage summary': 'Cerrar resumen de etapa',
     'Stage': 'Etapa',
+    'Tap a stage to see its details.': 'Toca una etapa para ver sus detalles.',
     'Start point': 'Punto de inicio',
     'Finish point': 'Punto final',
     'From': 'Desde',

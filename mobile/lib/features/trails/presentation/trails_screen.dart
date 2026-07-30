@@ -45,11 +45,15 @@ class TrailsScreen extends ConsumerWidget {
             pinned: true,
             backgroundColor: _ink,
             foregroundColor: Colors.white,
-            title: Text(
-              l10n.t('EUROTREX'),
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2.4,
+            title: Semantics(
+              image: true,
+              label: l10n.t('EUROTREX'),
+              child: Image.asset(
+                'assets/branding/eurotrex_wordmark.png',
+                key: const ValueKey('landing-eurotrex-wordmark'),
+                width: 138,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
               ),
             ),
             actions: [
@@ -66,8 +70,8 @@ class TrailsScreen extends ConsumerWidget {
               ),
               IconButton(
                 tooltip: l10n.t('Settings'),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
+                onPressed: () => Navigator.of(context).push<DebugHintReset>(
+                  MaterialPageRoute<DebugHintReset>(
                     builder: (_) => const SettingsScreen(),
                   ),
                 ),
