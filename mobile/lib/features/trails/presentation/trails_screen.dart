@@ -41,7 +41,7 @@ class TrailsScreen extends ConsumerWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 184,
+            expandedHeight: 154,
             pinned: true,
             backgroundColor: _ink,
             foregroundColor: Colors.white,
@@ -96,17 +96,12 @@ class TrailsScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l10n.t('Explore trails'),
+                          l10n.t('Trails'),
                           style: Theme.of(context).textTheme.headlineLarge
                               ?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
                               ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l10n.t('Choose a trail to view its stages and maps.'),
-                          style: const TextStyle(color: Colors.white70),
                         ),
                       ],
                     ),
@@ -251,7 +246,9 @@ class _TrailCard extends StatelessWidget {
             Container(
               key: ValueKey('trail-card-header-${trail.id}'),
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              constraints: trail.id == 'cyprus-e4'
+                  ? const BoxConstraints(minHeight: 165)
+                  : null,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -259,52 +256,88 @@ class _TrailCard extends StatelessWidget {
                   colors: [Color(0xFF275F45), Color(0xFF183226)],
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        key: ValueKey('trail-card-kind-${trail.id}'),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _yellow,
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                        child: Text(
-                          l10n.t('LONG DISTANCE'),
-                          style: const TextStyle(
-                            color: _ink,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.9,
+                  if (trail.id == 'cyprus-e4')
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: ExcludeSemantics(
+                          child: Image.asset(
+                            'assets/branding/cyprus_e4_forest.jpg',
+                            key: const ValueKey(
+                              'trail-card-watermark-cyprus-e4',
+                            ),
+                            fit: BoxFit.cover,
+                            alignment: Alignment.center,
+                            filterQuality: FilterQuality.medium,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: _TrailDataStatusBadge(
-                          trailId: trail.id,
-                          isOffline: isOffline,
+                    ),
+                  if (trail.id == 'cyprus-e4')
+                    const Positioned.fill(
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          key: ValueKey('trail-card-watermark-fade-cyprus-e4'),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Color(0xE6275F45), Color(0x66183226)],
+                              stops: [0.05, 1],
+                            ),
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    trail.name,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    l10n.routeDirection(start, end),
-                    style: const TextStyle(color: Colors.white70),
+                  Padding(
+                    key: ValueKey('trail-card-header-content-${trail.id}'),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              key: ValueKey('trail-card-kind-${trail.id}'),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _yellow,
+                                borderRadius: BorderRadius.circular(7),
+                              ),
+                              child: Text(
+                                l10n.t('LONG DISTANCE'),
+                                style: const TextStyle(
+                                  color: _ink,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.9,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: _TrailDataStatusBadge(
+                                trailId: trail.id,
+                                isOffline: isOffline,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 36),
+                        Text(
+                          trail.name,
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -318,6 +351,15 @@ class _TrailCard extends StatelessWidget {
                   Text(
                     l10n.t(trail.description),
                     style: const TextStyle(height: 1.3),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.routeDirection(start, end),
+                    key: ValueKey('trail-card-route-${trail.id}'),
+                    style: const TextStyle(
+                      color: _green,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -343,6 +385,7 @@ class _TrailCard extends StatelessWidget {
                   Align(
                     alignment: Alignment.centerRight,
                     child: FilledButton.icon(
+                      key: ValueKey('explore-trail-button-${trail.id}'),
                       onPressed: onExplore,
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
@@ -351,7 +394,7 @@ class _TrailCard extends StatelessWidget {
                         ),
                         visualDensity: VisualDensity.compact,
                       ),
-                      icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                      icon: const Icon(Icons.hiking_rounded, size: 18),
                       label: Text(l10n.t('Explore trail')),
                     ),
                   ),
@@ -374,7 +417,7 @@ class _TrailDataStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = context.l10n.t(
-      isOffline ? 'Trail data available offline' : 'Trail data not downloaded',
+      isOffline ? 'OFFLINE TRAIL' : 'Trail data not downloaded',
     );
     final foreground = isOffline ? _green : Colors.white70;
     final background = isOffline

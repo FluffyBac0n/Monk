@@ -52,6 +52,18 @@ void main() {
     );
     expect(longDistance, findsOneWidget);
     expect(offlineStatus, findsOneWidget);
+    final stageHeaderWatermark = find.byKey(
+      const ValueKey('stages-header-watermark-cyprus-e4'),
+    );
+    expect(stageHeaderWatermark, findsOneWidget);
+    expect(
+      tester.widget<Image>(stageHeaderWatermark).image,
+      const AssetImage('assets/branding/cyprus_e4_forest.jpg'),
+    );
+    expect(
+      find.byKey(const ValueKey('stages-header-watermark-fade-cyprus-e4')),
+      findsOneWidget,
+    );
     expect(
       tester.getCenter(longDistance).dx,
       lessThan(tester.getCenter(offlineStatus).dx),
@@ -61,7 +73,7 @@ void main() {
       findsNothing,
     );
     expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
-    expect(find.text('OFFLINE MAP AVAILABLE'), findsOneWidget);
+    expect(find.text('OFFLINE TRAIL'), findsOneWidget);
 
     final providerScope = ProviderScope.containerOf(
       tester.element(find.byType(StagesScreen)),
@@ -104,6 +116,27 @@ void main() {
     await tester.tap(information);
     await tester.pumpAndSettle();
     expect(find.byType(TrailInformationScreen), findsOneWidget);
+    final informationWatermark = find.byKey(
+      const ValueKey('trail-information-watermark-cyprus-e4'),
+    );
+    expect(informationWatermark, findsOneWidget);
+    expect(
+      (tester.widget<Image>(informationWatermark).image as AssetImage)
+          .assetName,
+      'assets/branding/cyprus_e4_forest.jpg',
+    );
+    expect(
+      find.byKey(const ValueKey('trail-information-watermark-fade-cyprus-e4')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('trail-information-image-header')),
+        matching: find.byIcon(Icons.route_rounded),
+      ),
+      findsNothing,
+    );
+    expect(find.text('Photo: Persephoni Trail stage'), findsOneWidget);
     expect(find.text('Sign posting'), findsOneWidget);
     expect(database.settings[cyprusE4TrailInformationSeenSetting], 'true');
     await tester.scrollUntilVisible(
@@ -195,9 +228,7 @@ void main() {
     expect(controller.syncCalls, 1);
   });
 
-  testWidgets('debug settings can restart both guidance hints', (
-    tester,
-  ) async {
+  testWidgets('debug settings can restart both guidance hints', (tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final database = _FakeAppDatabase()
@@ -256,7 +287,7 @@ void main() {
     expect(find.byKey(const ValueKey('stage-details-helper')), findsOneWidget);
   });
 
-  testWidgets('shows Explore trails and opens Cyprus E4', (tester) async {
+  testWidgets('shows Trails and opens Cyprus E4', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: MonkApp()));
     await tester.pumpAndSettle();
 
@@ -268,13 +299,35 @@ void main() {
     expect(find.text('MONK'), findsNothing);
     expect(find.text('TRAIL LIBRARY'), findsNothing);
     final headerGap =
-        tester.getTopLeft(find.text('Explore trails')).dy -
+        tester.getTopLeft(find.text('Trails')).dy -
         tester.getBottomLeft(landingWordmark).dy;
     expect(headerGap, greaterThanOrEqualTo(16));
     expect(headerGap, lessThan(80));
-    expect(find.text('Explore trails'), findsOneWidget);
+    expect(find.text('Trails'), findsOneWidget);
+    expect(find.text('Explore trails'), findsNothing);
+    expect(
+      find.text('Choose a trail to view its stages and maps.'),
+      findsNothing,
+    );
     expect(find.text('Cyprus E4'), findsOneWidget);
     final cyprusCard = find.byKey(const ValueKey('explore-cyprus-e4'));
+    final exploreButton = find.byKey(
+      const ValueKey('explore-trail-button-cyprus-e4'),
+    );
+    expect(
+      find.descendant(
+        of: exploreButton,
+        matching: find.byIcon(Icons.hiking_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: exploreButton,
+        matching: find.byIcon(Icons.arrow_forward_rounded),
+      ),
+      findsNothing,
+    );
     final trailHeader = find.byKey(
       const ValueKey('trail-card-header-cyprus-e4'),
     );
@@ -282,9 +335,28 @@ void main() {
     final trailDataStatus = find.byKey(
       const ValueKey('trail-data-status-badge-cyprus-e4'),
     );
+    final trailHeaderContent = find.byKey(
+      const ValueKey('trail-card-header-content-cyprus-e4'),
+    );
     expect(
-      tester.widget<Container>(trailHeader).padding,
+      tester.widget<Padding>(trailHeaderContent).padding,
       const EdgeInsets.all(16),
+    );
+    final trailWatermark = find.byKey(
+      const ValueKey('trail-card-watermark-cyprus-e4'),
+    );
+    expect(
+      find.descendant(of: trailHeader, matching: trailWatermark),
+      findsOneWidget,
+    );
+    expect(
+      (tester.widget<Image>(trailWatermark).image as AssetImage).assetName,
+      'assets/branding/cyprus_e4_forest.jpg',
+    );
+    expect(tester.getSize(trailHeader).height, greaterThanOrEqualTo(165));
+    expect(
+      find.byKey(const ValueKey('trail-card-watermark-fade-cyprus-e4')),
+      findsOneWidget,
     );
     expect(
       tester.widget<Container>(trailKind).padding,
@@ -292,6 +364,21 @@ void main() {
     );
     expect(
       find.descendant(of: trailHeader, matching: trailDataStatus),
+      findsOneWidget,
+    );
+    final routeDirection = find.byKey(
+      const ValueKey('trail-card-route-cyprus-e4'),
+    );
+    expect(
+      find.descendant(of: trailHeader, matching: routeDirection),
+      findsNothing,
+    );
+    expect(routeDirection, findsOneWidget);
+    expect(find.text('Pafos Airport  →  Larnaka Airport'), findsOneWidget);
+    expect(
+      find.text(
+        'A long-distance journey linking the coast, forests and Troodos mountain.',
+      ),
       findsOneWidget,
     );
     expect(
@@ -359,6 +446,15 @@ void main() {
     expect(find.byType(AboutScreen), findsOneWidget);
     expect(find.byKey(const ValueKey('about-screen')), findsOneWidget);
     expect(find.text('Project funding'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('about-eurotrex-wordmark')),
+      findsOneWidget,
+    );
+    expect(find.text('EUROTREX'), findsNothing);
+    expect(find.text('About EUROTREX'), findsNothing);
+    expect(find.text('Our mission'), findsOneWidget);
+    expect(find.text('Co-funded by the Republic of Cyprus'), findsOneWidget);
+    expect(find.textContaining('supported by the Republic'), findsNothing);
 
     final euLogo = find.byKey(const ValueKey('about-eu-logo'));
     final cyprusLogo = find.byKey(const ValueKey('about-cyprus-logo'));
@@ -557,9 +653,28 @@ void main() {
     expect(find.text('Estimated walking time'), findsOneWidget);
     expect(find.text('Drinking water'), findsOneWidget);
     expect(find.text('Available offline'), findsNothing);
+    final bottomNavigation = find.byKey(
+      const ValueKey('stage-detail-bottom-navigation'),
+    );
+    expect(bottomNavigation, findsOneWidget);
+    expect(
+      find.byKey(const Key('stage-detail-stages-shortcut')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('stage-detail-accommodation')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('stage-detail-gps')), findsOneWidget);
     final mapAction = find.byKey(const ValueKey('stage-detail-map'));
     final elevationAction = find.byKey(
       const ValueKey('stage-detail-elevation'),
+    );
+    final appBar = find.byType(AppBar);
+    expect(find.descendant(of: appBar, matching: mapAction), findsNothing);
+    expect(
+      find.descendant(of: appBar, matching: elevationAction),
+      findsNothing,
     );
     expect(
       tester.getCenter(mapAction).dx,
@@ -580,24 +695,32 @@ void main() {
         services: const {},
       ),
     );
-    await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp(
-          home: StageDetailScreen(stages: stages, initialIndex: 0),
+    for (var stageIndex = 0; stageIndex < stages.length; stageIndex++) {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: StageDetailScreen(
+              key: ValueKey('preview-stage-$stageIndex'),
+              stages: stages,
+              initialIndex: stageIndex,
+            ),
+          ),
         ),
-      ),
-    );
-
-    expect(find.byKey(const Key('stage-map-preview')), findsOneWidget);
-    expect(find.byKey(const Key('stage-trail-position-copy')), findsNothing);
-
-    for (var stageIndex = 1; stageIndex < stages.length; stageIndex++) {
-      await tester.tap(find.text('Next'));
+      );
       await tester.pumpAndSettle();
 
-      expect(find.text('Stage $stageIndex'), findsOneWidget);
+      expect(
+        find.text(stageIndex == 0 ? 'Start' : 'Stage $stageIndex'),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('stage-map-preview')), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const Key('stage-map-preview'))).height,
+        250,
+      );
       expect(find.byKey(const Key('stage-trail-position-copy')), findsNothing);
+      expect(find.text('Previous'), findsNothing);
+      expect(find.text('Next'), findsNothing);
     }
   });
 
@@ -1249,15 +1372,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final booking = find.byKey(
-      const ValueKey('book-accommodation-lodging-stage'),
-    );
+    final booking = find.byKey(const ValueKey('stage-detail-accommodation'));
     expect(booking, findsOneWidget);
     expect(find.text('Start point'), findsOneWidget);
     expect(find.text('0.0 km'), findsNothing);
-    expect(find.text('View places to stay'), findsOneWidget);
+    expect(find.text('View places to stay'), findsNothing);
     expect(find.text('View accommodation'), findsNothing);
     expect(find.text('Coming soon'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('stage-accommodation-lodging-stage')),
+      findsNothing,
+    );
 
     await tester.tap(booking);
     await tester.pumpAndSettle();
@@ -1342,6 +1467,50 @@ void main() {
     await tester.tap(book);
     await tester.pumpAndSettle();
     expect(launchedUris, [Uri.parse('https://booking.example.com/forest-inn')]);
+  });
+
+  testWidgets('stage accommodation action explains when none is available', (
+    tester,
+  ) async {
+    const stage = TrailStage(
+      id: 'no-lodging-stage',
+      sequence: 1,
+      name: 'No lodging stage',
+      accumulatedDistanceKm: 0,
+      services: {},
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          lodgingRepositoryProvider.overrideWithValue(
+            const _FakeLodgingRepository({}),
+          ),
+        ],
+        child: const MaterialApp(
+          home: StageDetailScreen(stages: [stage], initialIndex: 0),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('View places to stay'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('stage-detail-accommodation')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('stage-accommodation-message')),
+      findsOneWidget,
+    );
+    expect(
+      find.text('No accommodation is listed for this stage.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('stage-accommodation-message')),
+      findsNothing,
+    );
   });
 
   testWidgets('accommodation handles empty data and invalid booking links', (
@@ -1486,6 +1655,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
+    expect(find.text('App preferences'), findsNothing);
     expect(find.text('Language'), findsOneWidget);
     expect(find.text('Metric'), findsOneWidget);
     expect(

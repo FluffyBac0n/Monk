@@ -90,22 +90,9 @@ class AboutScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: _ink,
         foregroundColor: Colors.white,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.t('About us'),
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-            ),
-            Text(
-              l10n.t('About EUROTREX').toUpperCase(),
-              style: const TextStyle(
-                color: Colors.white60,
-                fontSize: 9,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ],
+        title: Text(
+          l10n.t('About us'),
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
         ),
       ),
       body: ListView(
@@ -115,7 +102,7 @@ class AboutScreen extends ConsumerWidget {
           const SizedBox(height: 14),
           _AboutCard(
             icon: Icons.explore_rounded,
-            title: l10n.t('About EUROTREX'),
+            title: l10n.t('Our mission'),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -148,7 +135,7 @@ class AboutScreen extends ConsumerWidget {
               children: [
                 Text(
                   l10n.t(
-                    'The EUROTREX project is co-funded by the European Union and supported by the Republic of Cyprus.',
+                    'The EUROTREX project is co-funded by the European Union and the Republic of Cyprus.',
                   ),
                   style: const TextStyle(color: Colors.black87, height: 1.45),
                 ),
@@ -162,10 +149,10 @@ class AboutScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 10),
                 _PartnerRow(
-                  semanticLabel: l10n.t('Supported by the Republic of Cyprus'),
+                  semanticLabel: l10n.t('Co-funded by the Republic of Cyprus'),
                   imageKey: const ValueKey('about-cyprus-logo'),
                   asset: 'assets/branding/republic_of_cyprus_emblem.png',
-                  label: l10n.t('Supported by the Republic of Cyprus'),
+                  label: l10n.t('Co-funded by the Republic of Cyprus'),
                   imageHeight: 50,
                 ),
               ],
@@ -249,42 +236,24 @@ class _AboutHero extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(22),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.route_rounded,
-              color: Colors.white,
-              size: 29,
+          Semantics(
+            image: true,
+            label: l10n.t('EUROTREX'),
+            child: Image.asset(
+              'assets/branding/eurotrex_wordmark.png',
+              key: const ValueKey('about-eurotrex-wordmark'),
+              width: 210,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
             ),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.t('EUROTREX'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 23,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.6,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  l10n.t('Explore Europe, one trail at a time.'),
-                  style: const TextStyle(color: Colors.white70),
-                ),
-              ],
-            ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.t('Explore Europe, one trail at a time.'),
+            style: const TextStyle(color: Colors.white70),
           ),
         ],
       ),

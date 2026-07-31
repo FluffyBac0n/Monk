@@ -32,6 +32,7 @@ void main() {
 
     expect(italian.t('Settings'), 'Impostazioni');
     expect(italian.t('Explore trails'), 'Esplora i sentieri');
+    expect(italian.t('Trails'), 'Sentieri');
     expect(italian.t('Stage'), 'Tappa');
     expect(italian.t('Accommodation'), 'Alloggi');
     expect(italian.t('Offline map'), 'Mappa offline');
@@ -43,6 +44,7 @@ void main() {
 
     expect(french.t('Settings'), 'Paramètres');
     expect(french.t('Explore trails'), 'Explorer les sentiers');
+    expect(french.t('Trails'), 'Sentiers');
     expect(french.t('Stage'), 'Étape');
     expect(french.t('Accommodation'), 'Hébergements');
     expect(french.t('Offline map'), 'Carte hors ligne');
@@ -65,6 +67,7 @@ void main() {
     expect(german.t('Republic of Cyprus'), 'Republik Zypern');
     expect(german.t('Crete E4'), 'Crete E4');
     expect(german.t('Peloponnese E4'), 'Peloponnes E4');
+    expect(german.t('OFFLINE TRAIL'), 'OFFLINE-WANDERWEG');
     expect(german.t('Offline access'), 'Offline-Zugriff');
     expect(german.t('Offline map'), 'Offline-Karte');
     expect(german.t('Map unavailable'), 'Karte nicht verfügbar');
@@ -95,6 +98,7 @@ void main() {
     expect(german.t('Selected stage'), 'Ausgewählte Etappe');
     expect(german.t('About us'), 'Über uns');
     expect(german.t('About EUROTREX'), 'Über EUROTREX');
+    expect(german.t('Our mission'), 'Unsere Mission');
     expect(
       german.t('Explore Europe, one trail at a time.'),
       'Entdecke Europa – Weg für Weg.',
@@ -109,13 +113,13 @@ void main() {
     expect(german.t('Project funding'), 'Projektförderung');
     expect(
       german.t(
-        'The EUROTREX project is co-funded by the European Union and supported by the Republic of Cyprus.',
+        'The EUROTREX project is co-funded by the European Union and the Republic of Cyprus.',
       ),
-      'Das EUROTREX-Projekt wird von der Europäischen Union kofinanziert und von der Republik Zypern unterstützt.',
+      'Das EUROTREX-Projekt wird von der Europäischen Union und der Republik Zypern kofinanziert.',
     );
     expect(
-      german.t('Supported by the Republic of Cyprus'),
-      'Unterstützt von der Republik Zypern',
+      german.t('Co-funded by the Republic of Cyprus'),
+      'Kofinanziert von der Republik Zypern',
     );
     expect(german.t('Contact us'), 'Kontakt');
     expect(
@@ -177,6 +181,7 @@ void main() {
     expect(spanish.t('Selected stage'), 'Etapa seleccionada');
     expect(spanish.t('About us'), 'Sobre nosotros');
     expect(spanish.t('About EUROTREX'), 'Sobre EUROTREX');
+    expect(spanish.t('Our mission'), 'Nuestra misión');
     expect(
       spanish.t('Explore Europe, one trail at a time.'),
       'Descubre Europa, ruta a ruta.',
@@ -191,13 +196,13 @@ void main() {
     expect(spanish.t('Project funding'), 'Financiación del proyecto');
     expect(
       spanish.t(
-        'The EUROTREX project is co-funded by the European Union and supported by the Republic of Cyprus.',
+        'The EUROTREX project is co-funded by the European Union and the Republic of Cyprus.',
       ),
-      'El proyecto EUROTREX está cofinanciado por la Unión Europea y cuenta con el apoyo de la República de Chipre.',
+      'El proyecto EUROTREX está cofinanciado por la Unión Europea y la República de Chipre.',
     );
     expect(
-      spanish.t('Supported by the Republic of Cyprus'),
-      'Con el apoyo de la República de Chipre',
+      spanish.t('Co-funded by the Republic of Cyprus'),
+      'Cofinanciado por la República de Chipre',
     );
     expect(spanish.t('Contact us'), 'Contacto');
     expect(

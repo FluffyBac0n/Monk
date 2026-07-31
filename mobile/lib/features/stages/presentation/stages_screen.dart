@@ -118,6 +118,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
   final Map<String, GlobalKey> _stageRowKeys = {};
   Set<String> selectedServices = {};
   String? _gpsSelectedStageId;
+  DeviceLocation? _gpsLocation;
   bool _isLocatingStage = false;
   bool? _hasSeenTrailInformation;
   bool? _hasSeenStageDetailsHint;
@@ -217,7 +218,10 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
 
   Future<void> _toggleGpsStage() async {
     if (_gpsSelectedStageId != null) {
-      setState(() => _gpsSelectedStageId = null);
+      setState(() {
+        _gpsSelectedStageId = null;
+        _gpsLocation = null;
+      });
       return;
     }
     await _findMyStage();
@@ -228,6 +232,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
     setState(() {
       _isLocatingStage = true;
       _gpsSelectedStageId = null;
+      _gpsLocation = null;
     });
 
     try {
@@ -283,6 +288,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
       if (!mounted) return;
       setState(() {
         _gpsSelectedStageId = stage.id;
+        _gpsLocation = location;
         selectedServices.clear();
       });
       await WidgetsBinding.instance.endOfFrame;
@@ -364,6 +370,9 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
               direction: direction,
               locationStageId: stage.id == _gpsSelectedStageId
                   ? _gpsSelectedStageId
+                  : null,
+              initialLocation: stage.id == _gpsSelectedStageId
+                  ? _gpsLocation
                   : null,
             ),
           ),
@@ -726,64 +735,90 @@ class _TrailAppBar extends StatelessWidget {
         ],
       ),
       flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [_ink, Color(0xFF274B3A)],
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 70, 20, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        key: const ValueKey('stage-long-distance-badge'),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _yellow,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          l10n.t('LONG DISTANCE'),
-                          style: const TextStyle(
-                            color: _ink,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Flexible(child: _OfflineMapStatusBadge()),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    l10n.t('Cyprus E4'),
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    l10n.routeDirection(start, end),
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                ],
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [_ink, Color(0xFF274B3A)],
+                ),
               ),
             ),
-          ),
+            ExcludeSemantics(
+              child: Image.asset(
+                'assets/branding/cyprus_e4_forest.jpg',
+                key: const ValueKey('stages-header-watermark-cyprus-e4'),
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+                filterQuality: FilterQuality.medium,
+              ),
+            ),
+            const DecoratedBox(
+              key: ValueKey('stages-header-watermark-fade-cyprus-e4'),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xE6275F45), Color(0x66183226)],
+                  stops: [0.05, 1],
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 70, 20, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          key: const ValueKey('stage-long-distance-badge'),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _yellow,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            l10n.t('LONG DISTANCE'),
+                            style: const TextStyle(
+                              color: _ink,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Flexible(child: _OfflineMapStatusBadge()),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      l10n.t('Cyprus E4'),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.routeDirection(start, end),
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -802,7 +837,7 @@ class _OfflineMapStatusBadge extends ConsumerWidget {
     final isChecking = offlineMap.isLoading;
     final label = context.l10n.t(
       isReady
-          ? 'Offline map available'
+          ? 'OFFLINE TRAIL'
           : isChecking
           ? 'Checking offline map…'
           : isDownloading
@@ -1500,6 +1535,7 @@ class StageDetailScreen extends ConsumerStatefulWidget {
     required this.initialIndex,
     this.direction = TrailDirection.pafosToLarnaka,
     this.locationStageId,
+    this.initialLocation,
     super.key,
   });
 
@@ -1507,6 +1543,7 @@ class StageDetailScreen extends ConsumerStatefulWidget {
   final int initialIndex;
   final TrailDirection direction;
   final String? locationStageId;
+  final DeviceLocation? initialLocation;
 
   @override
   ConsumerState<StageDetailScreen> createState() => _StageDetailScreenState();
@@ -1514,13 +1551,23 @@ class StageDetailScreen extends ConsumerStatefulWidget {
 
 class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
   late int index = widget.initialIndex;
+  final GlobalKey _mapPreviewKey = GlobalKey();
+  String? _gpsStageId;
+  DeviceLocation? _gpsLocation;
+  bool _isLocating = false;
+  bool _isOpeningAccommodation = false;
 
   TrailStage get stage => widget.stages[index];
 
+  @override
+  void initState() {
+    super.initState();
+    _gpsStageId = widget.locationStageId;
+    _gpsLocation = widget.initialLocation;
+  }
+
   void _openMap({List<Lodging> lodgings = const []}) {
-    final locationStageId = stage.id == widget.locationStageId
-        ? widget.locationStageId
-        : null;
+    final locationStageId = stage.id == _gpsStageId ? _gpsStageId : null;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => MapScreen(
@@ -1532,13 +1579,176 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
     );
   }
 
+  void _openElevation() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ElevationScreen(initialStageIndex: index),
+      ),
+    );
+  }
+
+  void _backToStages() {
+    Navigator.of(context).popUntil(
+      (route) => route.settings.name == StagesScreen.routeName || route.isFirst,
+    );
+  }
+
+  Future<void> _toggleGpsLocation() async {
+    if (_gpsStageId != null) {
+      setState(() {
+        _gpsStageId = null;
+        _gpsLocation = null;
+      });
+      return;
+    }
+    await _locateCurrentStage();
+  }
+
+  Future<void> _locateCurrentStage() async {
+    if (_isLocating) return;
+    setState(() => _isLocating = true);
+    try {
+      late final List<RoutePoint> routePoints;
+      try {
+        routePoints = await ref.read(elevationProvider.future);
+      } catch (_) {
+        _showMessage('Route data is not on this device yet.');
+        return;
+      }
+      if (!mounted) return;
+      if (routePoints.isEmpty || widget.stages.isEmpty) {
+        _showMessage('Route data is not on this device yet.');
+        return;
+      }
+
+      final location = await ref.read(deviceLocationReaderProvider)();
+      if (!mounted) return;
+      if (!location.accuracyM.isFinite ||
+          location.accuracyM < 0 ||
+          location.accuracyM > maximumUsableLocationAccuracyM) {
+        _showMessage('Your location could not be read right now.');
+        return;
+      }
+
+      final canonicalStages = widget.stages.toList(growable: false)
+        ..sort(
+          (first, second) => (first.accumulatedDistanceKm ?? double.infinity)
+              .compareTo(second.accumulatedDistanceKm ?? double.infinity),
+        );
+      final match = findNearbyTrailStage(
+        latitude: location.latitude,
+        longitude: location.longitude,
+        locationAccuracyM: location.accuracyM,
+        routePoints: routePoints,
+        stages: canonicalStages,
+        direction: widget.direction,
+      );
+      if (match == null) {
+        _showMessage('You are not on the trail.');
+        return;
+      }
+      final matchedIndex = widget.stages.indexWhere(
+        (candidate) => candidate.id == match.stageId,
+      );
+      if (matchedIndex < 0) {
+        _showMessage('You are not on the trail.');
+        return;
+      }
+
+      setState(() {
+        index = matchedIndex;
+        _gpsStageId = match.stageId;
+        _gpsLocation = location;
+      });
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+      final previewContext = _mapPreviewKey.currentContext;
+      if (previewContext != null && previewContext.mounted) {
+        await Scrollable.ensureVisible(
+          previewContext,
+          alignment: 0.5,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    } on LocationServicesDisabledException {
+      _showMessage('Turn on Location Services to show your position.');
+    } on LocationPermissionDeniedException {
+      _showMessage('Location permission is needed to show your position.');
+    } catch (_) {
+      _showMessage('Your location could not be read right now.');
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
+    }
+  }
+
+  Future<void> _openAccommodation() async {
+    if (_isOpeningAccommodation) return;
+    final selectedStage = stage;
+    setState(() => _isOpeningAccommodation = true);
+    List<Lodging>? availableLodgings;
+    var loadFailed = false;
+    try {
+      availableLodgings = await ref.read(
+        lodgingsForStageProvider(selectedStage.id).future,
+      );
+    } catch (_) {
+      loadFailed = true;
+    } finally {
+      if (mounted) setState(() => _isOpeningAccommodation = false);
+    }
+    if (!mounted || stage.id != selectedStage.id) return;
+    if (loadFailed) {
+      await _showAccommodationMessage(
+        'Accommodation information is currently unavailable.',
+      );
+      return;
+    }
+    if (availableLodgings == null || availableLodgings.isEmpty) {
+      await _showAccommodationMessage(
+        'No accommodation is listed for this stage.',
+      );
+      return;
+    }
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AccommodationScreen(stage: selectedStage),
+      ),
+    );
+  }
+
+  Future<void> _showAccommodationMessage(String message) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: const ValueKey('stage-accommodation-message'),
+        title: Text(context.l10n.t('Accommodation')),
+        content: Text(context.l10n.t(message)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(context.l10n.t('Close')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.t(message))));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final formatter = MeasurementFormatter(
       ref.watch(appSettingsProvider).measurementSystem,
     );
-    final showUserLocation = stage.id == widget.locationStageId;
+    final showUserLocation = stage.id == _gpsStageId;
     final previewRoute = ref.watch(elevationProvider).value;
     final previewStartDistanceKm = index == 0
         ? stage.accumulatedDistanceKm
@@ -1595,6 +1805,16 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
         : null;
     return Scaffold(
       backgroundColor: _sand,
+      bottomNavigationBar: _StageDetailBottomNavigationBar(
+        hasGpsLocation: _gpsStageId != null,
+        isLocating: _isLocating,
+        isLoadingAccommodation: lodgings.isLoading || _isOpeningAccommodation,
+        onStages: _backToStages,
+        onAccommodation: _openAccommodation,
+        onGps: _toggleGpsLocation,
+        onMap: () => _openMap(lodgings: mappedLodgings),
+        onElevation: _openElevation,
+      ),
       appBar: AppBar(
         backgroundColor: _ink,
         foregroundColor: Colors.white,
@@ -1615,34 +1835,6 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            key: const Key('stage-detail-stages-shortcut'),
-            tooltip: l10n.t('Back to stages'),
-            onPressed: () => Navigator.of(context).popUntil(
-              (route) =>
-                  route.settings.name == StagesScreen.routeName ||
-                  route.isFirst,
-            ),
-            icon: const Icon(Icons.route_rounded),
-          ),
-          IconButton(
-            key: const ValueKey('stage-detail-map'),
-            tooltip: l10n.t('Show on map'),
-            onPressed: () => _openMap(lodgings: mappedLodgings),
-            icon: const Icon(Icons.map_outlined),
-          ),
-          IconButton(
-            key: const ValueKey('stage-detail-elevation'),
-            tooltip: l10n.t('Elevation'),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => ElevationScreen(initialStageIndex: index),
-              ),
-            ),
-            icon: const Icon(Icons.show_chart_rounded),
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -1770,50 +1962,17 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                     ],
                   ),
           ),
-          if (stage.services['lodging'] == true ||
-              lodgings.value?.isNotEmpty == true) ...[
-            const SizedBox(height: 12),
-            _StageAccommodationSection(
-              stage: stage,
-              lodgings: lodgings,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => AccommodationScreen(stage: stage),
-                ),
-              ),
-            ),
-          ],
           const SizedBox(height: 12),
           _StageMapPreview(
+            key: _mapPreviewKey,
             routePoints: previewRoute ?? const [],
             startDistanceKm: previewStartDistanceKm,
             finishDistanceKm: previewFinishDistanceKm,
             showFinishFlag: stagePreviewShowsFinishFlag(index),
             lodgings: mappedLodgings,
             showUserLocation: showUserLocation,
+            userLocation: showUserLocation ? _gpsLocation : null,
             onTap: () => _openMap(lodgings: mappedLodgings),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: index > 0 ? () => setState(() => index--) : null,
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  label: Text(l10n.t('Previous')),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: index < widget.stages.length - 1
-                      ? () => setState(() => index++)
-                      : null,
-                  icon: const Icon(Icons.arrow_forward_rounded),
-                  label: Text(l10n.t('Next')),
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -1821,82 +1980,84 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
   }
 }
 
-class _StageAccommodationSection extends StatelessWidget {
-  const _StageAccommodationSection({
-    required this.stage,
-    required this.lodgings,
-    required this.onTap,
+class _StageDetailBottomNavigationBar extends StatelessWidget {
+  const _StageDetailBottomNavigationBar({
+    required this.hasGpsLocation,
+    required this.isLocating,
+    required this.isLoadingAccommodation,
+    required this.onStages,
+    required this.onAccommodation,
+    required this.onGps,
+    required this.onMap,
+    required this.onElevation,
   });
 
-  final TrailStage stage;
-  final AsyncValue<List<Lodging>> lodgings;
-  final VoidCallback onTap;
+  final bool hasGpsLocation;
+  final bool isLocating;
+  final bool isLoadingAccommodation;
+  final VoidCallback onStages;
+  final VoidCallback onAccommodation;
+  final VoidCallback onGps;
+  final VoidCallback onMap;
+  final VoidCallback onElevation;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final String? status = lodgings.isLoading
-        ? l10n.t('Finding accommodation…')
-        : lodgings.hasError
-        ? l10n.t('Accommodation information is currently unavailable.')
-        : lodgings.value?.isEmpty == true
-        ? l10n.t('No accommodation is listed for this stage.')
-        : null;
-
-    return _DetailSection(
-      title: l10n.t('Accommodation'),
-      child: Material(
-        color: _bookingBlue.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: ValueKey('book-accommodation-${stage.id}'),
-          onTap: onTap,
-          child: Container(
-            key: ValueKey('stage-accommodation-${stage.id}'),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _bookingBlue.withValues(alpha: 0.25)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.hotel_rounded, color: _bookingBlue),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.t('View places to stay'),
-                        style: const TextStyle(
-                          color: _bookingBlue,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      if (status != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          status,
-                          style: const TextStyle(
-                            color: Colors.black54,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (lodgings.isLoading)
-                  const SizedBox.square(
-                    dimension: 19,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else
-                  const Icon(Icons.chevron_right_rounded, color: _bookingBlue),
-              ],
-            ),
+    return Material(
+      key: const ValueKey('stage-detail-bottom-navigation'),
+      color: _sand,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          key: const ValueKey('stage-detail-bottom-navigation-size'),
+          height: 48,
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: Colors.black12)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _StageBottomAction(
+                key: const Key('stage-detail-stages-shortcut'),
+                icon: Icons.route_rounded,
+                label: l10n.t('Back to stages'),
+                onTap: onStages,
+              ),
+              _StageBottomAction(
+                key: const ValueKey('stage-detail-accommodation'),
+                icon: isLoadingAccommodation
+                    ? Icons.hourglass_top_rounded
+                    : Icons.hotel_outlined,
+                label: l10n.t('Accommodation'),
+                onTap: isLoadingAccommodation ? null : onAccommodation,
+              ),
+              _StageBottomAction(
+                key: const ValueKey('stage-detail-gps'),
+                icon: isLocating
+                    ? Icons.hourglass_top_rounded
+                    : hasGpsLocation
+                    ? Icons.gps_fixed_rounded
+                    : Icons.gps_not_fixed_rounded,
+                label: l10n.t('Find my stage'),
+                isActive: hasGpsLocation,
+                isToggle: true,
+                isPrimary: true,
+                onTap: isLocating ? null : onGps,
+              ),
+              _StageBottomAction(
+                key: const ValueKey('stage-detail-map'),
+                icon: Icons.map_outlined,
+                label: l10n.t('Show on map'),
+                onTap: onMap,
+              ),
+              _StageBottomAction(
+                key: const ValueKey('stage-detail-elevation'),
+                icon: Icons.landscape_outlined,
+                label: l10n.t('Elevation'),
+                onTap: onElevation,
+              ),
+            ],
           ),
         ),
       ),
@@ -1981,7 +2142,9 @@ class _StageMapPreview extends StatelessWidget {
     required this.showFinishFlag,
     required this.lodgings,
     required this.showUserLocation,
+    required this.userLocation,
     required this.onTap,
+    super.key,
   });
 
   final List<RoutePoint> routePoints;
@@ -1990,6 +2153,7 @@ class _StageMapPreview extends StatelessWidget {
   final bool showFinishFlag;
   final List<Lodging> lodgings;
   final bool showUserLocation;
+  final DeviceLocation? userLocation;
   final VoidCallback onTap;
 
   @override
@@ -2009,7 +2173,7 @@ class _StageMapPreview extends StatelessWidget {
       onTap: onTap,
       child: Container(
         key: const Key('stage-map-preview'),
-        height: 220,
+        height: 250,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: _mint,
@@ -2030,6 +2194,8 @@ class _StageMapPreview extends StatelessWidget {
                   'stage-map-${preview.startPoint.pointIndex}-'
                   '${preview.finishPoint.pointIndex}-'
                   'finish-$showFinishFlag-'
+                  'user-$showUserLocation-'
+                  '${userLocation?.latitude}-${userLocation?.longitude}-'
                   '${lodgings.map((lodging) => lodging.id).join(',')}',
                 ),
                 routePoints: preview.routePoints,
@@ -2038,6 +2204,7 @@ class _StageMapPreview extends StatelessWidget {
                 showFinishFlag: showFinishFlag,
                 lodgings: lodgings,
                 showUserLocation: showUserLocation,
+                userLocation: userLocation,
                 onTap: onTap,
               ),
       ),
@@ -2113,6 +2280,7 @@ class _StageMapSnapshot extends StatefulWidget {
     required this.showFinishFlag,
     required this.lodgings,
     required this.showUserLocation,
+    required this.userLocation,
     required this.onTap,
     super.key,
   });
@@ -2123,6 +2291,7 @@ class _StageMapSnapshot extends StatefulWidget {
   final bool showFinishFlag;
   final List<Lodging> lodgings;
   final bool showUserLocation;
+  final DeviceLocation? userLocation;
   final VoidCallback onTap;
 
   @override
@@ -2149,6 +2318,8 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
       for (final lodging in widget.lodgings)
         if (lodging.location case final location?)
           Position(location.longitude, location.latitude),
+      if (widget.userLocation case final DeviceLocation location)
+        Position(location.longitude, location.latitude),
     ];
     _initialViewport = viewportCoordinates.length == 1
         ? CameraViewportState(
@@ -2164,7 +2335,7 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
                 : const EdgeInsets.fromLTRB(72, 58, 64, 80),
             bearing: 0,
             pitch: 0,
-            maxZoom: 14,
+            maxZoom: 15,
             animationDuration: Duration.zero,
           );
   }

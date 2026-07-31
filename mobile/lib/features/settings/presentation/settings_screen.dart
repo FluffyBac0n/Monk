@@ -31,22 +31,9 @@ class SettingsScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: _ink,
         foregroundColor: Colors.white,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.t('Settings'),
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-            ),
-            Text(
-              l10n.t('App preferences').toUpperCase(),
-              style: const TextStyle(
-                color: Colors.white60,
-                fontSize: 9,
-                letterSpacing: 1.2,
-              ),
-            ),
-          ],
+        title: Text(
+          l10n.t('Settings'),
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
         ),
       ),
       body: ListView(

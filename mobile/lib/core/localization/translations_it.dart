@@ -2,18 +2,19 @@ const italianTranslations = <String, String>{
   'EUROTREX': 'EUROTREX',
   'Co-funded by the European Union': 'Cofinanziato dall’Unione europea',
   'Republic of Cyprus': 'Repubblica di Cipro',
-  'Supported by the Republic of Cyprus':
-      'Con il sostegno della Repubblica di Cipro',
+  'Co-funded by the Republic of Cyprus':
+      'Cofinanziato dalla Repubblica di Cipro',
   'About us': 'Chi siamo',
   'About EUROTREX': 'Informazioni su EUROTREX',
+  'Our mission': 'La nostra missione',
   'Explore Europe, one trail at a time.':
       'Esplora l’Europa, un sentiero alla volta.',
   'EUROTREX brings long-distance trails, stages, maps, elevation profiles and practical information together in one place.':
       'EUROTREX riunisce in un unico luogo sentieri a lunga percorrenza, tappe, mappe, profili altimetrici e informazioni pratiche.',
   'Visit our website': 'Visita il nostro sito web',
   'Project funding': 'Finanziamento del progetto',
-  'The EUROTREX project is co-funded by the European Union and supported by the Republic of Cyprus.':
-      'Il progetto EUROTREX è cofinanziato dall’Unione europea e sostenuto dalla Repubblica di Cipro.',
+  'The EUROTREX project is co-funded by the European Union and the Republic of Cyprus.':
+      'Il progetto EUROTREX è cofinanziato dall’Unione europea e dalla Repubblica di Cipro.',
   'Contact us': 'Contatti',
   'Have an idea that could improve EUROTREX? Send us your suggestion.':
       'Hai un’idea per migliorare EUROTREX? Inviaci il tuo suggerimento.',
@@ -34,14 +35,16 @@ const italianTranslations = <String, String>{
       'Mostra di nuovo il suggerimento sui dettagli della tappa.',
   'TRAIL LIBRARY': 'RACCOLTA SENTIERI',
   'Explore trails': 'Esplora i sentieri',
+  'Trails': 'Sentieri',
   'Choose a trail to view its stages and maps.':
       'Scegli un sentiero per visualizzarne le tappe e le mappe.',
   'Current trails': 'Sentieri disponibili',
   'available': 'disponibile',
   'LONG DISTANCE': 'LUNGA PERCORRENZA',
+  'OFFLINE TRAIL': 'SENTIERO OFFLINE',
   'E4': 'E4',
-  'A long-distance journey linking the coast, forests and Troodos mountains.':
-      'Un itinerario a lunga percorrenza che collega la costa, le foreste e i monti Troodos.',
+  'A long-distance journey linking the coast, forests and Troodos mountain.':
+      'Un itinerario a lunga percorrenza che collega la costa, le foreste e il monte Troodos.',
   'Trail data not downloaded': 'Dati del sentiero non scaricati',
   'Trail data available offline': 'Dati del sentiero disponibili offline',
   'Trail data and map available offline':
@@ -229,6 +232,7 @@ const italianTranslations = <String, String>{
   'Remove offline map': 'Rimuovi mappa offline',
   'Try again': 'Riprova',
   'Cancel': 'Annulla',
+  'Close': 'Chiudi',
   'Remove': 'Rimuovi',
   'Remove offline map?': 'Rimuovere la mappa offline?',
   'Show the whole trail': 'Mostra tutto il sentiero',
@@ -283,6 +287,7 @@ const italianTranslations = <String, String>{
   'Know the signs. Prepare for the trail.':
       'Riconosci i segnali. Preparati al sentiero.',
   'Sign posting': 'Segnaletica',
+  'Photo: Persephoni Trail stage': 'Foto: tappa Persephoni Trail',
   'Follow the yellow E4 signs and direction arrows. Markers may appear on posts, rocks or existing road signs.':
       'Segui i segnali gialli dell’E4 e le frecce direzionali. I segnavia possono trovarsi su pali, rocce o segnali stradali esistenti.',
   'Typical E4 waymark': 'Segnavia tipico dell’E4',

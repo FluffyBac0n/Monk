@@ -71,17 +71,18 @@ const _translations = <String, Map<String, String>>{
     'Co-funded by the European Union':
         'Kofinanziert von der Europäischen Union',
     'Republic of Cyprus': 'Republik Zypern',
-    'Supported by the Republic of Cyprus':
-        'Unterstützt von der Republik Zypern',
+    'Co-funded by the Republic of Cyprus':
+        'Kofinanziert von der Republik Zypern',
     'About us': 'Über uns',
     'About EUROTREX': 'Über EUROTREX',
+    'Our mission': 'Unsere Mission',
     'Explore Europe, one trail at a time.': 'Entdecke Europa – Weg für Weg.',
     'EUROTREX brings long-distance trails, stages, maps, elevation profiles and practical information together in one place.':
         'EUROTREX bündelt Fernwanderwege, Etappen, Karten, Höhenprofile und praktische Informationen an einem Ort.',
     'Visit our website': 'Unsere Website besuchen',
     'Project funding': 'Projektförderung',
-    'The EUROTREX project is co-funded by the European Union and supported by the Republic of Cyprus.':
-        'Das EUROTREX-Projekt wird von der Europäischen Union kofinanziert und von der Republik Zypern unterstützt.',
+    'The EUROTREX project is co-funded by the European Union and the Republic of Cyprus.':
+        'Das EUROTREX-Projekt wird von der Europäischen Union und der Republik Zypern kofinanziert.',
     'Contact us': 'Kontakt',
     'Have an idea that could improve EUROTREX? Send us your suggestion.':
         'Hast du eine Idee, die EUROTREX verbessern könnte? Sende uns deinen Vorschlag.',
@@ -102,14 +103,16 @@ const _translations = <String, Map<String, String>>{
         'Die Hilfe zu den Etappendetails erneut anzeigen.',
     'TRAIL LIBRARY': 'WEGBIBLIOTHEK',
     'Explore trails': 'Wanderwege entdecken',
+    'Trails': 'Wanderwege',
     'Choose a trail to view its stages and maps.':
         'Wähle einen Weg, um Etappen und Karten anzusehen.',
     'Current trails': 'Aktuelle Wanderwege',
     'available': 'verfügbar',
     'LONG DISTANCE': 'FERNWANDERWEG',
+    'OFFLINE TRAIL': 'OFFLINE-WANDERWEG',
     'E4': 'E4',
-    'A long-distance journey linking the coast, forests and Troodos mountains.':
-        'Eine Fernwanderung, die Küste, Wälder und das Troodos-Gebirge verbindet.',
+    'A long-distance journey linking the coast, forests and Troodos mountain.':
+        'Eine Fernwanderung, die Küste, Wälder und den Troodos-Berg verbindet.',
     'Trail data not downloaded': 'Wegdaten nicht heruntergeladen',
     'Trail data available offline': 'Wegdaten offline verfügbar',
     'Trail data and map available offline':
@@ -298,6 +301,7 @@ const _translations = <String, Map<String, String>>{
     'Remove offline map': 'Offline-Karte entfernen',
     'Try again': 'Erneut versuchen',
     'Cancel': 'Abbrechen',
+    'Close': 'Schließen',
     'Remove': 'Entfernen',
     'Remove offline map?': 'Offline-Karte entfernen?',
     'Show the whole trail': 'Gesamten Weg anzeigen',
@@ -352,6 +356,7 @@ const _translations = <String, Map<String, String>>{
     'Know the signs. Prepare for the trail.':
         'Kenne die Markierungen. Bereite dich auf den Weg vor.',
     'Sign posting': 'Wegmarkierung',
+    'Photo: Persephoni Trail stage': 'Foto: Etappe Persephoni Trail',
     'Follow the yellow E4 signs and direction arrows. Markers may appear on posts, rocks or existing road signs.':
         'Folge den gelben E4-Schildern und Richtungspfeilen. Markierungen können an Pfosten, Felsen oder vorhandenen Verkehrsschildern angebracht sein.',
     'Typical E4 waymark': 'Typische E4-Wegmarkierung',
@@ -379,17 +384,18 @@ const _translations = <String, Map<String, String>>{
     'EUROTREX': 'EUROTREX',
     'Co-funded by the European Union': 'Cofinanciado por la Unión Europea',
     'Republic of Cyprus': 'República de Chipre',
-    'Supported by the Republic of Cyprus':
-        'Con el apoyo de la República de Chipre',
+    'Co-funded by the Republic of Cyprus':
+        'Cofinanciado por la República de Chipre',
     'About us': 'Sobre nosotros',
     'About EUROTREX': 'Sobre EUROTREX',
+    'Our mission': 'Nuestra misión',
     'Explore Europe, one trail at a time.': 'Descubre Europa, ruta a ruta.',
     'EUROTREX brings long-distance trails, stages, maps, elevation profiles and practical information together in one place.':
         'EUROTREX reúne rutas de gran recorrido, etapas, mapas, perfiles de elevación e información práctica en un solo lugar.',
     'Visit our website': 'Visitar nuestro sitio web',
     'Project funding': 'Financiación del proyecto',
-    'The EUROTREX project is co-funded by the European Union and supported by the Republic of Cyprus.':
-        'El proyecto EUROTREX está cofinanciado por la Unión Europea y cuenta con el apoyo de la República de Chipre.',
+    'The EUROTREX project is co-funded by the European Union and the Republic of Cyprus.':
+        'El proyecto EUROTREX está cofinanciado por la Unión Europea y la República de Chipre.',
     'Contact us': 'Contacto',
     'Have an idea that could improve EUROTREX? Send us your suggestion.':
         '¿Tienes una idea que podría mejorar EUROTREX? Envíanos tu sugerencia.',
@@ -410,14 +416,16 @@ const _translations = <String, Map<String, String>>{
         'Volver a mostrar la ayuda sobre los detalles de las etapas.',
     'TRAIL LIBRARY': 'BIBLIOTECA DE RUTAS',
     'Explore trails': 'Explorar rutas',
+    'Trails': 'Rutas',
     'Choose a trail to view its stages and maps.':
         'Elige una ruta para ver sus etapas y mapas.',
     'Current trails': 'Rutas actuales',
     'available': 'disponible',
     'LONG DISTANCE': 'GRAN RECORRIDO',
+    'OFFLINE TRAIL': 'RUTA SIN CONEXIÓN',
     'E4': 'E4',
-    'A long-distance journey linking the coast, forests and Troodos mountains.':
-        'Una travesía de larga distancia que une la costa, los bosques y las montañas de Troodos.',
+    'A long-distance journey linking the coast, forests and Troodos mountain.':
+        'Una travesía de larga distancia que une la costa, los bosques y la montaña de Troodos.',
     'Trail data not downloaded': 'Datos de la ruta no descargados',
     'Trail data available offline': 'Datos de la ruta disponibles sin conexión',
     'Trail data and map available offline':
@@ -605,6 +613,7 @@ const _translations = <String, Map<String, String>>{
     'Remove offline map': 'Eliminar mapa sin conexión',
     'Try again': 'Intentar de nuevo',
     'Cancel': 'Cancelar',
+    'Close': 'Cerrar',
     'Remove': 'Eliminar',
     'Remove offline map?': '¿Eliminar el mapa sin conexión?',
     'Show the whole trail': 'Mostrar toda la ruta',
@@ -659,6 +668,7 @@ const _translations = <String, Map<String, String>>{
     'Know the signs. Prepare for the trail.':
         'Conoce las señales. Prepárate para la ruta.',
     'Sign posting': 'Señalización',
+    'Photo: Persephoni Trail stage': 'Foto: etapa Persephoni Trail',
     'Follow the yellow E4 signs and direction arrows. Markers may appear on posts, rocks or existing road signs.':
         'Sigue las señales amarillas de la E4 y las flechas de dirección. Las marcas pueden aparecer en postes, rocas o señales de tráfico existentes.',
     'Typical E4 waymark': 'Marca típica de la E4',

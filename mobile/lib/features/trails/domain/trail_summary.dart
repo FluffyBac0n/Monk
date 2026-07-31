@@ -25,7 +25,7 @@ const availableTrails = [
     id: 'cyprus-e4',
     name: 'Cyprus E4',
     description:
-        'A long-distance journey linking the coast, forests and Troodos mountains.',
+        'A long-distance journey linking the coast, forests and Troodos mountain.',
     distanceKm: 558,
     stageCount: 123,
     highPointM: 1732,

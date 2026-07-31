@@ -28,7 +28,7 @@ class TrailInformationScreen extends StatelessWidget {
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
             Text(
-              'CYPRUS E4 · ${l10n.t('Trail guide').toUpperCase()}',
+              '${l10n.t('Cyprus E4').toUpperCase()} · ${l10n.t('Trail guide').toUpperCase()}',
               style: const TextStyle(
                 color: Colors.white60,
                 fontSize: 9,
@@ -41,39 +41,88 @@ class TrailInformationScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [_ink, Color(0xFF315E47)]),
-              borderRadius: BorderRadius.circular(20),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: SizedBox(
+              key: const ValueKey('trail-information-image-header'),
+              height: 210,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [_ink, Color(0xFF315E47)],
+                      ),
+                    ),
+                  ),
+                  ExcludeSemantics(
+                    child: Image.asset(
+                      'assets/branding/cyprus_e4_forest.jpg',
+                      key: const ValueKey(
+                        'trail-information-watermark-cyprus-e4',
+                      ),
+                      fit: BoxFit.cover,
+                      alignment: Alignment.center,
+                      filterQuality: FilterQuality.medium,
+                    ),
+                  ),
+                  const DecoratedBox(
+                    key: ValueKey('trail-information-watermark-fade-cyprus-e4'),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0xE6275F45), Color(0x66183226)],
+                        stops: [0.05, 1],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Spacer(),
+                        Text(
+                          l10n.t('Cyprus E4'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          l10n.t('Know the signs. Prepare for the trail.'),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 48),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: _yellow,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.route_rounded, color: _ink),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 6, right: 4),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                l10n.t('Photo: Persephoni Trail stage'),
+                key: const ValueKey('trail-information-photo-note'),
+                style: const TextStyle(
+                  color: Color(0xFF68716B),
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
                 ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Cyprus E4',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.t('Know the signs. Prepare for the trail.'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 15),
-                ),
-              ],
+              ),
             ),
           ),
           const SizedBox(height: 26),
