@@ -5,6 +5,20 @@ import 'package:monk_mobile/features/stages/domain/trail_location_matcher.dart';
 import 'package:monk_mobile/features/trail/domain/trail_direction.dart';
 
 void main() {
+  test(
+    'reports distance to the trail even when outside matching tolerance',
+    () {
+      final distanceM = distanceFromTrailM(
+        latitude: 35.002,
+        longitude: _longitudeAtDistance(5),
+        routePoints: _sectionRoute,
+      );
+
+      expect(distanceM, isNotNull);
+      expect(distanceM!, inInclusiveRange(220, 225));
+    },
+  );
+
   group('findNearbyTrailStage', () {
     test('matches the stage section at the midpoint of a long leg', () {
       final result = findNearbyTrailStage(

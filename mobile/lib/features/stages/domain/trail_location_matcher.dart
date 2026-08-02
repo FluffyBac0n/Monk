@@ -19,6 +19,48 @@ class NearbyTrailStage {
   final double projectedRouteDistanceKm;
 }
 
+double? distanceFromTrailM({
+  required double latitude,
+  required double longitude,
+  required List<RoutePoint> routePoints,
+}) {
+  if (!latitude.isFinite || !longitude.isFinite || routePoints.isEmpty) {
+    return null;
+  }
+
+  double? nearestDistanceM;
+  void consider(double distanceM) {
+    if (!distanceM.isFinite) return;
+    if (nearestDistanceM == null || distanceM < nearestDistanceM!) {
+      nearestDistanceM = distanceM;
+    }
+  }
+
+  for (final point in routePoints) {
+    if (!point.lat.isFinite || !point.lng.isFinite) continue;
+    consider(_haversineDistanceM(latitude, longitude, point.lat, point.lng));
+  }
+  for (var index = 1; index < routePoints.length; index++) {
+    final start = routePoints[index - 1];
+    final end = routePoints[index];
+    if (!start.lat.isFinite ||
+        !start.lng.isFinite ||
+        !end.lat.isFinite ||
+        !end.lng.isFinite) {
+      continue;
+    }
+    consider(
+      _projectOntoSegment(
+        latitude: latitude,
+        longitude: longitude,
+        start: start,
+        end: end,
+      ).distanceM,
+    );
+  }
+  return nearestDistanceM;
+}
+
 NearbyTrailStage? findNearbyTrailStage({
   required double latitude,
   required double longitude,

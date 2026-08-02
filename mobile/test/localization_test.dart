@@ -38,6 +38,11 @@ void main() {
     expect(italian.t('Offline map'), 'Mappa offline');
     expect(italian.t('Find my stage'), 'Trova la mia tappa');
     expect(italian.t('From Start'), 'Dalla partenza');
+    expect(italian.t('To Finish'), 'All’arrivo');
+    expect(
+      italian.offTrailDistance('240 m'),
+      'Ti trovi a circa 240 m dal sentiero.',
+    );
     expect(
       italian.t('Tap a stage to see its details.'),
       'Tocca una tappa per visualizzarne i dettagli.',
@@ -51,6 +56,11 @@ void main() {
     expect(french.t('Offline map'), 'Carte hors ligne');
     expect(french.t('Find my stage'), 'Trouver mon étape');
     expect(french.t('From Start'), 'Depuis le départ');
+    expect(french.t('To Finish'), 'Jusqu’à l’arrivée');
+    expect(
+      french.offTrailDistance('240 m'),
+      'Vous êtes à environ 240 m du sentier.',
+    );
     expect(
       french.t('Tap a stage to see its details.'),
       'Touchez une étape pour voir ses détails.',
@@ -94,6 +104,7 @@ void main() {
     expect(german.t('Filter stages'), 'Etappen filtern');
     expect(german.t('Stage name'), 'Etappenname');
     expect(german.t('From Start'), 'Vom Start');
+    expect(german.t('To Finish'), 'Bis zum Ziel');
     expect(
       german.t('Search by stage name or number'),
       'Nach Etappenname oder -nummer suchen',
@@ -156,6 +167,10 @@ void main() {
       german.t('You are not on the trail.'),
       'Du befindest dich nicht auf dem Weg.',
     );
+    expect(
+      german.offTrailDistance('240 m'),
+      'Du bist ungefähr 240 m vom Weg entfernt.',
+    );
 
     expect(spanish.t('EUROTREX'), 'EUROTREX');
     expect(
@@ -173,6 +188,7 @@ void main() {
     expect(spanish.t('Filter stages'), 'Filtrar etapas');
     expect(spanish.t('Stage name'), 'Nombre de la etapa');
     expect(spanish.t('From Start'), 'Desde el inicio');
+    expect(spanish.t('To Finish'), 'Hasta la meta');
     expect(
       spanish.t('Search by stage name or number'),
       'Buscar por nombre o número de etapa',
@@ -251,5 +267,9 @@ void main() {
     expect(spanish.t('Version'), 'Versión');
     expect(spanish.t('Find my stage'), 'Encontrar mi etapa');
     expect(spanish.t('You are not on the trail.'), 'No estás en la ruta.');
+    expect(
+      spanish.offTrailDistance('240 m'),
+      'Estás aproximadamente a 240 m de la ruta.',
+    );
   });
 }

@@ -33,6 +33,10 @@ class AppLocalizations {
 
   String routeDirection(String start, String end) => '$start  →  $end';
 
+  String offTrailDistance(String distance) => t(
+    'You are approximately {distance} from the trail.',
+  ).replaceAll('{distance}', distance);
+
   String get pafosAirport => t('Pafos Airport');
   String get larnakaAirport => t('Larnaka Airport');
 
@@ -206,6 +210,7 @@ const _translations = <String, Map<String, String>>{
     'Finish point': 'Zielpunkt',
     'From': 'Ab',
     'From Start': 'Vom Start',
+    'To Finish': 'Bis zum Ziel',
     'Stage length': 'Etappenlänge',
     'Altitude': 'Höhe',
     'Services': 'Angebote',
@@ -371,6 +376,8 @@ const _translations = <String, Map<String, String>>{
         'Die Routendaten sind noch nicht auf diesem Gerät.',
     'Find my stage': 'Meine Etappe finden',
     'You are not on the trail.': 'Du befindest dich nicht auf dem Weg.',
+    'You are approximately {distance} from the trail.':
+        'Du bist ungefähr {distance} vom Weg entfernt.',
     'Trail information': 'Weginformationen',
     'Trail guide': 'Wanderführer',
     'App preferences': 'App-Einstellungen',
@@ -539,6 +546,7 @@ const _translations = <String, Map<String, String>>{
     'Finish point': 'Punto final',
     'From': 'Desde',
     'From Start': 'Desde el inicio',
+    'To Finish': 'Hasta la meta',
     'Stage length': 'Longitud de etapa',
     'Altitude': 'Altitud',
     'Services': 'Servicios',
@@ -704,6 +712,8 @@ const _translations = <String, Map<String, String>>{
         'Los datos de la ruta aún no están en este dispositivo.',
     'Find my stage': 'Encontrar mi etapa',
     'You are not on the trail.': 'No estás en la ruta.',
+    'You are approximately {distance} from the trail.':
+        'Estás aproximadamente a {distance} de la ruta.',
     'Trail information': 'Información de la ruta',
     'Trail guide': 'Guía de la ruta',
     'App preferences': 'Preferencias de la aplicación',

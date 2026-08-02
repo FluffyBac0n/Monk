@@ -138,6 +138,7 @@ const frenchTranslations = <String, String>{
   'Finish point': 'Point d’arrivée',
   'From': 'Depuis',
   'From Start': 'Depuis le départ',
+  'To Finish': 'Jusqu’à l’arrivée',
   'Stage length': 'Longueur de l’étape',
   'Altitude': 'Altitude',
   'Services': 'Services',
@@ -307,6 +308,8 @@ const frenchTranslations = <String, String>{
       'Les données de l’itinéraire ne sont pas encore sur cet appareil.',
   'Find my stage': 'Trouver mon étape',
   'You are not on the trail.': 'Vous ne vous trouvez pas sur le sentier.',
+  'You are approximately {distance} from the trail.':
+      'Vous êtes à environ {distance} du sentier.',
   'Trail information': 'Informations sur le sentier',
   'Trail guide': 'Guide du sentier',
   'App preferences': 'Préférences de l’application',

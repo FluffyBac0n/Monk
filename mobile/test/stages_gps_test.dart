@@ -261,7 +261,8 @@ void main() {
       await tester.tap(gpsButton);
       await tester.pumpAndSettle();
 
-      expect(find.text('Du befindest dich nicht auf dem Weg.'), findsOneWidget);
+      expect(find.textContaining('Du bist ungefähr'), findsOneWidget);
+      expect(find.textContaining('vom Weg entfernt.'), findsOneWidget);
       for (var index = 0; index < _gpsStageCount; index++) {
         expect(
           tester

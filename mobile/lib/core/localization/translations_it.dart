@@ -138,6 +138,7 @@ const italianTranslations = <String, String>{
   'Finish point': 'Punto di arrivo',
   'From': 'Da',
   'From Start': 'Dalla partenza',
+  'To Finish': 'All’arrivo',
   'Stage length': 'Lunghezza della tappa',
   'Altitude': 'Altitudine',
   'Services': 'Servizi',
@@ -302,6 +303,8 @@ const italianTranslations = <String, String>{
       'I dati del percorso non sono ancora su questo dispositivo.',
   'Find my stage': 'Trova la mia tappa',
   'You are not on the trail.': 'Non ti trovi sul sentiero.',
+  'You are approximately {distance} from the trail.':
+      'Ti trovi a circa {distance} dal sentiero.',
   'Trail information': 'Informazioni sul sentiero',
   'Trail guide': 'Guida del sentiero',
   'App preferences': 'Preferenze dell’app',
