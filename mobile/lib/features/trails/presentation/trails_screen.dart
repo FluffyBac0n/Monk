@@ -5,11 +5,11 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
 import '../../about/presentation/about_screen.dart';
+import '../../accommodation/presentation/accommodation_controller.dart';
 import '../../elevation/presentation/elevation_controller.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../stages/presentation/stages_controller.dart';
 import '../../stages/presentation/stages_screen.dart';
-import '../../trail/presentation/trail_direction_controller.dart';
 import '../domain/trail_summary.dart';
 
 const _ink = Color(0xFF17201B);
@@ -27,7 +27,6 @@ class TrailsScreen extends ConsumerWidget {
     final formatter = MeasurementFormatter(
       ref.watch(appSettingsProvider).measurementSystem,
     );
-    final direction = ref.watch(trailDirectionProvider);
     final stages = ref.watch(stagesProvider);
     final route = ref.watch(elevationProvider);
     final trailDataReady =
@@ -119,15 +118,17 @@ class TrailsScreen extends ConsumerWidget {
                     trail: trail,
                     formatter: formatter,
                     isOffline: trailDataReady,
-                    isReversed: direction.isReversed,
-                    onExplore: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        settings: const RouteSettings(
-                          name: StagesScreen.routeName,
+                    onExplore: () {
+                      ref.read(lodgingsForTrailProvider);
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          settings: const RouteSettings(
+                            name: StagesScreen.routeName,
+                          ),
+                          builder: (_) => const StagesScreen(),
                         ),
-                        builder: (_) => const StagesScreen(),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 const SizedBox(height: 16),
                 const _ComingSoonTrailCard(
@@ -217,21 +218,17 @@ class _TrailCard extends StatelessWidget {
     required this.trail,
     required this.formatter,
     required this.isOffline,
-    required this.isReversed,
     required this.onExplore,
   });
 
   final TrailSummary trail;
   final MeasurementFormatter formatter;
   final bool isOffline;
-  final bool isReversed;
   final VoidCallback onExplore;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final start = l10n.t(isReversed ? trail.endName : trail.startName);
-    final end = l10n.t(isReversed ? trail.startName : trail.endName);
 
     return Material(
       color: Colors.white,
@@ -351,15 +348,6 @@ class _TrailCard extends StatelessWidget {
                   Text(
                     l10n.t(trail.description),
                     style: const TextStyle(height: 1.3),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    l10n.routeDirection(start, end),
-                    key: ValueKey('trail-card-route-${trail.id}'),
-                    style: const TextStyle(
-                      color: _green,
-                      fontWeight: FontWeight.w700,
-                    ),
                   ),
                   const SizedBox(height: 12),
                   Row(

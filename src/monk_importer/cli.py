@@ -64,8 +64,18 @@ def main() -> None:
         action="store_true",
         help="Use non-merge writes for generated documents.",
     )
+    parser.add_argument(
+        "--prune",
+        action="store_true",
+        help=(
+            "After writing, delete generated documents that are absent from the workbook. "
+            "Import audit history is preserved. Requires --commit."
+        ),
+    )
 
     args = parser.parse_args()
+    if args.prune and not args.commit:
+        parser.error("--prune requires --commit")
     summary = run_import(
         workbook_path=args.workbook,
         trail_id=args.trail_id,
@@ -76,6 +86,7 @@ def main() -> None:
         project_id=args.project_id,
         service_account_path=args.service_account,
         merge=not args.replace,
+        prune=args.prune,
         validate=args.validate,
         validation_report_path=args.report if args.validate else None,
         validation_json_path=args.report_json if args.validate else None,

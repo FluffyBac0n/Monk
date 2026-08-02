@@ -44,6 +44,9 @@ const _timelineLineColor = Color(0xFFB9BDB8);
 const _timelineLeftInset = 12.0;
 const _timelineGutterWidth = 108.0;
 const _timelineLineColumnWidth = 20.0;
+const _startPointFilterKey = 'trailStart';
+const _finishPointFilterKey = 'trailFinish';
+const _stageNameFilterPrefix = 'stage:';
 const _filterServiceKeys = [
   'lodging',
   'tent',
@@ -57,6 +60,31 @@ const _filterServiceKeys = [
   'atm',
   'busStop',
 ];
+
+bool _stageMatchesFilters({
+  required TrailStage stage,
+  required int stageIndex,
+  required int stageCount,
+  required Set<String> filters,
+}) {
+  final filtersStart = filters.contains(_startPointFilterKey);
+  final filtersFinish = filters.contains(_finishPointFilterKey);
+  final selectedStageIds = filters
+      .where((filter) => filter.startsWith(_stageNameFilterPrefix))
+      .map((filter) => filter.substring(_stageNameFilterPrefix.length))
+      .toSet();
+  if (selectedStageIds.isNotEmpty && !selectedStageIds.contains(stage.id)) {
+    return false;
+  }
+  final matchesPoint =
+      (!filtersStart && !filtersFinish) ||
+      (filtersStart && stageIndex == 0) ||
+      (filtersFinish && stageIndex == stageCount - 1);
+  if (!matchesPoint) return false;
+  return _filterServiceKeys
+      .where(filters.contains)
+      .every((service) => stage.services[service] == true);
+}
 
 double _trailDistanceKm(List<TrailStage> stages) {
   var total = 0.0;
@@ -136,11 +164,26 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
   }
 
   Future<void> _openServiceFilters() async {
+    List<TrailStage> sourceStages;
+    try {
+      sourceStages = await ref.read(stagesProvider.future);
+    } catch (_) {
+      sourceStages = const <TrailStage>[];
+    }
+    if (!mounted) return;
+    final direction = ref.read(trailDirectionProvider);
+    final orderedStages = direction.isReversed
+        ? sourceStages.reversed.toList(growable: false)
+        : sourceStages;
     final selection = await showModalBottomSheet<Set<String>>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (_) => _ServiceFilterSheet(selected: selectedServices),
+      backgroundColor: _sand,
+      builder: (_) => _ServiceFilterSheet(
+        selected: selectedServices,
+        stages: orderedStages,
+      ),
     );
     if (selection != null && mounted) {
       setState(() => selectedServices = selection);
@@ -332,11 +375,22 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
     required int filteredIndex,
     required List<TrailStage> filteredItems,
     required List<TrailStage> orderedItems,
+    required bool connectsFirstFilteredStageToWaymark,
     required TrailDirection direction,
     required MeasurementFormatter formatter,
     required double totalDistanceKm,
   }) {
     final orderedIndex = orderedItems.indexWhere((item) => item.id == stage.id);
+    final previousOrderedIndex = filteredIndex == 0
+        ? null
+        : orderedItems.indexWhere(
+            (item) => item.id == filteredItems[filteredIndex - 1].id,
+          );
+    final nextOrderedIndex = filteredIndex == filteredItems.length - 1
+        ? null
+        : orderedItems.indexWhere(
+            (item) => item.id == filteredItems[filteredIndex + 1].id,
+          );
     final legMetrics = _stageLegMetrics(
       orderedStages: orderedItems,
       index: orderedIndex,
@@ -355,7 +409,11 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
               stage.accumulatedDistanceKm!,
               totalDistanceKm,
             ),
-      isLast: filteredIndex == filteredItems.length - 1,
+      connectsToPrevious:
+          orderedIndex == 0 ||
+          (filteredIndex == 0 && connectsFirstFilteredStageToWaymark) ||
+          previousOrderedIndex == orderedIndex - 1,
+      connectsToNext: nextOrderedIndex == orderedIndex + 1,
       isTrailStart: orderedIndex == 0,
       isTrailEnd: orderedIndex == orderedItems.length - 1,
       isSelected: stage.id == _gpsSelectedStageId,
@@ -438,14 +496,28 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                     : items;
                 final filteredItems = selectedServices.isEmpty
                     ? orderedItems
-                    : orderedItems
-                          .where(
-                            (stage) => selectedServices.every(
-                              (service) => stage.services[service] == true,
-                            ),
-                          )
-                          .toList(growable: false);
+                    : [
+                        for (
+                          var stageIndex = 0;
+                          stageIndex < orderedItems.length;
+                          stageIndex++
+                        )
+                          if (_stageMatchesFilters(
+                            stage: orderedItems[stageIndex],
+                            stageIndex: stageIndex,
+                            stageCount: orderedItems.length,
+                            filters: selectedServices,
+                          ))
+                            orderedItems[stageIndex],
+                      ];
                 final totalDistanceKm = _trailDistanceKm(orderedItems);
+                final selectedStageNameCount = selectedServices
+                    .where(
+                      (filter) => filter.startsWith(_stageNameFilterPrefix),
+                    )
+                    .length;
+                final connectsSingleNamedStageToWaymark =
+                    filteredItems.length == 1 && selectedStageNameCount == 1;
                 return orderedItems.isEmpty
                     ? const SliverFillRemaining(
                         hasScrollBody: false,
@@ -470,6 +542,13 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                             children: [
                               _TrailTimelineWaymark(
                                 shouldPulse: _hasSeenTrailInformation == false,
+                                connectsToTimeline:
+                                    connectsSingleNamedStageToWaymark ||
+                                    orderedItems.indexWhere(
+                                          (item) =>
+                                              item.id == filteredItems.first.id,
+                                        ) ==
+                                        0,
                                 onTap: _openTrailInformation,
                               ),
                               for (
@@ -483,6 +562,8 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                                   filteredIndex: index,
                                   filteredItems: filteredItems,
                                   orderedItems: orderedItems,
+                                  connectsFirstFilteredStageToWaymark:
+                                      connectsSingleNamedStageToWaymark,
                                   direction: direction,
                                   formatter: formatter,
                                   totalDistanceKm: totalDistanceKm,
@@ -549,14 +630,6 @@ class _StageBottomNavigationBar extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _StageBottomAction(
-                key: const ValueKey('stage-bottom-filter'),
-                icon: Icons.filter_list_rounded,
-                label: l10n.t('Filter'),
-                isActive: selectedServiceCount > 0,
-                badgeCount: selectedServiceCount,
-                onTap: onFilter,
-              ),
-              _StageBottomAction(
                 key: const ValueKey('reverse-trail-direction'),
                 icon: Icons.swap_horiz_rounded,
                 label: l10n.t(
@@ -565,6 +638,14 @@ class _StageBottomNavigationBar extends StatelessWidget {
                       : 'Walk from Larnaka to Pafos',
                 ),
                 onTap: onReverse,
+              ),
+              _StageBottomAction(
+                key: const ValueKey('stage-bottom-filter'),
+                icon: Icons.filter_list_rounded,
+                label: l10n.t('Filter'),
+                isActive: selectedServiceCount > 0,
+                badgeCount: selectedServiceCount,
+                onTap: onFilter,
               ),
               _StageBottomAction(
                 key: const ValueKey('stage-bottom-gps'),
@@ -904,9 +985,14 @@ class _OfflineMapStatusBadge extends ConsumerWidget {
 }
 
 class _TrailTimelineWaymark extends StatefulWidget {
-  const _TrailTimelineWaymark({required this.shouldPulse, required this.onTap});
+  const _TrailTimelineWaymark({
+    required this.shouldPulse,
+    required this.connectsToTimeline,
+    required this.onTap,
+  });
 
   final bool shouldPulse;
+  final bool connectsToTimeline;
   final VoidCallback onTap;
 
   @override
@@ -1121,7 +1207,13 @@ class _TrailTimelineWaymarkState extends State<_TrailTimelineWaymark>
                         ),
                       ),
                       Expanded(
-                        child: Container(width: 2, color: _timelineLineColor),
+                        child: Container(
+                          key: const ValueKey('stage-waymark-line'),
+                          width: 2,
+                          color: widget.connectsToTimeline
+                              ? _timelineLineColor
+                              : Colors.transparent,
+                        ),
                       ),
                     ],
                   ),
@@ -1144,7 +1236,8 @@ class _StageTimelineRow extends StatelessWidget {
     required this.descentM,
     required this.segmentLengthKm,
     required this.distanceKm,
-    required this.isLast,
+    required this.connectsToPrevious,
+    required this.connectsToNext,
     required this.isTrailStart,
     required this.isTrailEnd,
     required this.isSelected,
@@ -1159,7 +1252,8 @@ class _StageTimelineRow extends StatelessWidget {
   final double? descentM;
   final double? segmentLengthKm;
   final double? distanceKm;
-  final bool isLast;
+  final bool connectsToPrevious;
+  final bool connectsToNext;
   final bool isTrailStart;
   final bool isTrailEnd;
   final bool isSelected;
@@ -1219,7 +1313,7 @@ class _StageTimelineRow extends StatelessWidget {
       padding: const EdgeInsets.only(right: 4),
       child: _EndpointBadge(
         key: ValueKey('stage-endpoint-${stage.id}'),
-        label: context.l10n.t(isTrailStart ? 'Start point' : 'Finish point'),
+        label: context.l10n.t(isTrailStart ? 'Start' : 'Finish'),
         color: isTrailStart ? _green : _red,
       ),
     );
@@ -1248,7 +1342,13 @@ class _StageTimelineRow extends StatelessWidget {
                   child: Column(
                     children: [
                       Expanded(
-                        child: Container(width: 2, color: _timelineLineColor),
+                        child: Container(
+                          key: ValueKey('stage-line-before-${stage.id}'),
+                          width: 2,
+                          color: connectsToPrevious
+                              ? _timelineLineColor
+                              : Colors.transparent,
+                        ),
                       ),
                       Container(
                         key: ValueKey('stage-marker-${stage.id}'),
@@ -1265,10 +1365,11 @@ class _StageTimelineRow extends StatelessWidget {
                       ),
                       Expanded(
                         child: Container(
+                          key: ValueKey('stage-line-after-${stage.id}'),
                           width: 2,
-                          color: isLast
-                              ? Colors.transparent
-                              : _timelineLineColor,
+                          color: connectsToNext
+                              ? _timelineLineColor
+                              : Colors.transparent,
                         ),
                       ),
                     ],
@@ -1346,12 +1447,36 @@ class _StageTimelineRow extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 10),
                                 ],
-                                Text(
-                                  stage.name,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        stage.name,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Semantics(
+                                      label: context.l10n.stage(stage.sequence),
+                                      excludeSemantics: true,
+                                      child: Text(
+                                        '${stage.sequence}',
+                                        key: ValueKey(
+                                          'stage-number-${stage.id}',
+                                        ),
+                                        style: const TextStyle(
+                                          color: Colors.black45,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 if (activeServices.isNotEmpty) ...[
                                   const SizedBox(height: 8),
@@ -1773,9 +1898,9 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
             _trailDistanceKm(widget.stages),
           );
     final endpointLabel = index == 0
-        ? l10n.t('Start point')
+        ? l10n.t('Start')
         : index == widget.stages.length - 1
-        ? l10n.t('Finish point')
+        ? l10n.t('Finish')
         : null;
     final legMetrics = _stageLegMetrics(
       orderedStages: widget.stages,
@@ -1847,18 +1972,17 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                   value: distanceFromStart == null
                       ? '—'
                       : formatter.distance(distanceFromStart),
-                  label: l10n.from(
-                    widget.direction.isReversed ? 'Larnaka' : 'Pafos',
-                  ),
+                  label: l10n.t('From Start'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _DetailMetric(
                   key: const Key('stage-detail-position'),
-                  icon: endpointLabel == null
-                      ? Icons.straighten_rounded
-                      : Icons.flag_rounded,
+                  icon: endpointLabel == null ? null : Icons.flag_rounded,
+                  iconWidget: endpointLabel == null
+                      ? const _StageLengthRouteIcon()
+                      : null,
                   value:
                       endpointLabel ??
                       (hasStageLength
@@ -1900,6 +2024,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                     child: _DetailMetric(
                       key: const Key('stage-detail-descent'),
                       icon: Icons.trending_down_rounded,
+                      iconColor: _red,
                       value: formatter.altitude(descentM!),
                       label: l10n.t('Descent'),
                     ),
@@ -1909,6 +2034,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
                     child: _DetailMetric(
                       key: const Key('stage-detail-walking-time'),
                       icon: Icons.schedule_rounded,
+                      iconColor: _bookingBlue,
                       value: _formatWalkingTime(walkingTime, l10n),
                       label: l10n.t('Estimated walking time'),
                     ),
@@ -1968,6 +2094,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen> {
             routePoints: previewRoute ?? const [],
             startDistanceKm: previewStartDistanceKm,
             finishDistanceKm: previewFinishDistanceKm,
+            showRoute: stagePreviewShowsRoute(index),
             showFinishFlag: stagePreviewShowsFinishFlag(index),
             lodgings: mappedLodgings,
             showUserLocation: showUserLocation,
@@ -2067,13 +2194,17 @@ class _StageDetailBottomNavigationBar extends StatelessWidget {
 
 class _DetailMetric extends StatelessWidget {
   const _DetailMetric({
-    required this.icon,
+    this.icon,
+    this.iconWidget,
+    this.iconColor = _green,
     required this.value,
     required this.label,
     super.key,
-  });
+  }) : assert(icon != null || iconWidget != null);
 
-  final IconData icon;
+  final IconData? icon;
+  final Widget? iconWidget;
+  final Color iconColor;
   final String value;
   final String label;
 
@@ -2087,7 +2218,7 @@ class _DetailMetric extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(icon, color: _green),
+          iconWidget ?? Icon(icon, color: iconColor),
           const SizedBox(height: 7),
           Text(
             value,
@@ -2103,6 +2234,107 @@ class _DetailMetric extends StatelessWidget {
       ),
     );
   }
+}
+
+class _StageLengthRouteIcon extends StatelessWidget {
+  const _StageLengthRouteIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: context.l10n.t('Stage length'),
+      image: true,
+      child: const SizedBox(
+        key: ValueKey('stage-length-route-icon'),
+        width: 40,
+        height: 24,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: CustomPaint(painter: _DashedStageRoutePainter()),
+            ),
+            Positioned(
+              left: 0,
+              bottom: 0,
+              child: Icon(
+                Icons.flag_rounded,
+                key: ValueKey('stage-length-start-flag'),
+                size: 13,
+                color: _green,
+              ),
+            ),
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Icon(
+                Icons.flag_rounded,
+                key: ValueKey('stage-length-finish-flag'),
+                size: 13,
+                color: _red,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DashedStageRoutePainter extends CustomPainter {
+  const _DashedStageRoutePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final route = Path()
+      ..moveTo(15, size.height - 4)
+      ..cubicTo(
+        size.width * 0.62,
+        size.height - 4,
+        size.width - 6,
+        size.height * 0.78,
+        size.width - 6,
+        size.height * 0.65,
+      )
+      ..cubicTo(
+        size.width - 7,
+        size.height * 0.46,
+        7,
+        size.height * 0.55,
+        9,
+        size.height * 0.37,
+      )
+      ..cubicTo(
+        11,
+        size.height * 0.22,
+        size.width * 0.45,
+        size.height * 0.22,
+        size.width - 15,
+        5,
+      );
+    final paint = Paint()
+      ..color = _green
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round;
+
+    for (final metric in route.computeMetrics()) {
+      var offset = 0.0;
+      while (offset < metric.length) {
+        final dashEnd = offset + 2.4;
+        canvas.drawPath(
+          metric.extractPath(
+            offset,
+            dashEnd > metric.length ? metric.length : dashEnd,
+          ),
+          paint,
+        );
+        offset += 4.4;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedStageRoutePainter oldDelegate) => false;
 }
 
 class _DetailSection extends StatelessWidget {
@@ -2139,6 +2371,7 @@ class _StageMapPreview extends StatelessWidget {
     required this.routePoints,
     required this.startDistanceKm,
     required this.finishDistanceKm,
+    required this.showRoute,
     required this.showFinishFlag,
     required this.lodgings,
     required this.showUserLocation,
@@ -2150,6 +2383,7 @@ class _StageMapPreview extends StatelessWidget {
   final List<RoutePoint> routePoints;
   final double? startDistanceKm;
   final double? finishDistanceKm;
+  final bool showRoute;
   final bool showFinishFlag;
   final List<Lodging> lodgings;
   final bool showUserLocation;
@@ -2193,6 +2427,7 @@ class _StageMapPreview extends StatelessWidget {
                 key: ValueKey(
                   'stage-map-${preview.startPoint.pointIndex}-'
                   '${preview.finishPoint.pointIndex}-'
+                  'route-$showRoute-'
                   'finish-$showFinishFlag-'
                   'user-$showUserLocation-'
                   '${userLocation?.latitude}-${userLocation?.longitude}-'
@@ -2201,6 +2436,7 @@ class _StageMapPreview extends StatelessWidget {
                 routePoints: preview.routePoints,
                 startPoint: preview.startPoint,
                 finishPoint: preview.finishPoint,
+                showRoute: showRoute,
                 showFinishFlag: showFinishFlag,
                 lodgings: lodgings,
                 showUserLocation: showUserLocation,
@@ -2230,6 +2466,8 @@ typedef _StageMapPreviewData = ({
 }
 
 bool stagePreviewShowsFinishFlag(int stageIndex) => stageIndex > 0;
+
+bool stagePreviewShowsRoute(int stageIndex) => stageIndex > 0;
 
 _StageMapPreviewData? _stageMapPreviewData({
   required List<RoutePoint> routePoints,
@@ -2277,6 +2515,7 @@ class _StageMapSnapshot extends StatefulWidget {
     required this.routePoints,
     required this.startPoint,
     required this.finishPoint,
+    required this.showRoute,
     required this.showFinishFlag,
     required this.lodgings,
     required this.showUserLocation,
@@ -2288,6 +2527,7 @@ class _StageMapSnapshot extends StatefulWidget {
   final List<RoutePoint> routePoints;
   final RoutePoint startPoint;
   final RoutePoint finishPoint;
+  final bool showRoute;
   final bool showFinishFlag;
   final List<Lodging> lodgings;
   final bool showUserLocation;
@@ -2310,11 +2550,17 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
   @override
   void initState() {
     super.initState();
-    final center = widget.routePoints[widget.routePoints.length ~/ 2];
-    final stageDistanceKm =
-        (widget.finishPoint.distanceKm - widget.startPoint.distanceKm).abs();
+    final center = widget.showRoute
+        ? widget.routePoints[widget.routePoints.length ~/ 2]
+        : widget.startPoint;
+    final stageDistanceKm = widget.showRoute
+        ? (widget.finishPoint.distanceKm - widget.startPoint.distanceKm).abs()
+        : 0.0;
     final viewportCoordinates = <Position>[
-      for (final point in widget.routePoints) Position(point.lng, point.lat),
+      if (widget.showRoute)
+        for (final point in widget.routePoints) Position(point.lng, point.lat)
+      else
+        Position(widget.startPoint.lng, widget.startPoint.lat),
       for (final lodging in widget.lodgings)
         if (lodging.location case final location?)
           Position(location.longitude, location.latitude),
@@ -2378,7 +2624,7 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
       }
     }
 
-    if (widget.routePoints.length > 1) {
+    if (widget.showRoute && widget.routePoints.length > 1) {
       final routeManager = await map.annotations
           .createPolylineAnnotationManager();
       await routeManager.create(
@@ -2555,9 +2801,10 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
 }
 
 class _ServiceFilterSheet extends StatefulWidget {
-  const _ServiceFilterSheet({required this.selected});
+  const _ServiceFilterSheet({required this.selected, required this.stages});
 
   final Set<String> selected;
+  final List<TrailStage> stages;
 
   @override
   State<_ServiceFilterSheet> createState() => _ServiceFilterSheetState();
@@ -2565,29 +2812,190 @@ class _ServiceFilterSheet extends StatefulWidget {
 
 class _ServiceFilterSheetState extends State<_ServiceFilterSheet> {
   late final selected = widget.selected.toSet();
+  final stageSearchController = TextEditingController();
+  var stageQuery = '';
+
+  String _stageFilterKey(TrailStage stage) =>
+      '$_stageNameFilterPrefix${stage.id}';
+
+  void _selectStage(TrailStage stage) {
+    setState(() {
+      selected.add(_stageFilterKey(stage));
+      stageQuery = '';
+      stageSearchController.clear();
+    });
+  }
+
+  @override
+  void dispose() {
+    stageSearchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final normalizedQuery = stageQuery.trim().toLowerCase();
+    final stageIdMatch = RegExp(r'^#?\s*(\d+)$').firstMatch(normalizedQuery);
+    final exactStageSequence = int.tryParse(stageIdMatch?.group(1) ?? '');
+    final selectedStages = widget.stages
+        .where((stage) => selected.contains(_stageFilterKey(stage)))
+        .toList(growable: false);
+    final stageSuggestions = normalizedQuery.isEmpty
+        ? const <TrailStage>[]
+        : widget.stages
+              .where(
+                (stage) =>
+                    !selected.contains(_stageFilterKey(stage)) &&
+                    (exactStageSequence != null
+                        ? stage.sequence == exactStageSequence
+                        : stage.name.toLowerCase().contains(normalizedQuery) ||
+                              l10n
+                                  .t(stage.name)
+                                  .toLowerCase()
+                                  .contains(normalizedQuery)),
+              )
+              .take(6)
+              .toList(growable: false);
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          4,
+          20,
+          20 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              l10n.t('Filter by services'),
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              l10n.t('Stage name'),
+              style: const TextStyle(fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
+            TextField(
+              key: const ValueKey('stage-name-filter'),
+              controller: stageSearchController,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: l10n.t('Search by stage name or number'),
+                prefixIcon: const Icon(Icons.search_rounded),
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: (value) => setState(() => stageQuery = value),
+            ),
+            if (selectedStages.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final stage in selectedStages)
+                    InputChip(
+                      key: ValueKey('selected-stage-filter-${stage.id}'),
+                      avatar: const Icon(
+                        Icons.location_on_rounded,
+                        size: 18,
+                        color: _filterBlueTeal,
+                      ),
+                      label: Text(l10n.t(stage.name)),
+                      onDeleted: () => setState(
+                        () => selected.remove(_stageFilterKey(stage)),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+            if (normalizedQuery.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              if (stageSuggestions.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Text(
+                    l10n.t('No stages found.'),
+                    key: const ValueKey('stage-name-no-results'),
+                    style: const TextStyle(color: Colors.black54),
+                  ),
+                )
+              else
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 184),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.black12),
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    itemCount: stageSuggestions.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final stage = stageSuggestions[index];
+                      return ListTile(
+                        key: ValueKey('stage-name-suggestion-${stage.id}'),
+                        dense: true,
+                        leading: const Icon(
+                          Icons.location_on_outlined,
+                          color: _filterBlueTeal,
+                        ),
+                        title: Text(l10n.t(stage.name)),
+                        subtitle: Text(l10n.stage(stage.sequence)),
+                        onTap: () => _selectStage(stage),
+                      );
+                    },
+                  ),
+                ),
+            ],
+            const Divider(height: 28),
             Text(
-              l10n.t('Stages must offer every selected service.'),
-              style: Theme.of(context).textTheme.bodyMedium,
+              l10n.t('Trail points'),
+              style: const TextStyle(fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilterChip(
+                  key: const ValueKey('stage-filter-start'),
+                  selected: selected.contains(_startPointFilterKey),
+                  avatar: const Icon(
+                    Icons.flag_rounded,
+                    size: 18,
+                    color: _green,
+                  ),
+                  label: Text(l10n.t('Start')),
+                  onSelected: (isSelected) => setState(() {
+                    if (isSelected) {
+                      selected.add(_startPointFilterKey);
+                    } else {
+                      selected.remove(_startPointFilterKey);
+                    }
+                  }),
+                ),
+                FilterChip(
+                  key: const ValueKey('stage-filter-finish'),
+                  selected: selected.contains(_finishPointFilterKey),
+                  avatar: const Icon(Icons.flag_rounded, size: 18, color: _red),
+                  label: Text(l10n.t('Finish')),
+                  onSelected: (isSelected) => setState(() {
+                    if (isSelected) {
+                      selected.add(_finishPointFilterKey);
+                    } else {
+                      selected.remove(_finishPointFilterKey);
+                    }
+                  }),
+                ),
+              ],
+            ),
+            const Divider(height: 28),
+            Text(
+              l10n.t('Services'),
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -2616,21 +3024,19 @@ class _ServiceFilterSheetState extends State<_ServiceFilterSheet> {
             Row(
               children: [
                 Expanded(
-                  child: TextButton(
-                    onPressed: selected.isEmpty
-                        ? null
-                        : () => setState(selected.clear),
+                  child: OutlinedButton(
+                    key: const Key('clear-service-filter-selection'),
+                    onPressed: () =>
+                        Navigator.of(context).pop(const <String>{}),
                     child: Text(l10n.t('Clear')),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
-                  flex: 2,
-                  child: FilledButton.icon(
+                  child: FilledButton(
                     key: const Key('apply-service-filters'),
                     onPressed: () => Navigator.of(context).pop(selected),
-                    icon: const Icon(Icons.filter_alt_rounded),
-                    label: Text(l10n.t('Apply filters')),
+                    child: Text(l10n.t('Apply')),
                   ),
                 ),
               ],
@@ -2659,7 +3065,7 @@ class _NoMatchingStages extends StatelessWidget {
             const Icon(Icons.filter_alt_off_rounded, size: 54, color: _green),
             const SizedBox(height: 14),
             Text(
-              l10n.t('No stages match these services.'),
+              l10n.t('No stages match these filters.'),
               textAlign: TextAlign.center,
               style: Theme.of(
                 context,

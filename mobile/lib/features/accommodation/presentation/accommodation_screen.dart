@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/links/external_url_launcher.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../elevation/presentation/elevation_screen.dart';
 import '../../map/presentation/map_screen.dart';
 import '../../stages/domain/stage.dart';
+import '../../stages/presentation/stages_controller.dart';
+import '../../trail/presentation/trail_direction_controller.dart';
 import '../domain/lodging.dart';
 import 'accommodation_controller.dart';
 import 'lodging_type_icon.dart';
@@ -16,23 +18,109 @@ const _ink = Color(0xFF17201B);
 const _green = Color(0xFF277653);
 const _sand = Color(0xFFF4F2EC);
 const _bookingBlue = Color(0xFF1565C0);
+const _stagesRouteName = '/trails/cyprus-e4/stages';
+const _distanceFilterOptionsKm = <double>[0.5, 1, 2, 5];
 
-class AccommodationScreen extends ConsumerWidget {
+class AccommodationScreen extends ConsumerStatefulWidget {
   const AccommodationScreen({required this.stage, super.key});
 
   final TrailStage stage;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AccommodationScreen> createState() =>
+      _AccommodationScreenState();
+}
+
+class _AccommodationScreenState extends ConsumerState<AccommodationScreen> {
+  _AccommodationFilters filters = const _AccommodationFilters();
+
+  void _backToStages() {
+    Navigator.of(context).popUntil(
+      (route) => route.settings.name == _stagesRouteName || route.isFirst,
+    );
+  }
+
+  void _openMap(int? stageIndex, List<Lodging> lodgings) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MapScreen(
+          initialStageIndex: stageIndex,
+          initialLodgings: lodgings
+              .where((lodging) => lodging.location != null)
+              .toList(growable: false),
+        ),
+      ),
+    );
+  }
+
+  void _openElevation(int? stageIndex) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ElevationScreen(initialStageIndex: stageIndex),
+      ),
+    );
+  }
+
+  Future<void> _openFilters(List<Lodging> lodgings) async {
+    final updated = await showModalBottomSheet<_AccommodationFilters>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: _sand,
+      builder: (_) => _AccommodationFilterSheet(
+        initialFilters: filters,
+        availableTypes: _availableLodgingTypes(lodgings),
+      ),
+    );
+    if (updated != null && mounted) setState(() => filters = updated);
+  }
+
+  Future<void> _openDistanceFilter(MeasurementFormatter formatter) async {
+    final updated = await showModalBottomSheet<_AccommodationFilters>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: _sand,
+      builder: (_) => _AccommodationDistanceFilterSheet(
+        initialFilters: filters,
+        formatter: formatter,
+      ),
+    );
+    if (updated != null && mounted) setState(() => filters = updated);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final stage = widget.stage;
     final lodgings = ref.watch(lodgingsForStageProvider(stage.id));
     final formatter = MeasurementFormatter(
       ref.watch(appSettingsProvider).measurementSystem,
     );
+    final sourceStages =
+        ref.watch(stagesProvider).value ?? const <TrailStage>[];
+    final direction = ref.watch(trailDirectionProvider);
+    final orderedStages = direction.isReversed
+        ? sourceStages.reversed.toList(growable: false)
+        : sourceStages;
+    final resolvedStageIndex = orderedStages.indexWhere(
+      (candidate) => candidate.id == stage.id,
+    );
+    final stageIndex = resolvedStageIndex < 0 ? null : resolvedStageIndex;
+    final allLodgings = lodgings.value ?? const <Lodging>[];
 
     return Scaffold(
       key: ValueKey('accommodation-screen-${stage.id}'),
       backgroundColor: _sand,
+      bottomNavigationBar: _AccommodationBottomNavigationBar(
+        activeFilterCount: filters.regularActiveCount,
+        hasDistanceFilter: filters.maximumDistanceKm != null,
+        onStages: _backToStages,
+        onFilter: () => _openFilters(allLodgings),
+        onDistanceFilter: () => _openDistanceFilter(formatter),
+        onMap: () => _openMap(stageIndex, allLodgings),
+        onElevation: () => _openElevation(stageIndex),
+      ),
       appBar: AppBar(
         backgroundColor: _ink,
         foregroundColor: Colors.white,
@@ -75,27 +163,44 @@ class AccommodationScreen extends ConsumerWidget {
             label: Text(l10n.t('Try again')),
           ),
         ),
-        data: (items) => items.isEmpty
-            ? _AccommodationState(
-                key: const ValueKey('accommodation-empty'),
-                icon: Icons.hotel_outlined,
-                title: l10n.t('No accommodation is listed for this stage.'),
-                message: l10n.t('Try another nearby stage.'),
-              )
-            : ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
-                itemCount: items.length + 1,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return _PageIntroduction(stage: stage);
-                  }
-                  return _LodgingCard(
-                    lodging: items[index - 1],
-                    formatter: formatter,
-                  );
-                },
+        data: (items) {
+          if (items.isEmpty) {
+            return _AccommodationState(
+              key: const ValueKey('accommodation-empty'),
+              icon: Icons.hotel_outlined,
+              title: l10n.t('No accommodation is listed for this stage.'),
+              message: l10n.t('Try another nearby stage.'),
+            );
+          }
+          final filteredItems = items
+              .where(filters.matches)
+              .toList(growable: false);
+          if (filteredItems.isEmpty) {
+            return _AccommodationState(
+              key: const ValueKey('accommodation-filter-empty'),
+              icon: Icons.filter_alt_off_outlined,
+              title: l10n.t('No accommodation matches these filters.'),
+              action: OutlinedButton(
+                key: const ValueKey('accommodation-clear-filters'),
+                onPressed: () =>
+                    setState(() => filters = const _AccommodationFilters()),
+                child: Text(l10n.t('Clear filters')),
               ),
+            );
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
+            itemCount: filteredItems.length + 1,
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              if (index == 0) return _PageIntroduction(stage: stage);
+              return _LodgingCard(
+                lodging: filteredItems[index - 1],
+                formatter: formatter,
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -125,6 +230,400 @@ class _PageIntroduction extends StatelessWidget {
             style: const TextStyle(color: Colors.black54),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AccommodationFilters {
+  const _AccommodationFilters({
+    this.bookableOnlineOnly = false,
+    this.maximumDistanceKm,
+    this.types = const <String>{},
+  });
+
+  final bool bookableOnlineOnly;
+  final double? maximumDistanceKm;
+  final Set<String> types;
+
+  int get regularActiveCount => (bookableOnlineOnly ? 1 : 0) + types.length;
+
+  bool matches(Lodging lodging) {
+    if (bookableOnlineOnly && lodging.bookingUri == null) return false;
+    if (maximumDistanceKm case final maximumDistance?) {
+      final distance = lodging.distanceFromTrailKm;
+      if (distance == null || distance > maximumDistance) return false;
+    }
+    if (types.isNotEmpty) {
+      final type = lodging.type?.trim().toLowerCase();
+      if (type == null || !types.contains(type)) return false;
+    }
+    return true;
+  }
+}
+
+class _AccommodationFilterSheet extends StatefulWidget {
+  const _AccommodationFilterSheet({
+    required this.initialFilters,
+    required this.availableTypes,
+  });
+
+  final _AccommodationFilters initialFilters;
+  final List<String> availableTypes;
+
+  @override
+  State<_AccommodationFilterSheet> createState() =>
+      _AccommodationFilterSheetState();
+}
+
+class _AccommodationFilterSheetState extends State<_AccommodationFilterSheet> {
+  late bool bookableOnlineOnly = widget.initialFilters.bookableOnlineOnly;
+  late double? maximumDistanceKm = widget.initialFilters.maximumDistanceKm;
+  late Set<String> selectedTypes = {...widget.initialFilters.types};
+
+  _AccommodationFilters get selection => _AccommodationFilters(
+    bookableOnlineOnly: bookableOnlineOnly,
+    maximumDistanceKm: maximumDistanceKm,
+    types: Set.unmodifiable(selectedTypes),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return SafeArea(
+      child: SingleChildScrollView(
+        key: const ValueKey('accommodation-filter-sheet'),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          4,
+          20,
+          20 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile.adaptive(
+              key: const ValueKey('accommodation-bookable-filter'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                l10n.t('Bookable online'),
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              value: bookableOnlineOnly,
+              onChanged: (value) => setState(() => bookableOnlineOnly = value),
+            ),
+            if (widget.availableTypes.isNotEmpty) ...[
+              const Divider(height: 28),
+              Text(
+                l10n.t('Accommodation type'),
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final type in widget.availableTypes)
+                    FilterChip(
+                      key: ValueKey('accommodation-type-${_filterKey(type)}'),
+                      avatar: LodgingTypeIcon(
+                        type: type,
+                        color: lodgingMakiMarkerColor(type),
+                        size: 18,
+                      ),
+                      label: Text(l10n.t(type)),
+                      selected: selectedTypes.contains(type.toLowerCase()),
+                      onSelected: (selected) => setState(() {
+                        final normalizedType = type.toLowerCase();
+                        if (selected) {
+                          selectedTypes.add(normalizedType);
+                        } else {
+                          selectedTypes.remove(normalizedType);
+                        }
+                      }),
+                    ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 22),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    key: const ValueKey('accommodation-filter-clear'),
+                    onPressed: () => Navigator.of(context).pop(
+                      _AccommodationFilters(
+                        maximumDistanceKm:
+                            widget.initialFilters.maximumDistanceKm,
+                      ),
+                    ),
+                    child: Text(l10n.t('Clear')),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    key: const ValueKey('accommodation-filter-apply'),
+                    onPressed: () => Navigator.of(context).pop(selection),
+                    child: Text(l10n.t('Apply')),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AccommodationDistanceFilterSheet extends StatefulWidget {
+  const _AccommodationDistanceFilterSheet({
+    required this.initialFilters,
+    required this.formatter,
+  });
+
+  final _AccommodationFilters initialFilters;
+  final MeasurementFormatter formatter;
+
+  @override
+  State<_AccommodationDistanceFilterSheet> createState() =>
+      _AccommodationDistanceFilterSheetState();
+}
+
+class _AccommodationDistanceFilterSheetState
+    extends State<_AccommodationDistanceFilterSheet> {
+  late double? maximumDistanceKm = widget.initialFilters.maximumDistanceKm;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return SafeArea(
+      child: Padding(
+        key: const ValueKey('accommodation-distance-filter-sheet'),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.gps_fixed_rounded, color: _green),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    l10n.t('Maximum distance from trail'),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  key: const ValueKey('accommodation-distance-any'),
+                  label: Text(l10n.t('Any distance')),
+                  selected: maximumDistanceKm == null,
+                  onSelected: (_) => setState(() => maximumDistanceKm = null),
+                ),
+                for (final distance in _distanceFilterOptionsKm)
+                  ChoiceChip(
+                    key: ValueKey('accommodation-distance-$distance'),
+                    label: Text(widget.formatter.distance(distance)),
+                    selected: maximumDistanceKm == distance,
+                    onSelected: (_) =>
+                        setState(() => maximumDistanceKm = distance),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                key: const ValueKey('accommodation-distance-apply'),
+                onPressed: () => Navigator.of(context).pop(
+                  _AccommodationFilters(
+                    bookableOnlineOnly:
+                        widget.initialFilters.bookableOnlineOnly,
+                    maximumDistanceKm: maximumDistanceKm,
+                    types: widget.initialFilters.types,
+                  ),
+                ),
+                child: Text(l10n.t('Apply')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AccommodationBottomNavigationBar extends StatelessWidget {
+  const _AccommodationBottomNavigationBar({
+    required this.activeFilterCount,
+    required this.hasDistanceFilter,
+    required this.onStages,
+    required this.onFilter,
+    required this.onDistanceFilter,
+    required this.onMap,
+    required this.onElevation,
+  });
+
+  final int activeFilterCount;
+  final bool hasDistanceFilter;
+  final VoidCallback onStages;
+  final VoidCallback onFilter;
+  final VoidCallback onDistanceFilter;
+  final VoidCallback onMap;
+  final VoidCallback onElevation;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Material(
+      key: const ValueKey('accommodation-bottom-navigation'),
+      color: _sand,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          key: const ValueKey('accommodation-bottom-navigation-size'),
+          height: 48,
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: Colors.black12)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _AccommodationBottomAction(
+                key: const ValueKey('accommodation-stages-shortcut'),
+                icon: Icons.route_rounded,
+                label: l10n.t('Back to stages'),
+                onTap: onStages,
+              ),
+              _AccommodationBottomAction(
+                key: const ValueKey('accommodation-filter'),
+                icon: Icons.filter_list_rounded,
+                label: l10n.t('Filter'),
+                isActive: activeFilterCount > 0,
+                badgeCount: activeFilterCount,
+                onTap: onFilter,
+              ),
+              _AccommodationBottomAction(
+                key: const ValueKey('accommodation-gps'),
+                icon: hasDistanceFilter
+                    ? Icons.gps_fixed_rounded
+                    : Icons.gps_not_fixed_rounded,
+                label: l10n.t('Maximum distance from trail'),
+                isActive: hasDistanceFilter,
+                isPrimary: true,
+                onTap: onDistanceFilter,
+              ),
+              _AccommodationBottomAction(
+                key: const ValueKey('accommodation-map'),
+                icon: Icons.map_outlined,
+                label: l10n.t('Show on map'),
+                onTap: onMap,
+              ),
+              _AccommodationBottomAction(
+                key: const ValueKey('accommodation-elevation'),
+                icon: Icons.landscape_outlined,
+                label: l10n.t('Elevation'),
+                onTap: onElevation,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AccommodationBottomAction extends StatelessWidget {
+  const _AccommodationBottomAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.isActive = false,
+    this.isPrimary = false,
+    this.badgeCount = 0,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool isActive;
+  final bool isPrimary;
+  final int badgeCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = onTap == null
+        ? Colors.black26
+        : isPrimary && isActive
+        ? Colors.white
+        : isActive
+        ? Colors.black87
+        : Colors.black54;
+    return Expanded(
+      child: Tooltip(
+        message: label,
+        child: Semantics(
+          button: true,
+          selected: isActive,
+          enabled: onTap != null,
+          label: label,
+          child: InkWell(
+            onTap: onTap,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Center(
+                  child: Badge(
+                    isLabelVisible: badgeCount > 0,
+                    backgroundColor: _ink,
+                    textColor: _sand,
+                    label: Text('$badgeCount'),
+                    child: isPrimary
+                        ? Container(
+                            key: const ValueKey(
+                              'accommodation-bottom-gps-surface',
+                            ),
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? _ink
+                                  : Colors.black.withValues(alpha: 0.055),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isActive
+                                    ? Colors.transparent
+                                    : Colors.black12,
+                              ),
+                            ),
+                            child: Center(
+                              child: Icon(icon, color: foreground, size: 22),
+                            ),
+                          )
+                        : SizedBox.square(
+                            dimension: 24,
+                            child: Center(
+                              child: Icon(icon, color: foreground, size: 22),
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -173,6 +672,12 @@ class _LodgingCard extends ConsumerWidget {
       if (address != null && address.isNotEmpty) address,
       if (village != null && village.isNotEmpty && village != address) village,
     ].join(' · ');
+    final hasContactActions =
+        lodging.location != null || phoneUri != null || emailUri != null;
+    final hasStaticLocation =
+        lodging.location == null && locationText.isNotEmpty;
+    final hasWhatsapp =
+        whatsapp != null && whatsapp.isNotEmpty && whatsapp != rawPhone;
     final facts = <_LodgingFactData>[
       if (_formatPrice(lodging, l10n) case final price?)
         _LodgingFactData(
@@ -182,7 +687,7 @@ class _LodgingCard extends ConsumerWidget {
         ),
       if (lodging.distanceFromTrailKm case final distance?)
         _LodgingFactData(
-          icon: Icons.route_rounded,
+          icon: Icons.gps_fixed_rounded,
           label: l10n.t('Distance from trail'),
           value: formatter.distance(distance),
         ),
@@ -275,81 +780,65 @@ class _LodgingCard extends ConsumerWidget {
                 ),
               ],
             ),
-            if (lodging.location != null ||
-                village != null ||
-                address != null ||
-                rawPhone != null ||
-                whatsapp != null ||
-                email != null) ...[
+            if (hasContactActions || hasStaticLocation || hasWhatsapp) ...[
               const SizedBox(height: 14),
-              Column(
-                children: [
-                  if (lodging.location != null)
-                    _ContactRow(
-                      key: ValueKey('map-location-lodging-${lodging.id}'),
-                      icon: Icons.location_on_outlined,
-                      value: locationText.isNotEmpty
-                          ? locationText
-                          : l10n.t('Show on map'),
-                      actionLabel: l10n.t('Show on map'),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => MapScreen(initialLodging: lodging),
+              if (hasContactActions)
+                Row(
+                  key: ValueKey('lodging-contact-actions-${lodging.id}'),
+                  children: [
+                    if (lodging.location != null)
+                      _ContactActionButton(
+                        key: ValueKey('map-location-lodging-${lodging.id}'),
+                        tooltip: l10n.t('Show on map'),
+                        icon: const Icon(Icons.location_on_outlined),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => MapScreen(initialLodging: lodging),
+                          ),
                         ),
                       ),
-                    )
-                  else if (village != null || address != null)
-                    _ContactRow(
-                      icon: Icons.location_on_outlined,
-                      value: locationText,
-                    ),
-                  SelectionArea(
-                    child: Column(
-                      children: [
-                        if (rawPhone != null && rawPhone.isNotEmpty)
-                          _ContactRow(
-                            key: ValueKey('call-lodging-${lodging.id}'),
-                            icon: Icons.phone_outlined,
-                            value: phone == null
-                                ? rawPhone
-                                : _formatPhoneForDisplay(phone),
-                            valuePrefix: _CyprusCountryFlag(
-                              key: ValueKey(
-                                'cyprus-country-flag-${lodging.id}',
-                              ),
-                            ),
-                            actionLabel: phone == null
-                                ? null
-                                : '${l10n.t('Phone')}: ${_formatPhoneForDisplay(phone)}',
-                            onTap: phoneUri == null
-                                ? null
-                                : () => _openExternal(context, ref, phoneUri),
-                          ),
-                        if (whatsapp != null &&
-                            whatsapp.isNotEmpty &&
-                            whatsapp != rawPhone)
-                          _ContactRow(
-                            icon: Icons.chat_outlined,
-                            label: l10n.t('WhatsApp'),
-                            value: whatsapp,
-                          ),
-                        if (email != null && email.isNotEmpty)
-                          _ContactRow(
-                            key: ValueKey('email-lodging-${lodging.id}'),
-                            icon: Icons.email_outlined,
-                            value: email,
-                            actionLabel: emailUri == null
-                                ? null
-                                : '${l10n.t('Email')}: $email',
-                            onTap: emailUri == null
-                                ? null
-                                : () => _openExternal(context, ref, emailUri),
-                          ),
-                      ],
-                    ),
+                    if (lodging.location != null && phoneUri != null)
+                      const SizedBox(width: 10),
+                    if (phoneUri != null)
+                      _ContactActionButton(
+                        key: ValueKey('call-lodging-${lodging.id}'),
+                        tooltip:
+                            '${l10n.t('Phone')}: ${_formatPhoneForDisplay(phone!)}',
+                        icon: const Icon(Icons.phone_outlined),
+                        onTap: () => _openExternal(context, ref, phoneUri),
+                      ),
+                    if ((lodging.location != null || phoneUri != null) &&
+                        emailUri != null)
+                      const SizedBox(width: 10),
+                    if (emailUri != null)
+                      _ContactActionButton(
+                        key: ValueKey('email-lodging-${lodging.id}'),
+                        tooltip: '${l10n.t('Email')}: $email',
+                        icon: const Icon(Icons.email_outlined),
+                        onTap: () => _openExternal(context, ref, emailUri),
+                      ),
+                  ],
+                ),
+              if (hasContactActions && (hasStaticLocation || hasWhatsapp))
+                const SizedBox(height: 8),
+              if (hasStaticLocation || hasWhatsapp)
+                SelectionArea(
+                  child: Column(
+                    children: [
+                      if (hasStaticLocation)
+                        _ContactRow(
+                          icon: Icons.location_on_outlined,
+                          value: locationText,
+                        ),
+                      if (hasWhatsapp)
+                        _ContactRow(
+                          icon: Icons.chat_outlined,
+                          label: l10n.t('WhatsApp'),
+                          value: whatsapp,
+                        ),
+                    ],
                   ),
-                ],
-              ),
+                ),
             ],
             if (facts.isNotEmpty) ...[
               const SizedBox(height: 14),
@@ -372,7 +861,7 @@ class _LodgingCard extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: 13),
                   ),
                   icon: const Icon(Icons.open_in_new_rounded),
-                  label: Text(l10n.t('Book accommodation')),
+                  label: Text(l10n.t('Book')),
                 ),
               ),
             ],
@@ -384,101 +873,72 @@ class _LodgingCard extends ConsumerWidget {
 }
 
 class _ContactRow extends StatelessWidget {
-  const _ContactRow({
-    required this.icon,
-    required this.value,
-    this.label,
-    this.valuePrefix,
-    this.actionLabel,
-    this.onTap,
-    super.key,
-  });
+  const _ContactRow({required this.icon, required this.value, this.label});
 
   final IconData icon;
   final String value;
   final String? label;
-  final Widget? valuePrefix;
-  final String? actionLabel;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     if (value.isEmpty) return const SizedBox.shrink();
-    final isAction = onTap != null;
-    final content = Padding(
-      padding: isAction
-          ? const EdgeInsets.symmetric(horizontal: 10, vertical: 10)
-          : const EdgeInsets.only(bottom: 6),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: isAction ? _bookingBlue : _green),
+          Icon(icon, size: 18, color: _green),
           const SizedBox(width: 8),
           Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (valuePrefix != null) ...[
-                  valuePrefix!,
-                  const SizedBox(width: 7),
-                ],
-                Expanded(
-                  child: Text(
-                    label == null ? value : '${label!}: $value',
-                    style: const TextStyle(color: Colors.black87),
-                  ),
-                ),
-              ],
+            child: Text(
+              label == null ? value : '${label!}: $value',
+              style: const TextStyle(color: Colors.black87),
             ),
           ),
-          if (isAction) ...[
-            const SizedBox(width: 8),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: _bookingBlue,
-            ),
-          ],
         ],
-      ),
-    );
-    if (!isAction) return content;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Semantics(
-        button: true,
-        label: actionLabel,
-        child: Material(
-          color: _bookingBlue.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(12),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: content,
-          ),
-        ),
       ),
     );
   }
 }
 
-class _CyprusCountryFlag extends StatelessWidget {
-  const _CyprusCountryFlag({super.key});
+class _ContactActionButton extends StatelessWidget {
+  const _ContactActionButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onTap,
+    super.key,
+  });
+
+  final String tooltip;
+  final Widget icon;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 28,
-      height: 20,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(color: Colors.black12),
-      ),
-      child: SvgPicture.asset(
-        'assets/branding/cyprus_flag.svg',
-        fit: BoxFit.cover,
+    return Semantics(
+      button: true,
+      label: tooltip,
+      excludeSemantics: true,
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: _bookingBlue.withValues(alpha: 0.07),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: _bookingBlue.withValues(alpha: 0.18)),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 44),
+              child: IconTheme(
+                data: const IconThemeData(color: _bookingBlue, size: 22),
+                child: Center(child: icon),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -587,6 +1047,26 @@ class _AccommodationState extends StatelessWidget {
     );
   }
 }
+
+List<String> _availableLodgingTypes(Iterable<Lodging> lodgings) {
+  final typesByNormalizedName = <String, String>{};
+  for (final lodging in lodgings) {
+    final type = lodging.type?.trim();
+    if (type == null || type.isEmpty) continue;
+    typesByNormalizedName.putIfAbsent(type.toLowerCase(), () => type);
+  }
+  final types = typesByNormalizedName.values.toList(growable: false);
+  types.sort(
+    (left, right) => left.toLowerCase().compareTo(right.toLowerCase()),
+  );
+  return types;
+}
+
+String _filterKey(String value) => value
+    .trim()
+    .toLowerCase()
+    .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+    .replaceAll(RegExp(r'^-+|-+$'), '');
 
 String? _nonEmpty(String? value) {
   final trimmed = value?.trim();

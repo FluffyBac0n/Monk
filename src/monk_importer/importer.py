@@ -23,11 +23,15 @@ def run_import(
     project_id: str | None = None,
     service_account_path: str | None = None,
     merge: bool = True,
+    prune: bool = False,
     validate: bool = False,
     validation_report_path: Path | None = None,
     validation_json_path: Path | None = None,
     emulator_host: str | None = None,
 ) -> dict[str, Any]:
+    if prune and dry_run:
+        raise ValueError("Pruning requires a committed import (dry_run=False).")
+
     try:
         from dotenv import load_dotenv
 
@@ -54,7 +58,7 @@ def run_import(
         "dryRun": dry_run,
     }
 
-    if validate or validation_report_path or validation_json_path:
+    if validate or validation_report_path or validation_json_path or prune:
         report = build_validation_report(payload)
         summary["validationOk"] = report["ok"]
         summary["validationIssues"] = report["issues"]
@@ -63,6 +67,11 @@ def run_import(
             summary["validationReport"] = str(validation_report_path)
             if validation_json_path:
                 summary["validationJson"] = str(validation_json_path)
+        if prune and not report["ok"]:
+            raise ValueError(
+                "Refusing to prune because workbook validation failed: "
+                + "; ".join(report["issues"])
+            )
 
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -81,5 +90,5 @@ def run_import(
         service_account_path=service_account_path or os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or None,
         emulator_host=emulator_host or os.getenv("FIRESTORE_EMULATOR_HOST") or None,
     )
-    summary["written"] = write_import_payload(db, payload, merge=merge)
+    summary["written"] = write_import_payload(db, payload, merge=merge, prune=prune)
     return summary

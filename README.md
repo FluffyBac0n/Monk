@@ -64,6 +64,19 @@ monk-import --commit
 
 By default, the importer uses `set()` with stable document IDs, so rerunning it updates the same Firestore documents rather than creating duplicates.
 
+If rows were removed or their IDs changed, use `--prune` to remove stale generated
+documents after the new data has been written successfully:
+
+```bash
+monk-import --workbook /absolute/path/new-workbook.xlsx --commit --prune
+```
+
+Pruning automatically validates the workbook and refuses to run when validation
+fails. It applies to `stages`, `lodgings`, `routeChunks`, `routeMarkers`, and
+`routeMetadata`. Import audit history under `imports` is always preserved. Run a
+separate `--validate` dry run and review the reports before using `--commit --prune`
+against production.
+
 ## Validation Report
 
 Generate a human-readable report and a JSON report before writing to any database:

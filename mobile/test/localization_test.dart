@@ -37,6 +37,7 @@ void main() {
     expect(italian.t('Accommodation'), 'Alloggi');
     expect(italian.t('Offline map'), 'Mappa offline');
     expect(italian.t('Find my stage'), 'Trova la mia tappa');
+    expect(italian.t('From Start'), 'Dalla partenza');
     expect(
       italian.t('Tap a stage to see its details.'),
       'Tocca una tappa per visualizzarne i dettagli.',
@@ -49,6 +50,7 @@ void main() {
     expect(french.t('Accommodation'), 'Hébergements');
     expect(french.t('Offline map'), 'Carte hors ligne');
     expect(french.t('Find my stage'), 'Trouver mon étape');
+    expect(french.t('From Start'), 'Depuis le départ');
     expect(
       french.t('Tap a stage to see its details.'),
       'Touchez une étape pour voir ses détails.',
@@ -87,6 +89,18 @@ void main() {
       'Auf der Karte sind keine Unterkunftsstandorte verfügbar.',
     );
     expect(german.t('Book accommodation'), 'Unterkunft buchen');
+    expect(german.t('Book'), 'Buchen');
+    expect(german.t('Apply'), 'Anwenden');
+    expect(german.t('Filter stages'), 'Etappen filtern');
+    expect(german.t('Stage name'), 'Etappenname');
+    expect(german.t('From Start'), 'Vom Start');
+    expect(
+      german.t('Search by stage name or number'),
+      'Nach Etappenname oder -nummer suchen',
+    );
+    expect(german.t('Trail points'), 'Wegpunkte');
+    expect(german.t('Filter accommodation'), 'Unterkünfte filtern');
+    expect(german.t('Bookable online'), 'Online buchbar');
     expect(german.t('View places to stay'), 'Unterkünfte ansehen');
     expect(german.t('View on map'), 'Auf Karte anzeigen');
     expect(german.t('April - October'), 'April–Oktober');
@@ -155,6 +169,15 @@ void main() {
     expect(spanish.t('Offline map'), 'Mapa sin conexión');
     expect(spanish.t('Map unavailable'), 'Mapa no disponible');
     expect(spanish.t('Accommodation'), 'Alojamiento');
+    expect(spanish.t('Apply'), 'Aplicar');
+    expect(spanish.t('Filter stages'), 'Filtrar etapas');
+    expect(spanish.t('Stage name'), 'Nombre de la etapa');
+    expect(spanish.t('From Start'), 'Desde el inicio');
+    expect(
+      spanish.t('Search by stage name or number'),
+      'Buscar por nombre o número de etapa',
+    );
+    expect(spanish.t('Trail points'), 'Puntos de la ruta');
     expect(spanish.t('Show accommodation'), 'Mostrar alojamientos');
     expect(spanish.t('Hide accommodation'), 'Ocultar alojamientos');
     expect(
@@ -170,6 +193,9 @@ void main() {
       'No hay ubicaciones de alojamientos disponibles en el mapa.',
     );
     expect(spanish.t('Book accommodation'), 'Reservar alojamiento');
+    expect(spanish.t('Book'), 'Reservar');
+    expect(spanish.t('Filter accommodation'), 'Filtrar alojamientos');
+    expect(spanish.t('Bookable online'), 'Reservable en línea');
     expect(spanish.t('View places to stay'), 'Ver alojamientos');
     expect(spanish.t('View on map'), 'Ver en el mapa');
     expect(spanish.t('April - October'), 'abril–octubre');

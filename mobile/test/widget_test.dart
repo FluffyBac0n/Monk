@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -288,7 +290,15 @@ void main() {
   });
 
   testWidgets('shows Trails and opens Cyprus E4', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: MonkApp()));
+    final lodgingRepository = _TrailPreloadLodgingRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          lodgingRepositoryProvider.overrideWithValue(lodgingRepository),
+        ],
+        child: const MonkApp(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     final landingWordmark = find.byKey(
@@ -366,15 +376,11 @@ void main() {
       find.descendant(of: trailHeader, matching: trailDataStatus),
       findsOneWidget,
     );
-    final routeDirection = find.byKey(
-      const ValueKey('trail-card-route-cyprus-e4'),
-    );
     expect(
-      find.descendant(of: trailHeader, matching: routeDirection),
+      find.byKey(const ValueKey('trail-card-route-cyprus-e4')),
       findsNothing,
     );
-    expect(routeDirection, findsOneWidget);
-    expect(find.text('Pafos Airport  →  Larnaka Airport'), findsOneWidget);
+    expect(find.text('Pafos Airport  →  Larnaka Airport'), findsNothing);
     expect(
       find.text(
         'A long-distance journey linking the coast, forests and Troodos mountain.',
@@ -397,6 +403,7 @@ void main() {
     );
     await tester.tap(cyprusCard);
     await tester.pumpAndSettle();
+    expect(lodgingRepository.trailLoadCalls, 1);
     expect(find.text('EUROTREX'), findsNothing);
     expect(landingWordmark, findsNothing);
     expect(
@@ -640,6 +647,8 @@ void main() {
 
     expect(find.text('Acheleia'), findsOneWidget);
     expect(find.textContaining('STAGE 123'), findsOneWidget);
+    expect(find.text('From Start'), findsOneWidget);
+    expect(find.text('From Pafos'), findsNothing);
     expect(
       find.descendant(
         of: find.byKey(const Key('stage-detail-position')),
@@ -647,10 +656,69 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('stage-detail-position')),
+        matching: find.byKey(const ValueKey('stage-length-route-icon')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester.getSize(find.byKey(const ValueKey('stage-length-route-icon'))),
+      const Size(40, 24),
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('stage-detail-position')),
+        matching: find.byIcon(Icons.flag_rounded),
+      ),
+      findsNWidgets(2),
+    );
+    expect(
+      tester
+          .widget<Icon>(find.byKey(const ValueKey('stage-length-start-flag')))
+          .color,
+      const Color(0xFF277653),
+    );
+    expect(
+      tester
+          .widget<Icon>(find.byKey(const ValueKey('stage-length-finish-flag')))
+          .color,
+      const Color(0xFFD14B45),
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('stage-detail-position')),
+        matching: find.byIcon(Icons.straighten_rounded),
+      ),
+      findsNothing,
+    );
     expect(find.text('52 m'), findsOneWidget);
     expect(find.text('15 m'), findsOneWidget);
+    expect(
+      tester
+          .widget<Icon>(
+            find.descendant(
+              of: find.byKey(const Key('stage-detail-descent')),
+              matching: find.byIcon(Icons.trending_down_rounded),
+            ),
+          )
+          .color,
+      const Color(0xFFD14B45),
+    );
     expect(find.text('1 h 21 min'), findsOneWidget);
     expect(find.text('Estimated walking time'), findsOneWidget);
+    expect(
+      tester
+          .widget<Icon>(
+            find.descendant(
+              of: find.byKey(const Key('stage-detail-walking-time')),
+              matching: find.byIcon(Icons.schedule_rounded),
+            ),
+          )
+          .color,
+      const Color(0xFF1565C0),
+    );
     expect(find.text('Drinking water'), findsOneWidget);
     expect(find.text('Available offline'), findsNothing);
     final bottomNavigation = find.byKey(
@@ -710,7 +778,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text(stageIndex == 0 ? 'Start' : 'Stage $stageIndex'),
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text(stageIndex == 0 ? 'Start' : 'Stage $stageIndex'),
+        ),
         findsOneWidget,
       );
       expect(find.byKey(const Key('stage-map-preview')), findsOneWidget);
@@ -897,7 +968,7 @@ void main() {
     expect(find.text('1 h 17 min'), findsOneWidget);
   });
 
-  testWidgets('zero-length trail endpoint is presented as the finish point', (
+  testWidgets('zero-length trail endpoint is presented as the finish', (
     tester,
   ) async {
     const stages = [
@@ -926,71 +997,67 @@ void main() {
       ),
     );
 
-    expect(find.textContaining('FINISH POINT'), findsOneWidget);
-    expect(find.text('Finish point'), findsOneWidget);
+    expect(find.textContaining('FINISH'), findsOneWidget);
+    expect(find.text('Finish'), findsOneWidget);
     expect(find.text('0.0 km'), findsNothing);
   });
 
-  testWidgets(
-    'reversed start point takes priority over its stored stage length',
-    (tester) async {
-      const stages = [
-        TrailStage(
-          id: 'larnaka',
-          sequence: 1,
-          name: 'Larnaka Airport',
-          accumulatedDistanceKm: 558,
-          segmentLengthKm: 2.4,
-          elevationUpM: 90,
-          elevationDownM: 30,
-          services: {},
-        ),
-        TrailStage(
-          id: 'previous-stage',
-          sequence: 2,
-          name: 'Previous stage',
-          accumulatedDistanceKm: 555.6,
-          segmentLengthKm: 3,
-          services: {},
-        ),
-      ];
-      await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
-            home: StageDetailScreen(
-              stages: stages,
-              initialIndex: 0,
-              direction: TrailDirection.larnakaToPafos,
-            ),
+  testWidgets('reversed start takes priority over its stored stage length', (
+    tester,
+  ) async {
+    const stages = [
+      TrailStage(
+        id: 'larnaka',
+        sequence: 1,
+        name: 'Larnaka Airport',
+        accumulatedDistanceKm: 558,
+        segmentLengthKm: 2.4,
+        elevationUpM: 90,
+        elevationDownM: 30,
+        services: {},
+      ),
+      TrailStage(
+        id: 'previous-stage',
+        sequence: 2,
+        name: 'Previous stage',
+        accumulatedDistanceKm: 555.6,
+        segmentLengthKm: 3,
+        services: {},
+      ),
+    ];
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: StageDetailScreen(
+            stages: stages,
+            initialIndex: 0,
+            direction: TrailDirection.larnakaToPafos,
           ),
         ),
-      );
+      ),
+    );
 
-      final positionCard = find.byKey(const Key('stage-detail-position'));
-      expect(
-        find.descendant(of: positionCard, matching: find.text('Start point')),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: positionCard,
-          matching: find.text('Trail position'),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: positionCard, matching: find.text('2.4 km')),
-        findsNothing,
-      );
-      expect(
-        find.descendant(of: positionCard, matching: find.text('Stage length')),
-        findsNothing,
-      );
-      expect(find.byKey(const Key('stage-detail-ascent')), findsNothing);
-      expect(find.byKey(const Key('stage-detail-descent')), findsNothing);
-      expect(find.byKey(const Key('stage-detail-walking-time')), findsNothing);
-    },
-  );
+    final positionCard = find.byKey(const Key('stage-detail-position'));
+    expect(
+      find.descendant(of: positionCard, matching: find.text('Start')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: positionCard, matching: find.text('Trail position')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: positionCard, matching: find.text('2.4 km')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: positionCard, matching: find.text('Stage length')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('stage-detail-ascent')), findsNothing);
+    expect(find.byKey(const Key('stage-detail-descent')), findsNothing);
+    expect(find.byKey(const Key('stage-detail-walking-time')), findsNothing);
+  });
 
   testWidgets('stage detail elevation shortcut opens the selected stage', (
     tester,
@@ -1123,11 +1190,11 @@ void main() {
     );
     expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
     expect(
-      find.descendant(of: pafosEndpoint, matching: find.text('Start point')),
+      find.descendant(of: pafosEndpoint, matching: find.text('Start')),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: larnakaEndpoint, matching: find.text('Finish point')),
+      find.descendant(of: larnakaEndpoint, matching: find.text('Finish')),
       findsOneWidget,
     );
     expect(
@@ -1139,11 +1206,11 @@ void main() {
       lessThan(tester.getCenter(larnakaMarker).dx),
     );
     expect(
-      find.descendant(of: pafosCard, matching: find.text('Start point')),
+      find.descendant(of: pafosCard, matching: find.text('Start')),
       findsNothing,
     );
     expect(
-      find.descendant(of: larnakaCard, matching: find.text('Finish point')),
+      find.descendant(of: larnakaCard, matching: find.text('Finish')),
       findsNothing,
     );
 
@@ -1169,19 +1236,19 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.descendant(of: larnakaEndpoint, matching: find.text('Start point')),
+      find.descendant(of: larnakaEndpoint, matching: find.text('Start')),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: pafosEndpoint, matching: find.text('Finish point')),
+      find.descendant(of: pafosEndpoint, matching: find.text('Finish')),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: larnakaCard, matching: find.text('Start point')),
+      find.descendant(of: larnakaCard, matching: find.text('Start')),
       findsNothing,
     );
     expect(
-      find.descendant(of: pafosCard, matching: find.text('Finish point')),
+      find.descendant(of: pafosCard, matching: find.text('Finish')),
       findsNothing,
     );
 
@@ -1193,12 +1260,23 @@ void main() {
     expect(find.byKey(const Key('stage-detail-walking-time')), findsNothing);
   });
 
-  testWidgets('bottom navigation filters stages by selected services', (
+  testWidgets('bottom navigation filters stages by trail points and services', (
     tester,
   ) async {
+    Future<void> tapFilterAction(Key key) async {
+      final action = find.byKey(key);
+      await tester.scrollUntilVisible(
+        action,
+        160,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+    }
+
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [stagesProvider.overrideWith(_FakeStagesController.new)],
+        overrides: [stagesProvider.overrideWith(_FilterStagesController.new)],
         child: const MaterialApp(home: StagesScreen()),
       ),
     );
@@ -1210,20 +1288,204 @@ void main() {
     );
     expect(find.byIcon(Icons.filter_list_rounded), findsOneWidget);
     expect(find.byKey(const ValueKey('stage-gps-locate')), findsNothing);
+    final troodosNumber = find.byKey(const ValueKey('stage-number-troodos'));
+    expect(troodosNumber, findsOneWidget);
+    expect(tester.widget<Text>(troodosNumber).data, '2');
+    expect(tester.widget<Text>(troodosNumber).style?.fontSize, 10);
     await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
     await tester.pumpAndSettle();
-    expect(find.text('Filter by services'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('service-filter-lodging')));
-    await tester.tap(find.byKey(const Key('apply-service-filters')));
-    await tester.pumpAndSettle();
-    expect(find.text('No stages match these services.'), findsOneWidget);
+    expect(find.text('Filter stages'), findsNothing);
+    expect(
+      find.text('Choose stages, trail points and services.'),
+      findsNothing,
+    );
+    expect(find.text('Stage name'), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-name-filter')), findsOneWidget);
+    expect(find.text('Trail points'), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-filter-start')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-filter-finish')), findsOneWidget);
+    expect(find.text('Apply'), findsOneWidget);
+    expect(find.text('Apply filters'), findsNothing);
+    expect(
+      find.byKey(const Key('clear-service-filter-selection')),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget(find.byKey(const Key('clear-service-filter-selection'))),
+      isA<OutlinedButton>(),
+    );
 
-    final clearFilters = find.byKey(const Key('clear-service-filters'));
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -400));
+    final stageNameFilter = find.byKey(const ValueKey('stage-name-filter'));
+    await tester.enterText(stageNameFilter, '#2');
     await tester.pumpAndSettle();
-    await tester.tap(clearFilters);
+    expect(
+      find.byKey(const ValueKey('stage-name-suggestion-troodos')),
+      findsOneWidget,
+    );
+    await tester.enterText(stageNameFilter, 'troo');
     await tester.pumpAndSettle();
-    expect(find.text('No stages match these services.'), findsNothing);
+    final troodosSuggestion = find.byKey(
+      const ValueKey('stage-name-suggestion-troodos'),
+    );
+    expect(troodosSuggestion, findsOneWidget);
+    await tester.tap(troodosSuggestion);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('selected-stage-filter-troodos')),
+      findsOneWidget,
+    );
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
+    final applyFilters = find.byKey(const Key('apply-service-filters'));
+    await tester.scrollUntilVisible(
+      applyFilters,
+      160,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(applyFilters);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('stage-card-troodos')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-card-pafos')), findsNothing);
+    expect(find.byKey(const ValueKey('stage-card-larnaka')), findsNothing);
+    expect(
+      tester
+          .widget<Container>(find.byKey(const ValueKey('stage-waymark-line')))
+          .color,
+      const Color(0xFFB9BDB8),
+    );
+    expect(
+      tester
+          .widget<Container>(
+            find.byKey(const ValueKey('stage-line-before-troodos')),
+          )
+          .color,
+      const Color(0xFFB9BDB8),
+    );
+    expect(
+      tester
+          .widget<Container>(
+            find.byKey(const ValueKey('stage-line-after-troodos')),
+          )
+          .color,
+      Colors.transparent,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tapFilterAction(const Key('clear-service-filter-selection'));
+    expect(find.byKey(const ValueKey('stage-card-troodos')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-card-pafos')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-card-larnaka')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('stage-name-filter')),
+      'pafos',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stage-name-suggestion-pafos')));
+    await tester.enterText(
+      find.byKey(const ValueKey('stage-name-filter')),
+      'larnaka',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('stage-name-suggestion-larnaka')),
+    );
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
+    await tapFilterAction(const Key('apply-service-filters'));
+    expect(find.byKey(const ValueKey('stage-card-pafos')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-card-troodos')), findsNothing);
+    expect(find.byKey(const ValueKey('stage-card-larnaka')), findsOneWidget);
+    expect(
+      tester
+          .widget<Container>(
+            find.byKey(const ValueKey('stage-line-after-pafos')),
+          )
+          .color,
+      Colors.transparent,
+    );
+    expect(
+      tester
+          .widget<Container>(
+            find.byKey(const ValueKey('stage-line-before-larnaka')),
+          )
+          .color,
+      Colors.transparent,
+    );
+    expect(
+      tester
+          .widget<Container>(find.byKey(const ValueKey('stage-waymark-line')))
+          .color,
+      const Color(0xFFB9BDB8),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tapFilterAction(const Key('clear-service-filter-selection'));
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stage-filter-start')));
+    await tapFilterAction(const Key('apply-service-filters'));
+    expect(find.byKey(const ValueKey('stage-card-pafos')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-card-larnaka')), findsNothing);
+    expect(find.byKey(const ValueKey('stage-card-troodos')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('reverse-trail-direction')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('stage-card-larnaka')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-card-pafos')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tapFilterAction(const Key('clear-service-filter-selection'));
+    expect(find.text('Filter stages'), findsNothing);
+    expect(find.byKey(const ValueKey('stage-card-larnaka')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-card-pafos')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('service-filter-lodging')));
+    await tapFilterAction(const Key('apply-service-filters'));
+    expect(find.text('No stages match these filters.'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tapFilterAction(const Key('clear-service-filter-selection'));
+    expect(find.text('Filter stages'), findsNothing);
+    expect(find.text('No stages match these filters.'), findsNothing);
+  });
+
+  testWidgets('stage number search matches an exact single-digit stage', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [stagesProvider.overrideWith(_ManyStagesController.new)],
+        child: const MaterialApp(home: StagesScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('stage-name-filter')),
+      '1',
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('stage-name-suggestion-stage-29')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('stage-name-suggestion-stage-9')),
+      findsNothing,
+    );
   });
 
   testWidgets('stage bottom navigation stays visible and opens trail views', (
@@ -1287,8 +1549,8 @@ void main() {
     final gps = find.byKey(const ValueKey('stage-bottom-gps'));
     final initialBottom = tester.getBottomLeft(bottomNavigation).dy;
     expect(tester.getSize(navigationSize), const Size(800, 48));
-    expect(tester.getCenter(filter).dx, lessThan(tester.getCenter(reverse).dx));
-    expect(tester.getCenter(reverse).dx, lessThan(tester.getCenter(gps).dx));
+    expect(tester.getCenter(reverse).dx, lessThan(tester.getCenter(filter).dx));
+    expect(tester.getCenter(filter).dx, lessThan(tester.getCenter(gps).dx));
     expect(
       tester.getCenter(gps).dx,
       moreOrLessEquals(tester.getCenter(bottomNavigation).dx, epsilon: 0.1),
@@ -1332,6 +1594,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          stagesProvider.overrideWith(_LodgingStagesController.new),
+          elevationProvider.overrideWith(_FakeElevationController.new),
           lodgingRepositoryProvider.overrideWithValue(
             const _FakeLodgingRepository({
               'lodging-stage': [
@@ -1374,7 +1638,7 @@ void main() {
 
     final booking = find.byKey(const ValueKey('stage-detail-accommodation'));
     expect(booking, findsOneWidget);
-    expect(find.text('Start point'), findsOneWidget);
+    expect(find.text('Start'), findsOneWidget);
     expect(find.text('0.0 km'), findsNothing);
     expect(find.text('View places to stay'), findsNothing);
     expect(find.text('View accommodation'), findsNothing);
@@ -1408,15 +1672,80 @@ void main() {
           .having((decoration) => decoration.shape, 'shape', BoxShape.circle),
     );
     expect(find.text('Forest Inn'), findsOneWidget);
-    expect(find.textContaining('Platres'), findsOneWidget);
+    expect(find.textContaining('Platres'), findsNothing);
     expect(find.text('0.4 km'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('cyprus-country-flag-forest-inn')),
+      findsNothing,
+    );
+    expect(find.text('+357 99 123 456'), findsNothing);
+    expect(find.text('Book accommodation'), findsNothing);
+    expect(find.text('Book'), findsOneWidget);
+
+    final bottomNavigation = find.byKey(
+      const ValueKey('accommodation-bottom-navigation'),
+    );
+    final stagesShortcut = find.byKey(
+      const ValueKey('accommodation-stages-shortcut'),
+    );
+    final filterAction = find.byKey(const ValueKey('accommodation-filter'));
+    final gpsAction = find.byKey(const ValueKey('accommodation-gps'));
+    final navigationMap = find.byKey(const ValueKey('accommodation-map'));
+    final navigationElevation = find.byKey(
+      const ValueKey('accommodation-elevation'),
+    );
+    expect(bottomNavigation, findsOneWidget);
+    expect(
+      tester.getCenter(stagesShortcut).dx,
+      lessThan(tester.getCenter(filterAction).dx),
+    );
+    expect(
+      tester.getCenter(filterAction).dx,
+      lessThan(tester.getCenter(gpsAction).dx),
+    );
+    expect(
+      tester.getCenter(gpsAction).dx,
+      lessThan(tester.getCenter(navigationMap).dx),
+    );
+    expect(
+      tester.getCenter(navigationMap).dx,
+      lessThan(tester.getCenter(navigationElevation).dx),
+    );
+    final gpsInkWell = find.descendant(
+      of: gpsAction,
+      matching: find.byType(InkWell),
+    );
+    expect(tester.widget<InkWell>(gpsInkWell).onTap, isNotNull);
+    expect(
+      find.descendant(
+        of: filterAction,
+        matching: find.byIcon(Icons.filter_list_rounded),
+      ),
       findsOneWidget,
     );
-    expect(find.text('+357 99 123 456'), findsOneWidget);
 
+    final contactActions = find.byKey(
+      const ValueKey('lodging-contact-actions-forest-inn'),
+    );
+    final map = find.byKey(const ValueKey('map-location-lodging-forest-inn'));
     final call = find.byKey(const ValueKey('call-lodging-forest-inn'));
+    final email = find.byKey(const ValueKey('email-lodging-forest-inn'));
+    expect(contactActions, findsOneWidget);
+    expect(find.descendant(of: contactActions, matching: map), findsOneWidget);
+    expect(find.descendant(of: contactActions, matching: call), findsOneWidget);
+    expect(
+      find.descendant(of: contactActions, matching: email),
+      findsOneWidget,
+    );
+    expect(
+      (tester.getCenter(map).dy - tester.getCenter(call).dy).abs(),
+      lessThan(1),
+    );
+    expect(
+      (tester.getCenter(call).dy - tester.getCenter(email).dy).abs(),
+      lessThan(1),
+    );
+
     await tester.scrollUntilVisible(
       call,
       250,
@@ -1425,7 +1754,6 @@ void main() {
     await tester.tap(call);
     await tester.pumpAndSettle();
 
-    final email = find.byKey(const ValueKey('email-lodging-forest-inn'));
     await tester.scrollUntilVisible(
       email,
       250,
@@ -1440,7 +1768,6 @@ void main() {
     launchedUris.clear();
 
     expect(find.text('View on map'), findsNothing);
-    final map = find.byKey(const ValueKey('map-location-lodging-forest-inn'));
     await tester.scrollUntilVisible(
       map,
       250,
@@ -1467,6 +1794,25 @@ void main() {
     await tester.tap(book);
     await tester.pumpAndSettle();
     expect(launchedUris, [Uri.parse('https://booking.example.com/forest-inn')]);
+
+    await tester.tap(navigationMap);
+    await tester.pumpAndSettle();
+    final stageMap = tester.widget<MapScreen>(find.byType(MapScreen));
+    expect(stageMap.initialStageIndex, 0);
+    expect(stageMap.initialLodgings.map((lodging) => lodging.id), [
+      'forest-inn',
+    ]);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(navigationElevation);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<ElevationScreen>(find.byType(ElevationScreen))
+          .initialStageIndex,
+      0,
+    );
   });
 
   testWidgets('stage accommodation action explains when none is available', (
@@ -1511,6 +1857,217 @@ void main() {
       find.byKey(const ValueKey('stage-accommodation-message')),
       findsNothing,
     );
+  });
+
+  testWidgets('accommodation filters by booking distance and type', (
+    tester,
+  ) async {
+    const stage = TrailStage(
+      id: 'lodging-stage',
+      sequence: 1,
+      name: 'Lodging stage',
+      accumulatedDistanceKm: 1,
+      services: {},
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          stagesProvider.overrideWith(_LodgingStagesController.new),
+          lodgingRepositoryProvider.overrideWithValue(
+            const _FakeLodgingRepository({
+              'lodging-stage': [
+                Lodging(
+                  id: 'online-hotel',
+                  stageId: 'lodging-stage',
+                  name: 'Online Hotel',
+                  type: 'Hotel',
+                  distanceFromTrailKm: 0.3,
+                  website: 'https://booking.example.com/hotel',
+                ),
+                Lodging(
+                  id: 'nearby-guesthouse',
+                  stageId: 'lodging-stage',
+                  name: 'Nearby Guesthouse',
+                  type: 'Guesthouse',
+                  distanceFromTrailKm: 0.4,
+                ),
+                Lodging(
+                  id: 'distant-picnic-site',
+                  stageId: 'lodging-stage',
+                  name: 'Distant Picnic Site',
+                  type: 'Picnic site',
+                  distanceFromTrailKm: 3,
+                  website: 'https://booking.example.com/picnic',
+                ),
+              ],
+            }),
+          ),
+        ],
+        child: const MaterialApp(home: AccommodationScreen(stage: stage)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final filterAction = find.byKey(const ValueKey('accommodation-filter'));
+    final initialFilterBadge = tester.widget<Badge>(
+      find.descendant(of: filterAction, matching: find.byType(Badge)),
+    );
+    expect(initialFilterBadge.isLabelVisible, isFalse);
+    await tester.tap(filterAction);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('accommodation-filter-sheet')),
+      findsOneWidget,
+    );
+    expect(find.text('Filter accommodation'), findsNothing);
+    expect(find.text('Bookable online'), findsOneWidget);
+    expect(find.text('Maximum distance from trail'), findsNothing);
+    expect(find.text('Accommodation type'), findsOneWidget);
+    expect(find.text('Apply'), findsOneWidget);
+    expect(find.text('Apply filters'), findsNothing);
+    final hotelType = find.byKey(const ValueKey('accommodation-type-hotel'));
+    expect(
+      find.descendant(
+        of: hotelType,
+        matching: find.byKey(const ValueKey('lodging-type-icon-lodging')),
+      ),
+      findsOneWidget,
+    );
+    final guesthouseType = find.byKey(
+      const ValueKey('accommodation-type-guesthouse'),
+    );
+    expect(
+      find.descendant(
+        of: guesthouseType,
+        matching: find.byKey(const ValueKey('lodging-type-icon-home')),
+      ),
+      findsOneWidget,
+    );
+    final picnicType = find.byKey(
+      const ValueKey('accommodation-type-picnic-site'),
+    );
+    expect(
+      find.descendant(
+        of: picnicType,
+        matching: find.byKey(const ValueKey('lodging-type-icon-picnic-site')),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('accommodation-bookable-filter')),
+    );
+    await tester.scrollUntilVisible(
+      hotelType,
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(hotelType);
+    final apply = find.byKey(const ValueKey('accommodation-filter-apply'));
+    await tester.scrollUntilVisible(
+      apply,
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(apply);
+    await tester.pumpAndSettle();
+
+    final gpsAction = find.byKey(const ValueKey('accommodation-gps'));
+    await tester.tap(gpsAction);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('accommodation-distance-filter-sheet')),
+      findsOneWidget,
+    );
+    expect(find.text('Maximum distance from trail'), findsOneWidget);
+    expect(find.byIcon(Icons.gps_fixed_rounded), findsWidgets);
+    await tester.tap(find.byKey(const ValueKey('accommodation-distance-0.5')));
+    await tester.tap(
+      find.byKey(const ValueKey('accommodation-distance-apply')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('lodging-card-online-hotel')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('lodging-card-nearby-guesthouse')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('lodging-card-distant-picnic-site')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: filterAction, matching: find.text('2')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: gpsAction,
+        matching: find.byIcon(Icons.gps_fixed_rounded),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(filterAction);
+    await tester.pumpAndSettle();
+    final clear = find.byKey(const ValueKey('accommodation-filter-clear'));
+    await tester.scrollUntilVisible(
+      clear,
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(clear);
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: filterAction, matching: find.text('2')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('accommodation stage shortcut returns to the stage flow', (
+    tester,
+  ) async {
+    const stage = TrailStage(
+      id: 'lodging-stage',
+      sequence: 1,
+      name: 'Lodging stage',
+      services: {},
+    );
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          lodgingRepositoryProvider.overrideWithValue(
+            const _FakeLodgingRepository({}),
+          ),
+        ],
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          home: const Scaffold(
+            key: ValueKey('stages-flow-root'),
+            body: SizedBox.shrink(),
+          ),
+        ),
+      ),
+    );
+    unawaited(
+      navigatorKey.currentState!.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const AccommodationScreen(stage: stage),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey('accommodation-stages-shortcut')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('stages-flow-root')), findsOneWidget);
+    expect(find.byType(AccommodationScreen), findsNothing);
   });
 
   testWidgets('accommodation handles empty data and invalid booking links', (
@@ -1865,6 +2422,20 @@ class _FakeStagesController extends StagesController {
   ];
 }
 
+class _LodgingStagesController extends StagesController {
+  @override
+  Future<List<TrailStage>> build() async => const [
+    TrailStage(
+      id: 'lodging-stage',
+      sequence: 1,
+      name: 'Lodging stage',
+      accumulatedDistanceKm: 1,
+      altitudeM: 100,
+      services: {},
+    ),
+  ];
+}
+
 class _RefreshTrackingStagesController extends StagesController {
   int syncCalls = 0;
 
@@ -1910,6 +2481,33 @@ class _EndpointStagesController extends StagesController {
       elevationUpM: 120,
       elevationDownM: 45,
       altitudeM: 4,
+      services: {},
+    ),
+  ];
+}
+
+class _FilterStagesController extends StagesController {
+  @override
+  Future<List<TrailStage>> build() async => const [
+    TrailStage(
+      id: 'pafos',
+      sequence: 3,
+      name: 'Pafos Airport',
+      accumulatedDistanceKm: 0,
+      services: {},
+    ),
+    TrailStage(
+      id: 'troodos',
+      sequence: 2,
+      name: 'Troodos',
+      accumulatedDistanceKm: 5,
+      services: {},
+    ),
+    TrailStage(
+      id: 'larnaka',
+      sequence: 1,
+      name: 'Larnaka Airport',
+      accumulatedDistanceKm: 10,
       services: {},
     ),
   ];
@@ -2000,6 +2598,24 @@ class _FakeLodgingRepository implements LodgingRepository {
     required String stageId,
   }) async {
     return lodgingsByStage[stageId] ?? const [];
+  }
+}
+
+class _TrailPreloadLodgingRepository implements LodgingRepository {
+  int trailLoadCalls = 0;
+
+  @override
+  Future<List<Lodging>> loadForTrail({required String trailId}) async {
+    trailLoadCalls++;
+    return const [];
+  }
+
+  @override
+  Future<List<Lodging>> loadForStage({
+    required String trailId,
+    required String stageId,
+  }) async {
+    return const [];
   }
 }
 

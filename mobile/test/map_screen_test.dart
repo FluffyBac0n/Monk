@@ -134,6 +134,8 @@ void main() {
   test('first stage preview suppresses only its finish flag', () {
     expect(stagePreviewShowsFinishFlag(0), isFalse);
     expect(stagePreviewShowsFinishFlag(1), isTrue);
+    expect(stagePreviewShowsRoute(0), isFalse);
+    expect(stagePreviewShowsRoute(1), isTrue);
   });
 
   test('whole-route fit stays north-up on a portrait map', () {

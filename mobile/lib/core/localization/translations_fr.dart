@@ -75,13 +75,25 @@ const frenchTranslations = <String, String>{
   'High point': 'Point culminant',
   'Route': 'Itinéraire',
   'Filter': 'Filtrer',
+  'Filter stages': 'Filtrer les étapes',
+  'Choose trail points and services.':
+      'Choisissez des points du sentier et des services.',
+  'Choose stages, trail points and services.':
+      'Choisissez des étapes, des points du sentier et des services.',
+  'Stage name': 'Nom de l’étape',
+  'Search by stage name': 'Rechercher par nom d’étape',
+  'Search by stage name or number': 'Rechercher par nom ou numéro d’étape',
+  'No stages found.': 'Aucune étape trouvée.',
+  'Trail points': 'Points du sentier',
   'Filter by services': 'Filtrer par services',
   'Stages must offer every selected service.':
       'Les étapes doivent proposer tous les services sélectionnés.',
   'Clear': 'Effacer',
+  'Apply': 'Appliquer',
   'Apply filters': 'Appliquer les filtres',
   'No stages match these services.':
       'Aucune étape ne correspond à ces services.',
+  'No stages match these filters.': 'Aucune étape ne correspond à ces filtres.',
   'Clear filters': 'Effacer les filtres',
   'Go to top': 'Aller au début',
   'Go to end': 'Aller à la fin',
@@ -125,6 +137,7 @@ const frenchTranslations = <String, String>{
   'Start point': 'Point de départ',
   'Finish point': 'Point d’arrivée',
   'From': 'Depuis',
+  'From Start': 'Depuis le départ',
   'Stage length': 'Longueur de l’étape',
   'Altitude': 'Altitude',
   'Services': 'Services',
@@ -155,6 +168,14 @@ const frenchTranslations = <String, String>{
   'No accommodation locations are available on the map.':
       'Aucun emplacement d’hébergement n’est disponible sur la carte.',
   'Book accommodation': 'Réserver un hébergement',
+  'Book': 'Réserver',
+  'Filter accommodation': 'Filtrer les hébergements',
+  'Bookable online': 'Réservable en ligne',
+  'Maximum distance from trail': 'Distance maximale du sentier',
+  'Any distance': 'Toute distance',
+  'Accommodation type': 'Type d’hébergement',
+  'No accommodation matches these filters.':
+      'Aucun hébergement ne correspond à ces filtres.',
   'Accommodation booking': 'Réservation d’hébergement',
   'View places to stay': 'Voir les hébergements',
   'Places to stay near this stage': 'Hébergements près de cette étape',

@@ -75,13 +75,25 @@ const italianTranslations = <String, String>{
   'High point': 'Punto più alto',
   'Route': 'Percorso',
   'Filter': 'Filtra',
+  'Filter stages': 'Filtra tappe',
+  'Choose trail points and services.': 'Scegli punti del sentiero e servizi.',
+  'Choose stages, trail points and services.':
+      'Scegli tappe, punti del sentiero e servizi.',
+  'Stage name': 'Nome della tappa',
+  'Search by stage name': 'Cerca per nome della tappa',
+  'Search by stage name or number': 'Cerca per nome o numero della tappa',
+  'No stages found.': 'Nessuna tappa trovata.',
+  'Trail points': 'Punti del sentiero',
   'Filter by services': 'Filtra per servizi',
   'Stages must offer every selected service.':
       'Le tappe devono offrire tutti i servizi selezionati.',
   'Clear': 'Cancella',
+  'Apply': 'Applica',
   'Apply filters': 'Applica filtri',
   'No stages match these services.':
       'Nessuna tappa corrisponde a questi servizi.',
+  'No stages match these filters.':
+      'Nessuna tappa corrisponde a questi filtri.',
   'Clear filters': 'Cancella filtri',
   'Go to top': 'Vai all’inizio',
   'Go to end': 'Vai alla fine',
@@ -125,6 +137,7 @@ const italianTranslations = <String, String>{
   'Start point': 'Punto di partenza',
   'Finish point': 'Punto di arrivo',
   'From': 'Da',
+  'From Start': 'Dalla partenza',
   'Stage length': 'Lunghezza della tappa',
   'Altitude': 'Altitudine',
   'Services': 'Servizi',
@@ -155,6 +168,14 @@ const italianTranslations = <String, String>{
   'No accommodation locations are available on the map.':
       'Nessuna posizione di alloggio è disponibile sulla mappa.',
   'Book accommodation': 'Prenota un alloggio',
+  'Book': 'Prenota',
+  'Filter accommodation': 'Filtra alloggi',
+  'Bookable online': 'Prenotabile online',
+  'Maximum distance from trail': 'Distanza massima dal sentiero',
+  'Any distance': 'Qualsiasi distanza',
+  'Accommodation type': 'Tipo di alloggio',
+  'No accommodation matches these filters.':
+      'Nessun alloggio corrisponde a questi filtri.',
   'Accommodation booking': 'Prenotazione alloggio',
   'View places to stay': 'Vedi dove soggiornare',
   'Places to stay near this stage': 'Alloggi vicino a questa tappa',

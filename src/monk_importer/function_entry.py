@@ -22,6 +22,7 @@ def import_trail_http(request: Any) -> tuple[dict[str, Any], int]:
         dry_run=bool(body.get("dryRun", True)),
         project_id=body.get("projectId"),
         merge=bool(body.get("merge", True)),
+        prune=bool(body.get("prune", False)),
     )
     return summary, 200
 

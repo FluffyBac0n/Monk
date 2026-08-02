@@ -36,7 +36,13 @@ def get_firestore_client(
     return firestore.client()
 
 
-def write_import_payload(db: Client, payload: ImportPayload, *, merge: bool = True) -> dict[str, int]:
+def write_import_payload(
+    db: Client,
+    payload: ImportPayload,
+    *,
+    merge: bool = True,
+    prune: bool = False,
+) -> dict[str, int | dict[str, int]]:
     now = datetime.now(UTC)
     trail_ref = db.collection("trails").document(payload.trailId)
     trail_ref.set({**compact_doc(payload.trail), "updatedAt": now}, merge=merge)
@@ -65,20 +71,75 @@ def write_import_payload(db: Client, payload: ImportPayload, *, merge: bool = Tr
     )
     counts["routeMetadata"] = 1
 
+    pruned: dict[str, int] = {}
+    if prune:
+        pruned = prune_generated_collections(trail_ref, payload)
+        counts["pruned"] = pruned
+
     import_ref = trail_ref.collection("imports").document(now.strftime("%Y%m%dT%H%M%SZ"))
-    import_ref.set(
-        {
-            "createdAt": now,
-            "stageCount": len(payload.stages),
-            "lodgingCount": len(payload.lodgings),
-            "routePointCount": payload.routeMetadata.pointCount,
-            "routeChunkCount": len(payload.routeChunks),
-            "routeMarkerCount": len(payload.routeMarkers),
-            "warnings": payload.warnings,
-        }
-    )
+    audit_data: dict[str, Any] = {
+        "createdAt": now,
+        "stageCount": len(payload.stages),
+        "lodgingCount": len(payload.lodgings),
+        "routePointCount": payload.routeMetadata.pointCount,
+        "routeChunkCount": len(payload.routeChunks),
+        "routeMarkerCount": len(payload.routeMarkers),
+        "warnings": payload.warnings,
+    }
+    if prune:
+        audit_data["pruned"] = pruned
+    import_ref.set(audit_data)
     counts["imports"] = 1
     return counts
+
+
+def prune_generated_collections(trail_ref: Any, payload: ImportPayload) -> dict[str, int]:
+    """Delete generated documents whose IDs are absent from the current payload.
+
+    Import audit documents are intentionally excluded so that upload history is
+    retained. Pruning runs only after all current documents have been written.
+    """
+
+    expected_ids = {
+        "stages": {stage.id for stage in payload.stages},
+        "lodgings": {lodging.id for lodging in payload.lodgings},
+        "routeChunks": {chunk.id for chunk in payload.routeChunks},
+        "routeMarkers": {marker.id for marker in payload.routeMarkers},
+        "routeMetadata": {"main"},
+    }
+    return {
+        collection_name: prune_collection(
+            trail_ref.collection(collection_name),
+            document_ids,
+        )
+        for collection_name, document_ids in expected_ids.items()
+    }
+
+
+def prune_collection(
+    collection_ref: Any,
+    expected_ids: set[str],
+    *,
+    max_batch_docs: int = 450,
+) -> int:
+    """Delete documents not included in expected_ids and return the count."""
+
+    batch = collection_ref._client.batch()
+    pending = 0
+    total = 0
+    for document_ref in collection_ref.list_documents():
+        if document_ref.id in expected_ids:
+            continue
+        batch.delete(document_ref)
+        pending += 1
+        total += 1
+        if pending == max_batch_docs:
+            batch.commit()
+            batch = collection_ref._client.batch()
+            pending = 0
+    if pending:
+        batch.commit()
+    return total
 
 
 def write_collection(

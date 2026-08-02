@@ -52,6 +52,12 @@ def build_validation_report(payload: ImportPayload) -> dict[str, Any]:
 
     issues = []
     warnings = list(payload.warnings)
+    if not stage_ids:
+        issues.append("No stages were parsed from the workbook")
+    if not route_points:
+        issues.append("No route points were parsed from the workbook")
+    if not payload.routeChunks:
+        issues.append("No route chunks were generated from the workbook")
     if stage_duplicate_ids:
         issues.append(f"Duplicate stage IDs: {stage_duplicate_ids}")
     if lodging_duplicate_ids:
