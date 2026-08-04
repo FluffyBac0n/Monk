@@ -17,6 +17,7 @@ import 'lodging_type_icon.dart';
 const _ink = Color(0xFF17201B);
 const _green = Color(0xFF277653);
 const _sand = Color(0xFFF4F2EC);
+const _yellow = Color(0xFFF2C94C);
 const _bookingBlue = Color(0xFF1565C0);
 const _stagesRouteName = '/trails/cyprus-e4/stages';
 const _distanceFilterOptionsKm = <double>[0.5, 1, 2, 5];
@@ -488,21 +489,21 @@ class _AccommodationBottomNavigationBar extends StatelessWidget {
     final l10n = context.l10n;
     return Material(
       key: const ValueKey('accommodation-bottom-navigation'),
-      color: _sand,
+      color: _ink,
       child: SafeArea(
         top: false,
         child: Container(
           key: const ValueKey('accommodation-bottom-navigation-size'),
           height: 48,
           decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: Colors.black12)),
+            border: Border(top: BorderSide(color: Colors.white12)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _AccommodationBottomAction(
                 key: const ValueKey('accommodation-stages-shortcut'),
-                icon: Icons.route_rounded,
+                icon: Icons.hiking_rounded,
                 label: l10n.t('Back to stages'),
                 onTap: onStages,
               ),
@@ -565,12 +566,10 @@ class _AccommodationBottomAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = onTap == null
-        ? Colors.black26
-        : isPrimary && isActive
-        ? Colors.white
+        ? Colors.white30
         : isActive
-        ? Colors.black87
-        : Colors.black54;
+        ? Colors.white
+        : Colors.white70;
     return Expanded(
       child: Tooltip(
         message: label,
@@ -580,6 +579,8 @@ class _AccommodationBottomAction extends StatelessWidget {
           enabled: onTap != null,
           label: label,
           child: InkWell(
+            splashColor: Colors.white12,
+            highlightColor: Colors.white10,
             onTap: onTap,
             child: Stack(
               fit: StackFit.expand,
@@ -587,8 +588,8 @@ class _AccommodationBottomAction extends StatelessWidget {
                 Center(
                   child: Badge(
                     isLabelVisible: badgeCount > 0,
-                    backgroundColor: _ink,
-                    textColor: _sand,
+                    backgroundColor: _yellow,
+                    textColor: _ink,
                     label: Text('$badgeCount'),
                     child: isPrimary
                         ? Container(
@@ -599,14 +600,9 @@ class _AccommodationBottomAction extends StatelessWidget {
                             height: 36,
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? _ink
-                                  : Colors.black.withValues(alpha: 0.055),
+                                  ? _green
+                                  : Colors.white.withValues(alpha: 0.055),
                               shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isActive
-                                    ? Colors.transparent
-                                    : Colors.black12,
-                              ),
                             ),
                             child: Center(
                               child: Icon(icon, color: foreground, size: 22),

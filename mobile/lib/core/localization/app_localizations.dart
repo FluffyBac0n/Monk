@@ -101,10 +101,15 @@ const _translations = <String, Map<String, String>>{
     'Developer tools': 'Entwicklertools',
     'Reset E4 hint': 'E4-Hinweis zurücksetzen',
     'Reset stage hint': 'Etappenhinweis zurücksetzen',
+    'Reset metrics hint': 'Kennzahlenhinweis zurücksetzen',
     'Show the pulsing E4 trail information hint again.':
         'Den pulsierenden E4-Weginformationshinweis erneut anzeigen.',
     'Show the stage details helper again.':
         'Die Hilfe zu den Etappendetails erneut anzeigen.',
+    'Show the left-side stage metrics helper again.':
+        'Die Hilfe zu den Etappenkennzahlen auf der linken Seite erneut anzeigen.',
+    'Tap the E4 sign to open trail information.':
+        'Tippe auf das E4-Zeichen, um die Weginformationen zu öffnen.',
     'TRAIL LIBRARY': 'WEGBIBLIOTHEK',
     'Explore trails': 'Wanderwege entdecken',
     'Trails': 'Wanderwege',
@@ -156,6 +161,12 @@ const _translations = <String, Map<String, String>>{
     'Search by stage name or number': 'Nach Etappenname oder -nummer suchen',
     'No stages found.': 'Keine Etappen gefunden.',
     'Trail points': 'Wegpunkte',
+    'Points of Interest': 'Interessante Orte',
+    'Beach': 'Strand',
+    'Viewpoint': 'Aussichtspunkt',
+    'Religious Sites': 'Religiöse Stätten',
+    'Natural Landmarks': 'Naturdenkmäler',
+    'Forests/Parks': 'Wälder/Parks',
     'Filter by services': 'Nach Angeboten filtern',
     'Stages must offer every selected service.':
         'Etappen müssen alle ausgewählten Angebote bieten.',
@@ -206,6 +217,8 @@ const _translations = <String, Map<String, String>>{
     'Stage': 'Etappe',
     'Tap a stage to see its details.':
         'Tippe auf eine Etappe, um ihre Details anzusehen.',
+    'The numbers on the left show ascent, descent, stage length, and + distance from the trail.':
+        'Links siehst du Aufstieg, Abstieg, Etappenlänge und mit + die Entfernung vom Weg.',
     'Start point': 'Startpunkt',
     'Finish point': 'Zielpunkt',
     'From': 'Ab',
@@ -438,10 +451,15 @@ const _translations = <String, Map<String, String>>{
     'Developer tools': 'Herramientas de desarrollo',
     'Reset E4 hint': 'Restablecer aviso E4',
     'Reset stage hint': 'Restablecer aviso de etapa',
+    'Reset metrics hint': 'Restablecer aviso de métricas',
     'Show the pulsing E4 trail information hint again.':
         'Volver a mostrar el aviso pulsante de información del sendero E4.',
     'Show the stage details helper again.':
         'Volver a mostrar la ayuda sobre los detalles de las etapas.',
+    'Show the left-side stage metrics helper again.':
+        'Volver a mostrar la ayuda de las métricas de etapa del lado izquierdo.',
+    'Tap the E4 sign to open trail information.':
+        'Toca la señal E4 para abrir la información de la ruta.',
     'TRAIL LIBRARY': 'BIBLIOTECA DE RUTAS',
     'Explore trails': 'Explorar rutas',
     'Trails': 'Rutas',
@@ -493,6 +511,12 @@ const _translations = <String, Map<String, String>>{
     'Search by stage name or number': 'Buscar por nombre o número de etapa',
     'No stages found.': 'No se encontraron etapas.',
     'Trail points': 'Puntos de la ruta',
+    'Points of Interest': 'Puntos de interés',
+    'Beach': 'Playa',
+    'Viewpoint': 'Mirador',
+    'Religious Sites': 'Lugares religiosos',
+    'Natural Landmarks': 'Lugares naturales',
+    'Forests/Parks': 'Bosques/parques',
     'Filter by services': 'Filtrar por servicios',
     'Stages must offer every selected service.':
         'Las etapas deben ofrecer todos los servicios seleccionados.',
@@ -542,6 +566,8 @@ const _translations = <String, Map<String, String>>{
     'Close stage summary': 'Cerrar resumen de etapa',
     'Stage': 'Etapa',
     'Tap a stage to see its details.': 'Toca una etapa para ver sus detalles.',
+    'The numbers on the left show ascent, descent, stage length, and + distance from the trail.':
+        'Los números de la izquierda muestran ascenso, descenso, longitud de la etapa y la distancia a la ruta indicada con +.',
     'Start point': 'Punto de inicio',
     'Finish point': 'Punto final',
     'From': 'Desde',

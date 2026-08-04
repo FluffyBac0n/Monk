@@ -17,7 +17,7 @@ const _green = Color(0xFF277653);
 const _red = Color(0xFFD14B45);
 const _sand = Color(0xFFF4F2EC);
 
-enum DebugHintReset { e4Information, stageDetails }
+enum DebugHintReset { e4Information, stageDetails, stageMetrics }
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -149,6 +149,34 @@ class SettingsScreen extends ConsumerWidget {
                     },
                     icon: const Icon(Icons.replay_rounded),
                     label: Text(l10n.t('Reset stage hint')),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    l10n.t('Show the left-side stage metrics helper again.'),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    key: const ValueKey('reset-stage-metrics-hint'),
+                    onPressed: () async {
+                      try {
+                        await ref
+                            .read(appDatabaseProvider)
+                            .writeSetting(
+                              cyprusE4StageMetricsHintSeenSetting,
+                              'false',
+                            );
+                      } catch (_) {
+                        // The current Stages session can still reset the hint.
+                      }
+                      if (context.mounted) {
+                        Navigator.of(context).pop(DebugHintReset.stageMetrics);
+                      }
+                    },
+                    icon: const Icon(Icons.replay_rounded),
+                    label: Text(l10n.t('Reset metrics hint')),
                   ),
                 ],
               ),

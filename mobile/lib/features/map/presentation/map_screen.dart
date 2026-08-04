@@ -1681,7 +1681,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
                   const SizedBox(height: 10),
                   _MapControl(
                     tooltip: context.l10n.t('Show the whole trail'),
-                    icon: Icons.route_rounded,
+                    icon: Icons.hiking_rounded,
                     onPressed: _fitRoute,
                   ),
                   const SizedBox(height: 10),

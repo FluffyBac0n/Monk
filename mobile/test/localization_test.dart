@@ -39,6 +39,22 @@ void main() {
     expect(italian.t('Find my stage'), 'Trova la mia tappa');
     expect(italian.t('From Start'), 'Dalla partenza');
     expect(italian.t('To Finish'), 'All’arrivo');
+    expect(italian.t('Points of Interest'), 'Punti di interesse');
+    expect(italian.t('Beach'), 'Spiaggia');
+    expect(italian.t('Viewpoint'), 'Punto panoramico');
+    expect(italian.t('Religious Sites'), 'Luoghi religiosi');
+    expect(italian.t('Natural Landmarks'), 'Luoghi naturali');
+    expect(italian.t('Forests/Parks'), 'Boschi/parchi');
+    expect(
+      italian.t('Tap the E4 sign to open trail information.'),
+      'Tocca il segnale E4 per aprire le informazioni sul sentiero.',
+    );
+    expect(
+      italian.t(
+        'The numbers on the left show ascent, descent, stage length, and + distance from the trail.',
+      ),
+      'I numeri a sinistra mostrano salita, discesa, lunghezza della tappa e, con +, la distanza dal sentiero.',
+    );
     expect(
       italian.offTrailDistance('240 m'),
       'Ti trovi a circa 240 m dal sentiero.',
@@ -57,6 +73,22 @@ void main() {
     expect(french.t('Find my stage'), 'Trouver mon étape');
     expect(french.t('From Start'), 'Depuis le départ');
     expect(french.t('To Finish'), 'Jusqu’à l’arrivée');
+    expect(french.t('Points of Interest'), 'Points d’intérêt');
+    expect(french.t('Beach'), 'Plage');
+    expect(french.t('Viewpoint'), 'Point de vue');
+    expect(french.t('Religious Sites'), 'Sites religieux');
+    expect(french.t('Natural Landmarks'), 'Sites naturels');
+    expect(french.t('Forests/Parks'), 'Forêts/parcs');
+    expect(
+      french.t('Tap the E4 sign to open trail information.'),
+      'Touchez le balisage E4 pour ouvrir les informations du sentier.',
+    );
+    expect(
+      french.t(
+        'The numbers on the left show ascent, descent, stage length, and + distance from the trail.',
+      ),
+      'Les nombres à gauche indiquent la montée, la descente, la longueur de l’étape et, avec +, la distance par rapport au sentier.',
+    );
     expect(
       french.offTrailDistance('240 m'),
       'Vous êtes à environ 240 m du sentier.',
@@ -110,6 +142,22 @@ void main() {
       'Nach Etappenname oder -nummer suchen',
     );
     expect(german.t('Trail points'), 'Wegpunkte');
+    expect(german.t('Points of Interest'), 'Interessante Orte');
+    expect(german.t('Beach'), 'Strand');
+    expect(german.t('Viewpoint'), 'Aussichtspunkt');
+    expect(german.t('Religious Sites'), 'Religiöse Stätten');
+    expect(german.t('Natural Landmarks'), 'Naturdenkmäler');
+    expect(german.t('Forests/Parks'), 'Wälder/Parks');
+    expect(
+      german.t('Tap the E4 sign to open trail information.'),
+      'Tippe auf das E4-Zeichen, um die Weginformationen zu öffnen.',
+    );
+    expect(
+      german.t(
+        'The numbers on the left show ascent, descent, stage length, and + distance from the trail.',
+      ),
+      'Links siehst du Aufstieg, Abstieg, Etappenlänge und mit + die Entfernung vom Weg.',
+    );
     expect(german.t('Filter accommodation'), 'Unterkünfte filtern');
     expect(german.t('Bookable online'), 'Online buchbar');
     expect(german.t('View places to stay'), 'Unterkünfte ansehen');
@@ -194,6 +242,22 @@ void main() {
       'Buscar por nombre o número de etapa',
     );
     expect(spanish.t('Trail points'), 'Puntos de la ruta');
+    expect(spanish.t('Points of Interest'), 'Puntos de interés');
+    expect(spanish.t('Beach'), 'Playa');
+    expect(spanish.t('Viewpoint'), 'Mirador');
+    expect(spanish.t('Religious Sites'), 'Lugares religiosos');
+    expect(spanish.t('Natural Landmarks'), 'Lugares naturales');
+    expect(spanish.t('Forests/Parks'), 'Bosques/parques');
+    expect(
+      spanish.t('Tap the E4 sign to open trail information.'),
+      'Toca la señal E4 para abrir la información de la ruta.',
+    );
+    expect(
+      spanish.t(
+        'The numbers on the left show ascent, descent, stage length, and + distance from the trail.',
+      ),
+      'Los números de la izquierda muestran ascenso, descenso, longitud de la etapa y la distancia a la ruta indicada con +.',
+    );
     expect(spanish.t('Show accommodation'), 'Mostrar alojamientos');
     expect(spanish.t('Hide accommodation'), 'Ocultar alojamientos');
     expect(

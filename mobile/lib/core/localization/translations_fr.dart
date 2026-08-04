@@ -29,10 +29,15 @@ const frenchTranslations = <String, String>{
   'Developer tools': 'Outils de développement',
   'Reset E4 hint': 'Réinitialiser l’indication E4',
   'Reset stage hint': 'Réinitialiser l’indication d’étape',
+  'Reset metrics hint': 'Réinitialiser l’indication des mesures',
   'Show the pulsing E4 trail information hint again.':
       'Afficher à nouveau l’indication animée des informations du sentier E4.',
   'Show the stage details helper again.':
       'Afficher à nouveau l’aide sur les détails des étapes.',
+  'Show the left-side stage metrics helper again.':
+      'Afficher à nouveau l’aide sur les mesures de l’étape à gauche.',
+  'Tap the E4 sign to open trail information.':
+      'Touchez le balisage E4 pour ouvrir les informations du sentier.',
   'TRAIL LIBRARY': 'BIBLIOTHÈQUE DE SENTIERS',
   'Explore trails': 'Explorer les sentiers',
   'Trails': 'Sentiers',
@@ -85,6 +90,12 @@ const frenchTranslations = <String, String>{
   'Search by stage name or number': 'Rechercher par nom ou numéro d’étape',
   'No stages found.': 'Aucune étape trouvée.',
   'Trail points': 'Points du sentier',
+  'Points of Interest': 'Points d’intérêt',
+  'Beach': 'Plage',
+  'Viewpoint': 'Point de vue',
+  'Religious Sites': 'Sites religieux',
+  'Natural Landmarks': 'Sites naturels',
+  'Forests/Parks': 'Forêts/parcs',
   'Filter by services': 'Filtrer par services',
   'Stages must offer every selected service.':
       'Les étapes doivent proposer tous les services sélectionnés.',
@@ -134,6 +145,8 @@ const frenchTranslations = <String, String>{
   'Close stage summary': 'Fermer le résumé de l’étape',
   'Stage': 'Étape',
   'Tap a stage to see its details.': 'Touchez une étape pour voir ses détails.',
+  'The numbers on the left show ascent, descent, stage length, and + distance from the trail.':
+      'Les nombres à gauche indiquent la montée, la descente, la longueur de l’étape et, avec +, la distance par rapport au sentier.',
   'Start point': 'Point de départ',
   'Finish point': 'Point d’arrivée',
   'From': 'Depuis',

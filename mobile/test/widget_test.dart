@@ -86,6 +86,9 @@ void main() {
     expect(find.text('OFFLINE MAP NOT DOWNLOADED'), findsOneWidget);
 
     final information = find.byKey(const ValueKey('stage-e4-waymark'));
+    final informationHelper = find.byKey(
+      const ValueKey('e4-trail-information-helper'),
+    );
     final reverse = find.byKey(const ValueKey('reverse-trail-direction'));
     final refresh = find.byKey(const ValueKey('refresh-offline-trail'));
     final settings = find.byKey(const ValueKey('trail-settings'));
@@ -94,6 +97,16 @@ void main() {
       const ValueKey('stage-bottom-navigation'),
     );
     expect(information, findsOneWidget);
+    expect(informationHelper, findsOneWidget);
+    expect(
+      find.descendant(
+        of: informationHelper,
+        matching: find.text('Tap the E4 sign to open trail information.'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('stage-details-helper')), findsNothing);
+    expect(find.byKey(const ValueKey('stage-metrics-helper')), findsNothing);
     expect(find.byKey(const ValueKey('trail-information')), findsNothing);
     expect(
       find.byKey(const ValueKey('stage-e4-waymark-pulsing')),
@@ -156,6 +169,59 @@ void main() {
     );
     expect(find.byKey(const ValueKey('stage-e4-waymark-halo')), findsNothing);
     expect(find.byKey(const ValueKey('stage-e4-waymark-seen')), findsOneWidget);
+    expect(informationHelper, findsNothing);
+    expect(find.byKey(const ValueKey('stage-details-helper')), findsOneWidget);
+  });
+
+  testWidgets('guidance follows E4 then stage then metrics order', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final database = _FakeAppDatabase();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          stagesProvider.overrideWith(_EndpointStagesController.new),
+          elevationProvider.overrideWith(_FakeElevationController.new),
+          offlineMapProvider.overrideWith(_FakeOfflineMapController.new),
+        ],
+        child: const MaterialApp(home: StagesScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('e4-trail-information-helper')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('stage-details-helper')), findsNothing);
+    expect(find.byKey(const ValueKey('stage-metrics-helper')), findsNothing);
+
+    await tester.tap(
+      find.byKey(const ValueKey('open-e4-trail-information-helper')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(TrailInformationScreen), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('e4-trail-information-helper')),
+      findsNothing,
+    );
+    expect(find.byKey(const ValueKey('stage-details-helper')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-metrics-helper')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('stage-card-pafos')));
+    await tester.pumpAndSettle();
+    expect(find.byType(StageDetailScreen), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('stage-details-helper')), findsNothing);
+    expect(find.byKey(const ValueKey('stage-metrics-helper')), findsOneWidget);
   });
 
   testWidgets('trail header reveals a compact title after scrolling', (
@@ -228,6 +294,68 @@ void main() {
     expect(helper, findsNothing);
   });
 
+  testWidgets('left stage metrics helper explains values and can be reset', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final database = _FakeAppDatabase()
+      ..settings[cyprusE4TrailInformationSeenSetting] = 'true'
+      ..settings[cyprusE4StageDetailsHintSeenSetting] = 'true';
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          stagesProvider.overrideWith(_EndpointStagesController.new),
+          offlineMapProvider.overrideWith(_FakeOfflineMapController.new),
+        ],
+        child: const MaterialApp(home: StagesScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final helper = find.byKey(const ValueKey('stage-metrics-helper'));
+    expect(helper, findsOneWidget);
+    expect(
+      find.descendant(
+        of: helper,
+        matching: find.text(
+          'The numbers on the left show ascent, descent, stage length, and + distance from the trail.',
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('stage-card-larnaka')),
+        matching: helper,
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('dismiss-stage-metrics-hint')));
+    await tester.pumpAndSettle();
+    expect(helper, findsNothing);
+    expect(database.settings[cyprusE4StageMetricsHintSeenSetting], 'true');
+
+    await tester.tap(find.byKey(const ValueKey('trail-settings')));
+    await tester.pumpAndSettle();
+    final resetMetricsHint = find.byKey(
+      const ValueKey('reset-stage-metrics-hint'),
+    );
+    await tester.scrollUntilVisible(
+      resetMetricsHint,
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(resetMetricsHint);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StagesScreen), findsOneWidget);
+    expect(database.settings[cyprusE4StageMetricsHintSeenSetting], 'false');
+    expect(helper, findsOneWidget);
+  });
+
   testWidgets('pulling down at the top refreshes the stages', (tester) async {
     final database = _FakeAppDatabase()
       ..settings[cyprusE4TrailInformationSeenSetting] = 'true';
@@ -298,6 +426,11 @@ void main() {
     );
     expect(find.byKey(const ValueKey('stage-e4-waymark-halo')), findsOneWidget);
     expect(find.byKey(const ValueKey('stage-details-helper')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('stage-e4-waymark')));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('trail-settings')));
     await tester.pumpAndSettle();
@@ -693,7 +826,7 @@ void main() {
     );
     expect(
       tester.getSize(find.byKey(const ValueKey('stage-length-route-icon'))),
-      const Size(40, 24),
+      const Size(64, 24),
     );
     expect(
       find.descendant(
@@ -810,7 +943,18 @@ void main() {
     );
     expect(bottomNavigation, findsOneWidget);
     expect(
+      tester.widget<Material>(bottomNavigation).color,
+      const Color(0xFF17201B),
+    );
+    expect(
       find.byKey(const Key('stage-detail-stages-shortcut')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('stage-detail-stages-shortcut')),
+        matching: find.byIcon(Icons.hiking_rounded),
+      ),
       findsOneWidget,
     );
     expect(
@@ -944,7 +1088,7 @@ void main() {
       expect(find.byKey(const Key('stage-map-preview')), findsOneWidget);
       expect(
         tester.getSize(find.byKey(const Key('stage-map-preview'))).height,
-        250,
+        220,
       );
       expect(find.byKey(const Key('stage-trail-position-copy')), findsNothing);
       expect(find.text('Previous'), findsNothing);
@@ -1211,6 +1355,13 @@ void main() {
       find.descendant(of: positionCard, matching: find.text('Stage length')),
       findsNothing,
     );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('stage-detail-endpoint-distance')),
+        matching: find.byIcon(Icons.hiking_rounded),
+      ),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('stage-detail-ascent')), findsNothing);
     expect(find.byKey(const Key('stage-detail-descent')), findsNothing);
     expect(find.byKey(const Key('stage-detail-walking-time')), findsNothing);
@@ -1302,6 +1453,12 @@ void main() {
     );
     final pafosMarker = find.byKey(const ValueKey('stage-marker-pafos'));
     final larnakaMarker = find.byKey(const ValueKey('stage-marker-larnaka'));
+    final pafosTrailDistance = find.byKey(
+      const ValueKey('stage-distance-from-trail-pafos'),
+    );
+    final larnakaTrailDistance = find.byKey(
+      const ValueKey('stage-distance-from-trail-larnaka'),
+    );
     final larnakaAscent = find.byKey(const ValueKey('stage-ascent-larnaka'));
     final larnakaDescent = find.byKey(const ValueKey('stage-descent-larnaka'));
     final larnakaLength = find.byKey(const ValueKey('stage-length-larnaka'));
@@ -1325,6 +1482,40 @@ void main() {
     expect(
       tester.getCenter(larnakaSideMetrics).dx,
       lessThan(tester.getCenter(larnakaMarker).dx),
+    );
+    expect(pafosTrailDistance, findsOneWidget);
+    expect(larnakaTrailDistance, findsOneWidget);
+    expect(
+      (tester.widget<Container>(pafosMarker).decoration as BoxDecoration).color,
+      const Color(0xFF277653),
+    );
+    expect(
+      find.descendant(
+        of: pafosTrailDistance,
+        matching: find.byIcon(Icons.add_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: pafosTrailDistance, matching: find.text('0.49km')),
+      findsOneWidget,
+    );
+    expect(
+      (tester.widget<Container>(larnakaMarker).decoration as BoxDecoration)
+          .color,
+      const Color(0xFFF2C94C),
+    );
+    expect(tester.widget(pafosTrailDistance), isA<Row>());
+    expect(
+      find.descendant(
+        of: pafosTrailDistance,
+        matching: find.byType(DecoratedBox),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: larnakaTrailDistance, matching: find.text('0.5km')),
+      findsOneWidget,
     );
     expect(
       find.descendant(of: larnakaAscent, matching: find.text('120m')),
@@ -1374,6 +1565,17 @@ void main() {
     await tester.tap(find.byKey(const Key('reverse-trail-direction')));
     await tester.pumpAndSettle();
 
+    expect(
+      tester
+          .widget<Icon>(
+            find.descendant(
+              of: find.byKey(const Key('reverse-trail-direction')),
+              matching: find.byIcon(Icons.hiking_rounded),
+            ),
+          )
+          .color,
+      Colors.white70,
+    );
     expect(find.text('Larnaka Airport  →  Pafos Airport'), findsOneWidget);
     expect(larnakaDistance, findsNothing);
     expect(pafosDistance, findsOneWidget);
@@ -1458,9 +1660,27 @@ void main() {
     );
     expect(find.text('Stage name'), findsOneWidget);
     expect(find.byKey(const ValueKey('stage-name-filter')), findsOneWidget);
-    expect(find.text('Trail points'), findsOneWidget);
+    expect(find.text('Points of Interest'), findsOneWidget);
+    expect(find.text('Trail points'), findsNothing);
     expect(find.byKey(const ValueKey('stage-filter-start')), findsOneWidget);
     expect(find.byKey(const ValueKey('stage-filter-finish')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-filter-beach')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('stage-filter-viewpoint')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('stage-filter-religious-site')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('stage-filter-natural-landmark')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('stage-filter-forest-park')),
+      findsOneWidget,
+    );
     expect(find.text('Apply'), findsOneWidget);
     expect(find.text('Apply filters'), findsNothing);
     expect(
@@ -1645,6 +1865,95 @@ void main() {
     );
   });
 
+  testWidgets('stage POI filters derive categories from stage names', (
+    tester,
+  ) async {
+    Future<void> tapFilterAction(Key key) async {
+      final action = find.byKey(key);
+      await tester.scrollUntilVisible(
+        action,
+        160,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+    }
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [stagesProvider.overrideWith(_PoiStagesController.new)],
+        child: const MaterialApp(home: StagesScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    expect(find.text('Points of Interest'), findsOneWidget);
+    expect(find.text('Beach'), findsOneWidget);
+    expect(find.text('Viewpoint'), findsOneWidget);
+    expect(find.text('Religious Sites'), findsOneWidget);
+    expect(find.text('Natural Landmarks'), findsOneWidget);
+    expect(find.text('Forests/Parks'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('stage-filter-beach')));
+    await tapFilterAction(const Key('apply-service-filters'));
+    expect(find.byKey(const ValueKey('stage-card-coral-bay')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-card-akamas-view')), findsNothing);
+    expect(find.byKey(const ValueKey('stage-card-forest')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tapFilterAction(const Key('clear-service-filter-selection'));
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stage-filter-viewpoint')));
+    await tapFilterAction(const Key('apply-service-filters'));
+    expect(find.byKey(const ValueKey('stage-card-coral-bay')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('stage-card-akamas-view')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('stage-card-forest')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tapFilterAction(const Key('clear-service-filter-selection'));
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stage-filter-religious-site')));
+    await tapFilterAction(const Key('apply-service-filters'));
+    expect(find.byKey(const ValueKey('stage-card-religious')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-card-natural')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tapFilterAction(const Key('clear-service-filter-selection'));
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('stage-filter-natural-landmark')),
+    );
+    await tapFilterAction(const Key('apply-service-filters'));
+    expect(find.byKey(const ValueKey('stage-card-religious')), findsNothing);
+    expect(find.byKey(const ValueKey('stage-card-natural')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tapFilterAction(const Key('clear-service-filter-selection'));
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stage-filter-forest-park')));
+    await tapFilterAction(const Key('apply-service-filters'));
+    expect(find.byKey(const ValueKey('stage-card-park')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-card-forest')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-card-natural')), findsNothing);
+  });
+
   testWidgets('stage bottom navigation stays visible and opens trail views', (
     tester,
   ) async {
@@ -1663,6 +1972,10 @@ void main() {
       const ValueKey('stage-bottom-navigation'),
     );
     expect(bottomNavigation, findsOneWidget);
+    expect(
+      tester.widget<Material>(bottomNavigation).color,
+      const Color(0xFF17201B),
+    );
     expect(find.byKey(const ValueKey('stage-bottom-filter')), findsOneWidget);
     expect(find.byIcon(Icons.filter_list_rounded), findsOneWidget);
     expect(
@@ -1670,6 +1983,31 @@ void main() {
       findsOneWidget,
     );
     expect(find.byIcon(Icons.swap_horiz_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('reverse-trail-direction')),
+        matching: find.byIcon(Icons.hiking_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('reverse-trail-combined-icon')),
+      findsOneWidget,
+    );
+    final reverseAction = find.byKey(const ValueKey('reverse-trail-direction'));
+    final reverseHiker = tester.widget<Icon>(
+      find.descendant(
+        of: reverseAction,
+        matching: find.byIcon(Icons.hiking_rounded),
+      ),
+    );
+    final reverseArrows = tester.widget<Icon>(
+      find.descendant(
+        of: reverseAction,
+        matching: find.byIcon(Icons.swap_horiz_rounded),
+      ),
+    );
+    expect(reverseHiker.size!, greaterThan(reverseArrows.size!));
     expect(find.byKey(const ValueKey('stage-bottom-gps')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('stage-bottom-gps-surface')),
@@ -1695,7 +2033,7 @@ void main() {
     );
     expect(
       tester.widget<Material>(bottomNavigation).color,
-      const Color(0xFFF4F2EC),
+      const Color(0xFF17201B),
     );
 
     final navigationSize = find.byKey(
@@ -1856,6 +2194,17 @@ void main() {
       const ValueKey('accommodation-elevation'),
     );
     expect(bottomNavigation, findsOneWidget);
+    expect(
+      tester.widget<Material>(bottomNavigation).color,
+      const Color(0xFF17201B),
+    );
+    expect(
+      find.descendant(
+        of: stagesShortcut,
+        matching: find.byIcon(Icons.hiking_rounded),
+      ),
+      findsOneWidget,
+    );
     expect(
       tester.getCenter(stagesShortcut).dx,
       lessThan(tester.getCenter(filterAction).dx),
@@ -2622,6 +2971,7 @@ class _EndpointStagesController extends StagesController {
       id: 'pafos',
       sequence: 2,
       name: 'Pafos Airport',
+      distanceFromPathKm: 0.49,
       accumulatedDistanceKm: 0,
       segmentLengthKm: 0,
       altitudeM: 2,
@@ -2631,6 +2981,7 @@ class _EndpointStagesController extends StagesController {
       id: 'larnaka',
       sequence: 1,
       name: 'Larnaka Airport',
+      distanceFromPathKm: 0.5,
       accumulatedDistanceKm: 10,
       segmentLengthKm: 10,
       elevationUpM: 120,
@@ -2663,6 +3014,61 @@ class _FilterStagesController extends StagesController {
       sequence: 1,
       name: 'Larnaka Airport',
       accumulatedDistanceKm: 10,
+      services: {},
+    ),
+  ];
+}
+
+class _PoiStagesController extends StagesController {
+  @override
+  Future<List<TrailStage>> build() async => const [
+    TrailStage(
+      id: 'start',
+      sequence: 7,
+      name: 'Pafos Airport',
+      accumulatedDistanceKm: 0,
+      services: {},
+    ),
+    TrailStage(
+      id: 'coral-bay',
+      sequence: 6,
+      name: 'Coral Bay BEACH',
+      accumulatedDistanceKm: 5,
+      services: {},
+    ),
+    TrailStage(
+      id: 'akamas-view',
+      sequence: 5,
+      name: 'Akamas View-Point',
+      accumulatedDistanceKm: 10,
+      services: {},
+    ),
+    TrailStage(
+      id: 'religious',
+      sequence: 4,
+      name: 'Kykkos Monastery',
+      accumulatedDistanceKm: 12,
+      services: {},
+    ),
+    TrailStage(
+      id: 'natural',
+      sequence: 3,
+      name: 'Avakas Gorge',
+      accumulatedDistanceKm: 14,
+      services: {},
+    ),
+    TrailStage(
+      id: 'park',
+      sequence: 2,
+      name: 'Rizoelia Park',
+      accumulatedDistanceKm: 16,
+      services: {},
+    ),
+    TrailStage(
+      id: 'forest',
+      sequence: 1,
+      name: 'Forest stage',
+      accumulatedDistanceKm: 18,
       services: {},
     ),
   ];

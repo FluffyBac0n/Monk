@@ -47,6 +47,11 @@ const _timelineGutterWidth = 108.0;
 const _timelineLineColumnWidth = 20.0;
 const _startPointFilterKey = 'trailStart';
 const _finishPointFilterKey = 'trailFinish';
+const _beachPointFilterKey = 'trailBeach';
+const _viewpointPointFilterKey = 'trailViewpoint';
+const _religiousSitePointFilterKey = 'trailReligiousSite';
+const _naturalLandmarkPointFilterKey = 'trailNaturalLandmark';
+const _forestParkPointFilterKey = 'trailForestPark';
 const _stageNameFilterPrefix = 'stage:';
 const _filterServiceKeys = [
   'lodging',
@@ -62,6 +67,29 @@ const _filterServiceKeys = [
   'busStop',
 ];
 
+bool _stageNameHasBeach(String stageName) =>
+    RegExp(r'\bbeach(?:es)?\b', caseSensitive: false).hasMatch(stageName);
+
+bool _stageNameHasViewpoint(String stageName) => RegExp(
+  r'\bview[\s-]*points?\b|\blook[\s-]*out\b',
+  caseSensitive: false,
+).hasMatch(stageName);
+
+bool _stageNameHasReligiousSite(String stageName) => RegExp(
+  r'\bmonaster(?:y|ies)\b|\bchurch(?:es)?\b|\bchruch\b|\btekke\b|\biera\s+moni\b',
+  caseSensitive: false,
+).hasMatch(stageName);
+
+bool _stageNameHasNaturalLandmark(String stageName) => RegExp(
+  r'\bbaths?\b|\bgorges?\b|\bcaves?\b|\boaks?\b|\bcape\b',
+  caseSensitive: false,
+).hasMatch(stageName);
+
+bool _stageNameHasForestOrPark(String stageName) => RegExp(
+  r'\bforests?\b|\bparks?\b|\bvalleys?\b',
+  caseSensitive: false,
+).hasMatch(stageName);
+
 bool _stageMatchesFilters({
   required TrailStage stage,
   required int stageIndex,
@@ -70,6 +98,13 @@ bool _stageMatchesFilters({
 }) {
   final filtersStart = filters.contains(_startPointFilterKey);
   final filtersFinish = filters.contains(_finishPointFilterKey);
+  final filtersBeach = filters.contains(_beachPointFilterKey);
+  final filtersViewpoint = filters.contains(_viewpointPointFilterKey);
+  final filtersReligiousSite = filters.contains(_religiousSitePointFilterKey);
+  final filtersNaturalLandmark = filters.contains(
+    _naturalLandmarkPointFilterKey,
+  );
+  final filtersForestPark = filters.contains(_forestParkPointFilterKey);
   final selectedStageIds = filters
       .where((filter) => filter.startsWith(_stageNameFilterPrefix))
       .map((filter) => filter.substring(_stageNameFilterPrefix.length))
@@ -77,10 +112,23 @@ bool _stageMatchesFilters({
   if (selectedStageIds.isNotEmpty && !selectedStageIds.contains(stage.id)) {
     return false;
   }
+  final hasPointFilter =
+      filtersStart ||
+      filtersFinish ||
+      filtersBeach ||
+      filtersViewpoint ||
+      filtersReligiousSite ||
+      filtersNaturalLandmark ||
+      filtersForestPark;
   final matchesPoint =
-      (!filtersStart && !filtersFinish) ||
+      !hasPointFilter ||
       (filtersStart && stageIndex == 0) ||
-      (filtersFinish && stageIndex == stageCount - 1);
+      (filtersFinish && stageIndex == stageCount - 1) ||
+      (filtersBeach && _stageNameHasBeach(stage.name)) ||
+      (filtersViewpoint && _stageNameHasViewpoint(stage.name)) ||
+      (filtersReligiousSite && _stageNameHasReligiousSite(stage.name)) ||
+      (filtersNaturalLandmark && _stageNameHasNaturalLandmark(stage.name)) ||
+      (filtersForestPark && _stageNameHasForestOrPark(stage.name));
   if (!matchesPoint) return false;
   return _filterServiceKeys
       .where(filters.contains)
@@ -152,6 +200,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
   bool _isHeaderCollapsed = false;
   bool? _hasSeenTrailInformation;
   bool? _hasSeenStageDetailsHint;
+  bool? _hasSeenStageMetricsHint;
 
   @override
   void initState() {
@@ -204,12 +253,15 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
   Future<void> _restoreGuidanceSeen() async {
     var hasSeenTrailInformation = false;
     var hasSeenStageDetailsHint = false;
+    var hasSeenStageMetricsHint = false;
     try {
       final settings = await ref.read(appDatabaseProvider).readSettings();
       hasSeenTrailInformation =
           settings[cyprusE4TrailInformationSeenSetting] == 'true';
       hasSeenStageDetailsHint =
           settings[cyprusE4StageDetailsHintSeenSetting] == 'true';
+      hasSeenStageMetricsHint =
+          settings[cyprusE4StageMetricsHintSeenSetting] == 'true';
     } catch (_) {
       // Keep the guidance available when persistence cannot be read.
     }
@@ -220,6 +272,9 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
       }
       if (_hasSeenStageDetailsHint != true) {
         _hasSeenStageDetailsHint = hasSeenStageDetailsHint;
+      }
+      if (_hasSeenStageMetricsHint != true) {
+        _hasSeenStageMetricsHint = hasSeenStageMetricsHint;
       }
     });
   }
@@ -255,6 +310,22 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
       await ref
           .read(appDatabaseProvider)
           .writeSetting(cyprusE4StageDetailsHintSeenSetting, 'true');
+    } catch (_) {
+      // The helper still stays dismissed for the current session.
+    }
+  }
+
+  void _markStageMetricsHintSeen() {
+    if (_hasSeenStageMetricsHint == true) return;
+    setState(() => _hasSeenStageMetricsHint = true);
+    unawaited(_persistStageMetricsHintSeen());
+  }
+
+  Future<void> _persistStageMetricsHintSeen() async {
+    try {
+      await ref
+          .read(appDatabaseProvider)
+          .writeSetting(cyprusE4StageMetricsHintSeenSetting, 'true');
     } catch (_) {
       // The helper still stays dismissed for the current session.
     }
@@ -416,6 +487,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
     required TrailDirection direction,
     required MeasurementFormatter formatter,
     required double totalDistanceKm,
+    required bool showMetricsHint,
   }) {
     final orderedIndex = orderedItems.indexWhere((item) => item.id == stage.id);
     final previousOrderedIndex = filteredIndex == 0
@@ -454,9 +526,15 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
       isTrailStart: orderedIndex == 0,
       isTrailEnd: orderedIndex == orderedItems.length - 1,
       isSelected: stage.id == _gpsSelectedStageId,
-      showDetailsHint: filteredIndex == 0 && _hasSeenStageDetailsHint == false,
+      showDetailsHint:
+          filteredIndex == 0 &&
+          _hasSeenTrailInformation == true &&
+          _hasSeenStageDetailsHint == false,
+      showMetricsHint: showMetricsHint,
+      onMetricsHintDismiss: _markStageMetricsHintSeen,
       onTap: () {
         _markStageDetailsHintSeen();
+        if (showMetricsHint) _markStageMetricsHintSeen();
         Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => StageDetailScreen(
@@ -524,6 +602,8 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                   setState(() => _hasSeenTrailInformation = false),
               onStageDetailsHintReset: () =>
                   setState(() => _hasSeenStageDetailsHint = false),
+              onStageMetricsHintReset: () =>
+                  setState(() => _hasSeenStageMetricsHint = false),
             ),
             const SliverToBoxAdapter(child: SizedBox(height: 12)),
             stages.when(
@@ -556,6 +636,20 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                     .length;
                 final connectsSingleNamedStageToWaymark =
                     filteredItems.length == 1 && selectedStageNameCount == 1;
+                String? metricsHintStageId;
+                if (_hasSeenTrailInformation == true &&
+                    _hasSeenStageMetricsHint == false &&
+                    _hasSeenStageDetailsHint == true) {
+                  for (final candidate in filteredItems) {
+                    final candidateIndex = orderedItems.indexWhere(
+                      (stage) => stage.id == candidate.id,
+                    );
+                    if (candidateIndex > 0) {
+                      metricsHintStageId = candidate.id;
+                      break;
+                    }
+                  }
+                }
                 return orderedItems.isEmpty
                     ? const SliverFillRemaining(
                         hasScrollBody: false,
@@ -605,6 +699,9 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                                   direction: direction,
                                   formatter: formatter,
                                   totalDistanceKm: totalDistanceKm,
+                                  showMetricsHint:
+                                      filteredItems[index].id ==
+                                      metricsHintStageId,
                                 ),
                             ],
                           ),
@@ -655,14 +752,14 @@ class _StageBottomNavigationBar extends StatelessWidget {
     final l10n = context.l10n;
     return Material(
       key: const ValueKey('stage-bottom-navigation'),
-      color: _sand,
+      color: _ink,
       child: SafeArea(
         top: false,
         child: Container(
           key: const ValueKey('stage-bottom-navigation-size'),
           height: 48,
           decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: Colors.black12)),
+            border: Border(top: BorderSide(color: Colors.white12)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -670,13 +767,12 @@ class _StageBottomNavigationBar extends StatelessWidget {
               _StageBottomAction(
                 key: const ValueKey('reverse-trail-direction'),
                 icon: Icons.swap_horiz_rounded,
+                showReverseTrailIcon: true,
                 label: l10n.t(
                   isReversed
                       ? 'Walk from Pafos to Larnaka'
                       : 'Walk from Larnaka to Pafos',
                 ),
-                isActive: isReversed,
-                isToggle: true,
                 onTap: onReverse,
               ),
               _StageBottomAction(
@@ -729,6 +825,7 @@ class _StageBottomAction extends StatelessWidget {
     this.isToggle = false,
     this.isPrimary = false,
     this.badgeCount = 0,
+    this.showReverseTrailIcon = false,
     super.key,
   });
 
@@ -739,16 +836,18 @@ class _StageBottomAction extends StatelessWidget {
   final bool isToggle;
   final bool isPrimary;
   final int badgeCount;
+  final bool showReverseTrailIcon;
 
   @override
   Widget build(BuildContext context) {
     final foreground = onTap == null
-        ? Colors.black26
-        : isPrimary && isActive
-        ? Colors.white
+        ? Colors.white30
         : isActive
-        ? _filterBlueTeal
-        : Colors.black54;
+        ? Colors.white
+        : Colors.white70;
+    Widget buildIcon(double size) => showReverseTrailIcon
+        ? _ReverseTrailIcon(color: foreground, size: size + 4)
+        : Icon(icon, color: foreground, size: size);
     return Expanded(
       child: Tooltip(
         message: label,
@@ -758,6 +857,8 @@ class _StageBottomAction extends StatelessWidget {
           toggled: isToggle ? isActive : null,
           label: label,
           child: InkWell(
+            splashColor: Colors.white12,
+            highlightColor: Colors.white10,
             onTap: onTap == null
                 ? null
                 : () {
@@ -770,8 +871,8 @@ class _StageBottomAction extends StatelessWidget {
                 Center(
                   child: Badge(
                     isLabelVisible: badgeCount > 0,
-                    backgroundColor: _ink,
-                    textColor: _sand,
+                    backgroundColor: _yellow,
+                    textColor: _ink,
                     label: Text('$badgeCount'),
                     child: isPrimary
                         ? AnimatedContainer(
@@ -782,18 +883,11 @@ class _StageBottomAction extends StatelessWidget {
                             height: 36,
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? _ink
-                                  : Colors.black.withValues(alpha: 0.055),
+                                  ? _green
+                                  : Colors.white.withValues(alpha: 0.055),
                               shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isActive
-                                    ? Colors.transparent
-                                    : Colors.black12,
-                              ),
                             ),
-                            child: Center(
-                              child: Icon(icon, color: foreground, size: 22),
-                            ),
+                            child: Center(child: buildIcon(22)),
                           )
                         : AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
@@ -802,13 +896,11 @@ class _StageBottomAction extends StatelessWidget {
                             height: 32,
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? _filterBlueTeal.withValues(alpha: 0.11)
+                                  ? Colors.white.withValues(alpha: 0.16)
                                   : Colors.transparent,
                               shape: BoxShape.circle,
                             ),
-                            child: Center(
-                              child: Icon(icon, color: foreground, size: 22),
-                            ),
+                            child: Center(child: buildIcon(22)),
                           ),
                   ),
                 ),
@@ -821,18 +913,55 @@ class _StageBottomAction extends StatelessWidget {
   }
 }
 
+class _ReverseTrailIcon extends StatelessWidget {
+  const _ReverseTrailIcon({required this.color, required this.size});
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      key: const ValueKey('reverse-trail-combined-icon'),
+      dimension: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Positioned(
+            right: -10,
+            top: size * 0.13,
+            child: Icon(
+              Icons.swap_horiz_rounded,
+              color: color.withValues(alpha: 0.48),
+              size: size * 0.77,
+            ),
+          ),
+          Positioned(
+            left: -1,
+            top: size * 0.11,
+            child: Icon(Icons.hiking_rounded, color: color, size: size * 0.78),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _TrailAppBar extends StatelessWidget {
   const _TrailAppBar({
     required this.direction,
     required this.isCollapsed,
     required this.onTrailInformationHintReset,
     required this.onStageDetailsHintReset,
+    required this.onStageMetricsHintReset,
   });
 
   final TrailDirection direction;
   final bool isCollapsed;
   final VoidCallback onTrailInformationHintReset;
   final VoidCallback onStageDetailsHintReset;
+  final VoidCallback onStageMetricsHintReset;
 
   @override
   Widget build(BuildContext context) {
@@ -884,6 +1013,8 @@ class _TrailAppBar extends StatelessWidget {
                 onTrailInformationHintReset();
               } else if (reset == DebugHintReset.stageDetails) {
                 onStageDetailsHintReset();
+              } else if (reset == DebugHintReset.stageMetrics) {
+                onStageMetricsHintReset();
               }
             },
             icon: const Icon(Icons.tune_rounded),
@@ -1147,7 +1278,7 @@ class _TrailTimelineWaymarkState extends State<_TrailTimelineWaymark>
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 48,
+      height: widget.shouldPulse ? 72 : 48,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1297,7 +1428,52 @@ class _TrailTimelineWaymarkState extends State<_TrailTimelineWaymark>
               ],
             ),
           ),
-          const Expanded(child: SizedBox()),
+          Expanded(
+            child: widget.shouldPulse
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 2, 0, 10),
+                    child: Material(
+                      key: const ValueKey('e4-trail-information-helper'),
+                      color: _trailPulseBlue.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(10),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        key: const ValueKey('open-e4-trail-information-helper'),
+                        onTap: widget.onTap,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.arrow_back_rounded,
+                                color: _bookingBlue,
+                                size: 17,
+                              ),
+                              const SizedBox(width: 7),
+                              Expanded(
+                                child: Text(
+                                  context.l10n.t(
+                                    'Tap the E4 sign to open trail information.',
+                                  ),
+                                  style: const TextStyle(
+                                    color: _ink,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.2,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : const SizedBox(),
+          ),
         ],
       ),
     );
@@ -1318,6 +1494,8 @@ class _StageTimelineRow extends StatelessWidget {
     required this.isTrailEnd,
     required this.isSelected,
     required this.showDetailsHint,
+    required this.showMetricsHint,
+    required this.onMetricsHintDismiss,
     required this.onTap,
     super.key,
   });
@@ -1334,6 +1512,8 @@ class _StageTimelineRow extends StatelessWidget {
   final bool isTrailEnd;
   final bool isSelected;
   final bool showDetailsHint;
+  final bool showMetricsHint;
+  final VoidCallback onMetricsHintDismiss;
   final VoidCallback onTap;
 
   @override
@@ -1342,14 +1522,21 @@ class _StageTimelineRow extends StatelessWidget {
         .where((entry) => entry.value)
         .toList();
     final showDistance = !isTrailStart && distanceKm != null;
+    final distanceFromPathKm = stage.distanceFromPathKm;
+    final hasDistanceFromPath =
+        distanceFromPathKm != null &&
+        distanceFromPathKm.isFinite &&
+        distanceFromPathKm >= 0;
     final dotColor = isSelected
         ? _bookingBlue
+        : hasDistanceFromPath
+        ? distanceFromPathKm < 0.5
+              ? _green
+              : _yellow
         : isTrailStart
         ? _green
         : isTrailEnd
         ? _red
-        : stage.services['lodging'] == true
-        ? _green
         : _ink;
     final sideMetrics = Column(
       key: ValueKey('stage-side-metrics-${stage.id}'),
@@ -1393,7 +1580,7 @@ class _StageTimelineRow extends StatelessWidget {
         color: isTrailStart ? _green : _red,
       ),
     );
-    final sideContent = isTrailStart
+    final primarySideContent = isTrailStart
         ? endpointBadge
         : isTrailEnd
         ? Column(
@@ -1402,6 +1589,20 @@ class _StageTimelineRow extends StatelessWidget {
             children: [endpointBadge, const SizedBox(height: 3), sideMetrics],
           )
         : sideMetrics;
+    final sideContent = hasDistanceFromPath
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              primarySideContent,
+              const SizedBox(height: 2),
+              _StageTrailDistanceLabel(
+                stageId: stage.id,
+                distance: _trimmedDistance(formatter, distanceFromPathKm),
+              ),
+            ],
+          )
+        : primarySideContent;
 
     return IntrinsicHeight(
       child: Row(
@@ -1457,171 +1658,190 @@ class _StageTimelineRow extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: Semantics(
-                selected: isSelected,
-                child: Material(
-                  key: ValueKey('stage-card-${stage.id}'),
-                  color: isSelected ? const Color(0xFFE8F1FC) : Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(
-                      color: isSelected
-                          ? _bookingBlue
-                          : showDetailsHint
-                          ? _trailPulseBlue
-                          : Colors.transparent,
-                      width: isSelected || showDetailsHint ? 2 : 0,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: hasDistanceFromPath ? 92 : 0,
+                ),
+                child: Semantics(
+                  selected: isSelected,
+                  child: Material(
+                    key: ValueKey('stage-card-${stage.id}'),
+                    color: isSelected ? const Color(0xFFE8F1FC) : Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: isSelected
+                            ? _bookingBlue
+                            : showDetailsHint || showMetricsHint
+                            ? _trailPulseBlue
+                            : Colors.transparent,
+                        width: isSelected || showDetailsHint || showMetricsHint
+                            ? 2
+                            : 0,
+                      ),
                     ),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: onTap,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (showDetailsHint) ...[
-                                  Container(
-                                    key: const ValueKey('stage-details-helper'),
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _trailPulseBlue.withValues(
-                                        alpha: 0.14,
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: onTap,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (showDetailsHint) ...[
+                                    Container(
+                                      key: const ValueKey(
+                                        'stage-details-helper',
                                       ),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.touch_app_outlined,
-                                          color: _bookingBlue,
-                                          size: 17,
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _trailPulseBlue.withValues(
+                                          alpha: 0.14,
                                         ),
-                                        const SizedBox(width: 7),
-                                        Expanded(
-                                          child: Text(
-                                            context.l10n.t(
-                                              'Tap a stage to see its details.',
-                                            ),
-                                            style: const TextStyle(
-                                              color: _ink,
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.w700,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.touch_app_outlined,
+                                            color: _bookingBlue,
+                                            size: 17,
+                                          ),
+                                          const SizedBox(width: 7),
+                                          Expanded(
+                                            child: Text(
+                                              context.l10n.t(
+                                                'Tap a stage to see its details.',
+                                              ),
+                                              style: const TextStyle(
+                                                color: _ink,
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w700,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                ],
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        stage.name,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                        ),
+                                        ],
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Semantics(
-                                      label: context.l10n.stage(stage.sequence),
-                                      excludeSemantics: true,
-                                      child: Text(
-                                        '${stage.sequence}',
+                                    const SizedBox(height: 10),
+                                  ],
+                                  if (showMetricsHint) ...[
+                                    _StageMetricsHint(
+                                      onDismiss: onMetricsHintDismiss,
+                                    ),
+                                    const SizedBox(height: 10),
+                                  ],
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          stage.name,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Semantics(
+                                        label: context.l10n.stage(
+                                          stage.sequence,
+                                        ),
+                                        excludeSemantics: true,
+                                        child: Text(
+                                          '${stage.sequence}',
+                                          key: ValueKey(
+                                            'stage-number-${stage.id}',
+                                          ),
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 0.2,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (activeServices.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Wrap(
+                                      key: ValueKey(
+                                        'stage-card-services-${stage.id}',
+                                      ),
+                                      spacing: 8,
+                                      runSpacing: 6,
+                                      children: [
+                                        for (final service
+                                            in activeServices.take(7))
+                                          Tooltip(
+                                            message: context.l10n.t(
+                                              _serviceLabel(service.key),
+                                            ),
+                                            child: Icon(
+                                              _serviceIcon(service.key),
+                                              size: 16,
+                                              color: _serviceColor(service.key),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                  if (showDistance ||
+                                      stage.altitudeM != null) ...[
+                                    const SizedBox(height: 8),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Row(
                                         key: ValueKey(
-                                          'stage-number-${stage.id}',
+                                          'stage-card-metrics-${stage.id}',
                                         ),
-                                        style: const TextStyle(
-                                          color: Colors.black54,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 0.2,
-                                        ),
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (showDistance)
+                                            Text(
+                                              formatter.distance(distanceKm!),
+                                              key: ValueKey(
+                                                'stage-card-distance-${stage.id}',
+                                              ),
+                                              style: const TextStyle(
+                                                color: _green,
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 10.5,
+                                              ),
+                                            ),
+                                          if (showDistance &&
+                                              stage.altitudeM != null)
+                                            const SizedBox(width: 8),
+                                          if (stage.altitudeM
+                                              case final altitude?)
+                                            _MiniLabel(
+                                              key: ValueKey(
+                                                'stage-card-altitude-${stage.id}',
+                                              ),
+                                              icon: Icons.landscape_outlined,
+                                              label: formatter.altitude(
+                                                altitude,
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ),
                                   ],
-                                ),
-                                if (activeServices.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Wrap(
-                                    key: ValueKey(
-                                      'stage-card-services-${stage.id}',
-                                    ),
-                                    spacing: 8,
-                                    runSpacing: 6,
-                                    children: [
-                                      for (final service in activeServices.take(
-                                        7,
-                                      ))
-                                        Tooltip(
-                                          message: context.l10n.t(
-                                            _serviceLabel(service.key),
-                                          ),
-                                          child: Icon(
-                                            _serviceIcon(service.key),
-                                            size: 16,
-                                            color: _serviceColor(service.key),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
                                 ],
-                                if (showDistance ||
-                                    stage.altitudeM != null) ...[
-                                  const SizedBox(height: 8),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Row(
-                                      key: ValueKey(
-                                        'stage-card-metrics-${stage.id}',
-                                      ),
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (showDistance)
-                                          Text(
-                                            formatter.distance(distanceKm!),
-                                            key: ValueKey(
-                                              'stage-card-distance-${stage.id}',
-                                            ),
-                                            style: const TextStyle(
-                                              color: _green,
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 10.5,
-                                            ),
-                                          ),
-                                        if (showDistance &&
-                                            stage.altitudeM != null)
-                                          const SizedBox(width: 8),
-                                        if (stage.altitudeM
-                                            case final altitude?)
-                                          _MiniLabel(
-                                            key: ValueKey(
-                                              'stage-card-altitude-${stage.id}',
-                                            ),
-                                            icon: Icons.landscape_outlined,
-                                            label: formatter.altitude(altitude),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -1636,6 +1856,104 @@ class _StageTimelineRow extends StatelessWidget {
 }
 
 String _compactMeasurement(String value) => value.replaceAll(' ', '');
+
+String _trimmedDistance(MeasurementFormatter formatter, double distanceKm) {
+  final value = formatter
+      .distanceValue(distanceKm)
+      .toStringAsFixed(2)
+      .replaceFirst(RegExp(r'\.?0+$'), '');
+  return '$value${formatter.distanceUnit}';
+}
+
+class _StageTrailDistanceLabel extends StatelessWidget {
+  const _StageTrailDistanceLabel({
+    required this.stageId,
+    required this.distance,
+  });
+
+  final String stageId;
+  final String distance;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.t('Distance from trail');
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        label: '$label: $distance',
+        child: Row(
+          key: ValueKey('stage-distance-from-trail-$stageId'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.add_rounded,
+              key: ValueKey('stage-distance-from-trail-icon-$stageId'),
+              size: 11,
+              color: Colors.black54,
+            ),
+            const SizedBox(width: 1),
+            Text(
+              distance,
+              style: const TextStyle(
+                color: Colors.black54,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                height: 1.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StageMetricsHint extends StatelessWidget {
+  const _StageMetricsHint({required this.onDismiss});
+
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('stage-metrics-helper'),
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(9, 7, 4, 7),
+      decoration: BoxDecoration(
+        color: _trailPulseBlue.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.arrow_back_rounded, color: _bookingBlue, size: 17),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              context.l10n.t(
+                'The numbers on the left show ascent, descent, stage length, and + distance from the trail.',
+              ),
+              style: const TextStyle(
+                color: _ink,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                height: 1.25,
+              ),
+            ),
+          ),
+          IconButton(
+            key: const ValueKey('dismiss-stage-metrics-hint'),
+            tooltip: context.l10n.t('Close'),
+            onPressed: onDismiss,
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+            padding: EdgeInsets.zero,
+            icon: const Icon(Icons.close_rounded, size: 17),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _StageSideMetric extends StatelessWidget {
   const _StageSideMetric({
@@ -2163,7 +2481,9 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
                           ? _DetailMetric(
                               key: const Key('stage-detail-endpoint-distance'),
                               icon: hasEndpointDistance
-                                  ? Icons.route_rounded
+                                  ? index == 0
+                                        ? Icons.hiking_rounded
+                                        : Icons.route_rounded
                                   : Icons.landscape_outlined,
                               value: hasEndpointDistance
                                   ? formatter.distance(endpointDistanceKm)
@@ -2343,21 +2663,21 @@ class _StageDetailBottomNavigationBar extends StatelessWidget {
     final l10n = context.l10n;
     return Material(
       key: const ValueKey('stage-detail-bottom-navigation'),
-      color: _sand,
+      color: _ink,
       child: SafeArea(
         top: false,
         child: Container(
           key: const ValueKey('stage-detail-bottom-navigation-size'),
           height: 48,
           decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: Colors.black12)),
+            border: Border(top: BorderSide(color: Colors.white12)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _StageBottomAction(
                 key: const Key('stage-detail-stages-shortcut'),
-                icon: Icons.route_rounded,
+                icon: Icons.hiking_rounded,
                 label: l10n.t('Back to stages'),
                 onTap: onStages,
               ),
@@ -2428,7 +2748,7 @@ class _DetailMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -2436,14 +2756,14 @@ class _DetailMetric extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          iconWidget ?? Icon(icon, color: iconColor, size: 28),
-          const SizedBox(height: 9),
+          iconWidget ?? Icon(icon, color: iconColor, size: 26),
+          const SizedBox(height: 7),
           Text(
             value,
             style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           if (showFootnoteMarker)
             Text.rich(
               TextSpan(
@@ -2563,7 +2883,7 @@ class _StageLengthRouteIcon extends StatelessWidget {
       image: true,
       child: const SizedBox(
         key: ValueKey('stage-length-route-icon'),
-        width: 40,
+        width: 64,
         height: 24,
         child: Stack(
           children: [
@@ -2572,7 +2892,7 @@ class _StageLengthRouteIcon extends StatelessWidget {
             ),
             Positioned(
               left: 0,
-              bottom: 0,
+              top: 5.5,
               child: Icon(
                 Icons.flag_rounded,
                 key: ValueKey('stage-length-start-flag'),
@@ -2582,7 +2902,7 @@ class _StageLengthRouteIcon extends StatelessWidget {
             ),
             Positioned(
               right: 0,
-              top: 0,
+              top: 5.5,
               child: Icon(
                 Icons.flag_rounded,
                 key: ValueKey('stage-length-finish-flag'),
@@ -2603,31 +2923,8 @@ class _DashedStageRoutePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final route = Path()
-      ..moveTo(15, size.height - 4)
-      ..cubicTo(
-        size.width * 0.62,
-        size.height - 4,
-        size.width - 6,
-        size.height * 0.78,
-        size.width - 6,
-        size.height * 0.65,
-      )
-      ..cubicTo(
-        size.width - 7,
-        size.height * 0.46,
-        7,
-        size.height * 0.55,
-        9,
-        size.height * 0.37,
-      )
-      ..cubicTo(
-        11,
-        size.height * 0.22,
-        size.width * 0.45,
-        size.height * 0.22,
-        size.width - 15,
-        5,
-      );
+      ..moveTo(10, size.height / 2)
+      ..lineTo(size.width - 10, size.height / 2);
     final paint = Paint()
       ..color = _green
       ..style = PaintingStyle.stroke
@@ -2635,13 +2932,15 @@ class _DashedStageRoutePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     for (final metric in route.computeMetrics()) {
-      var offset = 0.0;
-      while (offset < metric.length) {
+      const endpointClearance = 6.0;
+      var offset = endpointClearance;
+      final paintedEnd = metric.length - endpointClearance;
+      while (offset < paintedEnd) {
         final dashEnd = offset + 2.4;
         canvas.drawPath(
           metric.extractPath(
             offset,
-            dashEnd > metric.length ? metric.length : dashEnd,
+            dashEnd > paintedEnd ? paintedEnd : dashEnd,
           ),
           paint,
         );
@@ -2724,7 +3023,7 @@ class _StageMapPreview extends StatelessWidget {
       onTap: onTap,
       child: Container(
         key: const Key('stage-map-preview'),
-        height: 250,
+        height: 220,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: _mint,
@@ -2887,18 +3186,18 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
     _initialViewport = viewportCoordinates.length == 1
         ? CameraViewportState(
             center: Point(coordinates: Position(center.lng, center.lat)),
-            zoom: 12.5,
+            zoom: 13.5,
             bearing: 0,
             pitch: 0,
           )
         : OverviewViewportState(
             geometry: LineString(coordinates: viewportCoordinates),
             geometryPadding: stageDistanceKm > 6
-                ? const EdgeInsets.fromLTRB(82, 68, 74, 92)
-                : const EdgeInsets.fromLTRB(72, 58, 64, 80),
+                ? const EdgeInsets.fromLTRB(60, 50, 54, 64)
+                : const EdgeInsets.fromLTRB(54, 44, 48, 54),
             bearing: 0,
             pitch: 0,
-            maxZoom: 15,
+            maxZoom: 16,
             animationDuration: Duration.zero,
           );
   }
@@ -3267,7 +3566,7 @@ class _ServiceFilterSheetState extends State<_ServiceFilterSheet> {
             ],
             const Divider(height: 28),
             Text(
-              l10n.t('Trail points'),
+              l10n.t('Points of Interest'),
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 10),
@@ -3302,6 +3601,91 @@ class _ServiceFilterSheetState extends State<_ServiceFilterSheet> {
                       selected.add(_finishPointFilterKey);
                     } else {
                       selected.remove(_finishPointFilterKey);
+                    }
+                  }),
+                ),
+                FilterChip(
+                  key: const ValueKey('stage-filter-beach'),
+                  selected: selected.contains(_beachPointFilterKey),
+                  avatar: const Icon(
+                    Icons.beach_access_rounded,
+                    size: 18,
+                    color: _bookingBlue,
+                  ),
+                  label: Text(l10n.t('Beach')),
+                  onSelected: (isSelected) => setState(() {
+                    if (isSelected) {
+                      selected.add(_beachPointFilterKey);
+                    } else {
+                      selected.remove(_beachPointFilterKey);
+                    }
+                  }),
+                ),
+                FilterChip(
+                  key: const ValueKey('stage-filter-viewpoint'),
+                  selected: selected.contains(_viewpointPointFilterKey),
+                  avatar: const Icon(
+                    Icons.visibility_rounded,
+                    size: 18,
+                    color: _filterBlueTeal,
+                  ),
+                  label: Text(l10n.t('Viewpoint')),
+                  onSelected: (isSelected) => setState(() {
+                    if (isSelected) {
+                      selected.add(_viewpointPointFilterKey);
+                    } else {
+                      selected.remove(_viewpointPointFilterKey);
+                    }
+                  }),
+                ),
+                FilterChip(
+                  key: const ValueKey('stage-filter-religious-site'),
+                  selected: selected.contains(_religiousSitePointFilterKey),
+                  avatar: const Icon(
+                    Icons.account_balance_rounded,
+                    size: 18,
+                    color: _filterBlueTeal,
+                  ),
+                  label: Text(l10n.t('Religious Sites')),
+                  onSelected: (isSelected) => setState(() {
+                    if (isSelected) {
+                      selected.add(_religiousSitePointFilterKey);
+                    } else {
+                      selected.remove(_religiousSitePointFilterKey);
+                    }
+                  }),
+                ),
+                FilterChip(
+                  key: const ValueKey('stage-filter-natural-landmark'),
+                  selected: selected.contains(_naturalLandmarkPointFilterKey),
+                  avatar: const Icon(
+                    Icons.landscape_outlined,
+                    size: 18,
+                    color: _accommodationBlue,
+                  ),
+                  label: Text(l10n.t('Natural Landmarks')),
+                  onSelected: (isSelected) => setState(() {
+                    if (isSelected) {
+                      selected.add(_naturalLandmarkPointFilterKey);
+                    } else {
+                      selected.remove(_naturalLandmarkPointFilterKey);
+                    }
+                  }),
+                ),
+                FilterChip(
+                  key: const ValueKey('stage-filter-forest-park'),
+                  selected: selected.contains(_forestParkPointFilterKey),
+                  avatar: const Icon(
+                    Icons.park_outlined,
+                    size: 18,
+                    color: _green,
+                  ),
+                  label: Text(l10n.t('Forests/Parks')),
+                  onSelected: (isSelected) => setState(() {
+                    if (isSelected) {
+                      selected.add(_forestParkPointFilterKey);
+                    } else {
+                      selected.remove(_forestParkPointFilterKey);
                     }
                   }),
                 ),

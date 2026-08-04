@@ -4,6 +4,7 @@ class TrailStage {
     required this.sequence,
     required this.name,
     required this.services,
+    this.distanceFromPathKm,
     this.accumulatedDistanceKm,
     this.segmentLengthKm,
     this.elevationUpM,
@@ -14,6 +15,7 @@ class TrailStage {
   final String id;
   final int sequence;
   final String name;
+  final double? distanceFromPathKm;
   final double? accumulatedDistanceKm;
   final double? segmentLengthKm;
   final double? elevationUpM;
@@ -27,6 +29,7 @@ class TrailStage {
       id: id,
       sequence: (json['sequence'] as num?)?.toInt() ?? 0,
       name: json['name'] as String? ?? 'Unnamed stage',
+      distanceFromPathKm: (json['distanceFromPathKm'] as num?)?.toDouble(),
       accumulatedDistanceKm: (json['accumulatedDistanceKm'] as num?)
           ?.toDouble(),
       segmentLengthKm: (json['segmentLengthKm'] as num?)?.toDouble(),

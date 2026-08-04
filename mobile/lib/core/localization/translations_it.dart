@@ -29,10 +29,15 @@ const italianTranslations = <String, String>{
   'Developer tools': 'Strumenti di sviluppo',
   'Reset E4 hint': 'Reimposta suggerimento E4',
   'Reset stage hint': 'Reimposta suggerimento tappa',
+  'Reset metrics hint': 'Reimposta suggerimento dati',
   'Show the pulsing E4 trail information hint again.':
       'Mostra di nuovo il suggerimento pulsante con le informazioni sul sentiero E4.',
   'Show the stage details helper again.':
       'Mostra di nuovo il suggerimento sui dettagli della tappa.',
+  'Show the left-side stage metrics helper again.':
+      'Mostra di nuovo il suggerimento sui dati della tappa a sinistra.',
+  'Tap the E4 sign to open trail information.':
+      'Tocca il segnale E4 per aprire le informazioni sul sentiero.',
   'TRAIL LIBRARY': 'RACCOLTA SENTIERI',
   'Explore trails': 'Esplora i sentieri',
   'Trails': 'Sentieri',
@@ -84,6 +89,12 @@ const italianTranslations = <String, String>{
   'Search by stage name or number': 'Cerca per nome o numero della tappa',
   'No stages found.': 'Nessuna tappa trovata.',
   'Trail points': 'Punti del sentiero',
+  'Points of Interest': 'Punti di interesse',
+  'Beach': 'Spiaggia',
+  'Viewpoint': 'Punto panoramico',
+  'Religious Sites': 'Luoghi religiosi',
+  'Natural Landmarks': 'Luoghi naturali',
+  'Forests/Parks': 'Boschi/parchi',
   'Filter by services': 'Filtra per servizi',
   'Stages must offer every selected service.':
       'Le tappe devono offrire tutti i servizi selezionati.',
@@ -134,6 +145,8 @@ const italianTranslations = <String, String>{
   'Stage': 'Tappa',
   'Tap a stage to see its details.':
       'Tocca una tappa per visualizzarne i dettagli.',
+  'The numbers on the left show ascent, descent, stage length, and + distance from the trail.':
+      'I numeri a sinistra mostrano salita, discesa, lunghezza della tappa e, con +, la distanza dal sentiero.',
   'Start point': 'Punto di partenza',
   'Finish point': 'Punto di arrivo',
   'From': 'Da',

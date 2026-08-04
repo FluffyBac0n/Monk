@@ -6,7 +6,7 @@ import '../../features/stages/domain/stage.dart';
 import 'stage_database_codec.dart';
 
 class AppDatabase {
-  static const schemaVersion = 4;
+  static const schemaVersion = 5;
 
   Database? _database;
 
@@ -21,6 +21,7 @@ class AppDatabase {
             trail_id TEXT NOT NULL,
             sequence INTEGER NOT NULL,
             name TEXT NOT NULL,
+            distance_from_path_km REAL,
             accumulated_distance_km REAL,
             segment_length_km REAL,
             elevation_up_m REAL,
@@ -40,6 +41,7 @@ class AppDatabase {
         if (oldVersion < 2) await _createRoutePointsTable(db);
         if (oldVersion < 3) await _createSettingsTable(db);
         if (oldVersion < 4) await _addStageElevationColumns(db);
+        if (oldVersion < 5) await _addStageDistanceFromPathColumn(db);
       },
     );
   }
@@ -128,6 +130,12 @@ class AppDatabase {
   static Future<void> _addStageElevationColumns(Database db) async {
     await db.execute('ALTER TABLE stages ADD COLUMN elevation_up_m REAL');
     await db.execute('ALTER TABLE stages ADD COLUMN elevation_down_m REAL');
+  }
+
+  static Future<void> _addStageDistanceFromPathColumn(Database db) async {
+    await db.execute(
+      'ALTER TABLE stages ADD COLUMN distance_from_path_km REAL',
+    );
   }
 
   Future<Map<String, String>> readSettings() async {
