@@ -214,6 +214,7 @@ const _translations = <String, Map<String, String>>{
         'Offline-Höhenprofil wird vorbereitet…',
     'Download profile': 'Profil herunterladen',
     'Close stage summary': 'Etappenübersicht schließen',
+    'Open Stage Info': 'Etappeninfo öffnen',
     'Stage': 'Etappe',
     'Tap a stage to see its details.':
         'Tippe auf eine Etappe, um ihre Details anzusehen.',
@@ -248,6 +249,32 @@ const _translations = <String, Map<String, String>>{
     'Accommodation': 'Unterkunft',
     'Show accommodation': 'Unterkünfte anzeigen',
     'Hide accommodation': 'Unterkünfte ausblenden',
+    'Excursion': 'Abstecher',
+    'Excursions': 'Abstecher',
+    'Detour': 'Umleitung',
+    'Detours': 'Umleitungen',
+    'Alternative route': 'Alternativroute',
+    'Leaves and rejoins the E4.':
+        'Verlässt den E4 und führt später wieder darauf zurück.',
+    'Detour route': 'Umleitungsroute',
+    'E4 section': 'E4-Abschnitt',
+    'Distance difference': 'Distanzunterschied',
+    'Time difference': 'Zeitunterschied',
+    'Show detours': 'Umleitungen anzeigen',
+    'Hide detours': 'Umleitungen ausblenden',
+    'No detour routes are available on the map.':
+        'Auf der Karte sind keine Umleitungsrouten verfügbar.',
+    'Detour routes are currently unavailable.':
+        'Umleitungsrouten sind derzeit nicht verfügbar.',
+    'One way': 'Einfach',
+    'Out and back': 'Hin und zurück',
+    'Loop': 'Rundweg',
+    'Show excursions': 'Abstecher anzeigen',
+    'Hide excursions': 'Abstecher ausblenden',
+    'No excursion routes are available on the map.':
+        'Auf der Karte sind keine Abstecher verfügbar.',
+    'Excursion routes are currently unavailable.':
+        'Abstecher sind derzeit nicht verfügbar.',
     'Close accommodation summary': 'Unterkunftsübersicht schließen',
     'Accommodation locations are currently unavailable.':
         'Unterkunftsstandorte sind derzeit nicht verfügbar.',
@@ -564,6 +591,7 @@ const _translations = <String, Map<String, String>>{
         'Preparando el perfil sin conexión…',
     'Download profile': 'Descargar perfil',
     'Close stage summary': 'Cerrar resumen de etapa',
+    'Open Stage Info': 'Abrir información de la etapa',
     'Stage': 'Etapa',
     'Tap a stage to see its details.': 'Toca una etapa para ver sus detalles.',
     'The numbers on the left show ascent, descent, stage length, and + distance from the trail.':
@@ -597,6 +625,31 @@ const _translations = <String, Map<String, String>>{
     'Accommodation': 'Alojamiento',
     'Show accommodation': 'Mostrar alojamientos',
     'Hide accommodation': 'Ocultar alojamientos',
+    'Excursion': 'Excursión',
+    'Excursions': 'Excursiones',
+    'Detour': 'Desvío',
+    'Detours': 'Desvíos',
+    'Alternative route': 'Ruta alternativa',
+    'Leaves and rejoins the E4.': 'Se desvía de la E4 y vuelve a conectarse.',
+    'Detour route': 'Ruta del desvío',
+    'E4 section': 'Tramo de la E4',
+    'Distance difference': 'Diferencia de distancia',
+    'Time difference': 'Diferencia de tiempo',
+    'Show detours': 'Mostrar desvíos',
+    'Hide detours': 'Ocultar desvíos',
+    'No detour routes are available on the map.':
+        'No hay rutas de desvío disponibles en el mapa.',
+    'Detour routes are currently unavailable.':
+        'Las rutas de desvío no están disponibles en este momento.',
+    'One way': 'Solo ida',
+    'Out and back': 'Ida y vuelta',
+    'Loop': 'Circular',
+    'Show excursions': 'Mostrar excursiones',
+    'Hide excursions': 'Ocultar excursiones',
+    'No excursion routes are available on the map.':
+        'No hay rutas de excursión disponibles en el mapa.',
+    'Excursion routes are currently unavailable.':
+        'Las rutas de excursión no están disponibles en este momento.',
     'Close accommodation summary': 'Cerrar resumen del alojamiento',
     'Accommodation locations are currently unavailable.':
         'Las ubicaciones de alojamientos no están disponibles en este momento.',

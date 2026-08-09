@@ -13,10 +13,24 @@ trails/cyprus-e4/lodgings/{lodgingId}
 trails/cyprus-e4/routeMetadata/main
 trails/cyprus-e4/routeChunks/{chunkId}
 trails/cyprus-e4/routeMarkers/{stageId}
+trails/cyprus-e4/excursions/{excursionId}
+trails/cyprus-e4/excursions/{excursionId}/routeChunks/{chunkId}
+trails/cyprus-e4/detours/{detourId}
+trails/cyprus-e4/detours/{detourId}/routeChunks/{chunkId}
 trails/cyprus-e4/imports/{importId}
 ```
 
 Route chunks are only a transport/storage format. The mobile app can fetch all chunks ordered by `chunkIndex`, expand each chunk's flat `points` array using `pointStride`, and cache the full route locally for offline map and elevation rendering.
+
+In the workbook's `Excursions` sheet, each route begins on a row containing its
+`Excursion ID`, `Route Type`, and `Anchor Type`. Its following GPS rows leave
+those metadata cells empty until the next excursion begins. `Anchor Stage` is
+required only for a `stage` anchor.
+
+In the `Detours` sheet, each one-way alternative begins with `Detour ID` and
+`Detour Name`; following GPS rows leave both fields empty. The importer projects
+the first and last GPS points onto the E4, derives the replaced trail section,
+compares distance/elevation/walking time, and identifies the affected stages.
 
 ## Setup
 
@@ -72,8 +86,9 @@ monk-import --workbook /absolute/path/new-workbook.xlsx --commit --prune
 ```
 
 Pruning automatically validates the workbook and refuses to run when validation
-fails. It applies to `stages`, `lodgings`, `routeChunks`, `routeMarkers`, and
-`routeMetadata`. Import audit history under `imports` is always preserved. Run a
+fails. It applies to `stages`, `lodgings`, `routeChunks`, `routeMarkers`,
+`routeMetadata`, `excursions`, `detours`, and their nested `routeChunks`. Import
+audit history under `imports` is always preserved. Run a
 separate `--validate` dry run and review the reports before using `--commit --prune`
 against production.
 
@@ -93,7 +108,10 @@ outputs/validation-report.json
 outputs/import-preview.json
 ```
 
-The report checks counts, duplicate IDs, lodging-to-stage links, route chunk continuity, route distance ordering, route marker links, and coverage metrics such as how many lodgings have GPS coordinates.
+The report checks counts, duplicate IDs, lodging-to-stage links, route chunk
+continuity, route distance ordering, route marker links, excursion anchors,
+detour endpoint connections, and coverage metrics such as how many lodgings have
+GPS coordinates.
 
 ## Firestore Emulator Test
 

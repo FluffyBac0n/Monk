@@ -112,6 +112,30 @@ void main() {
     );
   });
 
+  test('map stage points use the shared trail-distance colours', () {
+    const onTrail = TrailStage(
+      id: 'on-trail',
+      sequence: 2,
+      name: 'On trail',
+      distanceFromPathKm: 0.49,
+      services: {},
+    );
+    const offTrail = TrailStage(
+      id: 'off-trail',
+      sequence: 1,
+      name: 'Off trail',
+      distanceFromPathKm: 0.5,
+      services: {},
+    );
+
+    expect(mapStagePointColor(onTrail), const Color(0xFF277653));
+    expect(mapStagePointColor(offTrail), const Color(0xFFF2C94C));
+    expect(
+      mapStagePointColor(offTrail, isSelected: true),
+      const Color(0xFF1565C0),
+    );
+  });
+
   test('stage snapshot keeps start and finish ordered in reverse', () {
     expect(
       stageMapEndpointIndexes(
@@ -204,6 +228,91 @@ void main() {
     expect(subtitle.softWrap, isTrue);
     expect(subtitle.overflow, TextOverflow.visible);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('selected stage opens as a full-width draggable info sheet', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    var openCount = 0;
+    var closeCount = 0;
+    const stages = [
+      TrailStage(
+        id: 'start',
+        sequence: 2,
+        name: 'Start',
+        accumulatedDistanceKm: 0,
+        services: {},
+      ),
+      TrailStage(
+        id: 'forest-stage',
+        sequence: 1,
+        name: 'Forest stage',
+        accumulatedDistanceKm: 8.4,
+        segmentLengthKm: 8.4,
+        elevationUpM: 180,
+        elevationDownM: 45,
+        altitudeM: 320,
+        services: {'drinkableWater': true},
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              const ColoredBox(color: Colors.green),
+              MapStageInfoSheet(
+                stage: stages[1],
+                stageIndex: 1,
+                stages: stages,
+                direction: TrailDirection.pafosToLarnaka,
+                formatter: const MeasurementFormatter(MeasurementSystem.metric),
+                onOpenDetails: () => openCount++,
+                onClose: () => closeCount++,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final sheet = find.byKey(const ValueKey('map-stage-info-sheet'));
+    final header = find.byKey(const ValueKey('map-stage-info-sheet-header'));
+    expect(sheet, findsOneWidget);
+    expect(find.text('Forest stage'), findsOneWidget);
+    expect(tester.getSize(sheet).width, 400);
+    expect(tester.getBottomLeft(sheet).dy, closeTo(800, 0.1));
+    final compactHeight = tester.getSize(sheet).height;
+    expect(compactHeight, lessThan(150));
+
+    await tester.drag(header, const Offset(0, -520));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(sheet).height, greaterThan(compactHeight + 300));
+    expect(tester.getBottomLeft(sheet).dy, closeTo(800, 0.1));
+    expect(find.byKey(const ValueKey('stage-info-cards')), findsOneWidget);
+    expect(find.text('Trail position'), findsOneWidget);
+    expect(find.text('Drinking water'), findsOneWidget);
+    expect(find.byKey(const Key('stage-map-preview')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('stage-detail-bottom-navigation')),
+      findsNothing,
+    );
+
+    final openAction = find.byKey(const ValueKey('map-open-stage-info'));
+    await tester.scrollUntilVisible(
+      openAction,
+      180,
+      scrollable: find.descendant(of: sheet, matching: find.byType(Scrollable)),
+    );
+    await tester.tap(openAction);
+    expect(openCount, 1);
+
+    await tester.tap(find.byTooltip('Close stage summary'));
+    expect(closeCount, 1);
   });
 
   testWidgets('lodging map summary localizes details and handles card tap', (

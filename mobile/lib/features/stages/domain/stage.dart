@@ -40,3 +40,13 @@ class TrailStage {
     );
   }
 }
+
+const stageOnTrailThresholdKm = 0.5;
+
+bool? stageIsOnTrail(TrailStage stage) {
+  final distanceKm = stage.distanceFromPathKm;
+  if (distanceKm == null || !distanceKm.isFinite || distanceKm < 0) {
+    return null;
+  }
+  return distanceKm < stageOnTrailThresholdKm;
+}

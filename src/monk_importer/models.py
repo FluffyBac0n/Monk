@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -106,6 +106,89 @@ class RouteMarker(BaseModel):
     altitudeM: float
 
 
+class Excursion(BaseModel):
+    id: str
+    routeType: Literal["oneWay", "outAndBack", "loop"]
+    anchorType: Literal["stage", "trail", "standalone"]
+    anchorStageId: str | None = None
+    anchorStageSequence: int | None = None
+    anchorStageName: str | None = None
+    routeVersion: int
+    pointCount: int
+    chunkCount: int
+    chunkSize: int
+    routeDistanceKm: float
+    totalDistanceKm: float
+    routeElevationUpM: float
+    routeElevationDownM: float
+    elevationUpM: float
+    elevationDownM: float
+    estimatedWalkingTimeMinutes: int
+    minAltitudeM: float
+    maxAltitudeM: float
+    bounds: dict[str, float]
+    startLocation: GeoPointValue
+    endLocation: GeoPointValue
+    distanceFromTrailKm: float
+    mainTrailDistanceKm: float
+    excursionConnectionDistanceKm: float
+    excursionConnectionSegmentIndex: int
+    mainTrailConnectionSegmentIndex: int
+    connectionLocation: GeoPointValue
+    trailConnectionLocation: GeoPointValue
+    pointFormat: list[str] = Field(
+        default_factory=lambda: ["lat", "lng", "altitudeM", "distanceKm", "reverseDistanceKm"]
+    )
+    pointStride: int = 5
+    reverseDistanceAvailable: bool = True
+
+
+class DetourConnection(BaseModel):
+    distanceFromTrailKm: float
+    mainTrailDistanceKm: float
+    mainTrailSegmentIndex: int
+    routeLocation: GeoPointValue
+    trailLocation: GeoPointValue
+
+
+class Detour(BaseModel):
+    id: str
+    name: str
+    routeType: Literal["oneWay"] = "oneWay"
+    anchorType: Literal["trailSegment"] = "trailSegment"
+    routeVersion: int
+    pointCount: int
+    chunkCount: int
+    chunkSize: int
+    routeDistanceKm: float
+    elevationUpM: float
+    elevationDownM: float
+    estimatedWalkingTimeMinutes: int
+    replacedMainTrailDistanceKm: float
+    replacedElevationUpM: float
+    replacedElevationDownM: float
+    replacedEstimatedWalkingTimeMinutes: int
+    distanceDifferenceKm: float
+    elevationUpDifferenceM: float
+    elevationDownDifferenceM: float
+    estimatedWalkingTimeDifferenceMinutes: int
+    averageDistanceFromTrailKm: float
+    maximumDistanceFromTrailKm: float
+    minAltitudeM: float
+    maxAltitudeM: float
+    bounds: dict[str, float]
+    startConnection: DetourConnection
+    endConnection: DetourConnection
+    affectedStageIds: list[str] = Field(default_factory=list)
+    affectedStageSequences: list[int] = Field(default_factory=list)
+    affectedStageNames: list[str] = Field(default_factory=list)
+    pointFormat: list[str] = Field(
+        default_factory=lambda: ["lat", "lng", "altitudeM", "distanceKm", "reverseDistanceKm"]
+    )
+    pointStride: int = 5
+    reverseDistanceAvailable: bool = True
+
+
 class ImportPayload(BaseModel):
     trailId: str
     trail: dict[str, Any]
@@ -114,4 +197,8 @@ class ImportPayload(BaseModel):
     routeMetadata: RouteMetadata
     routeChunks: list[RouteChunk]
     routeMarkers: list[RouteMarker]
+    excursions: list[Excursion] = Field(default_factory=list)
+    excursionRouteChunks: dict[str, list[RouteChunk]] = Field(default_factory=dict)
+    detours: list[Detour] = Field(default_factory=list)
+    detourRouteChunks: dict[str, list[RouteChunk]] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)

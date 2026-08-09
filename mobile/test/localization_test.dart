@@ -118,6 +118,12 @@ void main() {
     expect(german.t('Accommodation'), 'Unterkunft');
     expect(german.t('Show accommodation'), 'Unterkünfte anzeigen');
     expect(german.t('Hide accommodation'), 'Unterkünfte ausblenden');
+    expect(german.t('Excursions'), 'Abstecher');
+    expect(german.t('Detours'), 'Umleitungen');
+    expect(german.t('Alternative route'), 'Alternativroute');
+    expect(german.t('Show detours'), 'Umleitungen anzeigen');
+    expect(german.t('Show excursions'), 'Abstecher anzeigen');
+    expect(german.t('Hide excursions'), 'Abstecher ausblenden');
     expect(
       german.t('Close accommodation summary'),
       'Unterkunftsübersicht schließen',
@@ -260,6 +266,12 @@ void main() {
     );
     expect(spanish.t('Show accommodation'), 'Mostrar alojamientos');
     expect(spanish.t('Hide accommodation'), 'Ocultar alojamientos');
+    expect(spanish.t('Excursions'), 'Excursiones');
+    expect(spanish.t('Detours'), 'Desvíos');
+    expect(spanish.t('Alternative route'), 'Ruta alternativa');
+    expect(spanish.t('Show detours'), 'Mostrar desvíos');
+    expect(spanish.t('Show excursions'), 'Mostrar excursiones');
+    expect(spanish.t('Hide excursions'), 'Ocultar excursiones');
     expect(
       spanish.t('Close accommodation summary'),
       'Cerrar resumen del alojamiento',

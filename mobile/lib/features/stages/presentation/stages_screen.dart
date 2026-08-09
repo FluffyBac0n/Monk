@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,10 @@ import '../../accommodation/presentation/lodging_type_icon.dart';
 import '../../elevation/domain/route_point.dart';
 import '../../elevation/presentation/elevation_controller.dart';
 import '../../elevation/presentation/elevation_screen.dart';
+import '../../detours/domain/trail_detour.dart';
+import '../../detours/presentation/detour_controller.dart';
+import '../../excursions/domain/trail_excursion.dart';
+import '../../excursions/presentation/excursion_controller.dart';
 import '../../map/presentation/map_flag_marker.dart';
 import '../../map/presentation/map_screen.dart';
 import '../../map/presentation/offline_map_controller.dart';
@@ -40,13 +45,16 @@ const _yellow = Color(0xFFF2C94C);
 const _trailPulseBlue = Color(0xFF73BCE8);
 const _bookingBlue = Color(0xFF1565C0);
 const _accommodationBlue = Color(0xFF0288D1);
+const _excursionCardBackground = Color(0xFFE9F5FB);
+const _excursionMapLightBlue = Color(0xFF76C7E5);
+const _detourPurple = Color(0xFF75588A);
 const _filterBlueTeal = Color(0xFF356F7A);
 const _timelineLineColor = Color(0xFFB9BDB8);
 const _timelineLeftInset = 12.0;
 const _timelineGutterWidth = 108.0;
-const _timelineLineColumnWidth = 20.0;
-const _startPointFilterKey = 'trailStart';
-const _finishPointFilterKey = 'trailFinish';
+const _timelineLineColumnWidth = 28.0;
+const _excursionPointFilterKey = 'trailExcursion';
+const _detourPointFilterKey = 'trailDetour';
 const _beachPointFilterKey = 'trailBeach';
 const _viewpointPointFilterKey = 'trailViewpoint';
 const _religiousSitePointFilterKey = 'trailReligiousSite';
@@ -92,12 +100,12 @@ bool _stageNameHasForestOrPark(String stageName) => RegExp(
 
 bool _stageMatchesFilters({
   required TrailStage stage,
-  required int stageIndex,
-  required int stageCount,
   required Set<String> filters,
+  required bool hasExcursions,
+  required bool hasDetours,
 }) {
-  final filtersStart = filters.contains(_startPointFilterKey);
-  final filtersFinish = filters.contains(_finishPointFilterKey);
+  final filtersExcursions = filters.contains(_excursionPointFilterKey);
+  final filtersDetours = filters.contains(_detourPointFilterKey);
   final filtersBeach = filters.contains(_beachPointFilterKey);
   final filtersViewpoint = filters.contains(_viewpointPointFilterKey);
   final filtersReligiousSite = filters.contains(_religiousSitePointFilterKey);
@@ -113,8 +121,8 @@ bool _stageMatchesFilters({
     return false;
   }
   final hasPointFilter =
-      filtersStart ||
-      filtersFinish ||
+      filtersExcursions ||
+      filtersDetours ||
       filtersBeach ||
       filtersViewpoint ||
       filtersReligiousSite ||
@@ -122,8 +130,8 @@ bool _stageMatchesFilters({
       filtersForestPark;
   final matchesPoint =
       !hasPointFilter ||
-      (filtersStart && stageIndex == 0) ||
-      (filtersFinish && stageIndex == stageCount - 1) ||
+      (filtersExcursions && hasExcursions) ||
+      (filtersDetours && hasDetours) ||
       (filtersBeach && _stageNameHasBeach(stage.name)) ||
       (filtersViewpoint && _stageNameHasViewpoint(stage.name)) ||
       (filtersReligiousSite && _stageNameHasReligiousSite(stage.name)) ||
@@ -149,6 +157,126 @@ typedef _StageLegMetrics = ({
   double? descentM,
   double? lengthKm,
 });
+
+class _DetourTimelineBranch {
+  const _DetourTimelineBranch({
+    required this.entersFromTop,
+    required this.exitsToBottom,
+    this.splitY,
+    this.rejoinY,
+  });
+
+  final bool entersFromTop;
+  final bool exitsToBottom;
+  final double? splitY;
+  final double? rejoinY;
+}
+
+typedef _DetourTimelineConnection = ({int rowIndex, double y});
+
+class _DetourTimelineSpan {
+  const _DetourTimelineSpan({
+    required this.detour,
+    required this.entry,
+    required this.exit,
+  });
+
+  final TrailDetour detour;
+  final _DetourTimelineConnection entry;
+  final _DetourTimelineConnection exit;
+}
+
+_DetourTimelineSpan? _detourTimelineSpan({
+  required TrailDetour detour,
+  required List<TrailStage> orderedStages,
+  required TrailDirection direction,
+}) {
+  final startDistance = detour.startMainTrailDistanceKm;
+  final endDistance = detour.endMainTrailDistanceKm;
+  if (startDistance == null || endDistance == null) return null;
+  final entry = _detourTimelineConnection(
+    orderedStages,
+    direction.isReversed ? endDistance : startDistance,
+  );
+  final exit = _detourTimelineConnection(
+    orderedStages,
+    direction.isReversed ? startDistance : endDistance,
+  );
+  if (entry == null || exit == null || entry.rowIndex > exit.rowIndex) {
+    return null;
+  }
+  return _DetourTimelineSpan(detour: detour, entry: entry, exit: exit);
+}
+
+_DetourTimelineBranch? _detourTimelineBranchForStage({
+  required TrailStage stage,
+  required List<TrailStage> orderedStages,
+  required List<TrailStage> filteredStages,
+  required List<TrailDetour> detours,
+  required TrailDirection direction,
+}) {
+  final rowIndex = orderedStages.indexWhere(
+    (candidate) => candidate.id == stage.id,
+  );
+  if (rowIndex < 0) return null;
+
+  for (final detour in detours) {
+    final span = _detourTimelineSpan(
+      detour: detour,
+      orderedStages: orderedStages,
+      direction: direction,
+    );
+    if (span == null) continue;
+    final entry = span.entry;
+    final exit = span.exit;
+    if (rowIndex < entry.rowIndex || rowIndex > exit.rowIndex) continue;
+
+    final visibleIds = filteredStages.map((item) => item.id).toSet();
+    final completeBranchIsVisible = [
+      for (var index = entry.rowIndex; index <= exit.rowIndex; index++)
+        orderedStages[index].id,
+    ].every(visibleIds.contains);
+    if (!completeBranchIsVisible) continue;
+
+    return _DetourTimelineBranch(
+      entersFromTop: rowIndex > entry.rowIndex,
+      exitsToBottom: rowIndex < exit.rowIndex,
+      splitY: rowIndex == entry.rowIndex ? entry.y : null,
+      rejoinY: rowIndex == exit.rowIndex ? exit.y : null,
+    );
+  }
+  return null;
+}
+
+_DetourTimelineConnection? _detourTimelineConnection(
+  List<TrailStage> orderedStages,
+  double distanceKm,
+) {
+  for (
+    var destinationIndex = 1;
+    destinationIndex < orderedStages.length;
+    destinationIndex++
+  ) {
+    final sourceDistance =
+        orderedStages[destinationIndex - 1].accumulatedDistanceKm;
+    final destinationDistance =
+        orderedStages[destinationIndex].accumulatedDistanceKm;
+    if (sourceDistance == null || destinationDistance == null) continue;
+    final minimum = math.min(sourceDistance, destinationDistance);
+    final maximum = math.max(sourceDistance, destinationDistance);
+    if (distanceKm < minimum || distanceKm > maximum) continue;
+    final legDistance = destinationDistance - sourceDistance;
+    if (legDistance.abs() < 0.000001) continue;
+    final progress = ((distanceKm - sourceDistance) / legDistance)
+        .clamp(0.0, 1.0)
+        .toDouble();
+    if (progress <= 0.5) {
+      return (rowIndex: destinationIndex - 1, y: 0.5 + progress);
+    }
+    return (rowIndex: destinationIndex, y: progress - 0.5);
+  }
+  return null;
+}
 
 _StageLegMetrics _stageLegMetrics({
   required List<TrailStage> orderedStages,
@@ -477,6 +605,53 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
         bottom <= screenHeight - 24;
   }
 
+  void _openStageDetails({
+    required BuildContext context,
+    required TrailStage stage,
+    required List<TrailStage> orderedStages,
+    required TrailDirection direction,
+    bool dismissMetricsHint = false,
+  }) {
+    final orderedIndex = orderedStages.indexWhere(
+      (candidate) => candidate.id == stage.id,
+    );
+    if (orderedIndex < 0) return;
+    _markStageDetailsHintSeen();
+    if (dismissMetricsHint) _markStageMetricsHintSeen();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => StageDetailScreen(
+          stages: orderedStages,
+          initialIndex: orderedIndex,
+          direction: direction,
+          locationStageId: stage.id == _gpsSelectedStageId
+              ? _gpsSelectedStageId
+              : null,
+          initialLocation: stage.id == _gpsSelectedStageId
+              ? _gpsLocation
+              : null,
+        ),
+      ),
+    );
+  }
+
+  void _openDetourDetails({
+    required BuildContext context,
+    required TrailDetour detour,
+    required List<TrailStage> orderedStages,
+    required TrailDirection direction,
+  }) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => DetourDetailScreen(
+          detour: detour,
+          stages: orderedStages,
+          direction: direction,
+        ),
+      ),
+    );
+  }
+
   Widget _buildStageTimelineRow({
     required BuildContext context,
     required TrailStage stage,
@@ -488,6 +663,9 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
     required MeasurementFormatter formatter,
     required double totalDistanceKm,
     required bool showMetricsHint,
+    required List<TrailExcursion> excursions,
+    required List<TrailDetour> detours,
+    required List<TrailDetour> trailDetours,
   }) {
     final orderedIndex = orderedItems.indexWhere((item) => item.id == stage.id);
     final previousOrderedIndex = filteredIndex == 0
@@ -503,6 +681,13 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
     final legMetrics = _stageLegMetrics(
       orderedStages: orderedItems,
       index: orderedIndex,
+      direction: direction,
+    );
+    final detourBranch = _detourTimelineBranchForStage(
+      stage: stage,
+      orderedStages: orderedItems,
+      filteredStages: filteredItems,
+      detours: trailDetours,
       direction: direction,
     );
     return _StageTimelineRow(
@@ -531,32 +716,25 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
           _hasSeenTrailInformation == true &&
           _hasSeenStageDetailsHint == false,
       showMetricsHint: showMetricsHint,
+      excursions: excursions,
+      detours: detours,
+      detourBranch: detourBranch,
       onMetricsHintDismiss: _markStageMetricsHintSeen,
-      onTap: () {
-        _markStageDetailsHintSeen();
-        if (showMetricsHint) _markStageMetricsHintSeen();
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => StageDetailScreen(
-              stages: orderedItems,
-              initialIndex: orderedIndex,
-              direction: direction,
-              locationStageId: stage.id == _gpsSelectedStageId
-                  ? _gpsSelectedStageId
-                  : null,
-              initialLocation: stage.id == _gpsSelectedStageId
-                  ? _gpsLocation
-                  : null,
-            ),
-          ),
-        );
-      },
+      onTap: () => _openStageDetails(
+        context: context,
+        stage: stage,
+        orderedStages: orderedItems,
+        direction: direction,
+        dismissMetricsHint: showMetricsHint,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final stages = ref.watch(stagesProvider);
+    final excursions = ref.watch(excursionsForTrailProvider);
+    final detours = ref.watch(detoursForTrailProvider);
     final direction = ref.watch(trailDirectionProvider);
     final formatter = MeasurementFormatter(
       ref.watch(appSettingsProvider).measurementSystem,
@@ -590,7 +768,24 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
       ),
       body: RefreshIndicator(
         key: const ValueKey('stage-pull-to-refresh'),
-        onRefresh: () => ref.read(stagesProvider.notifier).sync(),
+        onRefresh: () async {
+          await ref.read(stagesProvider.notifier).sync();
+          ref.invalidate(excursionRoutesForTrailProvider);
+          try {
+            await ref
+                .refresh(excursionsForTrailProvider.future)
+                .then<void>((_) {});
+          } catch (_) {
+            // Stage data remains usable when online excursion data is absent.
+          }
+          try {
+            await ref
+                .refresh(detoursForTrailProvider.future)
+                .then<void>((_) {});
+          } catch (_) {
+            // Stage data remains usable when online detour data is absent.
+          }
+        },
         child: CustomScrollView(
           controller: scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
@@ -609,6 +804,22 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
             stages.when(
               skipLoadingOnRefresh: true,
               data: (items) {
+                final excursionsByStageId = <String, List<TrailExcursion>>{};
+                for (final excursion
+                    in excursions.value ?? const <TrailExcursion>[]) {
+                  final stageId = excursion.anchorStageId;
+                  if (stageId == null) continue;
+                  excursionsByStageId
+                      .putIfAbsent(stageId, () => [])
+                      .add(excursion);
+                }
+                final detoursByStageId = <String, List<TrailDetour>>{};
+                final trailDetours = detours.value ?? const <TrailDetour>[];
+                for (final detour in trailDetours) {
+                  for (final stageId in detour.affectedStageIds) {
+                    detoursByStageId.putIfAbsent(stageId, () => []).add(detour);
+                  }
+                }
                 final orderedItems = direction.isReversed
                     ? items.reversed.toList(growable: false)
                     : items;
@@ -622,9 +833,13 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                         )
                           if (_stageMatchesFilters(
                             stage: orderedItems[stageIndex],
-                            stageIndex: stageIndex,
-                            stageCount: orderedItems.length,
                             filters: selectedServices,
+                            hasExcursions: excursionsByStageId.containsKey(
+                              orderedItems[stageIndex].id,
+                            ),
+                            hasDetours: detoursByStageId.containsKey(
+                              orderedItems[stageIndex].id,
+                            ),
                           ))
                             orderedItems[stageIndex],
                       ];
@@ -649,6 +864,160 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                       break;
                     }
                   }
+                }
+                final timelineRows = <Widget>[];
+                final suppressedBranchDetoursByStageId =
+                    <String, Set<String>>{};
+                var timelineIndex = 0;
+                while (timelineIndex < filteredItems.length) {
+                  final currentStage = filteredItems[timelineIndex];
+                  final currentOrderedIndex = orderedItems.indexWhere(
+                    (candidate) => candidate.id == currentStage.id,
+                  );
+                  _DetourTimelineSpan? choiceSpan;
+                  for (final detour in trailDetours) {
+                    final span = _detourTimelineSpan(
+                      detour: detour,
+                      orderedStages: orderedItems,
+                      direction: direction,
+                    );
+                    if (span == null ||
+                        span.entry.rowIndex != currentOrderedIndex ||
+                        span.exit.rowIndex - span.entry.rowIndex < 2) {
+                      continue;
+                    }
+                    final groupStages = orderedItems.sublist(
+                      span.entry.rowIndex,
+                      span.exit.rowIndex + 1,
+                    );
+                    if (timelineIndex + groupStages.length >
+                        filteredItems.length) {
+                      continue;
+                    }
+                    var groupIsVisible = true;
+                    for (
+                      var offset = 0;
+                      offset < groupStages.length;
+                      offset++
+                    ) {
+                      if (filteredItems[timelineIndex + offset].id !=
+                          groupStages[offset].id) {
+                        groupIsVisible = false;
+                        break;
+                      }
+                    }
+                    if (groupIsVisible) {
+                      choiceSpan = span;
+                      break;
+                    }
+                  }
+
+                  if (choiceSpan case final span?) {
+                    final groupStages = orderedItems.sublist(
+                      span.entry.rowIndex,
+                      span.exit.rowIndex + 1,
+                    );
+                    final bypassedStages = groupStages.sublist(
+                      1,
+                      groupStages.length - 1,
+                    );
+                    for (final groupStage in groupStages) {
+                      suppressedBranchDetoursByStageId
+                          .putIfAbsent(groupStage.id, () => <String>{})
+                          .add(span.detour.id);
+                    }
+                    timelineRows.add(
+                      _buildStageTimelineRow(
+                        context: context,
+                        stage: currentStage,
+                        filteredIndex: timelineIndex,
+                        filteredItems: filteredItems,
+                        orderedItems: orderedItems,
+                        connectsFirstFilteredStageToWaymark:
+                            connectsSingleNamedStageToWaymark,
+                        direction: direction,
+                        formatter: formatter,
+                        totalDistanceKm: totalDistanceKm,
+                        showMetricsHint: currentStage.id == metricsHintStageId,
+                        excursions:
+                            excursionsByStageId[currentStage.id] ??
+                            const <TrailExcursion>[],
+                        detours:
+                            detoursByStageId[currentStage.id] ??
+                            const <TrailDetour>[],
+                        trailDetours: trailDetours
+                            .where((detour) => detour.id != span.detour.id)
+                            .toList(growable: false),
+                      ),
+                    );
+                    timelineRows.add(
+                      _DetourRouteChoicePanel(
+                        detour: span.detour,
+                        mainStages: bypassedStages,
+                        orderedStages: orderedItems,
+                        direction: direction,
+                        formatter: formatter,
+                        totalDistanceKm: totalDistanceKm,
+                        selectedStageId: _gpsSelectedStageId,
+                        excursionsByStageId: excursionsByStageId,
+                        onStageTap: (selectedStage) {
+                          _openStageDetails(
+                            context: context,
+                            stage: selectedStage,
+                            orderedStages: orderedItems,
+                            direction: direction,
+                          );
+                        },
+                        onDetourTap: () {
+                          _openDetourDetails(
+                            context: context,
+                            detour: span.detour,
+                            orderedStages: orderedItems,
+                            direction: direction,
+                          );
+                        },
+                      ),
+                    );
+                    timelineIndex += groupStages.length - 1;
+                    continue;
+                  }
+
+                  final suppressedDetourIds =
+                      suppressedBranchDetoursByStageId[currentStage.id] ??
+                      const <String>{};
+                  timelineRows.add(
+                    _buildStageTimelineRow(
+                      context: context,
+                      stage: currentStage,
+                      filteredIndex: timelineIndex,
+                      filteredItems: filteredItems,
+                      orderedItems: orderedItems,
+                      connectsFirstFilteredStageToWaymark:
+                          connectsSingleNamedStageToWaymark,
+                      direction: direction,
+                      formatter: formatter,
+                      totalDistanceKm: totalDistanceKm,
+                      showMetricsHint: currentStage.id == metricsHintStageId,
+                      excursions:
+                          excursionsByStageId[currentStage.id] ??
+                          const <TrailExcursion>[],
+                      detours:
+                          (detoursByStageId[currentStage.id] ??
+                                  const <TrailDetour>[])
+                              .where(
+                                (detour) =>
+                                    !suppressedDetourIds.contains(detour.id),
+                              )
+                              .toList(growable: false),
+                      trailDetours: trailDetours
+                          .where(
+                            (detour) =>
+                                !suppressedDetourIds.contains(detour.id),
+                          )
+                          .toList(growable: false),
+                    ),
+                  );
+                  timelineIndex++;
                 }
                 return orderedItems.isEmpty
                     ? const SliverFillRemaining(
@@ -683,26 +1052,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                                         0,
                                 onTap: _openTrailInformation,
                               ),
-                              for (
-                                var index = 0;
-                                index < filteredItems.length;
-                                index++
-                              )
-                                _buildStageTimelineRow(
-                                  context: context,
-                                  stage: filteredItems[index],
-                                  filteredIndex: index,
-                                  filteredItems: filteredItems,
-                                  orderedItems: orderedItems,
-                                  connectsFirstFilteredStageToWaymark:
-                                      connectsSingleNamedStageToWaymark,
-                                  direction: direction,
-                                  formatter: formatter,
-                                  totalDistanceKm: totalDistanceKm,
-                                  showMetricsHint:
-                                      filteredItems[index].id ==
-                                      metricsHintStageId,
-                                ),
+                              ...timelineRows,
                             ],
                           ),
                         ),
@@ -1480,6 +1830,587 @@ class _TrailTimelineWaymarkState extends State<_TrailTimelineWaymark>
   }
 }
 
+class _DetourRouteChoicePanel extends StatelessWidget {
+  const _DetourRouteChoicePanel({
+    required this.detour,
+    required this.mainStages,
+    required this.orderedStages,
+    required this.direction,
+    required this.formatter,
+    required this.totalDistanceKm,
+    required this.selectedStageId,
+    required this.excursionsByStageId,
+    required this.onStageTap,
+    required this.onDetourTap,
+  });
+
+  final TrailDetour detour;
+  final List<TrailStage> mainStages;
+  final List<TrailStage> orderedStages;
+  final TrailDirection direction;
+  final MeasurementFormatter formatter;
+  final double totalDistanceKm;
+  final String? selectedStageId;
+  final Map<String, List<TrailExcursion>> excursionsByStageId;
+  final ValueChanged<TrailStage> onStageTap;
+  final VoidCallback onDetourTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (mainStages.isEmpty) return const SizedBox.shrink();
+    const cardGap = 10.0;
+    const connectorHeight = 34.0;
+    const bottomInset = 12.0;
+    const mainCardHeight = 140.0;
+    final contentHeight =
+        mainStages.length * mainCardHeight +
+        math.max(0, mainStages.length - 1) * cardGap;
+    final panelHeight = connectorHeight + contentHeight + bottomInset;
+
+    return SizedBox(
+      key: ValueKey('stage-detour-choice-${detour.id}'),
+      height: panelHeight,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const laneGap = 10.0;
+          const contentLeft = _timelineGutterWidth;
+          final laneWidth = (constraints.maxWidth - contentLeft - laneGap) / 2;
+          final leftCenter = contentLeft + laneWidth / 2;
+          final rightCenter = contentLeft + laneWidth + laneGap + laneWidth / 2;
+          final timelineX =
+              _timelineGutterWidth - (_timelineLineColumnWidth / 2);
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                left: timelineX - 1,
+                top: 0,
+                bottom: 0,
+                width: 2,
+                child: ColoredBox(
+                  key: ValueKey('stage-detour-timeline-axis-${detour.id}'),
+                  color: _timelineLineColor,
+                ),
+              ),
+              Positioned.fill(
+                child: CustomPaint(
+                  key: ValueKey('stage-detour-connectors-${detour.id}'),
+                  painter: _DetourChoiceConnectorPainter(
+                    leftCenterX: leftCenter,
+                    rightCenterX: rightCenter,
+                    cardTopY: connectorHeight,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                top: connectorHeight,
+                width: _timelineGutterWidth - _timelineLineColumnWidth,
+                height: contentHeight,
+                child: Column(
+                  children: [
+                    for (var index = 0; index < mainStages.length; index++) ...[
+                      SizedBox(
+                        height: mainCardHeight,
+                        child: Center(
+                          child: _DetourMainStageSideMetrics(
+                            stage: mainStages[index],
+                            orderedStages: orderedStages,
+                            direction: direction,
+                            formatter: formatter,
+                          ),
+                        ),
+                      ),
+                      if (index < mainStages.length - 1)
+                        const SizedBox(height: cardGap),
+                    ],
+                  ],
+                ),
+              ),
+              Positioned(
+                left: contentLeft,
+                top: connectorHeight,
+                width: laneWidth,
+                child: Column(
+                  children: [
+                    for (var index = 0; index < mainStages.length; index++) ...[
+                      SizedBox(
+                        height: mainCardHeight,
+                        child: _DetourMainStageCard(
+                          stage: mainStages[index],
+                          direction: direction,
+                          formatter: formatter,
+                          totalDistanceKm: totalDistanceKm,
+                          isSelected: mainStages[index].id == selectedStageId,
+                          excursions:
+                              excursionsByStageId[mainStages[index].id] ??
+                              const <TrailExcursion>[],
+                          onTap: () => onStageTap(mainStages[index]),
+                        ),
+                      ),
+                      if (index < mainStages.length - 1)
+                        const SizedBox(height: cardGap),
+                    ],
+                  ],
+                ),
+              ),
+              Positioned(
+                right: 0,
+                top: connectorHeight,
+                width: laneWidth,
+                height: contentHeight,
+                child: _DetourChoiceCard(
+                  detour: detour,
+                  formatter: formatter,
+                  onTap: onDetourTap,
+                  linkedStageId: mainStages.first.id,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DetourChoiceCard extends StatelessWidget {
+  const _DetourChoiceCard({
+    required this.detour,
+    required this.formatter,
+    required this.onTap,
+    required this.linkedStageId,
+  });
+
+  final TrailDetour detour;
+  final MeasurementFormatter formatter;
+  final VoidCallback onTap;
+  final String linkedStageId;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Semantics(
+      button: true,
+      label: '${l10n.t('Detour')}: ${detour.name}',
+      child: Material(
+        key: ValueKey('stage-detour-choice-card-${detour.id}'),
+        color: const Color(0xFFF1ECF5),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: _detourPurple, width: 1.6),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(13),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      key: ValueKey('stage-detour-tab-$linkedStageId'),
+                      width: 30,
+                      height: 24,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: _detourPurple, width: 1.5),
+                      ),
+                      child: Icon(
+                        Icons.fork_right_rounded,
+                        key: ValueKey('stage-detour-marker-$linkedStageId'),
+                        color: _detourPurple,
+                        size: 17,
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(
+                        l10n.t('Detour').toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: _detourPurple,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  detour.name,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _ink,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    height: 1.15,
+                  ),
+                ),
+                const Spacer(),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 5,
+                  children: [
+                    _CompactRouteMetric(
+                      icon: Icons.route_rounded,
+                      label: formatter.distance(detour.routeDistanceKm),
+                      color: _detourPurple,
+                    ),
+                    _CompactRouteMetric(
+                      icon: Icons.schedule_rounded,
+                      label: _formatWalkingTime(
+                        Duration(minutes: detour.estimatedWalkingTimeMinutes),
+                        l10n,
+                      ),
+                      color: _detourPurple,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetourMainStageCard extends StatelessWidget {
+  const _DetourMainStageCard({
+    required this.stage,
+    required this.direction,
+    required this.formatter,
+    required this.totalDistanceKm,
+    required this.isSelected,
+    required this.excursions,
+    required this.onTap,
+  });
+
+  final TrailStage stage;
+  final TrailDirection direction;
+  final MeasurementFormatter formatter;
+  final double totalDistanceKm;
+  final bool isSelected;
+  final List<TrailExcursion> excursions;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeServices = stage.services.entries
+        .where((entry) => entry.value)
+        .take(7)
+        .toList(growable: false);
+    final distanceFromStart = stage.accumulatedDistanceKm == null
+        ? null
+        : direction.distanceFromStart(
+            stage.accumulatedDistanceKm!,
+            totalDistanceKm,
+          );
+
+    return Semantics(
+      selected: isSelected,
+      button: true,
+      child: Material(
+        key: ValueKey('stage-card-${stage.id}'),
+        color: isSelected ? const Color(0xFFE8F1FC) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: isSelected ? _bookingBlue : Colors.transparent,
+            width: isSelected ? 2 : 0,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(11),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      key: ValueKey('stage-e4-badge-${stage.id}'),
+                      width: 30,
+                      height: 24,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: _yellow,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        context.l10n.t('E4'),
+                        style: const TextStyle(
+                          color: _ink,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${stage.sequence}',
+                      key: ValueKey('stage-number-${stage.id}'),
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  stage.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                  ),
+                ),
+                if (activeServices.isNotEmpty || excursions.isNotEmpty) ...[
+                  const SizedBox(height: 7),
+                  Wrap(
+                    key: ValueKey('stage-card-services-${stage.id}'),
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      for (final service in activeServices)
+                        Tooltip(
+                          message: context.l10n.t(_serviceLabel(service.key)),
+                          child: Icon(
+                            _serviceIcon(service.key),
+                            size: 16,
+                            color: _serviceColor(service.key),
+                          ),
+                        ),
+                      if (excursions.isNotEmpty)
+                        const Icon(
+                          Icons.alt_route_rounded,
+                          size: 16,
+                          color: _filterBlueTeal,
+                        ),
+                    ],
+                  ),
+                ],
+                const Spacer(),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      key: ValueKey('stage-card-metrics-${stage.id}'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (distanceFromStart != null)
+                          Text(
+                            formatter.distance(distanceFromStart),
+                            key: ValueKey('stage-card-distance-${stage.id}'),
+                            style: const TextStyle(
+                              color: _green,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 10.5,
+                            ),
+                          ),
+                        if (distanceFromStart != null &&
+                            stage.altitudeM != null)
+                          const SizedBox(width: 8),
+                        if (stage.altitudeM case final altitude?)
+                          _MiniLabel(
+                            key: ValueKey('stage-card-altitude-${stage.id}'),
+                            icon: Icons.landscape_outlined,
+                            label: formatter.altitude(altitude),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetourMainStageSideMetrics extends StatelessWidget {
+  const _DetourMainStageSideMetrics({
+    required this.stage,
+    required this.orderedStages,
+    required this.direction,
+    required this.formatter,
+  });
+
+  final TrailStage stage;
+  final List<TrailStage> orderedStages;
+  final TrailDirection direction;
+  final MeasurementFormatter formatter;
+
+  @override
+  Widget build(BuildContext context) {
+    final stageIndex = orderedStages.indexWhere(
+      (candidate) => candidate.id == stage.id,
+    );
+    final legMetrics = _stageLegMetrics(
+      orderedStages: orderedStages,
+      index: stageIndex,
+      direction: direction,
+    );
+    final distanceFromPathKm = stage.distanceFromPathKm;
+    return Column(
+      key: ValueKey('stage-side-metrics-${stage.id}'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _StageSideMetric(
+          key: ValueKey('stage-ascent-${stage.id}'),
+          icon: Icons.arrow_upward_rounded,
+          value: legMetrics.ascentM == null
+              ? '—'
+              : _compactMeasurement(formatter.altitude(legMetrics.ascentM!)),
+          tooltip: context.l10n.t('Ascent'),
+          color: _green,
+        ),
+        _StageSideMetric(
+          key: ValueKey('stage-descent-${stage.id}'),
+          icon: Icons.arrow_downward_rounded,
+          value: legMetrics.descentM == null
+              ? '—'
+              : _compactMeasurement(formatter.altitude(legMetrics.descentM!)),
+          tooltip: context.l10n.t('Descent'),
+          color: _red,
+        ),
+        _StageSideMetric(
+          key: ValueKey('stage-length-${stage.id}'),
+          icon: null,
+          value: legMetrics.lengthKm == null
+              ? '—'
+              : _compactMeasurement(formatter.distance(legMetrics.lengthKm!)),
+          tooltip: context.l10n.t('Stage length'),
+          color: _filterBlueTeal,
+        ),
+        if (distanceFromPathKm != null) ...[
+          const SizedBox(height: 2),
+          _StageTrailDistanceLabel(
+            stageId: stage.id,
+            distance: _trimmedDistance(formatter, distanceFromPathKm),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _CompactRouteMetric extends StatelessWidget {
+  const _CompactRouteMetric({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 12),
+        const SizedBox(width: 2),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DetourChoiceConnectorPainter extends CustomPainter {
+  const _DetourChoiceConnectorPainter({
+    required this.leftCenterX,
+    required this.rightCenterX,
+    required this.cardTopY,
+  });
+
+  final double leftCenterX;
+  final double rightCenterX;
+  final double cardTopY;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final mainColor = _green.withValues(alpha: 0.82);
+    final arrowTipY = cardTopY - 3;
+    final arrowBaseY = arrowTipY - 7;
+    final mainPaint = Paint()
+      ..color = mainColor
+      ..strokeWidth = 2.6
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      Offset(leftCenterX, 0),
+      Offset(leftCenterX, arrowBaseY),
+      mainPaint,
+    );
+    _drawDownArrow(canvas, leftCenterX, arrowTipY, mainColor);
+
+    final detourPaint = Paint()
+      ..color = _detourPurple
+      ..strokeWidth = 2.6
+      ..strokeCap = StrokeCap.round;
+    const dashLength = 4.0;
+    const dashGap = 4.0;
+    var dashY = 0.0;
+    while (dashY < arrowBaseY) {
+      final dashEnd = math.min(dashY + dashLength, arrowBaseY);
+      canvas.drawLine(
+        Offset(rightCenterX, dashY),
+        Offset(rightCenterX, dashEnd),
+        detourPaint,
+      );
+      dashY = dashEnd + dashGap;
+    }
+    _drawDownArrow(canvas, rightCenterX, arrowTipY, _detourPurple);
+  }
+
+  void _drawDownArrow(Canvas canvas, double x, double tipY, Color color) {
+    final arrow = Path()
+      ..moveTo(x - 4.5, tipY - 7)
+      ..lineTo(x + 4.5, tipY - 7)
+      ..lineTo(x, tipY)
+      ..close();
+    canvas.drawPath(arrow, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DetourChoiceConnectorPainter oldDelegate) {
+    return oldDelegate.leftCenterX != leftCenterX ||
+        oldDelegate.rightCenterX != rightCenterX ||
+        oldDelegate.cardTopY != cardTopY;
+  }
+}
+
 class _StageTimelineRow extends StatelessWidget {
   const _StageTimelineRow({
     required this.stage,
@@ -1495,6 +2426,9 @@ class _StageTimelineRow extends StatelessWidget {
     required this.isSelected,
     required this.showDetailsHint,
     required this.showMetricsHint,
+    required this.excursions,
+    required this.detours,
+    required this.detourBranch,
     required this.onMetricsHintDismiss,
     required this.onTap,
     super.key,
@@ -1513,6 +2447,9 @@ class _StageTimelineRow extends StatelessWidget {
   final bool isSelected;
   final bool showDetailsHint;
   final bool showMetricsHint;
+  final List<TrailExcursion> excursions;
+  final List<TrailDetour> detours;
+  final _DetourTimelineBranch? detourBranch;
   final VoidCallback onMetricsHintDismiss;
   final VoidCallback onTap;
 
@@ -1521,16 +2458,16 @@ class _StageTimelineRow extends StatelessWidget {
     final activeServices = stage.services.entries
         .where((entry) => entry.value)
         .toList();
+    final hasExcursions = excursions.isNotEmpty;
+    final hasDetours = detours.isNotEmpty;
     final showDistance = !isTrailStart && distanceKm != null;
     final distanceFromPathKm = stage.distanceFromPathKm;
-    final hasDistanceFromPath =
-        distanceFromPathKm != null &&
-        distanceFromPathKm.isFinite &&
-        distanceFromPathKm >= 0;
+    final isOnTrail = stageIsOnTrail(stage);
+    final hasDistanceFromPath = isOnTrail != null;
     final dotColor = isSelected
         ? _bookingBlue
         : hasDistanceFromPath
-        ? distanceFromPathKm < 0.5
+        ? isOnTrail == true
               ? _green
               : _yellow
         : isTrailStart
@@ -1598,7 +2535,7 @@ class _StageTimelineRow extends StatelessWidget {
               const SizedBox(height: 2),
               _StageTrailDistanceLabel(
                 stageId: stage.id,
-                distance: _trimmedDistance(formatter, distanceFromPathKm),
+                distance: _trimmedDistance(formatter, distanceFromPathKm!),
               ),
             ],
           )
@@ -1616,38 +2553,53 @@ class _StageTimelineRow extends StatelessWidget {
                 Expanded(child: Center(child: sideContent)),
                 SizedBox(
                   width: _timelineLineColumnWidth,
-                  child: Column(
+                  child: Stack(
+                    alignment: Alignment.topCenter,
+                    clipBehavior: Clip.none,
                     children: [
-                      Expanded(
-                        child: Container(
-                          key: ValueKey('stage-line-before-${stage.id}'),
-                          width: 2,
-                          color: connectsToPrevious
-                              ? _timelineLineColor
-                              : Colors.transparent,
+                      if (detourBranch case final branch?)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: CustomPaint(
+                              key: ValueKey('stage-detour-branch-${stage.id}'),
+                              painter: _DetourBranchPainter(branch: branch),
+                            ),
+                          ),
                         ),
-                      ),
-                      Container(
-                        key: ValueKey('stage-marker-${stage.id}'),
-                        width: 15,
-                        height: 15,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: dotColor,
-                          border: Border.all(color: _sand, width: 3),
-                          boxShadow: const [
-                            BoxShadow(color: Colors.black12, blurRadius: 2),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Container(
-                          key: ValueKey('stage-line-after-${stage.id}'),
-                          width: 2,
-                          color: connectsToNext
-                              ? _timelineLineColor
-                              : Colors.transparent,
-                        ),
+                      Column(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              key: ValueKey('stage-line-before-${stage.id}'),
+                              width: 2,
+                              color: connectsToPrevious
+                                  ? _timelineLineColor
+                                  : Colors.transparent,
+                            ),
+                          ),
+                          Container(
+                            key: ValueKey('stage-marker-${stage.id}'),
+                            width: 15,
+                            height: 15,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: dotColor,
+                              border: Border.all(color: _sand, width: 3),
+                              boxShadow: const [
+                                BoxShadow(color: Colors.black12, blurRadius: 2),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(
+                              key: ValueKey('stage-line-after-${stage.id}'),
+                              width: 2,
+                              color: connectsToNext
+                                  ? _timelineLineColor
+                                  : Colors.transparent,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -1657,194 +2609,274 @@ class _StageTimelineRow extends StatelessWidget {
           ),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: EdgeInsets.only(top: hasDetours ? 11 : 0, bottom: 10),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   minHeight: hasDistanceFromPath ? 92 : 0,
                 ),
-                child: Semantics(
-                  selected: isSelected,
-                  child: Material(
-                    key: ValueKey('stage-card-${stage.id}'),
-                    color: isSelected ? const Color(0xFFE8F1FC) : Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Semantics(
+                      selected: isSelected,
+                      child: Material(
+                        key: ValueKey('stage-card-${stage.id}'),
                         color: isSelected
-                            ? _bookingBlue
-                            : showDetailsHint || showMetricsHint
-                            ? _trailPulseBlue
-                            : Colors.transparent,
-                        width: isSelected || showDetailsHint || showMetricsHint
-                            ? 2
-                            : 0,
-                      ),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: onTap,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (showDetailsHint) ...[
-                                    Container(
-                                      key: const ValueKey(
-                                        'stage-details-helper',
-                                      ),
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _trailPulseBlue.withValues(
-                                          alpha: 0.14,
-                                        ),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.touch_app_outlined,
-                                            color: _bookingBlue,
-                                            size: 17,
-                                          ),
-                                          const SizedBox(width: 7),
-                                          Expanded(
-                                            child: Text(
-                                              context.l10n.t(
-                                                'Tap a stage to see its details.',
-                                              ),
-                                              style: const TextStyle(
-                                                color: _ink,
-                                                fontSize: 11.5,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                  ],
-                                  if (showMetricsHint) ...[
-                                    _StageMetricsHint(
-                                      onDismiss: onMetricsHintDismiss,
-                                    ),
-                                    const SizedBox(height: 10),
-                                  ],
-                                  Row(
+                            ? const Color(0xFFE8F1FC)
+                            : hasExcursions
+                            ? _excursionCardBackground
+                            : Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: isSelected
+                                ? _bookingBlue
+                                : showDetailsHint || showMetricsHint
+                                ? _trailPulseBlue
+                                : hasExcursions
+                                ? _filterBlueTeal
+                                : Colors.transparent,
+                            width:
+                                isSelected || showDetailsHint || showMetricsHint
+                                ? 2
+                                : hasExcursions
+                                ? 1.6
+                                : 0,
+                          ),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: onTap,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Expanded(
-                                        child: Text(
-                                          stage.name,
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w800,
+                                      if (showDetailsHint) ...[
+                                        Container(
+                                          key: const ValueKey(
+                                            'stage-details-helper',
                                           ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Semantics(
-                                        label: context.l10n.stage(
-                                          stage.sequence,
-                                        ),
-                                        excludeSemantics: true,
-                                        child: Text(
-                                          '${stage.sequence}',
-                                          key: ValueKey(
-                                            'stage-number-${stage.id}',
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 8,
                                           ),
-                                          style: const TextStyle(
-                                            color: Colors.black54,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: 0.2,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  if (activeServices.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      key: ValueKey(
-                                        'stage-card-services-${stage.id}',
-                                      ),
-                                      spacing: 8,
-                                      runSpacing: 6,
-                                      children: [
-                                        for (final service
-                                            in activeServices.take(7))
-                                          Tooltip(
-                                            message: context.l10n.t(
-                                              _serviceLabel(service.key),
+                                          decoration: BoxDecoration(
+                                            color: _trailPulseBlue.withValues(
+                                              alpha: 0.14,
                                             ),
-                                            child: Icon(
-                                              _serviceIcon(service.key),
-                                              size: 16,
-                                              color: _serviceColor(service.key),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
                                             ),
                                           ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.touch_app_outlined,
+                                                color: _bookingBlue,
+                                                size: 17,
+                                              ),
+                                              const SizedBox(width: 7),
+                                              Expanded(
+                                                child: Text(
+                                                  context.l10n.t(
+                                                    'Tap a stage to see its details.',
+                                                  ),
+                                                  style: const TextStyle(
+                                                    color: _ink,
+                                                    fontSize: 11.5,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
                                       ],
-                                    ),
-                                  ],
-                                  if (showDistance ||
-                                      stage.altitudeM != null) ...[
-                                    const SizedBox(height: 8),
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: Row(
-                                        key: ValueKey(
-                                          'stage-card-metrics-${stage.id}',
+                                      if (showMetricsHint) ...[
+                                        _StageMetricsHint(
+                                          onDismiss: onMetricsHintDismiss,
                                         ),
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (showDistance)
+                                        const SizedBox(height: 10),
+                                      ],
+                                      if (hasExcursions) ...[
+                                        Row(
+                                          children: [
+                                            _StageLinkedRouteTab(
+                                              containerKey: ValueKey(
+                                                'stage-excursion-tab-${stage.id}',
+                                              ),
+                                              markerKey: ValueKey(
+                                                'stage-excursion-marker-${stage.id}',
+                                              ),
+                                              tooltip: context.l10n.t(
+                                                'Excursions',
+                                              ),
+                                              icon: Icons.alt_route_rounded,
+                                              color: _filterBlueTeal,
+                                              onTap: onTap,
+                                            ),
+                                            const SizedBox(width: 7),
                                             Text(
-                                              formatter.distance(distanceKm!),
+                                              context.l10n
+                                                  .t('Excursion')
+                                                  .toUpperCase(),
+                                              style: const TextStyle(
+                                                color: _filterBlueTeal,
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: 0.8,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                      ],
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              stage.name,
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Semantics(
+                                            label: context.l10n.stage(
+                                              stage.sequence,
+                                            ),
+                                            excludeSemantics: true,
+                                            child: Text(
+                                              '${stage.sequence}',
                                               key: ValueKey(
-                                                'stage-card-distance-${stage.id}',
+                                                'stage-number-${stage.id}',
                                               ),
                                               style: const TextStyle(
-                                                color: _green,
+                                                color: Colors.black54,
+                                                fontSize: 12,
                                                 fontWeight: FontWeight.w800,
-                                                fontSize: 10.5,
+                                                letterSpacing: 0.2,
                                               ),
                                             ),
-                                          if (showDistance &&
-                                              stage.altitudeM != null)
-                                            const SizedBox(width: 8),
-                                          if (stage.altitudeM
-                                              case final altitude?)
-                                            _MiniLabel(
-                                              key: ValueKey(
-                                                'stage-card-altitude-${stage.id}',
-                                              ),
-                                              icon: Icons.landscape_outlined,
-                                              label: formatter.altitude(
-                                                altitude,
-                                              ),
-                                            ),
+                                          ),
                                         ],
                                       ),
-                                    ),
-                                  ],
-                                ],
-                              ),
+                                      if (activeServices.isNotEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        Wrap(
+                                          key: ValueKey(
+                                            'stage-card-services-${stage.id}',
+                                          ),
+                                          spacing: 8,
+                                          runSpacing: 6,
+                                          children: [
+                                            for (final service
+                                                in activeServices.take(7))
+                                              Tooltip(
+                                                message: context.l10n.t(
+                                                  _serviceLabel(service.key),
+                                                ),
+                                                child: Icon(
+                                                  _serviceIcon(service.key),
+                                                  size: 16,
+                                                  color: _serviceColor(
+                                                    service.key,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                      if (showDistance ||
+                                          stage.altitudeM != null) ...[
+                                        const SizedBox(height: 8),
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: Row(
+                                            key: ValueKey(
+                                              'stage-card-metrics-${stage.id}',
+                                            ),
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (showDistance)
+                                                Text(
+                                                  formatter.distance(
+                                                    distanceKm!,
+                                                  ),
+                                                  key: ValueKey(
+                                                    'stage-card-distance-${stage.id}',
+                                                  ),
+                                                  style: const TextStyle(
+                                                    color: _green,
+                                                    fontWeight: FontWeight.w800,
+                                                    fontSize: 10.5,
+                                                  ),
+                                                ),
+                                              if (showDistance &&
+                                                  stage.altitudeM != null)
+                                                const SizedBox(width: 8),
+                                              if (stage.altitudeM
+                                                  case final altitude?)
+                                                _MiniLabel(
+                                                  key: ValueKey(
+                                                    'stage-card-altitude-${stage.id}',
+                                                  ),
+                                                  icon:
+                                                      Icons.landscape_outlined,
+                                                  label: formatter.altitude(
+                                                    altitude,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                    if (hasDetours)
+                      Positioned(
+                        top: -11,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _StageLinkedRouteTab(
+                                containerKey: ValueKey(
+                                  'stage-detour-tab-${stage.id}',
+                                ),
+                                markerKey: ValueKey(
+                                  'stage-detour-marker-${stage.id}',
+                                ),
+                                tooltip: context.l10n.t('Detours'),
+                                icon: Icons.fork_right_rounded,
+                                color: _detourPurple,
+                                onTap: onTap,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -1852,6 +2884,134 @@ class _StageTimelineRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _StageLinkedRouteTab extends StatelessWidget {
+  const _StageLinkedRouteTab({
+    required this.containerKey,
+    required this.markerKey,
+    required this.tooltip,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final Key containerKey;
+  final Key markerKey;
+  final String tooltip;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          key: containerKey,
+          width: 42,
+          height: 23,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: color, width: 2),
+          ),
+          child: Icon(icon, key: markerKey, size: 17, color: color),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetourBranchPainter extends CustomPainter {
+  const _DetourBranchPainter({required this.branch});
+
+  final _DetourTimelineBranch branch;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final mainX = size.width / 2;
+    final branchX = size.width - 3;
+    final splitY = branch.splitY == null
+        ? null
+        : branch.splitY!.clamp(0.0, 1.0).toDouble() * size.height;
+    final rejoinY = branch.rejoinY == null
+        ? null
+        : branch.rejoinY!.clamp(0.0, 1.0).toDouble() * size.height;
+    final path = Path();
+    var currentY = 0.0;
+
+    if (branch.entersFromTop) {
+      path.moveTo(branchX, 0);
+    } else if (splitY != null) {
+      final curveHeight = math.min(14.0, math.max(7.0, size.height - splitY));
+      path.moveTo(mainX, splitY);
+      path.cubicTo(
+        mainX,
+        splitY + curveHeight * 0.45,
+        branchX,
+        splitY + curveHeight * 0.55,
+        branchX,
+        splitY + curveHeight,
+      );
+      currentY = splitY + curveHeight;
+    } else {
+      return;
+    }
+
+    if (rejoinY != null) {
+      final availableHeight = math.max(0.0, rejoinY - currentY);
+      final curveHeight = math.min(14.0, math.max(7.0, availableHeight));
+      final curveStartY = math.max(currentY, rejoinY - curveHeight);
+      if (curveStartY > currentY) path.lineTo(branchX, curveStartY);
+      path.cubicTo(
+        branchX,
+        curveStartY + curveHeight * 0.45,
+        mainX,
+        rejoinY - curveHeight * 0.45,
+        mainX,
+        rejoinY,
+      );
+    } else if (branch.exitsToBottom) {
+      path.lineTo(branchX, size.height);
+    }
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = _sand
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6.5
+        ..strokeCap = StrokeCap.round,
+    );
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = _detourPurple
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.2
+        ..strokeCap = StrokeCap.round,
+    );
+
+    final connectionPaint = Paint()..color = _detourPurple;
+    final connectionHaloPaint = Paint()..color = _sand;
+    for (final connectionY in [splitY, rejoinY].whereType<double>()) {
+      canvas.drawCircle(Offset(mainX, connectionY), 4.5, connectionHaloPaint);
+      canvas.drawCircle(Offset(mainX, connectionY), 2.4, connectionPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DetourBranchPainter oldDelegate) {
+    return oldDelegate.branch.entersFromTop != branch.entersFromTop ||
+        oldDelegate.branch.exitsToBottom != branch.exitsToBottom ||
+        oldDelegate.branch.splitY != branch.splitY ||
+        oldDelegate.branch.rejoinY != branch.rejoinY;
   }
 }
 
@@ -2048,6 +3208,192 @@ class _MiniLabel extends StatelessWidget {
   }
 }
 
+class DetourDetailScreen extends ConsumerWidget {
+  const DetourDetailScreen({
+    required this.detour,
+    required this.stages,
+    required this.direction,
+    super.key,
+  });
+
+  final TrailDetour detour;
+  final List<TrailStage> stages;
+  final TrailDirection direction;
+
+  Future<void> _openMap(
+    BuildContext context,
+    WidgetRef ref,
+    int? initialStageIndex,
+    TrailDetourRoute? loadedRoute,
+  ) async {
+    var route = loadedRoute;
+    if (route == null) {
+      try {
+        for (final candidate in await ref.read(
+          detourRoutesForTrailProvider.future,
+        )) {
+          if (candidate.detour.id == detour.id) {
+            route = candidate;
+            break;
+          }
+        }
+      } catch (_) {
+        // The main trail map remains available if detour geometry cannot load.
+      }
+    }
+    if (!context.mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MapScreen(
+          initialStageIndex: initialStageIndex,
+          initialDetours: route == null ? const [] : [route],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final formatter = MeasurementFormatter(
+      ref.watch(appSettingsProvider).measurementSystem,
+    );
+    final mainRoutePoints = ref.watch(elevationProvider).value ?? const [];
+    TrailDetourRoute? detourRoute;
+    for (final route
+        in ref.watch(detourRoutesForTrailProvider).value ??
+            const <TrailDetourRoute>[]) {
+      if (route.detour.id == detour.id) {
+        detourRoute = route;
+        break;
+      }
+    }
+    final detourAscent = direction.isReversed
+        ? detour.elevationDownM
+        : detour.elevationUpM;
+    final detourDescent = direction.isReversed
+        ? detour.elevationUpM
+        : detour.elevationDownM;
+    final walkingTime = estimateNaismithWalkingTime(
+      distanceKm: detour.routeDistanceKm,
+      ascentM: detourAscent,
+    );
+    final startDistanceKm = direction.isReversed
+        ? detour.endMainTrailDistanceKm
+        : detour.startMainTrailDistanceKm;
+    final finishDistanceKm = direction.isReversed
+        ? detour.startMainTrailDistanceKm
+        : detour.endMainTrailDistanceKm;
+    final initialStageIndex = startDistanceKm == null
+        ? null
+        : _detourTimelineConnection(stages, startDistanceKm)?.rowIndex;
+    final mappedDetours = detourRoute == null
+        ? const <TrailDetourRoute>[]
+        : [detourRoute];
+
+    return Scaffold(
+      key: ValueKey('detour-detail-${detour.id}'),
+      backgroundColor: _sand,
+      appBar: AppBar(
+        backgroundColor: _ink,
+        foregroundColor: Colors.white,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              detour.name,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            Text(
+              'CYPRUS E4 · ${l10n.t('Detour').toUpperCase()}',
+              style: const TextStyle(
+                fontSize: 9,
+                color: Colors.white60,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        children: [
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _DetailMetric(
+                    icon: Icons.fork_right_rounded,
+                    iconColor: _detourPurple,
+                    value: formatter.distance(detour.routeDistanceKm),
+                    label: l10n.t('Detour route'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _DetailMetric(
+                    icon: Icons.schedule_rounded,
+                    iconColor: _detourPurple,
+                    value: _formatWalkingTime(walkingTime, l10n),
+                    label: l10n.t('Estimated walking time'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _CompactDetailMetrics(
+            children: [
+              _CompactDetailMetric(
+                icon: Icons.trending_up_rounded,
+                iconColor: _green,
+                value: formatter.altitude(detourAscent),
+                label: l10n.t('Ascent'),
+              ),
+              _CompactDetailMetric(
+                icon: Icons.trending_down_rounded,
+                iconColor: _red,
+                value: formatter.altitude(detourDescent),
+                label: l10n.t('Descent'),
+              ),
+              _CompactDetailMetric(
+                icon: Icons.add_road_rounded,
+                iconColor: _detourPurple,
+                value: formatter.distance(detour.maximumDistanceFromTrailKm),
+                label: l10n.t('Maximum distance from trail'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _DetailSection(
+            title: l10n.t('Alternative route'),
+            child: _DetourSummaryCard(
+              detour: detour,
+              direction: direction,
+              formatter: formatter,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _StageMapPreview(
+            routePoints: mainRoutePoints,
+            startDistanceKm: startDistanceKm,
+            finishDistanceKm: finishDistanceKm,
+            showRoute: true,
+            showFinishFlag: true,
+            lodgings: const [],
+            excursions: const [],
+            detours: mappedDetours,
+            showUserLocation: false,
+            userLocation: null,
+            onTap: () => _openMap(context, ref, initialStageIndex, detourRoute),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class StageDetailScreen extends ConsumerStatefulWidget {
   const StageDetailScreen({
     required this.stages,
@@ -2125,13 +3471,52 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
     _showAdjacentStage(velocity < 0 ? index + 1 : index - 1);
   }
 
-  void _openMap({List<Lodging> lodgings = const []}) {
-    final locationStageId = stage.id == _gpsStageId ? _gpsStageId : null;
+  Future<void> _openMap({
+    List<Lodging> lodgings = const [],
+    List<TrailExcursionRoute> excursions = const [],
+    List<TrailDetourRoute> detours = const [],
+    bool loadStageExcursions = false,
+    bool loadStageDetours = false,
+  }) async {
+    final selectedStage = stage;
+    final selectedIndex = index;
+    var mappedExcursions = excursions;
+    if (loadStageExcursions && mappedExcursions.isEmpty) {
+      try {
+        mappedExcursions =
+            (await ref.read(excursionRoutesForTrailProvider.future))
+                .where(
+                  (route) => route.excursion.anchorStageId == selectedStage.id,
+                )
+                .toList(growable: false);
+      } catch (_) {
+        // The main trail map still opens if excursion geometry is unavailable.
+      }
+    }
+    var mappedDetours = detours;
+    if (loadStageDetours && mappedDetours.isEmpty) {
+      try {
+        mappedDetours = (await ref.read(detourRoutesForTrailProvider.future))
+            .where(
+              (route) =>
+                  route.detour.affectedStageIds.contains(selectedStage.id),
+            )
+            .toList(growable: false);
+      } catch (_) {
+        // The main trail map still opens if detour geometry is unavailable.
+      }
+    }
+    if (!mounted) return;
+    final locationStageId = selectedStage.id == _gpsStageId
+        ? _gpsStageId
+        : null;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => MapScreen(
-          initialStageIndex: index,
+          initialStageIndex: selectedIndex,
           initialLodgings: lodgings,
+          initialExcursions: mappedExcursions,
+          initialDetours: mappedDetours,
           locationStageId: locationStageId,
         ),
       ),
@@ -2342,65 +3727,44 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
         ? widget.stages[1].accumulatedDistanceKm
         : stage.accumulatedDistanceKm;
     final lodgings = ref.watch(lodgingsForStageProvider(stage.id));
+    final excursions = ref
+        .watch(excursionsForTrailProvider)
+        .value
+        ?.where((excursion) => excursion.anchorStageId == stage.id)
+        .toList(growable: false);
+    final excursionRoutes = excursions?.isNotEmpty == true
+        ? ref
+                  .watch(excursionRoutesForTrailProvider)
+                  .value
+                  ?.where((route) => route.excursion.anchorStageId == stage.id)
+                  .toList(growable: false) ??
+              const <TrailExcursionRoute>[]
+        : const <TrailExcursionRoute>[];
+    final detours = ref
+        .watch(detoursForTrailProvider)
+        .value
+        ?.where((detour) => detour.affectedStageIds.contains(stage.id))
+        .toList(growable: false);
+    final detourRoutes = detours?.isNotEmpty == true
+        ? ref
+                  .watch(detourRoutesForTrailProvider)
+                  .value
+                  ?.where(
+                    (route) => route.detour.affectedStageIds.contains(stage.id),
+                  )
+                  .toList(growable: false) ??
+              const <TrailDetourRoute>[]
+        : const <TrailDetourRoute>[];
     final lodgingCount = lodgings.value?.length ?? 0;
     final mappedLodgings =
         lodgings.value
             ?.where((lodging) => lodging.location != null)
             .toList(growable: false) ??
         const <Lodging>[];
-    final services = stage.services.entries
-        .where((entry) => entry.value)
-        .toList();
-    final accumulatedDistance = stage.accumulatedDistanceKm;
-    final totalDistanceKm = _trailDistanceKm(widget.stages);
-    final distanceFromStart = accumulatedDistance == null
-        ? null
-        : widget.direction.distanceFromStart(
-            accumulatedDistance,
-            totalDistanceKm,
-          );
-    final distanceToFinish = distanceFromStart == null
-        ? null
-        : (totalDistanceKm - distanceFromStart)
-              .clamp(0, totalDistanceKm)
-              .toDouble();
     final endpointLabel = index == 0
         ? l10n.t('Start')
         : index == widget.stages.length - 1
         ? l10n.t('Finish')
-        : null;
-    final endpointDistanceKm = index == 0
-        ? distanceToFinish
-        : distanceFromStart;
-    final hasEndpointDistance =
-        endpointLabel != null &&
-        endpointDistanceKm != null &&
-        endpointDistanceKm > 0;
-    final legMetrics = _stageLegMetrics(
-      orderedStages: widget.stages,
-      index: index,
-      direction: widget.direction,
-    );
-    final segmentLengthKm = legMetrics.lengthKm;
-    final ascentM = legMetrics.ascentM;
-    final descentM = legMetrics.descentM;
-    final hasStageLength = segmentLengthKm != null && segmentLengthKm > 0;
-    final hasStageEffort =
-        index > 0 &&
-        segmentLengthKm != null &&
-        segmentLengthKm.isFinite &&
-        segmentLengthKm >= 0 &&
-        ascentM != null &&
-        ascentM.isFinite &&
-        ascentM >= 0 &&
-        descentM != null &&
-        descentM.isFinite &&
-        descentM >= 0;
-    final walkingTime = hasStageEffort
-        ? estimateNaismithWalkingTime(
-            distanceKm: segmentLengthKm,
-            ascentM: ascentM,
-          )
         : null;
     final stageTransition = CurvedAnimation(
       parent: _stageTransitionController,
@@ -2416,7 +3780,13 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
         onStages: _backToStages,
         onAccommodation: lodgingCount > 0 ? _openAccommodation : null,
         onGps: _toggleGpsLocation,
-        onMap: () => _openMap(lodgings: mappedLodgings),
+        onMap: () => _openMap(
+          lodgings: mappedLodgings,
+          excursions: excursionRoutes,
+          detours: detourRoutes,
+          loadStageExcursions: excursions?.isNotEmpty == true,
+          loadStageDetours: detours?.isNotEmpty == true,
+        ),
         onElevation: _openElevation,
       ),
       appBar: AppBar(
@@ -2454,165 +3824,14 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
             controller: _detailScrollController,
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: _DetailMetric(
-                        key: const Key('stage-detail-position'),
-                        icon: endpointLabel == null ? null : Icons.flag_rounded,
-                        iconWidget: endpointLabel == null
-                            ? const _StageLengthRouteIcon()
-                            : null,
-                        value:
-                            endpointLabel ??
-                            (hasStageLength
-                                ? formatter.distance(segmentLengthKm)
-                                : '—'),
-                        label: endpointLabel != null
-                            ? l10n.t('Trail position')
-                            : l10n.t('Stage length'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: endpointLabel != null
-                          ? _DetailMetric(
-                              key: const Key('stage-detail-endpoint-distance'),
-                              icon: hasEndpointDistance
-                                  ? index == 0
-                                        ? Icons.hiking_rounded
-                                        : Icons.route_rounded
-                                  : Icons.landscape_outlined,
-                              value: hasEndpointDistance
-                                  ? formatter.distance(endpointDistanceKm)
-                                  : stage.altitudeM == null
-                                  ? '—'
-                                  : formatter.altitude(stage.altitudeM!),
-                              label: l10n.t(
-                                hasEndpointDistance
-                                    ? index == 0
-                                          ? 'To Finish'
-                                          : 'From Start'
-                                    : 'Altitude',
-                              ),
-                            )
-                          : _DetailMetric(
-                              key: const Key('stage-detail-walking-time'),
-                              icon: Icons.schedule_rounded,
-                              iconColor: _bookingBlue,
-                              value: walkingTime == null
-                                  ? '—'
-                                  : _formatWalkingTime(walkingTime, l10n),
-                              label: l10n.t('Estimated walking time'),
-                              showFootnoteMarker: true,
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-              if (walkingTime != null) ...[
-                const SizedBox(height: 8),
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      const TextSpan(
-                        text: '* ',
-                        style: TextStyle(
-                          color: _bookingBlue,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      TextSpan(
-                        text: l10n.t(
-                          'Naismith estimate based on distance and ascent. Breaks and terrain are not included.',
-                        ),
-                      ),
-                    ],
-                  ),
-                  key: const ValueKey('walking-time-footnote-note'),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.black54,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-              if (endpointLabel == null || hasEndpointDistance) ...[
-                const SizedBox(height: 12),
-                _CompactDetailMetrics(
-                  children: endpointLabel != null
-                      ? [
-                          _CompactDetailMetric(
-                            key: const Key('stage-detail-altitude'),
-                            icon: Icons.landscape_outlined,
-                            iconColor: Colors.black54,
-                            value: stage.altitudeM == null
-                                ? '—'
-                                : formatter.altitude(stage.altitudeM!),
-                            label: l10n.t('Altitude'),
-                          ),
-                        ]
-                      : [
-                          _CompactDetailMetric(
-                            key: const Key('stage-detail-distance-from-start'),
-                            icon: Icons.hiking_rounded,
-                            value: distanceFromStart == null
-                                ? '—'
-                                : formatter.distance(distanceFromStart),
-                            label: l10n.t('From Start'),
-                          ),
-                          _CompactDetailMetric(
-                            key: const Key('stage-detail-altitude'),
-                            icon: Icons.landscape_outlined,
-                            iconColor: Colors.black54,
-                            value: stage.altitudeM == null
-                                ? '—'
-                                : formatter.altitude(stage.altitudeM!),
-                            label: l10n.t('Altitude'),
-                          ),
-                          _CompactDetailMetric(
-                            key: const Key('stage-detail-ascent'),
-                            icon: Icons.trending_up_rounded,
-                            value: ascentM == null
-                                ? '—'
-                                : formatter.altitude(ascentM),
-                            label: l10n.t('Ascent'),
-                          ),
-                          _CompactDetailMetric(
-                            key: const Key('stage-detail-descent'),
-                            icon: Icons.trending_down_rounded,
-                            iconColor: _red,
-                            value: descentM == null
-                                ? '—'
-                                : formatter.altitude(descentM),
-                            label: l10n.t('Descent'),
-                          ),
-                        ],
-                ),
-              ],
-              const SizedBox(height: 16),
-              _DetailSection(
-                title: l10n.t('Services'),
-                child: services.isEmpty
-                    ? Text(l10n.t('No services recorded for this stage.'))
-                    : Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final service in services)
-                            Chip(
-                              avatar: Icon(
-                                _serviceIcon(service.key),
-                                size: 17,
-                                color: _serviceColor(service.key),
-                              ),
-                              label: Text(l10n.t(_serviceLabel(service.key))),
-                              backgroundColor: _sand,
-                              side: BorderSide.none,
-                            ),
-                        ],
-                      ),
+              StageInfoCards(
+                stage: stage,
+                stages: widget.stages,
+                index: index,
+                direction: widget.direction,
+                formatter: formatter,
+                excursions: excursions ?? const [],
+                detours: detours ?? const [],
               ),
               const SizedBox(height: 12),
               _StageMapPreview(
@@ -2623,14 +3842,310 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
                 showRoute: stagePreviewShowsRoute(index),
                 showFinishFlag: stagePreviewShowsFinishFlag(index),
                 lodgings: mappedLodgings,
+                excursions: excursionRoutes,
+                detours: detourRoutes,
                 showUserLocation: showUserLocation,
                 userLocation: showUserLocation ? _gpsLocation : null,
-                onTap: () => _openMap(lodgings: mappedLodgings),
+                onTap: () => _openMap(
+                  lodgings: mappedLodgings,
+                  excursions: excursionRoutes,
+                  detours: detourRoutes,
+                  loadStageExcursions: excursions?.isNotEmpty == true,
+                  loadStageDetours: detours?.isNotEmpty == true,
+                ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class StageInfoCards extends StatelessWidget {
+  const StageInfoCards({
+    required this.stage,
+    required this.stages,
+    required this.index,
+    required this.direction,
+    required this.formatter,
+    this.excursions = const [],
+    this.detours = const [],
+    super.key,
+  });
+
+  final TrailStage stage;
+  final List<TrailStage> stages;
+  final int index;
+  final TrailDirection direction;
+  final MeasurementFormatter formatter;
+  final List<TrailExcursion> excursions;
+  final List<TrailDetour> detours;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final services = stage.services.entries
+        .where((entry) => entry.value)
+        .toList(growable: false);
+    final accumulatedDistance = stage.accumulatedDistanceKm;
+    final totalDistanceKm = _trailDistanceKm(stages);
+    final distanceFromStart = accumulatedDistance == null
+        ? null
+        : direction.distanceFromStart(accumulatedDistance, totalDistanceKm);
+    final distanceToFinish = distanceFromStart == null
+        ? null
+        : (totalDistanceKm - distanceFromStart)
+              .clamp(0, totalDistanceKm)
+              .toDouble();
+    final endpointLabel = index == 0
+        ? l10n.t('Start')
+        : index == stages.length - 1
+        ? l10n.t('Finish')
+        : null;
+    final endpointDistanceKm = index == 0
+        ? distanceToFinish
+        : distanceFromStart;
+    final hasEndpointDistance =
+        endpointLabel != null &&
+        endpointDistanceKm != null &&
+        endpointDistanceKm > 0;
+    final legMetrics = _stageLegMetrics(
+      orderedStages: stages,
+      index: index,
+      direction: direction,
+    );
+    final segmentLengthKm = legMetrics.lengthKm;
+    final ascentM = legMetrics.ascentM;
+    final descentM = legMetrics.descentM;
+    final hasStageLength = segmentLengthKm != null && segmentLengthKm > 0;
+    final hasStageEffort =
+        index > 0 &&
+        segmentLengthKm != null &&
+        segmentLengthKm.isFinite &&
+        segmentLengthKm >= 0 &&
+        ascentM != null &&
+        ascentM.isFinite &&
+        ascentM >= 0 &&
+        descentM != null &&
+        descentM.isFinite &&
+        descentM >= 0;
+    final walkingTime = hasStageEffort
+        ? estimateNaismithWalkingTime(
+            distanceKm: segmentLengthKm,
+            ascentM: ascentM,
+          )
+        : null;
+
+    return Column(
+      key: const ValueKey('stage-info-cards'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _DetailMetric(
+                  key: const Key('stage-detail-position'),
+                  icon: endpointLabel == null ? null : Icons.flag_rounded,
+                  iconWidget: endpointLabel == null
+                      ? const _StageLengthRouteIcon()
+                      : null,
+                  value:
+                      endpointLabel ??
+                      (hasStageLength
+                          ? formatter.distance(segmentLengthKm)
+                          : '—'),
+                  label: endpointLabel != null
+                      ? l10n.t('Trail position')
+                      : l10n.t('Stage length'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: endpointLabel != null
+                    ? _DetailMetric(
+                        key: const Key('stage-detail-endpoint-distance'),
+                        icon: hasEndpointDistance
+                            ? index == 0
+                                  ? Icons.hiking_rounded
+                                  : Icons.route_rounded
+                            : Icons.landscape_outlined,
+                        value: hasEndpointDistance
+                            ? formatter.distance(endpointDistanceKm)
+                            : stage.altitudeM == null
+                            ? '—'
+                            : formatter.altitude(stage.altitudeM!),
+                        label: l10n.t(
+                          hasEndpointDistance
+                              ? index == 0
+                                    ? 'To Finish'
+                                    : 'From Start'
+                              : 'Altitude',
+                        ),
+                      )
+                    : _DetailMetric(
+                        key: const Key('stage-detail-walking-time'),
+                        icon: Icons.schedule_rounded,
+                        iconColor: _bookingBlue,
+                        value: walkingTime == null
+                            ? '—'
+                            : _formatWalkingTime(walkingTime, l10n),
+                        label: l10n.t('Estimated walking time'),
+                        showFootnoteMarker: true,
+                      ),
+              ),
+            ],
+          ),
+        ),
+        if (walkingTime != null) ...[
+          const SizedBox(height: 8),
+          Text.rich(
+            TextSpan(
+              children: [
+                const TextSpan(
+                  text: '* ',
+                  style: TextStyle(
+                    color: _bookingBlue,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                TextSpan(
+                  text: l10n.t(
+                    'Naismith estimate based on distance and ascent. Breaks and terrain are not included.',
+                  ),
+                ),
+              ],
+            ),
+            key: const ValueKey('walking-time-footnote-note'),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Colors.black54,
+              height: 1.35,
+            ),
+          ),
+        ],
+        if (endpointLabel == null || hasEndpointDistance) ...[
+          const SizedBox(height: 12),
+          _CompactDetailMetrics(
+            children: endpointLabel != null
+                ? [
+                    _CompactDetailMetric(
+                      key: const Key('stage-detail-altitude'),
+                      icon: Icons.landscape_outlined,
+                      iconColor: Colors.black54,
+                      value: stage.altitudeM == null
+                          ? '—'
+                          : formatter.altitude(stage.altitudeM!),
+                      label: l10n.t('Altitude'),
+                    ),
+                  ]
+                : [
+                    _CompactDetailMetric(
+                      key: const Key('stage-detail-distance-from-start'),
+                      icon: Icons.hiking_rounded,
+                      value: distanceFromStart == null
+                          ? '—'
+                          : formatter.distance(distanceFromStart),
+                      label: l10n.t('From Start'),
+                    ),
+                    _CompactDetailMetric(
+                      key: const Key('stage-detail-altitude'),
+                      icon: Icons.landscape_outlined,
+                      iconColor: Colors.black54,
+                      value: stage.altitudeM == null
+                          ? '—'
+                          : formatter.altitude(stage.altitudeM!),
+                      label: l10n.t('Altitude'),
+                    ),
+                    _CompactDetailMetric(
+                      key: const Key('stage-detail-ascent'),
+                      icon: Icons.trending_up_rounded,
+                      value: ascentM == null
+                          ? '—'
+                          : formatter.altitude(ascentM),
+                      label: l10n.t('Ascent'),
+                    ),
+                    _CompactDetailMetric(
+                      key: const Key('stage-detail-descent'),
+                      icon: Icons.trending_down_rounded,
+                      iconColor: _red,
+                      value: descentM == null
+                          ? '—'
+                          : formatter.altitude(descentM),
+                      label: l10n.t('Descent'),
+                    ),
+                  ],
+          ),
+        ],
+        const SizedBox(height: 16),
+        if (services.isNotEmpty)
+          _DetailSection(
+            title: l10n.t('Services'),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final service in services)
+                  Chip(
+                    avatar: Icon(
+                      _serviceIcon(service.key),
+                      size: 17,
+                      color: _serviceColor(service.key),
+                    ),
+                    label: Text(l10n.t(_serviceLabel(service.key))),
+                    backgroundColor: _sand,
+                    side: BorderSide.none,
+                  ),
+              ],
+            ),
+          ),
+        if (excursions.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _DetailSection(
+            title: l10n.t('Excursions'),
+            child: Column(
+              children: [
+                for (
+                  var excursionIndex = 0;
+                  excursionIndex < excursions.length;
+                  excursionIndex++
+                ) ...[
+                  _ExcursionSummaryCard(
+                    excursion: excursions[excursionIndex],
+                    formatter: formatter,
+                  ),
+                  if (excursionIndex < excursions.length - 1)
+                    const SizedBox(height: 10),
+                ],
+              ],
+            ),
+          ),
+        ],
+        if (detours.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _DetailSection(
+            title: l10n.t('Detours'),
+            child: Column(
+              children: [
+                for (
+                  var detourIndex = 0;
+                  detourIndex < detours.length;
+                  detourIndex++
+                ) ...[
+                  _DetourSummaryCard(
+                    detour: detours[detourIndex],
+                    direction: direction,
+                    formatter: formatter,
+                  ),
+                  if (detourIndex < detours.length - 1)
+                    const SizedBox(height: 10),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -2953,6 +4468,312 @@ class _DashedStageRoutePainter extends CustomPainter {
   bool shouldRepaint(covariant _DashedStageRoutePainter oldDelegate) => false;
 }
 
+String _excursionRouteTypeLabel(ExcursionRouteType routeType) =>
+    switch (routeType) {
+      ExcursionRouteType.oneWay => 'One way',
+      ExcursionRouteType.outAndBack => 'Out and back',
+      ExcursionRouteType.loop => 'Loop',
+    };
+
+class _ExcursionSummaryCard extends StatelessWidget {
+  const _ExcursionSummaryCard({
+    required this.excursion,
+    required this.formatter,
+  });
+
+  final TrailExcursion excursion;
+  final MeasurementFormatter formatter;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final walkingTime = Duration(
+      minutes: excursion.estimatedWalkingTimeMinutes,
+    );
+    return Container(
+      key: ValueKey('stage-excursion-${excursion.id}'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: _excursionCardBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _filterBlueTeal, width: 1.6),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                key: ValueKey('stage-excursion-icon-${excursion.id}'),
+                width: 34,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: _filterBlueTeal, width: 1.5),
+                ),
+                child: const Icon(
+                  Icons.alt_route_rounded,
+                  size: 19,
+                  color: _filterBlueTeal,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.t('Excursion').toUpperCase(),
+                  style: const TextStyle(
+                    color: _filterBlueTeal,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                l10n.t(_excursionRouteTypeLabel(excursion.routeType)),
+                style: const TextStyle(
+                  color: _filterBlueTeal,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          Text(
+            excursion.displayName,
+            style: const TextStyle(
+              color: _ink,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 11),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              _ExcursionMetric(
+                icon: Icons.route_rounded,
+                value: formatter.distance(excursion.totalDistanceKm),
+                label: l10n.t('Distance'),
+              ),
+              _ExcursionMetric(
+                icon: Icons.trending_up_rounded,
+                value: formatter.altitude(excursion.elevationUpM),
+                label: l10n.t('Ascent'),
+              ),
+              _ExcursionMetric(
+                icon: Icons.schedule_rounded,
+                value: _formatWalkingTime(walkingTime, l10n),
+                label: l10n.t('Estimated walking time'),
+              ),
+              if (excursion.distanceFromTrailKm case final distance?)
+                _ExcursionMetric(
+                  icon: Icons.add_location_alt_outlined,
+                  value: formatter.distance(distance),
+                  label: l10n.t('Distance from trail'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExcursionMetric extends StatelessWidget {
+  const _ExcursionMetric({
+    required this.icon,
+    required this.value,
+    required this.label,
+    this.color = _filterBlueTeal,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: label,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: _ink,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetourSummaryCard extends StatelessWidget {
+  const _DetourSummaryCard({
+    required this.detour,
+    required this.direction,
+    required this.formatter,
+  });
+
+  final TrailDetour detour;
+  final TrailDirection direction;
+  final MeasurementFormatter formatter;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final detourAscent = direction.isReversed
+        ? detour.elevationDownM
+        : detour.elevationUpM;
+    final replacedAscent = direction.isReversed
+        ? detour.replacedElevationDownM
+        : detour.replacedElevationUpM;
+    final walkingTime = estimateNaismithWalkingTime(
+      distanceKm: detour.routeDistanceKm,
+      ascentM: detourAscent,
+    );
+    final replacedWalkingTime = estimateNaismithWalkingTime(
+      distanceKm: detour.replacedMainTrailDistanceKm,
+      ascentM: replacedAscent,
+    );
+    final timeDifferenceMinutes =
+        walkingTime.inMinutes - replacedWalkingTime.inMinutes;
+    return Container(
+      key: ValueKey('stage-detour-${detour.id}'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _sand,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.fork_right_rounded,
+                size: 21,
+                color: _detourPurple,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      detour.name,
+                      style: const TextStyle(
+                        color: _ink,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.t('Leaves and rejoins the E4.'),
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                l10n.t('Alternative route'),
+                style: const TextStyle(
+                  color: _detourPurple,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 9,
+            children: [
+              _ExcursionMetric(
+                icon: Icons.fork_right_rounded,
+                value: formatter.distance(detour.routeDistanceKm),
+                label: l10n.t('Detour route'),
+                color: _detourPurple,
+              ),
+              _ExcursionMetric(
+                icon: Icons.route_outlined,
+                value: formatter.distance(detour.replacedMainTrailDistanceKm),
+                label: l10n.t('E4 section'),
+                color: _detourPurple,
+              ),
+              _ExcursionMetric(
+                icon: Icons.trending_up_rounded,
+                value: formatter.altitude(detourAscent),
+                label: l10n.t('Ascent'),
+                color: _detourPurple,
+              ),
+              _ExcursionMetric(
+                icon: Icons.schedule_rounded,
+                value: _formatWalkingTime(walkingTime, l10n),
+                label: l10n.t('Estimated walking time'),
+                color: _detourPurple,
+              ),
+              _ExcursionMetric(
+                icon: Icons.add_road_rounded,
+                value: _signedDistance(formatter, detour.distanceDifferenceKm),
+                label: l10n.t('Distance difference'),
+                color: _detourPurple,
+              ),
+              _ExcursionMetric(
+                icon: Icons.more_time_rounded,
+                value: _signedWalkingTime(timeDifferenceMinutes, l10n),
+                label: l10n.t('Time difference'),
+                color: _detourPurple,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _signedDistance(MeasurementFormatter formatter, double distanceKm) {
+  final sign = distanceKm > 0
+      ? '+'
+      : distanceKm < 0
+      ? '−'
+      : '';
+  return '$sign${formatter.distance(distanceKm.abs())}';
+}
+
+String _signedWalkingTime(int minutes, AppLocalizations l10n) {
+  final sign = minutes > 0
+      ? '+'
+      : minutes < 0
+      ? '−'
+      : '';
+  return '$sign${_formatWalkingTime(Duration(minutes: minutes.abs()), l10n)}';
+}
+
 class _DetailSection extends StatelessWidget {
   const _DetailSection({required this.title, required this.child});
 
@@ -2990,6 +4811,8 @@ class _StageMapPreview extends StatelessWidget {
     required this.showRoute,
     required this.showFinishFlag,
     required this.lodgings,
+    required this.excursions,
+    required this.detours,
     required this.showUserLocation,
     required this.userLocation,
     required this.onTap,
@@ -3002,6 +4825,8 @@ class _StageMapPreview extends StatelessWidget {
   final bool showRoute;
   final bool showFinishFlag;
   final List<Lodging> lodgings;
+  final List<TrailExcursionRoute> excursions;
+  final List<TrailDetourRoute> detours;
   final bool showUserLocation;
   final DeviceLocation? userLocation;
   final VoidCallback onTap;
@@ -3047,7 +4872,9 @@ class _StageMapPreview extends StatelessWidget {
                   'finish-$showFinishFlag-'
                   'user-$showUserLocation-'
                   '${userLocation?.latitude}-${userLocation?.longitude}-'
-                  '${lodgings.map((lodging) => lodging.id).join(',')}',
+                  '${lodgings.map((lodging) => lodging.id).join(',')}-'
+                  '${excursions.map((route) => '${route.excursion.id}:${route.points.length}').join(',')}-'
+                  '${detours.map((route) => '${route.detour.id}:${route.points.length}').join(',')}',
                 ),
                 routePoints: preview.routePoints,
                 startPoint: preview.startPoint,
@@ -3055,6 +4882,8 @@ class _StageMapPreview extends StatelessWidget {
                 showRoute: showRoute,
                 showFinishFlag: showFinishFlag,
                 lodgings: lodgings,
+                excursions: excursions,
+                detours: detours,
                 showUserLocation: showUserLocation,
                 userLocation: userLocation,
                 onTap: onTap,
@@ -3134,6 +4963,8 @@ class _StageMapSnapshot extends StatefulWidget {
     required this.showRoute,
     required this.showFinishFlag,
     required this.lodgings,
+    required this.excursions,
+    required this.detours,
     required this.showUserLocation,
     required this.userLocation,
     required this.onTap,
@@ -3146,6 +4977,8 @@ class _StageMapSnapshot extends StatefulWidget {
   final bool showRoute;
   final bool showFinishFlag;
   final List<Lodging> lodgings;
+  final List<TrailExcursionRoute> excursions;
+  final List<TrailDetourRoute> detours;
   final bool showUserLocation;
   final DeviceLocation? userLocation;
   final VoidCallback onTap;
@@ -3180,6 +5013,10 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
       for (final lodging in widget.lodgings)
         if (lodging.location case final location?)
           Position(location.longitude, location.latitude),
+      for (final route in widget.excursions)
+        for (final point in route.points) Position(point.lng, point.lat),
+      for (final route in widget.detours)
+        for (final point in route.points) Position(point.lng, point.lat),
       if (widget.userLocation case final DeviceLocation location)
         Position(location.longitude, location.latitude),
     ];
@@ -3258,6 +5095,52 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
           lineOpacity: 0.95,
         ),
       );
+    }
+
+    if (widget.excursions.isNotEmpty) {
+      final excursionManager = await map.annotations
+          .createPolylineAnnotationManager();
+      for (final route in widget.excursions) {
+        if (route.points.length < 2) continue;
+        await excursionManager.create(
+          PolylineAnnotationOptions(
+            geometry: LineString(
+              coordinates: [
+                for (final point in route.points)
+                  Position(point.lng, point.lat),
+              ],
+            ),
+            lineColor: _excursionMapLightBlue.toARGB32(),
+            lineWidth: 5,
+            lineBorderColor: Colors.white.toARGB32(),
+            lineBorderWidth: 1.5,
+            lineOpacity: 0.95,
+          ),
+        );
+      }
+    }
+
+    if (widget.detours.isNotEmpty) {
+      final detourManager = await map.annotations
+          .createPolylineAnnotationManager();
+      for (final route in widget.detours) {
+        if (route.points.length < 2) continue;
+        await detourManager.create(
+          PolylineAnnotationOptions(
+            geometry: LineString(
+              coordinates: [
+                for (final point in route.points)
+                  Position(point.lng, point.lat),
+              ],
+            ),
+            lineColor: _detourPurple.toARGB32(),
+            lineWidth: 5,
+            lineBorderColor: Colors.white.toARGB32(),
+            lineBorderWidth: 1.5,
+            lineOpacity: 0.95,
+          ),
+        );
+      }
     }
 
     final flags = await Future.wait([
@@ -3575,32 +5458,36 @@ class _ServiceFilterSheetState extends State<_ServiceFilterSheet> {
               runSpacing: 8,
               children: [
                 FilterChip(
-                  key: const ValueKey('stage-filter-start'),
-                  selected: selected.contains(_startPointFilterKey),
+                  key: const ValueKey('stage-filter-excursions'),
+                  selected: selected.contains(_excursionPointFilterKey),
                   avatar: const Icon(
-                    Icons.flag_rounded,
+                    Icons.alt_route_rounded,
                     size: 18,
-                    color: _green,
+                    color: _filterBlueTeal,
                   ),
-                  label: Text(l10n.t('Start')),
+                  label: Text(l10n.t('Excursions')),
                   onSelected: (isSelected) => setState(() {
                     if (isSelected) {
-                      selected.add(_startPointFilterKey);
+                      selected.add(_excursionPointFilterKey);
                     } else {
-                      selected.remove(_startPointFilterKey);
+                      selected.remove(_excursionPointFilterKey);
                     }
                   }),
                 ),
                 FilterChip(
-                  key: const ValueKey('stage-filter-finish'),
-                  selected: selected.contains(_finishPointFilterKey),
-                  avatar: const Icon(Icons.flag_rounded, size: 18, color: _red),
-                  label: Text(l10n.t('Finish')),
+                  key: const ValueKey('stage-filter-detours'),
+                  selected: selected.contains(_detourPointFilterKey),
+                  avatar: const Icon(
+                    Icons.fork_right_rounded,
+                    size: 18,
+                    color: _detourPurple,
+                  ),
+                  label: Text(l10n.t('Detours')),
                   onSelected: (isSelected) => setState(() {
                     if (isSelected) {
-                      selected.add(_finishPointFilterKey);
+                      selected.add(_detourPointFilterKey);
                     } else {
-                      selected.remove(_finishPointFilterKey);
+                      selected.remove(_detourPointFilterKey);
                     }
                   }),
                 ),

@@ -51,6 +51,12 @@ def run_import(
         "trailId": payload.trailId,
         "stageCount": len(payload.stages),
         "lodgingCount": len(payload.lodgings),
+        "excursionCount": len(payload.excursions),
+        "excursionRouteChunkCount": sum(
+            len(chunks) for chunks in payload.excursionRouteChunks.values()
+        ),
+        "detourCount": len(payload.detours),
+        "detourRouteChunkCount": sum(len(chunks) for chunks in payload.detourRouteChunks.values()),
         "routePointCount": payload.routeMetadata.pointCount,
         "routeChunkCount": len(payload.routeChunks),
         "routeMarkerCount": len(payload.routeMarkers),
@@ -87,7 +93,9 @@ def run_import(
 
     db = get_firestore_client(
         project_id=project_id or os.getenv("FIREBASE_PROJECT_ID") or None,
-        service_account_path=service_account_path or os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or None,
+        service_account_path=service_account_path
+        or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        or None,
         emulator_host=emulator_host or os.getenv("FIRESTORE_EMULATOR_HOST") or None,
     )
     summary["written"] = write_import_payload(db, payload, merge=merge, prune=prune)

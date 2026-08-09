@@ -39,6 +39,8 @@ Keys:
 | `country` | string | Trail country. | `Cyprus` |
 | `stageCount` | number | Number of stage documents imported. | `123` |
 | `lodgingCount` | number | Number of lodging documents imported. | `192` |
+| `excursionCount` | number | Number of excursion documents imported. | `1` |
+| `detourCount` | number | Number of detour documents imported. | `1` |
 | `routePointCount` | number | Number of route GPS/elevation points. | `23107` |
 | `totalDistanceKm` | number | Full route distance in kilometers. | `558.091042780747` |
 | `startStageId` | string | Stage ID at the start of the route. | `124-pafos-airport` |
@@ -57,6 +59,8 @@ Example:
   "country": "Cyprus",
   "stageCount": 123,
   "lodgingCount": 192,
+  "excursionCount": 1,
+  "detourCount": 1,
   "routePointCount": 23107,
   "totalDistanceKm": 558.091042780747,
   "startStageId": "124-pafos-airport",
@@ -446,6 +450,117 @@ Common query:
 routeMarkers order by pointIndex ascending
 ```
 
+## Collection: `trails/{trailId}/excursions`
+
+Path:
+
+```text
+trails/{trailId}/excursions/{excursionId}
+```
+
+Purpose:
+
+Stores an excursion summary and all importer-derived route, elevation, and E4
+connection data. Excursion display text is intentionally kept outside this
+workbook-backed import.
+
+Supported `routeType` values:
+
+| Value | Meaning |
+| --- | --- |
+| `oneWay` | The supplied GPS geometry is walked once. |
+| `outAndBack` | The supplied GPS geometry is the outward leg; distance and elevation totals include the return over the same route. |
+| `loop` | The supplied GPS geometry represents one complete loop. |
+
+Supported `anchorType` values:
+
+| Value | Import behavior |
+| --- | --- |
+| `stage` | Resolves `Anchor Stage` to a stage document and projects the first excursion point onto the E4 route. |
+| `trail` | Compares the complete excursion geometry to the complete E4 geometry and uses their closest connection. |
+| `standalone` | Keeps the route independent; nearest-E4 calculations remain informational. |
+
+Key calculated fields include:
+
+| Key | Type | Meaning |
+| --- | --- | --- |
+| `anchorStageId` | string or null | Stage document linked by a `stage` anchor. |
+| `routeDistanceKm` | number | Length of the GPS geometry stored in route chunks. |
+| `totalDistanceKm` | number | Walking distance after applying route type behavior. |
+| `routeElevationUpM` / `routeElevationDownM` | number | Elevation totals in the supplied GPS geometry. |
+| `elevationUpM` / `elevationDownM` | number | Walking elevation totals after applying route type behavior. |
+| `estimatedWalkingTimeMinutes` | number | Naismith estimate: 12 minutes/km plus 1 minute/10 m ascent. |
+| `distanceFromTrailKm` | number | Shortest calculated separation from the canonical E4 geometry. |
+| `mainTrailDistanceKm` | number | Cumulative E4 distance at the nearest/projected connection. |
+| `excursionConnectionDistanceKm` | number | Cumulative excursion distance at the connection. |
+| `connectionLocation` | map | Calculated location on the excursion geometry. |
+| `trailConnectionLocation` | map | Matching projected location on the E4 geometry. |
+| `pointCount` / `chunkCount` / `chunkSize` | number | Route transport metadata. |
+| `bounds` | map | Excursion bounding box. |
+
+## Collection: `trails/{trailId}/excursions/{excursionId}/routeChunks`
+
+Path:
+
+```text
+trails/{trailId}/excursions/{excursionId}/routeChunks/{chunkId}
+```
+
+Excursion route chunks use the same flat five-value point format as the main E4
+route:
+
+```text
+[lat, lng, altitudeM, distanceKm, reverseDistanceKm, ...]
+```
+
+Fetch them ordered by `chunkIndex`.
+
+## Collection: `trails/{trailId}/detours`
+
+Path:
+
+```text
+trails/{trailId}/detours/{detourId}
+```
+
+Purpose:
+
+Stores a one-way alternative that leaves the E4 and reconnects later. The source
+sheet contains only GPS/elevation points plus the detour ID and name. The importer
+calculates all trail connections and comparison values.
+
+Key calculated fields include:
+
+| Key | Type | Meaning |
+| --- | --- | --- |
+| `routeType` | string | Always `oneWay` for the supported detour format. |
+| `anchorType` | string | Always `trailSegment`; both endpoints are projected onto the E4. |
+| `routeDistanceKm` | number | Length of the detour GPS geometry. |
+| `elevationUpM` / `elevationDownM` | number | Detour elevation totals. |
+| `estimatedWalkingTimeMinutes` | number | Naismith estimate for the detour. |
+| `startConnection` / `endConnection` | map | Route endpoint, projected E4 location, E4 cumulative distance, segment index, and separation. |
+| `replacedMainTrailDistanceKm` | number | E4 distance between the two projected connections. |
+| `replacedElevationUpM` / `replacedElevationDownM` | number | Elevation totals for the replaced E4 section in detour direction. |
+| `replacedEstimatedWalkingTimeMinutes` | number | Naismith estimate for the replaced E4 section. |
+| `distanceDifferenceKm` | number | Detour distance minus replaced E4 distance. |
+| `elevationUpDifferenceM` / `elevationDownDifferenceM` | number | Detour elevation minus replaced E4 elevation. |
+| `estimatedWalkingTimeDifferenceMinutes` | number | Detour walking estimate minus replaced E4 estimate. |
+| `averageDistanceFromTrailKm` / `maximumDistanceFromTrailKm` | number | Calculated detour separation from the E4 geometry. |
+| `affectedStageIds` / `affectedStageSequences` / `affectedStageNames` | arrays | Stages whose E4 legs overlap the replaced section. |
+| `pointCount` / `chunkCount` / `chunkSize` | number | Route transport metadata. |
+| `bounds` | map | Detour bounding box. |
+
+## Collection: `trails/{trailId}/detours/{detourId}/routeChunks`
+
+Path:
+
+```text
+trails/{trailId}/detours/{detourId}/routeChunks/{chunkId}
+```
+
+Detour chunks use the same flat five-value format and `chunkIndex` ordering as
+the main route and excursions.
+
 ## Collection: `trails/{trailId}/imports`
 
 Path:
@@ -474,6 +589,10 @@ Keys:
 | `routePointCount` | number | Number of route points in the import. | `23107` |
 | `routeChunkCount` | number | Number of route chunks written. | `47` |
 | `routeMarkerCount` | number | Number of route markers written. | `122` |
+| `excursionCount` | number | Number of excursion summaries written. | `1` |
+| `excursionRouteChunkCount` | number | Number of nested excursion route chunks written. | `1` |
+| `detourCount` | number | Number of detour summaries written. | `1` |
+| `detourRouteChunkCount` | number | Number of nested detour route chunks written. | `1` |
 | `warnings` | array of strings | Non-fatal import warnings. | `["LODGING row 14: unknown stage '...'"]` |
 
 Example:
@@ -499,6 +618,10 @@ trails/{trailId}
   routeMetadata/main
   routeChunks/{chunkId}         -> ordered by chunkIndex
   routeMarkers/{routeMarkerId}  -> optional stageId references stages/{stageId}
+  excursions/{excursionId}
+    routeChunks/{chunkId}       -> ordered by chunkIndex
+  detours/{detourId}
+    routeChunks/{chunkId}       -> ordered by chunkIndex
   imports/{importId}
 ```
 
@@ -509,3 +632,8 @@ For app usage:
 - Query `lodgings` by `stageId` to show lodging for a stage.
 - Read `routeMetadata/main`, then fetch `routeChunks` ordered by `chunkIndex` to draw the route and elevation profile.
 - Read `routeMarkers` ordered by `pointIndex` to place labeled points on the route/elevation UI.
+- Read `excursions`, then each selected excursion's nested `routeChunks` ordered
+  by `chunkIndex` to draw its map and elevation profile.
+- Read `detours`, then each selected detour's nested `routeChunks` ordered by
+  `chunkIndex`; use its two connection maps to render where it leaves and rejoins
+  the E4.

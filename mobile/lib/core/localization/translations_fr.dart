@@ -143,6 +143,7 @@ const frenchTranslations = <String, String>{
       'Préparation du profil altimétrique hors ligne…',
   'Download profile': 'Télécharger le profil',
   'Close stage summary': 'Fermer le résumé de l’étape',
+  'Open Stage Info': 'Ouvrir les informations de l’étape',
   'Stage': 'Étape',
   'Tap a stage to see its details.': 'Touchez une étape pour voir ses détails.',
   'The numbers on the left show ascent, descent, stage length, and + distance from the trail.':
@@ -176,6 +177,31 @@ const frenchTranslations = <String, String>{
   'Accommodation': 'Hébergements',
   'Show accommodation': 'Afficher les hébergements',
   'Hide accommodation': 'Masquer les hébergements',
+  'Excursion': 'Excursion',
+  'Excursions': 'Excursions',
+  'Detour': 'Déviation',
+  'Detours': 'Déviations',
+  'Alternative route': 'Itinéraire alternatif',
+  'Leaves and rejoins the E4.': 'Quitte l’E4 puis le rejoint plus loin.',
+  'Detour route': 'Itinéraire de déviation',
+  'E4 section': 'Section de l’E4',
+  'Distance difference': 'Différence de distance',
+  'Time difference': 'Différence de temps',
+  'Show detours': 'Afficher les déviations',
+  'Hide detours': 'Masquer les déviations',
+  'No detour routes are available on the map.':
+      'Aucun itinéraire de déviation n’est disponible sur la carte.',
+  'Detour routes are currently unavailable.':
+      'Les itinéraires de déviation sont actuellement indisponibles.',
+  'One way': 'Aller simple',
+  'Out and back': 'Aller-retour',
+  'Loop': 'Boucle',
+  'Show excursions': 'Afficher les excursions',
+  'Hide excursions': 'Masquer les excursions',
+  'No excursion routes are available on the map.':
+      'Aucun itinéraire d’excursion n’est disponible sur la carte.',
+  'Excursion routes are currently unavailable.':
+      'Les itinéraires d’excursion sont actuellement indisponibles.',
   'Close accommodation summary': 'Fermer le résumé de l’hébergement',
   'Accommodation locations are currently unavailable.':
       'Les emplacements des hébergements sont actuellement indisponibles.',

@@ -142,6 +142,7 @@ const italianTranslations = <String, String>{
       'Preparazione del profilo altimetrico offline…',
   'Download profile': 'Scarica profilo',
   'Close stage summary': 'Chiudi il riepilogo della tappa',
+  'Open Stage Info': 'Apri informazioni sulla tappa',
   'Stage': 'Tappa',
   'Tap a stage to see its details.':
       'Tocca una tappa per visualizzarne i dettagli.',
@@ -176,6 +177,31 @@ const italianTranslations = <String, String>{
   'Accommodation': 'Alloggi',
   'Show accommodation': 'Mostra alloggi',
   'Hide accommodation': 'Nascondi alloggi',
+  'Excursion': 'Escursione',
+  'Excursions': 'Escursioni',
+  'Detour': 'Deviazione',
+  'Detours': 'Deviazioni',
+  'Alternative route': 'Percorso alternativo',
+  'Leaves and rejoins the E4.': 'Lascia l’E4 e vi si ricongiunge più avanti.',
+  'Detour route': 'Percorso della deviazione',
+  'E4 section': 'Tratto E4',
+  'Distance difference': 'Differenza di distanza',
+  'Time difference': 'Differenza di tempo',
+  'Show detours': 'Mostra deviazioni',
+  'Hide detours': 'Nascondi deviazioni',
+  'No detour routes are available on the map.':
+      'Non sono disponibili percorsi di deviazione sulla mappa.',
+  'Detour routes are currently unavailable.':
+      'I percorsi di deviazione non sono al momento disponibili.',
+  'One way': 'Solo andata',
+  'Out and back': 'Andata e ritorno',
+  'Loop': 'Anello',
+  'Show excursions': 'Mostra escursioni',
+  'Hide excursions': 'Nascondi escursioni',
+  'No excursion routes are available on the map.':
+      'Non sono disponibili percorsi di escursione sulla mappa.',
+  'Excursion routes are currently unavailable.':
+      'I percorsi di escursione non sono al momento disponibili.',
   'Close accommodation summary': 'Chiudi il riepilogo dell’alloggio',
   'Accommodation locations are currently unavailable.':
       'Le posizioni degli alloggi non sono al momento disponibili.',
