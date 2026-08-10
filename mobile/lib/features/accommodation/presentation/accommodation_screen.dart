@@ -729,11 +729,7 @@ class _AccommodationBottomAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = onTap == null
-        ? Colors.white30
-        : isActive
-        ? Colors.white
-        : Colors.white70;
+    final foreground = onTap == null ? Colors.white30 : Colors.white;
     return Expanded(
       child: Tooltip(
         message: label,

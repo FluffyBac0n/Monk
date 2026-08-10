@@ -155,7 +155,7 @@ class _ComingSoonTrailCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(Icons.route_rounded, color: _comingSoonBlue),
+              const Icon(Icons.hiking_rounded, color: _comingSoonBlue),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -212,8 +212,17 @@ class _TrailCard extends StatelessWidget {
     final l10n = context.l10n;
 
     return Material(
+      key: ValueKey('trail-card-surface-${trail.id}'),
       color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: trail.id == 'cyprus-e4'
+            ? BorderSide(
+                color: EurotrexPalette.navy.withValues(alpha: 0.28),
+                width: 1.25,
+              )
+            : BorderSide.none,
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         key: ValueKey('explore-${trail.id}'),
@@ -261,7 +270,7 @@ class _TrailCard extends StatelessWidget {
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [Color(0xD9303E4E), Color(0x802D5DD3)],
+                              colors: [Color(0x80000000), Color(0x52000000)],
                               stops: [0.05, 1],
                             ),
                           ),

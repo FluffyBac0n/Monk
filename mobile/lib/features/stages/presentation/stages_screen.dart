@@ -53,7 +53,7 @@ const _filterBlueTeal = Color(0xFF356F7A);
 const _timelineLineColor = Color(0xFFB9BDB8);
 const _timelineLeftInset = 12.0;
 const _timelineGutterWidth = 108.0;
-const _trailHeaderExpandedHeight = 164.0;
+const _trailHeaderExpandedHeight = 128.0;
 const _trailHeaderCollapseThreshold = 82.0;
 const _timelineLineColumnWidth = 28.0;
 const _beachPointFilterKey = 'trailBeach';
@@ -785,7 +785,6 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             _TrailAppBar(
-              direction: direction,
               isCollapsed: _isHeaderCollapsed,
               onTrailInformationHintReset: () =>
                   setState(() => _hasSeenTrailInformation = false),
@@ -1178,11 +1177,7 @@ class _StageBottomAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = onTap == null
-        ? Colors.white30
-        : isActive
-        ? Colors.white
-        : Colors.white70;
+    final foreground = onTap == null ? Colors.white30 : Colors.white;
     Widget buildIcon(double size) => showReverseTrailIcon
         ? _ReverseTrailIcon(color: foreground, size: size + 4)
         : Icon(icon, color: foreground, size: size);
@@ -1271,7 +1266,7 @@ class _ReverseTrailIcon extends StatelessWidget {
             top: size * 0.13,
             child: Icon(
               Icons.swap_horiz_rounded,
-              color: color.withValues(alpha: 0.48),
+              color: color,
               size: size * 0.77,
             ),
           ),
@@ -1288,14 +1283,12 @@ class _ReverseTrailIcon extends StatelessWidget {
 
 class _TrailAppBar extends StatelessWidget {
   const _TrailAppBar({
-    required this.direction,
     required this.isCollapsed,
     required this.onTrailInformationHintReset,
     required this.onStageDetailsHintReset,
     required this.onStageMetricsHintReset,
   });
 
-  final TrailDirection direction;
   final bool isCollapsed;
   final VoidCallback onTrailInformationHintReset;
   final VoidCallback onStageDetailsHintReset;
@@ -1304,10 +1297,6 @@ class _TrailAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final start = direction.isReversed
-        ? l10n.larnakaAirport
-        : l10n.pafosAirport;
-    final end = direction.isReversed ? l10n.pafosAirport : l10n.larnakaAirport;
     return SliverAppBar(
       expandedHeight: _trailHeaderExpandedHeight,
       pinned: true,
@@ -1319,23 +1308,36 @@ class _TrailAppBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Expanded(
-            child: IgnorePointer(
-              child: AnimatedOpacity(
-                key: const ValueKey('trail-compact-title-opacity'),
-                opacity: isCollapsed ? 1 : 0,
-                duration: const Duration(milliseconds: 180),
-                child: Text(
-                  l10n.t('Cyprus E4'),
-                  key: const ValueKey('trail-compact-title'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                IgnorePointer(
+                  child: AnimatedOpacity(
+                    key: const ValueKey('trail-compact-title-opacity'),
+                    opacity: isCollapsed ? 1 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child: Text(
+                      l10n.t('Cyprus E4'),
+                      key: const ValueKey('trail-compact-title'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                IgnorePointer(
+                  child: AnimatedOpacity(
+                    key: const ValueKey('trail-expanded-badges-opacity'),
+                    opacity: isCollapsed ? 0 : 1,
+                    duration: const Duration(milliseconds: 180),
+                    child: const _TrailHeaderBadges(),
+                  ),
+                ),
+              ],
             ),
           ),
           IconButton(
@@ -1388,45 +1390,19 @@ class _TrailAppBar extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xD9303E4E), Color(0x802D5DD3)],
+                  colors: [Color(0x80000000), Color(0x52000000)],
                   stops: [0.05, 1],
                 ),
               ),
             ),
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 52, 20, 12),
+                key: const ValueKey('stages-header-content-padding'),
+                padding: const EdgeInsets.fromLTRB(20, 52, 20, 18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          key: const ValueKey('stage-long-distance-badge'),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _yellow,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            l10n.t('LONG DISTANCE'),
-                            style: const TextStyle(
-                              color: _ink,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Flexible(child: _OfflineMapStatusBadge()),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
                     Text(
                       l10n.t('Cyprus E4'),
                       style: Theme.of(context).textTheme.headlineSmall
@@ -1435,14 +1411,6 @@ class _TrailAppBar extends StatelessWidget {
                             fontWeight: FontWeight.w900,
                           ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.routeDirection(start, end),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -1450,6 +1418,38 @@ class _TrailAppBar extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _TrailHeaderBadges extends StatelessWidget {
+  const _TrailHeaderBadges();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      key: const ValueKey('stage-header-badges'),
+      children: [
+        Container(
+          key: const ValueKey('stage-long-distance-badge'),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: _yellow,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            context.l10n.t('LONG DISTANCE'),
+            style: const TextStyle(
+              color: _ink,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Flexible(child: _OfflineMapStatusBadge()),
+      ],
     );
   }
 }

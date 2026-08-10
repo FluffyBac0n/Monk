@@ -62,12 +62,37 @@ void main() {
     );
     expect(stageHeaderWatermark, findsOneWidget);
     expect(
+      tester.widget<SliverAppBar>(find.byType(SliverAppBar)).expandedHeight,
+      128,
+    );
+    expect(
+      tester
+          .widget<Padding>(
+            find.byKey(const ValueKey('stages-header-content-padding')),
+          )
+          .padding,
+      const EdgeInsets.fromLTRB(20, 52, 20, 18),
+    );
+    expect(
       tester.widget<Image>(stageHeaderWatermark).image,
       const AssetImage('assets/branding/cyprus_e4_forest.jpg'),
     );
+    final stageHeaderFade = find.byKey(
+      const ValueKey('stages-header-watermark-fade-cyprus-e4'),
+    );
+    expect(stageHeaderFade, findsOneWidget);
+    final stageHeaderFadeDecoration =
+        tester.widget<DecoratedBox>(stageHeaderFade).decoration
+            as BoxDecoration;
+    final stageHeaderGradient =
+        stageHeaderFadeDecoration.gradient! as LinearGradient;
+    expect(stageHeaderGradient.colors, const [
+      Color(0x80000000),
+      Color(0x52000000),
+    ]);
     expect(
-      find.byKey(const ValueKey('stages-header-watermark-fade-cyprus-e4')),
-      findsOneWidget,
+      find.byKey(const ValueKey('stages-header-route-direction')),
+      findsNothing,
     );
     expect(
       tester.getCenter(longDistance).dx,
@@ -122,6 +147,14 @@ void main() {
     expect(
       tester.widget<Row>(toolbar).mainAxisAlignment,
       MainAxisAlignment.end,
+    );
+    expect(
+      find.descendant(of: toolbar, matching: longDistance),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: toolbar, matching: offlineStatus),
+      findsOneWidget,
     );
     expect(find.descendant(of: toolbar, matching: settings), findsOneWidget);
     expect(find.descendant(of: toolbar, matching: reverse), findsNothing);
@@ -508,6 +541,15 @@ void main() {
     final trailHeader = find.byKey(
       const ValueKey('trail-card-header-cyprus-e4'),
     );
+    final trailSurface = tester.widget<Material>(
+      find.byKey(const ValueKey('trail-card-surface-cyprus-e4')),
+    );
+    final trailSurfaceShape = trailSurface.shape! as RoundedRectangleBorder;
+    expect(trailSurfaceShape.side.width, 1.25);
+    expect(
+      trailSurfaceShape.side.color,
+      EurotrexPalette.navy.withValues(alpha: 0.28),
+    );
     final trailKind = find.byKey(const ValueKey('trail-card-kind-cyprus-e4'));
     final trailDataStatus = find.byKey(
       const ValueKey('trail-data-status-badge-cyprus-e4'),
@@ -531,10 +573,19 @@ void main() {
       'assets/branding/cyprus_e4_forest.jpg',
     );
     expect(tester.getSize(trailHeader).height, greaterThanOrEqualTo(165));
-    expect(
-      find.byKey(const ValueKey('trail-card-watermark-fade-cyprus-e4')),
-      findsOneWidget,
+    final trailWatermarkFade = find.byKey(
+      const ValueKey('trail-card-watermark-fade-cyprus-e4'),
     );
+    expect(trailWatermarkFade, findsOneWidget);
+    final trailWatermarkDecoration =
+        tester.widget<DecoratedBox>(trailWatermarkFade).decoration
+            as BoxDecoration;
+    final trailWatermarkGradient =
+        trailWatermarkDecoration.gradient! as LinearGradient;
+    expect(trailWatermarkGradient.colors, const [
+      Color(0x80000000),
+      Color(0x52000000),
+    ]);
     expect(
       tester.widget<Container>(trailKind).padding,
       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -753,6 +804,14 @@ void main() {
         findsOneWidget,
       );
       expect(
+        find.descendant(of: card, matching: find.byIcon(Icons.hiking_rounded)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: card, matching: find.byIcon(Icons.route_rounded)),
+        findsNothing,
+      );
+      expect(
         find.descendant(
           of: card,
           matching: find.byWidgetPredicate((widget) {
@@ -950,7 +1009,7 @@ void main() {
     expect(bottomNavigation, findsOneWidget);
     expect(
       tester.widget<Material>(bottomNavigation).color,
-      const Color(0xFF303E4E),
+      EurotrexPalette.navy,
     );
     expect(
       find.byKey(const Key('stage-detail-stages-shortcut')),
@@ -982,6 +1041,25 @@ void main() {
       tester.getCenter(mapAction).dx,
       lessThan(tester.getCenter(elevationAction).dx),
     );
+    for (final action in [
+      (key: const ValueKey('stage-detail-map'), icon: Icons.map_outlined),
+      (
+        key: const ValueKey('stage-detail-elevation'),
+        icon: Icons.landscape_outlined,
+      ),
+    ]) {
+      expect(
+        tester
+            .widget<Icon>(
+              find.descendant(
+                of: find.byKey(action.key),
+                matching: find.byIcon(action.icon),
+              ),
+            )
+            .color,
+        Colors.white,
+      );
+    }
   });
 
   testWidgets('linked excursions appear on the stage card and details', (
@@ -1636,7 +1714,7 @@ void main() {
     final pafosDescent = find.byKey(const ValueKey('stage-descent-pafos'));
     final pafosLength = find.byKey(const ValueKey('stage-length-pafos'));
 
-    expect(find.text('Pafos Airport  →  Larnaka Airport'), findsOneWidget);
+    expect(find.text('Pafos Airport  →  Larnaka Airport'), findsNothing);
     expect(pafosDistance, findsNothing);
     expect(pafosAltitude, findsOneWidget);
     expect(larnakaDistance, findsOneWidget);
@@ -1744,9 +1822,9 @@ void main() {
             ),
           )
           .color,
-      Colors.white70,
+      Colors.white,
     );
-    expect(find.text('Larnaka Airport  →  Pafos Airport'), findsOneWidget);
+    expect(find.text('Larnaka Airport  →  Pafos Airport'), findsNothing);
     expect(larnakaDistance, findsNothing);
     expect(pafosDistance, findsOneWidget);
     expect(larnakaAscent, findsNothing);
@@ -2163,7 +2241,7 @@ void main() {
     expect(bottomNavigation, findsOneWidget);
     expect(
       tester.widget<Material>(bottomNavigation).color,
-      const Color(0xFF303E4E),
+      EurotrexPalette.navy,
     );
     expect(find.byKey(const ValueKey('stage-bottom-filter')), findsOneWidget);
     expect(find.byIcon(Icons.filter_list_rounded), findsOneWidget);
@@ -2197,6 +2275,8 @@ void main() {
       ),
     );
     expect(reverseHiker.size!, greaterThan(reverseArrows.size!));
+    expect(reverseHiker.color, Colors.white);
+    expect(reverseArrows.color, Colors.white);
     expect(find.byKey(const ValueKey('stage-bottom-gps')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('stage-bottom-gps-surface')),
@@ -2207,6 +2287,29 @@ void main() {
       find.byKey(const ValueKey('stage-bottom-elevation')),
       findsOneWidget,
     );
+    for (final action in [
+      (
+        key: const ValueKey('stage-bottom-filter'),
+        icon: Icons.filter_list_rounded,
+      ),
+      (
+        key: const ValueKey('stage-bottom-gps'),
+        icon: Icons.gps_not_fixed_rounded,
+      ),
+      (key: const ValueKey('stage-bottom-map'), icon: Icons.map_outlined),
+      (
+        key: const ValueKey('stage-bottom-elevation'),
+        icon: Icons.landscape_outlined,
+      ),
+    ]) {
+      final icon = tester.widget<Icon>(
+        find.descendant(
+          of: find.byKey(action.key),
+          matching: find.byIcon(action.icon),
+        ),
+      );
+      expect(icon.color, Colors.white);
+    }
     expect(find.byKey(const ValueKey('stage-e4-waymark')), findsOneWidget);
     expect(
       find.descendant(of: bottomNavigation, matching: find.text('Filter')),
@@ -2222,7 +2325,7 @@ void main() {
     );
     expect(
       tester.widget<Material>(bottomNavigation).color,
-      const Color(0xFF303E4E),
+      EurotrexPalette.navy,
     );
 
     final navigationSize = find.byKey(
@@ -2387,6 +2490,37 @@ void main() {
       tester.widget<Material>(bottomNavigation).color,
       const Color(0xFF303E4E),
     );
+    for (final action in [
+      (
+        key: const ValueKey('accommodation-stages-shortcut'),
+        icon: Icons.hiking_rounded,
+      ),
+      (
+        key: const ValueKey('accommodation-filter'),
+        icon: Icons.filter_list_rounded,
+      ),
+      (
+        key: const ValueKey('accommodation-gps'),
+        icon: Icons.gps_not_fixed_rounded,
+      ),
+      (key: const ValueKey('accommodation-map'), icon: Icons.map_outlined),
+      (
+        key: const ValueKey('accommodation-elevation'),
+        icon: Icons.landscape_outlined,
+      ),
+    ]) {
+      expect(
+        tester
+            .widget<Icon>(
+              find.descendant(
+                of: find.byKey(action.key),
+                matching: find.byIcon(action.icon),
+              ),
+            )
+            .color,
+        Colors.white,
+      );
+    }
     expect(
       find.descendant(
         of: stagesShortcut,
