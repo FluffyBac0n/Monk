@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../../core/theme/eurotrex_palette.dart';
 import '../../about/presentation/about_screen.dart';
 import '../../accommodation/presentation/accommodation_controller.dart';
 import '../../elevation/presentation/elevation_controller.dart';
@@ -40,9 +41,8 @@ class TrailsScreen extends ConsumerWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 154,
             pinned: true,
-            backgroundColor: _ink,
+            backgroundColor: EurotrexPalette.navy,
             foregroundColor: Colors.white,
             title: Semantics(
               image: true,
@@ -84,26 +84,7 @@ class TrailsScreen extends ConsumerWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [_ink, Color(0xFF315E47)],
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 70, 20, 22),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.t('Trails'),
-                          style: Theme.of(context).textTheme.headlineLarge
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                              ),
-                        ),
-                      ],
-                    ),
+                    colors: [EurotrexPalette.navy, EurotrexPalette.blue],
                   ),
                 ),
               ),
@@ -250,7 +231,7 @@ class _TrailCard extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF275F45), Color(0xFF183226)],
+                  colors: [EurotrexPalette.navy, EurotrexPalette.blue],
                 ),
               ),
               child: Stack(
@@ -280,7 +261,7 @@ class _TrailCard extends StatelessWidget {
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [Color(0xE6275F45), Color(0x66183226)],
+                              colors: [Color(0xD9303E4E), Color(0x802D5DD3)],
                               stops: [0.05, 1],
                             ),
                           ),
@@ -376,6 +357,8 @@ class _TrailCard extends StatelessWidget {
                       key: ValueKey('explore-trail-button-${trail.id}'),
                       onPressed: onExplore,
                       style: FilledButton.styleFrom(
+                        backgroundColor: EurotrexPalette.blue,
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 14,
                           vertical: 10,

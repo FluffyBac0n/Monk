@@ -166,6 +166,8 @@ void main() {
     );
     expect(german.t('Filter accommodation'), 'Unterkünfte filtern');
     expect(german.t('Bookable online'), 'Online buchbar');
+    expect(german.t('Price range'), 'Preisspanne');
+    expect(german.t('Any price'), 'Beliebiger Preis');
     expect(german.t('View places to stay'), 'Unterkünfte ansehen');
     expect(german.t('View on map'), 'Auf Karte anzeigen');
     expect(german.t('April - October'), 'April–Oktober');
@@ -288,6 +290,8 @@ void main() {
     expect(spanish.t('Book'), 'Reservar');
     expect(spanish.t('Filter accommodation'), 'Filtrar alojamientos');
     expect(spanish.t('Bookable online'), 'Reservable en línea');
+    expect(spanish.t('Price range'), 'Rango de precios');
+    expect(spanish.t('Any price'), 'Cualquier precio');
     expect(spanish.t('View places to stay'), 'Ver alojamientos');
     expect(spanish.t('View on map'), 'Ver en el mapa');
     expect(spanish.t('April - October'), 'abril–octubre');

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../../core/theme/eurotrex_palette.dart';
 import '../../stages/domain/stage.dart';
 import '../../stages/presentation/stages_controller.dart';
 import '../../stages/presentation/stages_screen.dart';
@@ -111,7 +112,7 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
     return Scaffold(
       backgroundColor: _sand,
       appBar: AppBar(
-        backgroundColor: _ink,
+        backgroundColor: EurotrexPalette.navy,
         foregroundColor: Colors.white,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

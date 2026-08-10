@@ -98,12 +98,25 @@ void main() {
     final detourCard = find.byKey(
       const ValueKey('stage-detour-choice-card-teishia-tis-madaris'),
     );
+    final detourTimelineAxis = find.byKey(
+      const ValueKey('stage-detour-timeline-axis-teishia-tis-madaris'),
+    );
+    final e4PathMarker = find.byKey(
+      const ValueKey('stage-detour-e4-path-marker-66-spilia'),
+    );
+    expect(e4PathMarker, findsOneWidget);
+    expect(
+      (tester.widget<Container>(e4PathMarker).decoration! as BoxDecoration)
+          .color,
+      const Color(0xFF277653),
+    );
+    expect(
+      tester.getCenter(e4PathMarker).dx,
+      closeTo(tester.getCenter(detourTimelineAxis).dx, 0.01),
+    );
     expect(
       tester.getCenter(card).dx,
       lessThan(tester.getCenter(detourCard).dx),
-    );
-    final detourTimelineAxis = find.byKey(
-      const ValueKey('stage-detour-timeline-axis-teishia-tis-madaris'),
     );
     final sarantiMarker = find.byKey(const ValueKey('stage-marker-65-saranti'));
     expect(
@@ -149,7 +162,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('stage-filter-start')), findsNothing);
     expect(find.byKey(const ValueKey('stage-filter-finish')), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('stage-filter-detours')));
+    expect(find.byKey(const ValueKey('stage-filter-detours')), findsNothing);
+    expect(find.byKey(const ValueKey('stage-filter-excursions')), findsNothing);
     final applyFilters = find.byKey(const Key('apply-service-filters'));
     await tester.scrollUntilVisible(
       applyFilters,
@@ -160,23 +174,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('stage-card-67-adventure-mountain-park')),
-      findsNothing,
+      findsOneWidget,
     );
     expect(find.byKey(const ValueKey('stage-card-66-spilia')), findsOneWidget);
     expect(find.byKey(const ValueKey('stage-card-65-saranti')), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
-    await tester.pumpAndSettle();
-    final clearFilters = find.byKey(
-      const Key('clear-service-filter-selection'),
-    );
-    await tester.scrollUntilVisible(
-      clearFilters,
-      160,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.tap(clearFilters);
-    await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('stage-detour-choice-teishia-tis-madaris')),
       findsOneWidget,
@@ -281,6 +282,7 @@ class _DetourStagesController extends StagesController {
       id: '66-spilia',
       sequence: 66,
       name: 'Spilia',
+      distanceFromPathKm: 0.2,
       accumulatedDistanceKm: 270,
       segmentLengthKm: 1.7,
       elevationUpM: 200,

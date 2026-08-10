@@ -211,6 +211,8 @@ const italianTranslations = <String, String>{
   'Book': 'Prenota',
   'Filter accommodation': 'Filtra alloggi',
   'Bookable online': 'Prenotabile online',
+  'Price range': 'Fascia di prezzo',
+  'Any price': 'Qualsiasi prezzo',
   'Maximum distance from trail': 'Distanza massima dal sentiero',
   'Any distance': 'Qualsiasi distanza',
   'Accommodation type': 'Tipo di alloggio',

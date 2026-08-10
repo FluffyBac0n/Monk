@@ -211,6 +211,8 @@ const frenchTranslations = <String, String>{
   'Book': 'Réserver',
   'Filter accommodation': 'Filtrer les hébergements',
   'Bookable online': 'Réservable en ligne',
+  'Price range': 'Fourchette de prix',
+  'Any price': 'Tous les prix',
   'Maximum distance from trail': 'Distance maximale du sentier',
   'Any distance': 'Toute distance',
   'Accommodation type': 'Type d’hébergement',

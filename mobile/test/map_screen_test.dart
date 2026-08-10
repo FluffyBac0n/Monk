@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:monk_mobile/core/localization/app_localizations.dart';
 import 'package:monk_mobile/core/settings/app_settings.dart';
 import 'package:monk_mobile/core/settings/measurement_formatter.dart';
+import 'package:monk_mobile/core/theme/eurotrex_palette.dart';
 import 'package:monk_mobile/features/accommodation/domain/lodging.dart';
 import 'package:monk_mobile/features/accommodation/presentation/lodging_type_icon.dart';
 import 'package:monk_mobile/features/elevation/domain/route_point.dart';
@@ -282,7 +283,18 @@ void main() {
 
     final sheet = find.byKey(const ValueKey('map-stage-info-sheet'));
     final header = find.byKey(const ValueKey('map-stage-info-sheet-header'));
+    final headerSurface = find.byKey(
+      const ValueKey('map-stage-info-sheet-header-surface'),
+    );
     expect(sheet, findsOneWidget);
+    final headerGradient =
+        (tester.widget<Ink>(headerSurface).decoration! as BoxDecoration)
+                .gradient!
+            as LinearGradient;
+    expect(headerGradient.colors, const [
+      EurotrexPalette.navy,
+      EurotrexPalette.blue,
+    ]);
     expect(find.text('Forest stage'), findsOneWidget);
     expect(tester.getSize(sheet).width, 400);
     expect(tester.getBottomLeft(sheet).dy, closeTo(800, 0.1));
@@ -307,6 +319,14 @@ void main() {
       openAction,
       180,
       scrollable: find.descendant(of: sheet, matching: find.byType(Scrollable)),
+    );
+    expect(
+      tester
+          .widget<FilledButton>(openAction)
+          .style
+          ?.backgroundColor
+          ?.resolve({}),
+      EurotrexPalette.blue,
     );
     await tester.tap(openAction);
     expect(openCount, 1);

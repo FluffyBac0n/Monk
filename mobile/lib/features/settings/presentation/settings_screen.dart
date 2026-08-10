@@ -6,13 +6,13 @@ import '../../../core/database/database_provider.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/app_settings_controller.dart';
+import '../../../core/theme/eurotrex_palette.dart';
 import '../../elevation/presentation/elevation_controller.dart';
 import '../../map/domain/offline_map_state.dart';
 import '../../map/presentation/offline_map_controller.dart';
 import '../../stages/presentation/stages_controller.dart';
 import '../../trail/domain/trail_preferences.dart';
 
-const _ink = Color(0xFF17201B);
 const _green = Color(0xFF277653);
 const _red = Color(0xFFD14B45);
 const _sand = Color(0xFFF4F2EC);
@@ -29,168 +29,181 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: _sand,
       appBar: AppBar(
-        backgroundColor: _ink,
+        backgroundColor: EurotrexPalette.navy,
         foregroundColor: Colors.white,
         title: Text(
           l10n.t('Settings'),
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-        children: [
-          _SettingsCard(
-            icon: Icons.translate_rounded,
-            title: l10n.t('Language'),
-            child: DropdownButtonFormField<AppLanguage>(
-              key: const Key('language-setting'),
-              initialValue: settings.language,
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-              items: [
-                for (final language in AppLanguage.values)
-                  DropdownMenuItem(
-                    value: language,
-                    child: Text(language.displayName),
-                  ),
-              ],
-              onChanged: (language) {
-                if (language != null) {
-                  ref.read(appSettingsProvider.notifier).setLanguage(language);
-                }
-              },
-            ),
-          ),
-          const SizedBox(height: 14),
-          _SettingsCard(
-            icon: Icons.straighten_rounded,
-            title: l10n.t('Measurements'),
-            child: SegmentedButton<MeasurementSystem>(
-              key: const Key('measurement-setting'),
-              segments: [
-                ButtonSegment(
-                  value: MeasurementSystem.metric,
-                  label: Text(l10n.t('Metric')),
-                  tooltip: l10n.t('Kilometres and metres'),
-                ),
-                ButtonSegment(
-                  value: MeasurementSystem.imperial,
-                  label: Text(l10n.t('Imperial')),
-                  tooltip: l10n.t('Miles and feet'),
-                ),
-              ],
-              selected: {settings.measurementSystem},
-              onSelectionChanged: (selection) => ref
-                  .read(appSettingsProvider.notifier)
-                  .setMeasurementSystem(selection.single),
-              showSelectedIcon: false,
-            ),
-          ),
-          const SizedBox(height: 14),
-          const _OfflineAccessSetting(),
-          if (kDebugMode) ...[
-            const SizedBox(height: 14),
+      body: Theme(
+        data: EurotrexPalette.controlsTheme(Theme.of(context)),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+          children: [
             _SettingsCard(
-              icon: Icons.science_outlined,
-              title: l10n.t('Developer tools'),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.t('Show the pulsing E4 trail information hint again.'),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    key: const ValueKey('reset-e4-information-hint'),
-                    onPressed: () async {
-                      try {
-                        await ref
-                            .read(appDatabaseProvider)
-                            .writeSetting(
-                              cyprusE4TrailInformationSeenSetting,
-                              'false',
-                            );
-                      } catch (_) {
-                        // The current Stages session can still reset the hint.
-                      }
-                      if (context.mounted) {
-                        Navigator.of(context).pop(DebugHintReset.e4Information);
-                      }
-                    },
-                    icon: const Icon(Icons.replay_rounded),
-                    label: Text(l10n.t('Reset E4 hint')),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    l10n.t('Show the stage details helper again.'),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    key: const ValueKey('reset-stage-details-hint'),
-                    onPressed: () async {
-                      try {
-                        await ref
-                            .read(appDatabaseProvider)
-                            .writeSetting(
-                              cyprusE4StageDetailsHintSeenSetting,
-                              'false',
-                            );
-                      } catch (_) {
-                        // The current Stages session can still reset the hint.
-                      }
-                      if (context.mounted) {
-                        Navigator.of(context).pop(DebugHintReset.stageDetails);
-                      }
-                    },
-                    icon: const Icon(Icons.replay_rounded),
-                    label: Text(l10n.t('Reset stage hint')),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    l10n.t('Show the left-side stage metrics helper again.'),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    key: const ValueKey('reset-stage-metrics-hint'),
-                    onPressed: () async {
-                      try {
-                        await ref
-                            .read(appDatabaseProvider)
-                            .writeSetting(
-                              cyprusE4StageMetricsHintSeenSetting,
-                              'false',
-                            );
-                      } catch (_) {
-                        // The current Stages session can still reset the hint.
-                      }
-                      if (context.mounted) {
-                        Navigator.of(context).pop(DebugHintReset.stageMetrics);
-                      }
-                    },
-                    icon: const Icon(Icons.replay_rounded),
-                    label: Text(l10n.t('Reset metrics hint')),
-                  ),
+              icon: Icons.translate_rounded,
+              title: l10n.t('Language'),
+              child: DropdownButtonFormField<AppLanguage>(
+                key: const Key('language-setting'),
+                initialValue: settings.language,
+                decoration: const InputDecoration(),
+                items: [
+                  for (final language in AppLanguage.values)
+                    DropdownMenuItem(
+                      value: language,
+                      child: Text(language.displayName),
+                    ),
                 ],
+                onChanged: (language) {
+                  if (language != null) {
+                    ref
+                        .read(appSettingsProvider.notifier)
+                        .setLanguage(language);
+                  }
+                },
               ),
             ),
+            const SizedBox(height: 14),
+            _SettingsCard(
+              icon: Icons.straighten_rounded,
+              title: l10n.t('Measurements'),
+              child: SegmentedButton<MeasurementSystem>(
+                key: const Key('measurement-setting'),
+                segments: [
+                  ButtonSegment(
+                    value: MeasurementSystem.metric,
+                    label: Text(l10n.t('Metric')),
+                    tooltip: l10n.t('Kilometres and metres'),
+                  ),
+                  ButtonSegment(
+                    value: MeasurementSystem.imperial,
+                    label: Text(l10n.t('Imperial')),
+                    tooltip: l10n.t('Miles and feet'),
+                  ),
+                ],
+                selected: {settings.measurementSystem},
+                onSelectionChanged: (selection) => ref
+                    .read(appSettingsProvider.notifier)
+                    .setMeasurementSystem(selection.single),
+                showSelectedIcon: false,
+              ),
+            ),
+            const SizedBox(height: 14),
+            const _OfflineAccessSetting(),
+            if (kDebugMode) ...[
+              const SizedBox(height: 14),
+              _SettingsCard(
+                icon: Icons.science_outlined,
+                title: l10n.t('Developer tools'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.t(
+                        'Show the pulsing E4 trail information hint again.',
+                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      key: const ValueKey('reset-e4-information-hint'),
+                      onPressed: () async {
+                        try {
+                          await ref
+                              .read(appDatabaseProvider)
+                              .writeSetting(
+                                cyprusE4TrailInformationSeenSetting,
+                                'false',
+                              );
+                        } catch (_) {
+                          // The current Stages session can still reset the hint.
+                        }
+                        if (context.mounted) {
+                          Navigator.of(
+                            context,
+                          ).pop(DebugHintReset.e4Information);
+                        }
+                      },
+                      icon: const Icon(Icons.replay_rounded),
+                      label: Text(l10n.t('Reset E4 hint')),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      l10n.t('Show the stage details helper again.'),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      key: const ValueKey('reset-stage-details-hint'),
+                      onPressed: () async {
+                        try {
+                          await ref
+                              .read(appDatabaseProvider)
+                              .writeSetting(
+                                cyprusE4StageDetailsHintSeenSetting,
+                                'false',
+                              );
+                        } catch (_) {
+                          // The current Stages session can still reset the hint.
+                        }
+                        if (context.mounted) {
+                          Navigator.of(
+                            context,
+                          ).pop(DebugHintReset.stageDetails);
+                        }
+                      },
+                      icon: const Icon(Icons.replay_rounded),
+                      label: Text(l10n.t('Reset stage hint')),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      l10n.t('Show the left-side stage metrics helper again.'),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      key: const ValueKey('reset-stage-metrics-hint'),
+                      onPressed: () async {
+                        try {
+                          await ref
+                              .read(appDatabaseProvider)
+                              .writeSetting(
+                                cyprusE4StageMetricsHintSeenSetting,
+                                'false',
+                              );
+                        } catch (_) {
+                          // The current Stages session can still reset the hint.
+                        }
+                        if (context.mounted) {
+                          Navigator.of(
+                            context,
+                          ).pop(DebugHintReset.stageMetrics);
+                        }
+                      },
+                      icon: const Icon(Icons.replay_rounded),
+                      label: Text(l10n.t('Reset metrics hint')),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 14),
+            Text(
+              l10n.t('Changes apply throughout the app.'),
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.black54),
+            ),
           ],
-          const SizedBox(height: 14),
-          Text(
-            l10n.t('Changes apply throughout the app.'),
-            textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.black54),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -623,13 +636,22 @@ class _SettingsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: EurotrexPalette.paleBlue),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: _green),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: const BoxDecoration(
+                  color: EurotrexPalette.paleBlue,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: EurotrexPalette.navy, size: 19),
+              ),
               const SizedBox(width: 10),
               Text(
                 title,

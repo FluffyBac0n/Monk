@@ -7,6 +7,7 @@ import '../../../core/links/external_url_launcher.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../../core/theme/eurotrex_palette.dart';
 import '../../accommodation/domain/lodging.dart';
 import '../../accommodation/presentation/accommodation_controller.dart';
 import '../../accommodation/presentation/lodging_type_icon.dart';
@@ -161,7 +162,7 @@ class MapScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: _sand,
       appBar: AppBar(
-        backgroundColor: _ink,
+        backgroundColor: EurotrexPalette.navy,
         foregroundColor: Colors.white,
         toolbarHeight: 76,
         title: Column(
@@ -2033,8 +2034,15 @@ class _MapStageInfoSheetState extends State<MapStageInfoSheet> {
                 InkWell(
                   key: const ValueKey('map-stage-info-sheet-header'),
                   onTap: _toggleExpanded,
-                  child: Container(
-                    color: _ink,
+                  child: Ink(
+                    key: const ValueKey('map-stage-info-sheet-header-surface'),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [EurotrexPalette.navy, EurotrexPalette.blue],
+                      ),
+                    ),
                     padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
                     child: Column(
                       children: [
@@ -2042,7 +2050,7 @@ class _MapStageInfoSheetState extends State<MapStageInfoSheet> {
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.white38,
+                            color: Colors.white54,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -2107,7 +2115,8 @@ class _MapStageInfoSheetState extends State<MapStageInfoSheet> {
                     key: const ValueKey('map-open-stage-info'),
                     onPressed: widget.onOpenDetails,
                     style: FilledButton.styleFrom(
-                      backgroundColor: _green,
+                      backgroundColor: EurotrexPalette.blue,
+                      foregroundColor: Colors.white,
                       minimumSize: const Size.fromHeight(48),
                     ),
                     icon: const Icon(Icons.open_in_full_rounded),

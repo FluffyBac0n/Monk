@@ -11,6 +11,7 @@ import '../../../core/location/device_location.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../../core/theme/eurotrex_palette.dart';
 import '../../accommodation/domain/lodging.dart';
 import '../../accommodation/presentation/accommodation_controller.dart';
 import '../../accommodation/presentation/accommodation_screen.dart';
@@ -52,9 +53,9 @@ const _filterBlueTeal = Color(0xFF356F7A);
 const _timelineLineColor = Color(0xFFB9BDB8);
 const _timelineLeftInset = 12.0;
 const _timelineGutterWidth = 108.0;
+const _trailHeaderExpandedHeight = 164.0;
+const _trailHeaderCollapseThreshold = 82.0;
 const _timelineLineColumnWidth = 28.0;
-const _excursionPointFilterKey = 'trailExcursion';
-const _detourPointFilterKey = 'trailDetour';
 const _beachPointFilterKey = 'trailBeach';
 const _viewpointPointFilterKey = 'trailViewpoint';
 const _religiousSitePointFilterKey = 'trailReligiousSite';
@@ -101,11 +102,7 @@ bool _stageNameHasForestOrPark(String stageName) => RegExp(
 bool _stageMatchesFilters({
   required TrailStage stage,
   required Set<String> filters,
-  required bool hasExcursions,
-  required bool hasDetours,
 }) {
-  final filtersExcursions = filters.contains(_excursionPointFilterKey);
-  final filtersDetours = filters.contains(_detourPointFilterKey);
   final filtersBeach = filters.contains(_beachPointFilterKey);
   final filtersViewpoint = filters.contains(_viewpointPointFilterKey);
   final filtersReligiousSite = filters.contains(_religiousSitePointFilterKey);
@@ -121,8 +118,6 @@ bool _stageMatchesFilters({
     return false;
   }
   final hasPointFilter =
-      filtersExcursions ||
-      filtersDetours ||
       filtersBeach ||
       filtersViewpoint ||
       filtersReligiousSite ||
@@ -130,8 +125,6 @@ bool _stageMatchesFilters({
       filtersForestPark;
   final matchesPoint =
       !hasPointFilter ||
-      (filtersExcursions && hasExcursions) ||
-      (filtersDetours && hasDetours) ||
       (filtersBeach && _stageNameHasBeach(stage.name)) ||
       (filtersViewpoint && _stageNameHasViewpoint(stage.name)) ||
       (filtersReligiousSite && _stageNameHasReligiousSite(stage.name)) ||
@@ -346,7 +339,8 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
 
   void _updateHeaderCollapseState() {
     final isCollapsed =
-        scrollController.hasClients && scrollController.offset >= 116;
+        scrollController.hasClients &&
+        scrollController.offset >= _trailHeaderCollapseThreshold;
     if (isCollapsed == _isHeaderCollapsed || !mounted) return;
     setState(() => _isHeaderCollapsed = isCollapsed);
   }
@@ -834,12 +828,6 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                           if (_stageMatchesFilters(
                             stage: orderedItems[stageIndex],
                             filters: selectedServices,
-                            hasExcursions: excursionsByStageId.containsKey(
-                              orderedItems[stageIndex].id,
-                            ),
-                            hasDetours: detoursByStageId.containsKey(
-                              orderedItems[stageIndex].id,
-                            ),
                           ))
                             orderedItems[stageIndex],
                       ];
@@ -1102,7 +1090,7 @@ class _StageBottomNavigationBar extends StatelessWidget {
     final l10n = context.l10n;
     return Material(
       key: const ValueKey('stage-bottom-navigation'),
-      color: _ink,
+      color: EurotrexPalette.navy,
       child: SafeArea(
         top: false,
         child: Container(
@@ -1233,7 +1221,7 @@ class _StageBottomAction extends StatelessWidget {
                             height: 36,
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? _green
+                                  ? EurotrexPalette.blue
                                   : Colors.white.withValues(alpha: 0.055),
                               shape: BoxShape.circle,
                             ),
@@ -1321,9 +1309,9 @@ class _TrailAppBar extends StatelessWidget {
         : l10n.pafosAirport;
     final end = direction.isReversed ? l10n.pafosAirport : l10n.larnakaAirport;
     return SliverAppBar(
-      expandedHeight: 204,
+      expandedHeight: _trailHeaderExpandedHeight,
       pinned: true,
-      backgroundColor: _ink,
+      backgroundColor: EurotrexPalette.navy,
       foregroundColor: Colors.white,
       titleSpacing: 0,
       title: Row(
@@ -1381,7 +1369,7 @@ class _TrailAppBar extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [_ink, Color(0xFF274B3A)],
+                  colors: [EurotrexPalette.navy, EurotrexPalette.blue],
                 ),
               ),
             ),
@@ -1400,14 +1388,14 @@ class _TrailAppBar extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xE6275F45), Color(0x66183226)],
+                  colors: [Color(0xD9303E4E), Color(0x802D5DD3)],
                   stops: [0.05, 1],
                 ),
               ),
             ),
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 70, 20, 18),
+                padding: const EdgeInsets.fromLTRB(20, 52, 20, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -1418,7 +1406,7 @@ class _TrailAppBar extends StatelessWidget {
                           key: const ValueKey('stage-long-distance-badge'),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
-                            vertical: 5,
+                            vertical: 4,
                           ),
                           decoration: BoxDecoration(
                             color: _yellow,
@@ -1438,19 +1426,22 @@ class _TrailAppBar extends StatelessWidget {
                         const Flexible(child: _OfflineMapStatusBadge()),
                       ],
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 10),
                     Text(
                       l10n.t('Cyprus E4'),
-                      style: Theme.of(context).textTheme.headlineMedium
+                      style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
                           ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       l10n.routeDirection(start, end),
-                      style: const TextStyle(color: Colors.white70),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -1966,6 +1957,31 @@ class _DetourRouteChoicePanel extends StatelessWidget {
                   linkedStageId: mainStages.first.id,
                 ),
               ),
+              for (var index = 0; index < mainStages.length; index++)
+                Positioned(
+                  left: timelineX - 8.5,
+                  top:
+                      connectorHeight +
+                      index * (mainCardHeight + cardGap) +
+                      (mainCardHeight - 17) / 2,
+                  child: Container(
+                    key: ValueKey(
+                      'stage-detour-e4-path-marker-${mainStages[index].id}',
+                    ),
+                    width: 17,
+                    height: 17,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: stageIsOnTrail(mainStages[index]) == false
+                          ? _yellow
+                          : _green,
+                      border: Border.all(color: _sand, width: 3),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black12, blurRadius: 2),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           );
         },
@@ -3295,7 +3311,7 @@ class DetourDetailScreen extends ConsumerWidget {
       key: ValueKey('detour-detail-${detour.id}'),
       backgroundColor: _sand,
       appBar: AppBar(
-        backgroundColor: _ink,
+        backgroundColor: EurotrexPalette.navy,
         foregroundColor: Colors.white,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -3790,7 +3806,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
         onElevation: _openElevation,
       ),
       appBar: AppBar(
-        backgroundColor: _ink,
+        backgroundColor: EurotrexPalette.navy,
         foregroundColor: Colors.white,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -4178,7 +4194,7 @@ class _StageDetailBottomNavigationBar extends StatelessWidget {
     final l10n = context.l10n;
     return Material(
       key: const ValueKey('stage-detail-bottom-navigation'),
-      color: _ink,
+      color: EurotrexPalette.navy,
       child: SafeArea(
         top: false,
         child: Container(
@@ -5356,281 +5372,321 @@ class _ServiceFilterSheetState extends State<_ServiceFilterSheet> {
               )
               .take(6)
               .toList(growable: false);
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          4,
-          20,
-          20 + MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.t('Stage name'),
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              key: const ValueKey('stage-name-filter'),
-              controller: stageSearchController,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: l10n.t('Search by stage name or number'),
-                prefixIcon: const Icon(Icons.search_rounded),
-                border: const OutlineInputBorder(),
+    return Theme(
+      data: EurotrexPalette.controlsTheme(Theme.of(context)),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            4,
+            20,
+            20 + MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _StageFilterPanel(
+                key: const ValueKey('stage-filter-name-panel'),
+                icon: Icons.search_rounded,
+                title: l10n.t('Stage name'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      key: const ValueKey('stage-name-filter'),
+                      controller: stageSearchController,
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        hintText: l10n.t('Search by stage name or number'),
+                        prefixIcon: const Icon(Icons.search_rounded),
+                      ),
+                      onChanged: (value) => setState(() => stageQuery = value),
+                    ),
+                    if (selectedStages.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final stage in selectedStages)
+                            InputChip(
+                              key: ValueKey(
+                                'selected-stage-filter-${stage.id}',
+                              ),
+                              avatar: const Icon(
+                                Icons.location_on_rounded,
+                                size: 18,
+                                color: _filterBlueTeal,
+                              ),
+                              label: Text(l10n.t(stage.name)),
+                              onDeleted: () => setState(
+                                () => selected.remove(_stageFilterKey(stage)),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                    if (normalizedQuery.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      if (stageSuggestions.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Text(
+                            l10n.t('No stages found.'),
+                            key: const ValueKey('stage-name-no-results'),
+                            style: const TextStyle(color: Colors.black54),
+                          ),
+                        )
+                      else
+                        Container(
+                          constraints: const BoxConstraints(maxHeight: 184),
+                          decoration: BoxDecoration(
+                            color: EurotrexPalette.paleBlue.withValues(
+                              alpha: 0.32,
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: EurotrexPalette.paleBlue),
+                          ),
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            padding: EdgeInsets.zero,
+                            itemCount: stageSuggestions.length,
+                            separatorBuilder: (_, _) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final stage = stageSuggestions[index];
+                              return ListTile(
+                                key: ValueKey(
+                                  'stage-name-suggestion-${stage.id}',
+                                ),
+                                dense: true,
+                                leading: const Icon(
+                                  Icons.location_on_outlined,
+                                  color: _filterBlueTeal,
+                                ),
+                                title: Text(l10n.t(stage.name)),
+                                subtitle: Text(l10n.stage(stage.sequence)),
+                                onTap: () => _selectStage(stage),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  ],
+                ),
               ),
-              onChanged: (value) => setState(() => stageQuery = value),
-            ),
-            if (selectedStages.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final stage in selectedStages)
-                    InputChip(
-                      key: ValueKey('selected-stage-filter-${stage.id}'),
+              const SizedBox(height: 12),
+              _StageFilterPanel(
+                key: const ValueKey('stage-filter-services-panel'),
+                icon: Icons.category_outlined,
+                title: l10n.t('Services'),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final service in _filterServiceKeys)
+                      FilterChip(
+                        key: ValueKey('service-filter-$service'),
+                        selected: selected.contains(service),
+                        avatar: Icon(
+                          _serviceIcon(service),
+                          size: 18,
+                          color: _serviceColor(service),
+                        ),
+                        label: Text(l10n.t(_serviceLabel(service))),
+                        onSelected: (isSelected) => setState(() {
+                          if (isSelected) {
+                            selected.add(service);
+                          } else {
+                            selected.remove(service);
+                          }
+                        }),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              _StageFilterPanel(
+                key: const ValueKey('stage-filter-poi-panel'),
+                icon: Icons.place_outlined,
+                title: l10n.t('Points of Interest'),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilterChip(
+                      key: const ValueKey('stage-filter-beach'),
+                      selected: selected.contains(_beachPointFilterKey),
                       avatar: const Icon(
-                        Icons.location_on_rounded,
+                        Icons.beach_access_rounded,
+                        size: 18,
+                        color: _bookingBlue,
+                      ),
+                      label: Text(l10n.t('Beach')),
+                      onSelected: (isSelected) => setState(() {
+                        if (isSelected) {
+                          selected.add(_beachPointFilterKey);
+                        } else {
+                          selected.remove(_beachPointFilterKey);
+                        }
+                      }),
+                    ),
+                    FilterChip(
+                      key: const ValueKey('stage-filter-viewpoint'),
+                      selected: selected.contains(_viewpointPointFilterKey),
+                      avatar: const Icon(
+                        Icons.visibility_rounded,
                         size: 18,
                         color: _filterBlueTeal,
                       ),
-                      label: Text(l10n.t(stage.name)),
-                      onDeleted: () => setState(
-                        () => selected.remove(_stageFilterKey(stage)),
-                      ),
+                      label: Text(l10n.t('Viewpoint')),
+                      onSelected: (isSelected) => setState(() {
+                        if (isSelected) {
+                          selected.add(_viewpointPointFilterKey);
+                        } else {
+                          selected.remove(_viewpointPointFilterKey);
+                        }
+                      }),
                     ),
+                    FilterChip(
+                      key: const ValueKey('stage-filter-religious-site'),
+                      selected: selected.contains(_religiousSitePointFilterKey),
+                      avatar: const Icon(
+                        Icons.account_balance_rounded,
+                        size: 18,
+                        color: _filterBlueTeal,
+                      ),
+                      label: Text(l10n.t('Religious Sites')),
+                      onSelected: (isSelected) => setState(() {
+                        if (isSelected) {
+                          selected.add(_religiousSitePointFilterKey);
+                        } else {
+                          selected.remove(_religiousSitePointFilterKey);
+                        }
+                      }),
+                    ),
+                    FilterChip(
+                      key: const ValueKey('stage-filter-natural-landmark'),
+                      selected: selected.contains(
+                        _naturalLandmarkPointFilterKey,
+                      ),
+                      avatar: const Icon(
+                        Icons.landscape_outlined,
+                        size: 18,
+                        color: _accommodationBlue,
+                      ),
+                      label: Text(l10n.t('Natural Landmarks')),
+                      onSelected: (isSelected) => setState(() {
+                        if (isSelected) {
+                          selected.add(_naturalLandmarkPointFilterKey);
+                        } else {
+                          selected.remove(_naturalLandmarkPointFilterKey);
+                        }
+                      }),
+                    ),
+                    FilterChip(
+                      key: const ValueKey('stage-filter-forest-park'),
+                      selected: selected.contains(_forestParkPointFilterKey),
+                      avatar: const Icon(
+                        Icons.park_outlined,
+                        size: 18,
+                        color: _green,
+                      ),
+                      label: Text(l10n.t('Forests/Parks')),
+                      onSelected: (isSelected) => setState(() {
+                        if (isSelected) {
+                          selected.add(_forestParkPointFilterKey);
+                        } else {
+                          selected.remove(_forestParkPointFilterKey);
+                        }
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 22),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      key: const Key('clear-service-filter-selection'),
+                      onPressed: () =>
+                          Navigator.of(context).pop(const <String>{}),
+                      icon: const Icon(Icons.filter_alt_off_rounded, size: 18),
+                      label: Text(l10n.t('Clear')),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      key: const Key('apply-service-filters'),
+                      onPressed: () => Navigator.of(context).pop(selected),
+                      icon: const Icon(Icons.check_rounded, size: 18),
+                      label: Text(l10n.t('Apply')),
+                    ),
+                  ),
                 ],
               ),
             ],
-            if (normalizedQuery.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              if (stageSuggestions.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Text(
-                    l10n.t('No stages found.'),
-                    key: const ValueKey('stage-name-no-results'),
-                    style: const TextStyle(color: Colors.black54),
-                  ),
-                )
-              else
-                Container(
-                  constraints: const BoxConstraints(maxHeight: 184),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.black12),
-                  ),
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    padding: EdgeInsets.zero,
-                    itemCount: stageSuggestions.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final stage = stageSuggestions[index];
-                      return ListTile(
-                        key: ValueKey('stage-name-suggestion-${stage.id}'),
-                        dense: true,
-                        leading: const Icon(
-                          Icons.location_on_outlined,
-                          color: _filterBlueTeal,
-                        ),
-                        title: Text(l10n.t(stage.name)),
-                        subtitle: Text(l10n.stage(stage.sequence)),
-                        onTap: () => _selectStage(stage),
-                      );
-                    },
-                  ),
-                ),
-            ],
-            const Divider(height: 28),
-            Text(
-              l10n.t('Points of Interest'),
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilterChip(
-                  key: const ValueKey('stage-filter-excursions'),
-                  selected: selected.contains(_excursionPointFilterKey),
-                  avatar: const Icon(
-                    Icons.alt_route_rounded,
-                    size: 18,
-                    color: _filterBlueTeal,
-                  ),
-                  label: Text(l10n.t('Excursions')),
-                  onSelected: (isSelected) => setState(() {
-                    if (isSelected) {
-                      selected.add(_excursionPointFilterKey);
-                    } else {
-                      selected.remove(_excursionPointFilterKey);
-                    }
-                  }),
-                ),
-                FilterChip(
-                  key: const ValueKey('stage-filter-detours'),
-                  selected: selected.contains(_detourPointFilterKey),
-                  avatar: const Icon(
-                    Icons.fork_right_rounded,
-                    size: 18,
-                    color: _detourPurple,
-                  ),
-                  label: Text(l10n.t('Detours')),
-                  onSelected: (isSelected) => setState(() {
-                    if (isSelected) {
-                      selected.add(_detourPointFilterKey);
-                    } else {
-                      selected.remove(_detourPointFilterKey);
-                    }
-                  }),
-                ),
-                FilterChip(
-                  key: const ValueKey('stage-filter-beach'),
-                  selected: selected.contains(_beachPointFilterKey),
-                  avatar: const Icon(
-                    Icons.beach_access_rounded,
-                    size: 18,
-                    color: _bookingBlue,
-                  ),
-                  label: Text(l10n.t('Beach')),
-                  onSelected: (isSelected) => setState(() {
-                    if (isSelected) {
-                      selected.add(_beachPointFilterKey);
-                    } else {
-                      selected.remove(_beachPointFilterKey);
-                    }
-                  }),
-                ),
-                FilterChip(
-                  key: const ValueKey('stage-filter-viewpoint'),
-                  selected: selected.contains(_viewpointPointFilterKey),
-                  avatar: const Icon(
-                    Icons.visibility_rounded,
-                    size: 18,
-                    color: _filterBlueTeal,
-                  ),
-                  label: Text(l10n.t('Viewpoint')),
-                  onSelected: (isSelected) => setState(() {
-                    if (isSelected) {
-                      selected.add(_viewpointPointFilterKey);
-                    } else {
-                      selected.remove(_viewpointPointFilterKey);
-                    }
-                  }),
-                ),
-                FilterChip(
-                  key: const ValueKey('stage-filter-religious-site'),
-                  selected: selected.contains(_religiousSitePointFilterKey),
-                  avatar: const Icon(
-                    Icons.account_balance_rounded,
-                    size: 18,
-                    color: _filterBlueTeal,
-                  ),
-                  label: Text(l10n.t('Religious Sites')),
-                  onSelected: (isSelected) => setState(() {
-                    if (isSelected) {
-                      selected.add(_religiousSitePointFilterKey);
-                    } else {
-                      selected.remove(_religiousSitePointFilterKey);
-                    }
-                  }),
-                ),
-                FilterChip(
-                  key: const ValueKey('stage-filter-natural-landmark'),
-                  selected: selected.contains(_naturalLandmarkPointFilterKey),
-                  avatar: const Icon(
-                    Icons.landscape_outlined,
-                    size: 18,
-                    color: _accommodationBlue,
-                  ),
-                  label: Text(l10n.t('Natural Landmarks')),
-                  onSelected: (isSelected) => setState(() {
-                    if (isSelected) {
-                      selected.add(_naturalLandmarkPointFilterKey);
-                    } else {
-                      selected.remove(_naturalLandmarkPointFilterKey);
-                    }
-                  }),
-                ),
-                FilterChip(
-                  key: const ValueKey('stage-filter-forest-park'),
-                  selected: selected.contains(_forestParkPointFilterKey),
-                  avatar: const Icon(
-                    Icons.park_outlined,
-                    size: 18,
-                    color: _green,
-                  ),
-                  label: Text(l10n.t('Forests/Parks')),
-                  onSelected: (isSelected) => setState(() {
-                    if (isSelected) {
-                      selected.add(_forestParkPointFilterKey);
-                    } else {
-                      selected.remove(_forestParkPointFilterKey);
-                    }
-                  }),
-                ),
-              ],
-            ),
-            const Divider(height: 28),
-            Text(
-              l10n.t('Services'),
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final service in _filterServiceKeys)
-                  FilterChip(
-                    key: ValueKey('service-filter-$service'),
-                    selected: selected.contains(service),
-                    avatar: Icon(
-                      _serviceIcon(service),
-                      size: 18,
-                      color: _serviceColor(service),
-                    ),
-                    label: Text(l10n.t(_serviceLabel(service))),
-                    onSelected: (isSelected) => setState(() {
-                      if (isSelected) {
-                        selected.add(service);
-                      } else {
-                        selected.remove(service);
-                      }
-                    }),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 22),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    key: const Key('clear-service-filter-selection'),
-                    onPressed: () =>
-                        Navigator.of(context).pop(const <String>{}),
-                    child: Text(l10n.t('Clear')),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    key: const Key('apply-service-filters'),
-                    onPressed: () => Navigator.of(context).pop(selected),
-                    child: Text(l10n.t('Apply')),
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _StageFilterPanel extends StatelessWidget {
+  const _StageFilterPanel({
+    required this.icon,
+    required this.title,
+    required this.child,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: EurotrexPalette.paleBlue),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: EurotrexPalette.paleBlue,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: EurotrexPalette.navy, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: EurotrexPalette.navy,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
       ),
     );
   }

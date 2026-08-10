@@ -5,6 +5,7 @@ import '../../../core/links/external_url_launcher.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../../core/theme/eurotrex_palette.dart';
 import '../../elevation/presentation/elevation_screen.dart';
 import '../../map/presentation/map_screen.dart';
 import '../../stages/domain/stage.dart';
@@ -71,6 +72,7 @@ class _AccommodationScreenState extends ConsumerState<AccommodationScreen> {
       builder: (_) => _AccommodationFilterSheet(
         initialFilters: filters,
         availableTypes: _availableLodgingTypes(lodgings),
+        availablePriceRange: _availableLodgingPriceRange(lodgings),
       ),
     );
     if (updated != null && mounted) setState(() => filters = updated);
@@ -123,7 +125,7 @@ class _AccommodationScreenState extends ConsumerState<AccommodationScreen> {
         onElevation: () => _openElevation(stageIndex),
       ),
       appBar: AppBar(
-        backgroundColor: _ink,
+        backgroundColor: EurotrexPalette.navy,
         foregroundColor: Colors.white,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,20 +242,34 @@ class _AccommodationFilters {
   const _AccommodationFilters({
     this.bookableOnlineOnly = false,
     this.maximumDistanceKm,
+    this.priceRangeEur,
     this.types = const <String>{},
   });
 
   final bool bookableOnlineOnly;
   final double? maximumDistanceKm;
+  final RangeValues? priceRangeEur;
   final Set<String> types;
 
-  int get regularActiveCount => (bookableOnlineOnly ? 1 : 0) + types.length;
+  int get regularActiveCount =>
+      (bookableOnlineOnly ? 1 : 0) +
+      (priceRangeEur == null ? 0 : 1) +
+      types.length;
 
   bool matches(Lodging lodging) {
     if (bookableOnlineOnly && lodging.bookingUri == null) return false;
     if (maximumDistanceKm case final maximumDistance?) {
       final distance = lodging.distanceFromTrailKm;
       if (distance == null || distance > maximumDistance) return false;
+    }
+    if (priceRangeEur case final selectedPriceRange?) {
+      final priceMinimum = lodging.priceMinEur ?? lodging.priceMaxEur;
+      final priceMaximum = lodging.priceMaxEur ?? lodging.priceMinEur;
+      if (priceMinimum == null || priceMaximum == null) return false;
+      if (priceMaximum < selectedPriceRange.start ||
+          priceMinimum > selectedPriceRange.end) {
+        return false;
+      }
     }
     if (types.isNotEmpty) {
       final type = lodging.type?.trim().toLowerCase();
@@ -267,10 +283,12 @@ class _AccommodationFilterSheet extends StatefulWidget {
   const _AccommodationFilterSheet({
     required this.initialFilters,
     required this.availableTypes,
+    required this.availablePriceRange,
   });
 
   final _AccommodationFilters initialFilters;
   final List<String> availableTypes;
+  final RangeValues? availablePriceRange;
 
   @override
   State<_AccommodationFilterSheet> createState() =>
@@ -280,98 +298,168 @@ class _AccommodationFilterSheet extends StatefulWidget {
 class _AccommodationFilterSheetState extends State<_AccommodationFilterSheet> {
   late bool bookableOnlineOnly = widget.initialFilters.bookableOnlineOnly;
   late double? maximumDistanceKm = widget.initialFilters.maximumDistanceKm;
+  late RangeValues? priceRangeEur = widget.initialFilters.priceRangeEur;
   late Set<String> selectedTypes = {...widget.initialFilters.types};
 
   _AccommodationFilters get selection => _AccommodationFilters(
     bookableOnlineOnly: bookableOnlineOnly,
     maximumDistanceKm: maximumDistanceKm,
+    priceRangeEur: priceRangeEur,
     types: Set.unmodifiable(selectedTypes),
   );
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return SafeArea(
-      child: SingleChildScrollView(
-        key: const ValueKey('accommodation-filter-sheet'),
-        padding: EdgeInsets.fromLTRB(
-          20,
-          4,
-          20,
-          20 + MediaQuery.viewInsetsOf(context).bottom,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SwitchListTile.adaptive(
-              key: const ValueKey('accommodation-bookable-filter'),
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                l10n.t('Bookable online'),
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              value: bookableOnlineOnly,
-              onChanged: (value) => setState(() => bookableOnlineOnly = value),
-            ),
-            if (widget.availableTypes.isNotEmpty) ...[
-              const Divider(height: 28),
-              Text(
-                l10n.t('Accommodation type'),
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final type in widget.availableTypes)
-                    FilterChip(
-                      key: ValueKey('accommodation-type-${_filterKey(type)}'),
-                      avatar: LodgingTypeIcon(
-                        type: type,
-                        color: lodgingMakiMarkerColor(type),
-                        size: 18,
-                      ),
-                      label: Text(l10n.t(type)),
-                      selected: selectedTypes.contains(type.toLowerCase()),
-                      onSelected: (selected) => setState(() {
-                        final normalizedType = type.toLowerCase();
-                        if (selected) {
-                          selectedTypes.add(normalizedType);
-                        } else {
-                          selectedTypes.remove(normalizedType);
-                        }
-                      }),
-                    ),
-                ],
-              ),
-            ],
-            const SizedBox(height: 22),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    key: const ValueKey('accommodation-filter-clear'),
-                    onPressed: () => Navigator.of(context).pop(
-                      _AccommodationFilters(
-                        maximumDistanceKm:
-                            widget.initialFilters.maximumDistanceKm,
-                      ),
-                    ),
-                    child: Text(l10n.t('Clear')),
-                  ),
+    final availablePriceRange = widget.availablePriceRange;
+    final displayedPriceRange = _clampPriceRange(
+      priceRangeEur ?? availablePriceRange,
+      availablePriceRange,
+    );
+    return Theme(
+      data: EurotrexPalette.controlsTheme(Theme.of(context)),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          key: const ValueKey('accommodation-filter-sheet'),
+          padding: EdgeInsets.fromLTRB(
+            20,
+            4,
+            20,
+            20 + MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _AccommodationFilterPanel(
+                key: const ValueKey('accommodation-bookable-panel'),
+                icon: Icons.language_rounded,
+                title: l10n.t('Bookable online'),
+                trailing: Switch.adaptive(
+                  key: const ValueKey('accommodation-bookable-filter'),
+                  value: bookableOnlineOnly,
+                  onChanged: (value) =>
+                      setState(() => bookableOnlineOnly = value),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    key: const ValueKey('accommodation-filter-apply'),
-                    onPressed: () => Navigator.of(context).pop(selection),
-                    child: Text(l10n.t('Apply')),
+              ),
+              if (availablePriceRange != null &&
+                  displayedPriceRange != null) ...[
+                const SizedBox(height: 12),
+                _AccommodationFilterPanel(
+                  key: const ValueKey('accommodation-price-panel'),
+                  icon: Icons.euro_rounded,
+                  title: l10n.t('Price range'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          ChoiceChip(
+                            key: const ValueKey('accommodation-price-any'),
+                            label: Text(l10n.t('Any price')),
+                            selected: priceRangeEur == null,
+                            onSelected: (_) =>
+                                setState(() => priceRangeEur = null),
+                          ),
+                          const Spacer(),
+                          Text(
+                            priceRangeEur == null
+                                ? l10n.t('Any price')
+                                : _formatEuro(
+                                    displayedPriceRange.start,
+                                    displayedPriceRange.end,
+                                    l10n,
+                                  ),
+                            key: const ValueKey(
+                              'accommodation-price-selection',
+                            ),
+                            style: const TextStyle(
+                              color: EurotrexPalette.navy,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      RangeSlider(
+                        key: const ValueKey('accommodation-price-range'),
+                        values: displayedPriceRange,
+                        min: availablePriceRange.start,
+                        max: availablePriceRange.end,
+                        divisions: _priceRangeDivisions(availablePriceRange),
+                        labels: RangeLabels(
+                          _formatEuro(displayedPriceRange.start, null, l10n),
+                          _formatEuro(displayedPriceRange.end, null, l10n),
+                        ),
+                        onChanged: (values) =>
+                            setState(() => priceRangeEur = values),
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ),
-          ],
+              if (widget.availableTypes.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _AccommodationFilterPanel(
+                  key: const ValueKey('accommodation-types-panel'),
+                  icon: Icons.category_outlined,
+                  title: l10n.t('Accommodation type'),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final type in widget.availableTypes)
+                        FilterChip(
+                          key: ValueKey(
+                            'accommodation-type-${_filterKey(type)}',
+                          ),
+                          avatar: LodgingTypeIcon(
+                            type: type,
+                            color: lodgingMakiMarkerColor(type),
+                            size: 18,
+                          ),
+                          label: Text(l10n.t(type)),
+                          selected: selectedTypes.contains(type.toLowerCase()),
+                          onSelected: (selected) => setState(() {
+                            final normalizedType = type.toLowerCase();
+                            if (selected) {
+                              selectedTypes.add(normalizedType);
+                            } else {
+                              selectedTypes.remove(normalizedType);
+                            }
+                          }),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 22),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      key: const ValueKey('accommodation-filter-clear'),
+                      onPressed: () => Navigator.of(context).pop(
+                        _AccommodationFilters(
+                          maximumDistanceKm:
+                              widget.initialFilters.maximumDistanceKm,
+                        ),
+                      ),
+                      icon: const Icon(Icons.filter_alt_off_rounded, size: 18),
+                      label: Text(l10n.t('Clear')),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      key: const ValueKey('accommodation-filter-apply'),
+                      onPressed: () => Navigator.of(context).pop(selection),
+                      icon: const Icon(Icons.check_rounded, size: 18),
+                      label: Text(l10n.t('Apply')),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -399,67 +487,143 @@ class _AccommodationDistanceFilterSheetState
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return SafeArea(
-      child: Padding(
-        key: const ValueKey('accommodation-distance-filter-sheet'),
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.gps_fixed_rounded, color: _green),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    l10n.t('Maximum distance from trail'),
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
+    return Theme(
+      data: EurotrexPalette.controlsTheme(Theme.of(context)),
+      child: SafeArea(
+        child: Padding(
+          key: const ValueKey('accommodation-distance-filter-sheet'),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _AccommodationFilterPanel(
+                key: const ValueKey('accommodation-distance-panel'),
+                icon: Icons.gps_fixed_rounded,
+                title: l10n.t('Maximum distance from trail'),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      key: const ValueKey('accommodation-distance-any'),
+                      label: Text(l10n.t('Any distance')),
+                      selected: maximumDistanceKm == null,
+                      onSelected: (_) =>
+                          setState(() => maximumDistanceKm = null),
+                    ),
+                    for (final distance in _distanceFilterOptionsKm)
+                      ChoiceChip(
+                        key: ValueKey('accommodation-distance-$distance'),
+                        label: Text(widget.formatter.distance(distance)),
+                        selected: maximumDistanceKm == distance,
+                        onSelected: (_) =>
+                            setState(() => maximumDistanceKm = distance),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 22),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      key: const ValueKey('accommodation-distance-clear'),
+                      onPressed: () => Navigator.of(context).pop(
+                        _AccommodationFilters(
+                          bookableOnlineOnly:
+                              widget.initialFilters.bookableOnlineOnly,
+                          priceRangeEur: widget.initialFilters.priceRangeEur,
+                          types: widget.initialFilters.types,
+                        ),
+                      ),
+                      icon: const Icon(Icons.filter_alt_off_rounded, size: 18),
+                      label: Text(l10n.t('Clear')),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ChoiceChip(
-                  key: const ValueKey('accommodation-distance-any'),
-                  label: Text(l10n.t('Any distance')),
-                  selected: maximumDistanceKm == null,
-                  onSelected: (_) => setState(() => maximumDistanceKm = null),
-                ),
-                for (final distance in _distanceFilterOptionsKm)
-                  ChoiceChip(
-                    key: ValueKey('accommodation-distance-$distance'),
-                    label: Text(widget.formatter.distance(distance)),
-                    selected: maximumDistanceKm == distance,
-                    onSelected: (_) =>
-                        setState(() => maximumDistanceKm = distance),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      key: const ValueKey('accommodation-distance-apply'),
+                      onPressed: () => Navigator.of(context).pop(
+                        _AccommodationFilters(
+                          bookableOnlineOnly:
+                              widget.initialFilters.bookableOnlineOnly,
+                          maximumDistanceKm: maximumDistanceKm,
+                          priceRangeEur: widget.initialFilters.priceRangeEur,
+                          types: widget.initialFilters.types,
+                        ),
+                      ),
+                      icon: const Icon(Icons.check_rounded, size: 18),
+                      label: Text(l10n.t('Apply')),
+                    ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 22),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                key: const ValueKey('accommodation-distance-apply'),
-                onPressed: () => Navigator.of(context).pop(
-                  _AccommodationFilters(
-                    bookableOnlineOnly:
-                        widget.initialFilters.bookableOnlineOnly,
-                    maximumDistanceKm: maximumDistanceKm,
-                    types: widget.initialFilters.types,
-                  ),
-                ),
-                child: Text(l10n.t('Apply')),
+                ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _AccommodationFilterPanel extends StatelessWidget {
+  const _AccommodationFilterPanel({
+    required this.icon,
+    required this.title,
+    this.child,
+    this.trailing,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final Widget? child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: EurotrexPalette.paleBlue),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: EurotrexPalette.paleBlue,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: EurotrexPalette.navy, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: EurotrexPalette.navy,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (trailing case final trailing?) ...[
+                const SizedBox(width: 10),
+                trailing,
+              ],
+            ],
+          ),
+          if (child case final child?) ...[const SizedBox(height: 12), child],
+        ],
       ),
     );
   }
@@ -489,7 +653,7 @@ class _AccommodationBottomNavigationBar extends StatelessWidget {
     final l10n = context.l10n;
     return Material(
       key: const ValueKey('accommodation-bottom-navigation'),
-      color: _ink,
+      color: EurotrexPalette.navy,
       child: SafeArea(
         top: false,
         child: Container(
@@ -600,7 +764,7 @@ class _AccommodationBottomAction extends StatelessWidget {
                             height: 36,
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? _green
+                                  ? EurotrexPalette.blue
                                   : Colors.white.withValues(alpha: 0.055),
                               shape: BoxShape.circle,
                             ),
@@ -1057,6 +1221,34 @@ List<String> _availableLodgingTypes(Iterable<Lodging> lodgings) {
   );
   return types;
 }
+
+RangeValues? _availableLodgingPriceRange(Iterable<Lodging> lodgings) {
+  double? minimum;
+  double? maximum;
+  for (final lodging in lodgings) {
+    final low = lodging.priceMinEur ?? lodging.priceMaxEur;
+    final high = lodging.priceMaxEur ?? lodging.priceMinEur;
+    if (low == null || high == null || low < 0 || high < 0) continue;
+    minimum = minimum == null || low < minimum ? low : minimum;
+    maximum = maximum == null || high > maximum ? high : maximum;
+  }
+  if (minimum == null || maximum == null) return null;
+
+  final roundedMinimum = (minimum / 10).floor() * 10.0;
+  var roundedMaximum = (maximum / 10).ceil() * 10.0;
+  if (roundedMaximum <= roundedMinimum) roundedMaximum = roundedMinimum + 10;
+  return RangeValues(roundedMinimum, roundedMaximum);
+}
+
+RangeValues? _clampPriceRange(RangeValues? selected, RangeValues? available) {
+  if (selected == null || available == null) return null;
+  final start = selected.start.clamp(available.start, available.end).toDouble();
+  final end = selected.end.clamp(available.start, available.end).toDouble();
+  return start <= end ? RangeValues(start, end) : RangeValues(end, start);
+}
+
+int _priceRangeDivisions(RangeValues range) =>
+    ((range.end - range.start) / 5).round().clamp(1, 100);
 
 String _filterKey(String value) => value
     .trim()

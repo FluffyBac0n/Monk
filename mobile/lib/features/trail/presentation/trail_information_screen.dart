@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/theme/eurotrex_palette.dart';
 
 const _ink = Color(0xFF17201B);
 const _green = Color(0xFF277653);
@@ -18,7 +19,7 @@ class TrailInformationScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: _sand,
       appBar: AppBar(
-        backgroundColor: _ink,
+        backgroundColor: EurotrexPalette.navy,
         foregroundColor: Colors.white,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,7 +55,7 @@ class TrailInformationScreen extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [_ink, Color(0xFF315E47)],
+                        colors: [EurotrexPalette.navy, EurotrexPalette.blue],
                       ),
                     ),
                   ),
@@ -75,7 +76,7 @@ class TrailInformationScreen extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Color(0xE6275F45), Color(0x66183226)],
+                        colors: [Color(0xD9303E4E), Color(0x802D5DD3)],
                         stops: [0.05, 1],
                       ),
                     ),

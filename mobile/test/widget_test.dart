@@ -11,6 +11,7 @@ import 'package:monk_mobile/core/database/database_provider.dart';
 import 'package:monk_mobile/core/links/external_url_launcher.dart';
 import 'package:monk_mobile/core/settings/app_settings.dart';
 import 'package:monk_mobile/core/settings/app_settings_controller.dart';
+import 'package:monk_mobile/core/theme/eurotrex_palette.dart';
 import 'package:monk_mobile/features/about/presentation/about_screen.dart';
 import 'package:monk_mobile/features/accommodation/data/lodging_repository.dart';
 import 'package:monk_mobile/features/accommodation/domain/lodging.dart';
@@ -452,7 +453,7 @@ void main() {
     expect(find.byKey(const ValueKey('stage-details-helper')), findsOneWidget);
   });
 
-  testWidgets('shows Trails and opens Cyprus E4', (tester) async {
+  testWidgets('shows landing trail cards and opens Cyprus E4', (tester) async {
     final lodgingRepository = _TrailPreloadLodgingRepository();
     await tester.pumpWidget(
       ProviderScope(
@@ -471,12 +472,7 @@ void main() {
     expect(find.text('EUROTREX'), findsNothing);
     expect(find.text('MONK'), findsNothing);
     expect(find.text('TRAIL LIBRARY'), findsNothing);
-    final headerGap =
-        tester.getTopLeft(find.text('Trails')).dy -
-        tester.getBottomLeft(landingWordmark).dy;
-    expect(headerGap, greaterThanOrEqualTo(16));
-    expect(headerGap, lessThan(80));
-    expect(find.text('Trails'), findsOneWidget);
+    expect(find.text('Trails'), findsNothing);
     expect(find.text('Explore trails'), findsNothing);
     expect(
       find.text('Choose a trail to view its stages and maps.'),
@@ -486,6 +482,14 @@ void main() {
     final cyprusCard = find.byKey(const ValueKey('explore-cyprus-e4'));
     final exploreButton = find.byKey(
       const ValueKey('explore-trail-button-cyprus-e4'),
+    );
+    expect(
+      tester
+          .widget<FilledButton>(exploreButton)
+          .style
+          ?.backgroundColor
+          ?.resolve({}),
+      EurotrexPalette.blue,
     );
     expect(
       find.descendant(
@@ -946,7 +950,7 @@ void main() {
     expect(bottomNavigation, findsOneWidget);
     expect(
       tester.widget<Material>(bottomNavigation).color,
-      const Color(0xFF17201B),
+      const Color(0xFF303E4E),
     );
     expect(
       find.byKey(const Key('stage-detail-stages-shortcut')),
@@ -1087,7 +1091,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('stage-filter-start')), findsNothing);
     expect(find.byKey(const ValueKey('stage-filter-finish')), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('stage-filter-excursions')));
+    expect(find.byKey(const ValueKey('stage-filter-excursions')), findsNothing);
+    expect(find.byKey(const ValueKey('stage-filter-detours')), findsNothing);
     final applyFilters = find.byKey(const Key('apply-service-filters'));
     await tester.scrollUntilVisible(
       applyFilters,
@@ -1097,7 +1102,7 @@ void main() {
     await tester.tap(applyFilters);
     await tester.pumpAndSettle();
     expect(stageCard, findsOneWidget);
-    expect(unlinkedStageCard, findsNothing);
+    expect(unlinkedStageCard, findsOneWidget);
 
     await tester.tap(stageCard);
     await tester.pumpAndSettle();
@@ -1824,16 +1829,25 @@ void main() {
       findsNothing,
     );
     expect(find.text('Stage name'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('stage-filter-name-panel')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('stage-filter-poi-panel')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('stage-filter-services-panel')),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('stage-name-filter')), findsOneWidget);
     expect(find.text('Points of Interest'), findsOneWidget);
     expect(find.text('Trail points'), findsNothing);
     expect(find.byKey(const ValueKey('stage-filter-start')), findsNothing);
     expect(find.byKey(const ValueKey('stage-filter-finish')), findsNothing);
-    expect(
-      find.byKey(const ValueKey('stage-filter-excursions')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const ValueKey('stage-filter-detours')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-filter-excursions')), findsNothing);
+    expect(find.byKey(const ValueKey('stage-filter-detours')), findsNothing);
     expect(find.byKey(const ValueKey('stage-filter-beach')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('stage-filter-viewpoint')),
@@ -1851,6 +1865,19 @@ void main() {
       find.byKey(const ValueKey('stage-filter-forest-park')),
       findsOneWidget,
     );
+    final namePanel = find.byKey(const ValueKey('stage-filter-name-panel'));
+    final servicesPanel = find.byKey(
+      const ValueKey('stage-filter-services-panel'),
+    );
+    final poiPanel = find.byKey(const ValueKey('stage-filter-poi-panel'));
+    expect(
+      tester.getBottomLeft(namePanel).dy,
+      lessThan(tester.getTopLeft(servicesPanel).dy),
+    );
+    expect(
+      tester.getBottomLeft(servicesPanel).dy,
+      lessThan(tester.getTopLeft(poiPanel).dy),
+    );
     expect(find.text('Apply'), findsOneWidget);
     expect(find.text('Apply filters'), findsNothing);
     expect(
@@ -1860,6 +1887,20 @@ void main() {
     expect(
       tester.widget(find.byKey(const Key('clear-service-filter-selection'))),
       isA<OutlinedButton>(),
+    );
+    final applyAction = find.byKey(const Key('apply-service-filters'));
+    expect(
+      Theme.of(
+        tester.element(applyAction),
+      ).filledButtonTheme.style?.backgroundColor?.resolve({}),
+      EurotrexPalette.blue,
+    );
+    expect(
+      find.descendant(
+        of: applyAction,
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+      findsOneWidget,
     );
 
     final stageNameFilter = find.byKey(const ValueKey('stage-name-filter'));
@@ -2046,7 +2087,7 @@ void main() {
     expect(find.text('Natural Landmarks'), findsOneWidget);
     expect(find.text('Forests/Parks'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('stage-filter-beach')));
+    await tapFilterAction(const ValueKey('stage-filter-beach'));
     await tapFilterAction(const Key('apply-service-filters'));
     expect(find.byKey(const ValueKey('stage-card-coral-bay')), findsOneWidget);
     expect(find.byKey(const ValueKey('stage-card-akamas-view')), findsNothing);
@@ -2058,7 +2099,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('stage-filter-viewpoint')));
+    await tapFilterAction(const ValueKey('stage-filter-viewpoint'));
     await tapFilterAction(const Key('apply-service-filters'));
     expect(find.byKey(const ValueKey('stage-card-coral-bay')), findsNothing);
     expect(
@@ -2073,7 +2114,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('stage-filter-religious-site')));
+    await tapFilterAction(const ValueKey('stage-filter-religious-site'));
     await tapFilterAction(const Key('apply-service-filters'));
     expect(find.byKey(const ValueKey('stage-card-religious')), findsOneWidget);
     expect(find.byKey(const ValueKey('stage-card-natural')), findsNothing);
@@ -2084,9 +2125,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const ValueKey('stage-filter-natural-landmark')),
-    );
+    await tapFilterAction(const ValueKey('stage-filter-natural-landmark'));
     await tapFilterAction(const Key('apply-service-filters'));
     expect(find.byKey(const ValueKey('stage-card-religious')), findsNothing);
     expect(find.byKey(const ValueKey('stage-card-natural')), findsOneWidget);
@@ -2097,7 +2136,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('stage-filter-forest-park')));
+    await tapFilterAction(const ValueKey('stage-filter-forest-park'));
     await tapFilterAction(const Key('apply-service-filters'));
     expect(find.byKey(const ValueKey('stage-card-park')), findsOneWidget);
     expect(find.byKey(const ValueKey('stage-card-forest')), findsOneWidget);
@@ -2124,7 +2163,7 @@ void main() {
     expect(bottomNavigation, findsOneWidget);
     expect(
       tester.widget<Material>(bottomNavigation).color,
-      const Color(0xFF17201B),
+      const Color(0xFF303E4E),
     );
     expect(find.byKey(const ValueKey('stage-bottom-filter')), findsOneWidget);
     expect(find.byIcon(Icons.filter_list_rounded), findsOneWidget);
@@ -2183,7 +2222,7 @@ void main() {
     );
     expect(
       tester.widget<Material>(bottomNavigation).color,
-      const Color(0xFF17201B),
+      const Color(0xFF303E4E),
     );
 
     final navigationSize = find.byKey(
@@ -2346,7 +2385,7 @@ void main() {
     expect(bottomNavigation, findsOneWidget);
     expect(
       tester.widget<Material>(bottomNavigation).color,
-      const Color(0xFF17201B),
+      const Color(0xFF303E4E),
     );
     expect(
       find.descendant(
@@ -2536,6 +2575,8 @@ void main() {
                   name: 'Online Hotel',
                   type: 'Hotel',
                   distanceFromTrailKm: 0.3,
+                  priceMinEur: 80,
+                  priceMaxEur: 120,
                   website: 'https://booking.example.com/hotel',
                 ),
                 Lodging(
@@ -2544,6 +2585,8 @@ void main() {
                   name: 'Nearby Guesthouse',
                   type: 'Guesthouse',
                   distanceFromTrailKm: 0.4,
+                  priceMinEur: 40,
+                  priceMaxEur: 70,
                 ),
                 Lodging(
                   id: 'distant-picnic-site',
@@ -2551,6 +2594,8 @@ void main() {
                   name: 'Distant Picnic Site',
                   type: 'Picnic site',
                   distanceFromTrailKm: 3,
+                  priceMinEur: 0,
+                  priceMaxEur: 0,
                   website: 'https://booking.example.com/picnic',
                 ),
               ],
@@ -2576,9 +2621,27 @@ void main() {
     expect(find.text('Filter accommodation'), findsNothing);
     expect(find.text('Bookable online'), findsOneWidget);
     expect(find.text('Maximum distance from trail'), findsNothing);
+    expect(find.text('Price range'), findsOneWidget);
+    expect(find.text('Any price'), findsWidgets);
     expect(find.text('Accommodation type'), findsOneWidget);
     expect(find.text('Apply'), findsOneWidget);
     expect(find.text('Apply filters'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('accommodation-bookable-panel')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('accommodation-price-panel')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('accommodation-types-panel')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('accommodation-price-range')),
+      findsOneWidget,
+    );
     final hotelType = find.byKey(const ValueKey('accommodation-type-hotel'));
     expect(
       find.descendant(
@@ -2635,6 +2698,14 @@ void main() {
     );
     expect(find.text('Maximum distance from trail'), findsOneWidget);
     expect(find.byIcon(Icons.gps_fixed_rounded), findsWidgets);
+    expect(
+      find.byKey(const ValueKey('accommodation-distance-panel')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('accommodation-distance-clear')),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const ValueKey('accommodation-distance-0.5')));
     await tester.tap(
       find.byKey(const ValueKey('accommodation-distance-apply')),
@@ -2678,6 +2749,36 @@ void main() {
     expect(
       find.descendant(of: filterAction, matching: find.text('2')),
       findsNothing,
+    );
+
+    await tester.tap(filterAction);
+    await tester.pumpAndSettle();
+    final priceRangeFinder = find.byKey(
+      const ValueKey('accommodation-price-range'),
+    );
+    final priceRange = tester.widget<RangeSlider>(priceRangeFinder);
+    priceRange.onChanged!(const RangeValues(30, 70));
+    await tester.pump();
+    final priceApply = find.byKey(const ValueKey('accommodation-filter-apply'));
+    await tester.scrollUntilVisible(
+      priceApply,
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.tap(priceApply);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('lodging-card-online-hotel')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('lodging-card-nearby-guesthouse')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: filterAction, matching: find.text('1')),
+      findsOneWidget,
     );
   });
 
@@ -2869,6 +2970,12 @@ void main() {
     expect(find.text('App preferences'), findsNothing);
     expect(find.text('Language'), findsOneWidget);
     expect(find.text('Metric'), findsOneWidget);
+    expect(
+      Theme.of(
+        tester.element(find.byKey(const Key('language-setting'))),
+      ).colorScheme.primary,
+      EurotrexPalette.blue,
+    );
     expect(
       find.byKey(const Key('settings-delete-offline-maps')),
       findsOneWidget,

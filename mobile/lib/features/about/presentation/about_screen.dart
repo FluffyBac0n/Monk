@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/app_info/app_version_provider.dart';
 import '../../../core/links/external_url_launcher.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/theme/eurotrex_palette.dart';
 
 const eurotrexWebsiteUrl = 'https://eurotrex.eu';
 const eurotrexSuggestionsEmail = 'info@eurotrex.eu';
@@ -88,7 +89,7 @@ class AboutScreen extends ConsumerWidget {
       key: const ValueKey('about-screen'),
       backgroundColor: _sand,
       appBar: AppBar(
-        backgroundColor: _ink,
+        backgroundColor: EurotrexPalette.navy,
         foregroundColor: Colors.white,
         title: Text(
           l10n.t('About us'),
@@ -232,7 +233,7 @@ class _AboutHero extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [_ink, Color(0xFF315E47)],
+          colors: [EurotrexPalette.navy, EurotrexPalette.blue],
         ),
         borderRadius: BorderRadius.circular(22),
       ),
