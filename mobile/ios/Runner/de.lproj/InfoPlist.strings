@@ -1,1 +1,2 @@
-"NSLocationWhenInUseUsageDescription" = "EUROTREX verwendet deinen Standort, um deine nächstgelegene Wanderetappe zu finden.";
+"CFBundleDisplayName" = "EuroTrex";
+"NSLocationWhenInUseUsageDescription" = "EuroTrex verwendet deinen Standort, um deine nächstgelegene Wanderetappe zu finden.";

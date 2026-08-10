@@ -1,1 +1,2 @@
-"NSLocationWhenInUseUsageDescription" = "EUROTREX uses your location to find your nearby trail stage.";
+"CFBundleDisplayName" = "EuroTrex";
+"NSLocationWhenInUseUsageDescription" = "EuroTrex uses your location to find your nearby trail stage.";
