@@ -1620,6 +1620,14 @@ void main() {
   testWidgets('stage detail elevation shortcut opens the selected stage', (
     tester,
   ) async {
+    const start = TrailStage(
+      id: 'stage-start',
+      sequence: 2,
+      name: 'Stage start',
+      accumulatedDistanceKm: 0,
+      altitudeM: 2,
+      services: {},
+    );
     const stage = TrailStage(
       id: 'stage-one',
       sequence: 1,
@@ -1635,7 +1643,7 @@ void main() {
           stagesProvider.overrideWith(_SingleStageController.new),
         ],
         child: const MaterialApp(
-          home: StageDetailScreen(stages: [stage], initialIndex: 0),
+          home: StageDetailScreen(stages: [start, stage], initialIndex: 1),
         ),
       ),
     );
@@ -1645,25 +1653,24 @@ void main() {
     expect(find.byType(ElevationScreen), findsOneWidget);
     expect(find.byType(LineChart), findsOneWidget);
     final chart = tester.widget<LineChart>(find.byType(LineChart));
+    expect(chart.data.maxX, 5);
+    expect(find.text('Stage length'), findsOneWidget);
+    final backAction = find.byKey(const Key('elevation-back'));
+    expect(backAction, findsOneWidget);
+    expect(find.byKey(const Key('elevation-stage-toggle')), findsNothing);
+    expect(find.text('Stage one'), findsOneWidget);
     expect(
-      chart.transformationConfig.transformationController!.value
-          .getMaxScaleOnAxis(),
-      greaterThan(1),
+      find.descendant(
+        of: find.byKey(const Key('elevation-stage-summary')),
+        matching: find.byIcon(Icons.close_rounded),
+      ),
+      findsNothing,
     );
-    final stageToggle = find.byKey(const Key('elevation-stage-toggle'));
-    expect(find.text('Stage one'), findsOneWidget);
 
-    await tester.tap(stageToggle);
+    await tester.tap(backAction);
     await tester.pumpAndSettle();
-    expect(find.text('Stage one'), findsOneWidget);
-
-    await tester.tap(stageToggle);
-    await tester.pumpAndSettle();
-    expect(find.text('Stage one'), findsNothing);
-
-    await tester.tap(stageToggle);
-    await tester.pumpAndSettle();
-    expect(find.text('Stage one'), findsOneWidget);
+    expect(find.byType(ElevationScreen), findsNothing);
+    expect(find.byType(StageDetailScreen), findsOneWidget);
   });
 
   testWidgets('stages can reverse the shared trail direction', (tester) async {
@@ -3194,7 +3201,7 @@ void main() {
     expect(find.text('Unités de mesure'), findsOneWidget);
   });
 
-  testWidgets('elevation stage markers can be shown and hidden', (
+  testWidgets('elevation navigation and chart interactions remain compact', (
     tester,
   ) async {
     _FakeElevationController.refreshCount = 0;
@@ -3209,10 +3216,57 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final controls = tester.widget<Container>(
-      find.byKey(const ValueKey('elevation-controls')),
+    final navigation = tester.widget<Material>(
+      find.byKey(const ValueKey('elevation-bottom-navigation')),
     );
-    expect((controls.decoration! as BoxDecoration).color, EurotrexPalette.navy);
+    expect(navigation.color, EurotrexPalette.navy);
+    expect(
+      tester
+          .getSize(
+            find.byKey(const ValueKey('elevation-bottom-navigation-size')),
+          )
+          .height,
+      48,
+    );
+    final backAction = find.byKey(const Key('elevation-back'));
+    final zoomOutAction = find.byKey(const Key('elevation-zoom-out'));
+    final gpsAction = find.byKey(const Key('elevation-location-toggle'));
+    final zoomInAction = find.byKey(const Key('elevation-zoom-in'));
+    final resetAction = find.byKey(const Key('elevation-reset-view'));
+    expect(
+      tester.getCenter(backAction).dx,
+      lessThan(tester.getCenter(zoomOutAction).dx),
+    );
+    expect(
+      tester.getCenter(zoomOutAction).dx,
+      lessThan(tester.getCenter(gpsAction).dx),
+    );
+    expect(
+      tester.getCenter(gpsAction).dx,
+      lessThan(tester.getCenter(zoomInAction).dx),
+    );
+    expect(
+      tester.getCenter(zoomInAction).dx,
+      lessThan(tester.getCenter(resetAction).dx),
+    );
+    expect(
+      tester.getCenter(gpsAction).dx,
+      closeTo(tester.getSize(find.byType(Scaffold)).width / 2, 0.1),
+    );
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('elevation-scope-selector')))
+          .height,
+      lessThan(40),
+    );
+    final scopeSelector =
+        tester.widget(find.byKey(const ValueKey('elevation-scope-selector')))
+            as SegmentedButton;
+    expect(scopeSelector.segments.last.enabled, isFalse);
+    expect(
+      scopeSelector.style!.backgroundColor!.resolve({WidgetState.disabled}),
+      const Color(0xFFE3E5E4),
+    );
     final chartCard = tester.widget<Container>(
       find.byKey(const ValueKey('elevation-chart-card')),
     );
@@ -3228,6 +3282,12 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('elevation-trail-distance')))
+          .height,
+      lessThan(72),
+    );
     expect(find.textContaining('The Troodos section contains'), findsNothing);
     expect(
       find.byKey(const ValueKey('elevation-pull-to-refresh')),
@@ -3237,6 +3297,9 @@ void main() {
     await tester.drag(find.byType(ListView), const Offset(0, 320));
     await tester.pumpAndSettle();
     expect(_FakeElevationController.refreshCount, 1);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -520));
+    await tester.pumpAndSettle();
 
     expect(
       find.descendant(
@@ -3256,10 +3319,16 @@ void main() {
     expect(find.text('Total descent'), findsOneWidget);
     expect(find.text('Offline samples'), findsNothing);
 
+    await tester.drag(find.byType(ListView), const Offset(0, 520));
+    await tester.pumpAndSettle();
+
     final chart = tester.widget<LineChart>(find.byType(LineChart));
     expect(chart.transformationConfig.scaleAxis, FlScaleAxis.horizontal);
     expect(chart.transformationConfig.maxScale, 15);
     expect(chart.data.lineBarsData.first.color, EurotrexPalette.blue);
+    expect(chart.data.lineBarsData.first.barWidth, 2.2);
+    expect(chart.duration, Duration.zero);
+    expect(find.byKey(const Key('elevation-stage-toggle')), findsNothing);
     final transformationController =
         chart.transformationConfig.transformationController!;
     final chartCenter = tester.getCenter(find.byType(LineChart));
@@ -3294,30 +3363,10 @@ void main() {
     await tester.tap(find.byKey(const Key('elevation-reset-view')));
     await tester.pump();
 
-    final stageToggle = find.byKey(const Key('elevation-stage-toggle'));
     expect(
       find.descendant(
-        of: stageToggle,
-        matching: find.byIcon(Icons.location_on_outlined),
-      ),
-      findsOneWidget,
-    );
-    await tester.tap(stageToggle);
-    await tester.pumpAndSettle();
-    expect(
-      find.descendant(
-        of: stageToggle,
-        matching: find.byIcon(Icons.location_on_rounded),
-      ),
-      findsOneWidget,
-    );
-
-    await tester.tap(stageToggle);
-    await tester.pumpAndSettle();
-    expect(
-      find.descendant(
-        of: stageToggle,
-        matching: find.byIcon(Icons.location_on_outlined),
+        of: backAction,
+        matching: find.byIcon(Icons.chevron_left_rounded),
       ),
       findsOneWidget,
     );
@@ -3341,26 +3390,128 @@ void main() {
     expect(gradient.begin, Alignment.bottomCenter);
     expect(gradient.end, Alignment.topCenter);
     expect(gradient.colors, const [
-      Color(0x737DC8C1),
-      Color(0x737DC8C1),
-      Color(0x7396C77D),
-      Color(0x7396C77D),
-      Color(0x73CCBD69),
-      Color(0x73CCBD69),
-      Color(0x73D89B55),
-      Color(0x73D89B55),
+      Color(0x943E9ED0),
+      Color(0x9461AF57),
+      Color(0x94D8AA35),
+      Color(0x94D66B35),
+      Color(0x94D66B35),
     ]);
-    expect(gradient.stops, const [
-      0,
-      0.2,
-      0.2,
-      0.4666666666666667,
-      0.4666666666666667,
-      0.8,
-      0.8,
-      1,
+    expect(gradient.stops, const [0, 0.2, 0.4666666666666667, 0.8, 1]);
+    expect(
+      find.byKey(const ValueKey('elevation-contour-legend')),
+      findsOneWidget,
+    );
+    final legendGradient =
+        (tester
+                        .widget<Container>(
+                          find.byKey(
+                            const ValueKey('elevation-contour-gradient'),
+                          ),
+                        )
+                        .decoration!
+                    as BoxDecoration)
+                .gradient!
+            as LinearGradient;
+    expect(legendGradient.colors, const [
+      Color(0xFF3E9ED0),
+      Color(0xFF61AF57),
+      Color(0xFFD8AA35),
+      Color(0xFFD66B35),
     ]);
+    expect(find.text('Altitude'), findsNothing);
   });
+
+  testWidgets(
+    'elevation stage scope highlights its range and adapts distance axes',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            elevationProvider.overrideWith(_ScopeElevationController.new),
+            stagesProvider.overrideWith(_ScopeStagesController.new),
+          ],
+          child: const MaterialApp(home: ElevationScreen(initialStageIndex: 2)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Stage length'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('elevation-trail-distance')),
+          matching: find.text('4.0 km'),
+        ),
+        findsOneWidget,
+      );
+      var chart = tester.widget<LineChart>(find.byType(LineChart));
+      expect(
+        chart.data.rangeAnnotations.verticalRangeAnnotations,
+        hasLength(1),
+      );
+      final range = chart.data.rangeAnnotations.verticalRangeAnnotations.single;
+      expect(range.x1, 0);
+      expect(range.x2, 4);
+      expect(chart.data.maxX, 4);
+      expect(chart.data.extraLinesData.verticalLines, hasLength(2));
+
+      await tester.tap(find.text('Full trail'));
+      await tester.pumpAndSettle();
+      expect(find.text('Trail distance'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('elevation-trail-distance')),
+          matching: find.text('8.0 km'),
+        ),
+        findsOneWidget,
+      );
+
+      chart = tester.widget<LineChart>(find.byType(LineChart));
+      final fullRange =
+          chart.data.rangeAnnotations.verticalRangeAnnotations.single;
+      expect(fullRange.x1, 4);
+      expect(fullRange.x2, 8);
+      expect(chart.data.maxX, 8);
+      final initialInterval = chart.data.gridData.verticalInterval!;
+      await tester.tap(find.byKey(const Key('elevation-zoom-in')));
+      await tester.tap(find.byKey(const Key('elevation-zoom-in')));
+      await tester.pump();
+      chart = tester.widget<LineChart>(find.byType(LineChart));
+      expect(chart.data.gridData.verticalInterval, lessThan(initialInterval));
+
+      await tester.tap(find.text('Stage'));
+      await tester.pumpAndSettle();
+      expect(find.text('Stage length'), findsOneWidget);
+      chart = tester.widget<LineChart>(find.byType(LineChart));
+      expect(
+        chart.data.rangeAnnotations.verticalRangeAnnotations,
+        hasLength(1),
+      );
+      expect(chart.data.extraLinesData.verticalLines, hasLength(2));
+      expect(find.byKey(const Key('elevation-stage-summary')), findsOneWidget);
+      expect(find.byKey(const Key('elevation-stage-toggle')), findsNothing);
+
+      final baseBar = chart.data.lineBarsData.first;
+      final inspectedSpot = baseBar.spots[baseBar.spots.length ~/ 2];
+      chart.data.lineTouchData.touchCallback!(
+        FlPanUpdateEvent(
+          DragUpdateDetails(
+            globalPosition: Offset(100, 100),
+            localPosition: Offset(100, 100),
+          ),
+        ),
+        LineTouchResponse(
+          touchLocation: const Offset(100, 100),
+          touchChartCoordinate: Offset(inspectedSpot.x, inspectedSpot.y),
+          lineBarSpots: [TouchLineBarSpot(baseBar, 0, inspectedSpot, 0)],
+        ),
+      );
+      await tester.pump();
+      chart = tester.widget<LineChart>(find.byType(LineChart));
+      expect(chart.data.extraLinesData.verticalLines.length, greaterThan(2));
+    },
+  );
 
   testWidgets('map hides provider details when configuration is missing', (
     tester,
@@ -3418,7 +3569,7 @@ class _ContourElevationController extends ElevationController {
       lng: 32.4,
       altitudeM: 0,
       distanceKm: 0,
-      reverseDistanceKm: 4,
+      reverseDistanceKm: 8,
     ),
     RoutePoint(
       pointIndex: 1,
@@ -3426,7 +3577,7 @@ class _ContourElevationController extends ElevationController {
       lng: 32.41,
       altitudeM: 300,
       distanceKm: 1,
-      reverseDistanceKm: 3,
+      reverseDistanceKm: 7,
     ),
     RoutePoint(
       pointIndex: 2,
@@ -3434,7 +3585,7 @@ class _ContourElevationController extends ElevationController {
       lng: 32.42,
       altitudeM: 700,
       distanceKm: 2,
-      reverseDistanceKm: 2,
+      reverseDistanceKm: 6,
     ),
     RoutePoint(
       pointIndex: 3,
@@ -3442,7 +3593,7 @@ class _ContourElevationController extends ElevationController {
       lng: 32.43,
       altitudeM: 1200,
       distanceKm: 3,
-      reverseDistanceKm: 1,
+      reverseDistanceKm: 5,
     ),
     RoutePoint(
       pointIndex: 4,
@@ -3450,7 +3601,84 @@ class _ContourElevationController extends ElevationController {
       lng: 32.44,
       altitudeM: 1500,
       distanceKm: 4,
+      reverseDistanceKm: 4,
+    ),
+    RoutePoint(
+      pointIndex: 5,
+      lat: 34.75,
+      lng: 32.45,
+      altitudeM: 1500,
+      distanceKm: 5,
+      reverseDistanceKm: 3,
+    ),
+    RoutePoint(
+      pointIndex: 6,
+      lat: 34.76,
+      lng: 32.46,
+      altitudeM: 1500,
+      distanceKm: 6,
+      reverseDistanceKm: 2,
+    ),
+    RoutePoint(
+      pointIndex: 7,
+      lat: 34.77,
+      lng: 32.47,
+      altitudeM: 1500,
+      distanceKm: 7,
+      reverseDistanceKm: 1,
+    ),
+    RoutePoint(
+      pointIndex: 8,
+      lat: 34.78,
+      lng: 32.48,
+      altitudeM: 1500,
+      distanceKm: 8,
       reverseDistanceKm: 0,
+    ),
+  ];
+}
+
+class _ScopeElevationController extends ElevationController {
+  @override
+  Future<List<RoutePoint>> build() async => [
+    for (var index = 0; index <= 8; index++)
+      RoutePoint(
+        pointIndex: index,
+        lat: 34.7 + index / 1000,
+        lng: 32.4 + index / 1000,
+        altitudeM: 100 + index * 20,
+        distanceKm: index.toDouble(),
+        reverseDistanceKm: (8 - index).toDouble(),
+      ),
+  ];
+}
+
+class _ScopeStagesController extends StagesController {
+  @override
+  Future<List<TrailStage>> build() async => const [
+    TrailStage(
+      id: 'scope-start',
+      sequence: 3,
+      name: 'Scope start',
+      accumulatedDistanceKm: 0,
+      altitudeM: 100,
+      services: {},
+    ),
+    TrailStage(
+      id: 'scope-middle',
+      sequence: 2,
+      name: 'Scope middle',
+      accumulatedDistanceKm: 4,
+      altitudeM: 180,
+      services: {},
+    ),
+    TrailStage(
+      id: 'scope-finish',
+      sequence: 1,
+      name: 'Scope finish',
+      accumulatedDistanceKm: 8,
+      altitudeM: 260,
+      services: {},
     ),
   ];
 }
@@ -3661,6 +3889,14 @@ class _ManyStagesController extends StagesController {
 class _SingleStageController extends StagesController {
   @override
   Future<List<TrailStage>> build() async => const [
+    TrailStage(
+      id: 'stage-start',
+      sequence: 2,
+      name: 'Stage start',
+      accumulatedDistanceKm: 0,
+      altitudeM: 2,
+      services: {},
+    ),
     TrailStage(
       id: 'stage-one',
       sequence: 1,

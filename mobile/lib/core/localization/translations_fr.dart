@@ -126,6 +126,7 @@ const frenchTranslations = <String, String>{
   'Reset elevation view': 'Réinitialiser la vue altimétrique',
   'Hide stages': 'Masquer les étapes',
   'Show stages': 'Afficher les étapes',
+  'Full trail': 'Itinéraire complet',
   'Trail distance': 'Distance du sentier',
   'Highest point': 'Point culminant',
   'High point position': 'Position du point culminant',

@@ -130,6 +130,53 @@ void main() {
     },
   );
 
+  testWidgets('Stages carries its GPS fix into the elevation profile', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _GpsTestApp(
+        location: const DeviceLocation(
+          latitude: _gpsRouteLatitude + _gpsLateralOffset,
+          longitude:
+              _gpsRouteStartLongitude +
+              _forwardLocationDistanceKm * _gpsRoutePointStep,
+          accuracyM: 5,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-gps')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-elevation')));
+    await tester.pumpAndSettle();
+
+    final elevationGps = find.byKey(
+      const ValueKey('elevation-location-toggle'),
+    );
+    expect(elevationGps, findsOneWidget);
+    expect(
+      find.descendant(
+        of: elevationGps,
+        matching: find.byIcon(Icons.gps_fixed_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Stage length'), findsOneWidget);
+
+    await tester.tap(elevationGps);
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: elevationGps,
+        matching: find.byIcon(Icons.gps_not_fixed_rounded),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('Stage Info GPS locates the stage and updates its map preview', (
     tester,
   ) async {

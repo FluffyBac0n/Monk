@@ -3,33 +3,42 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/location/device_location.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 import '../../stages/domain/stage.dart';
+import '../../stages/domain/trail_location_matcher.dart';
 import '../../stages/presentation/stages_controller.dart';
-import '../../stages/presentation/stages_screen.dart';
 import '../../trail/domain/trail_direction.dart';
 import '../../trail/presentation/trail_direction_controller.dart';
+import '../domain/elevation_profile.dart';
 import '../domain/elevation_totals.dart';
 import '../domain/route_point.dart';
 import 'elevation_controller.dart';
 
 const _ink = EurotrexPalette.navy;
-const _green = Color(0xFF277653);
-const _red = Color(0xFFD14B45);
 const _sand = Color(0xFFF4F2EC);
-const _contourLowland = Color(0x737DC8C1);
-const _contourFoothill = Color(0x7396C77D);
-const _contourUpland = Color(0x73CCBD69);
-const _contourPeak = Color(0x73D89B55);
+const _contourLowland = Color(0xFF3E9ED0);
+const _contourFoothill = Color(0xFF61AF57);
+const _contourUpland = Color(0xFFD8AA35);
+const _contourPeak = Color(0xFFD66B35);
+const _minimumElevationChangeM = 1.5;
+
+enum _ElevationScope { fullTrail, stage }
 
 class ElevationScreen extends ConsumerStatefulWidget {
-  const ElevationScreen({this.initialStageIndex, super.key});
+  const ElevationScreen({
+    this.initialStageIndex,
+    this.initialLocation,
+    super.key,
+  });
 
   final int? initialStageIndex;
+  final DeviceLocation? initialLocation;
 
   @override
   ConsumerState<ElevationScreen> createState() => _ElevationScreenState();
@@ -38,13 +47,29 @@ class ElevationScreen extends ConsumerStatefulWidget {
 class _ElevationScreenState extends ConsumerState<ElevationScreen> {
   final TransformationController elevationTransformationController =
       TransformationController();
-  bool showStages = false;
-  bool stagesExplicitlyHidden = false;
   late int? selectedStageIndex = widget.initialStageIndex;
-  bool initialStageFocusApplied = false;
+  late DeviceLocation? currentLocation = widget.initialLocation;
+  late _ElevationScope scope = widget.initialStageIndex == null
+      ? _ElevationScope.fullTrail
+      : _ElevationScope.stage;
+  bool isLocating = false;
+  double? inspectedDistanceKm;
+  List<RoutePoint>? _sourceProfile;
+  List<RoutePoint>? _smoothedProfile;
+
+  @override
+  void initState() {
+    super.initState();
+    elevationTransformationController.addListener(_rebuildForChartTransform);
+  }
+
+  void _rebuildForChartTransform() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
+    elevationTransformationController.removeListener(_rebuildForChartTransform);
     elevationTransformationController.dispose();
     super.dispose();
   }
@@ -61,40 +86,76 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
     );
   }
 
-  void _focusInitialStage(
-    List<TrailStage> stages,
+  List<RoutePoint> _smoothedPoints(List<RoutePoint> points) {
+    if (identical(points, _sourceProfile) && _smoothedProfile != null) {
+      return _smoothedProfile!;
+    }
+    _sourceProfile = points;
+    return _smoothedProfile = smoothElevationProfile(points);
+  }
+
+  void _changeScope(_ElevationScope nextScope) {
+    if (nextScope == scope) return;
+    setState(() => scope = nextScope);
+    elevationTransformationController.value = Matrix4.identity();
+  }
+
+  Future<void> _toggleLocation(
+    List<RoutePoint> routePoints,
+    List<TrailStage> sourceStages,
+    List<TrailStage> orderedStages,
     TrailDirection direction,
-    double totalDistance,
-  ) {
-    if (initialStageFocusApplied) return;
-    final initialIndex = widget.initialStageIndex;
-    if (initialIndex == null ||
-        initialIndex < 0 ||
-        initialIndex >= stages.length ||
-        totalDistance <= 0) {
-      initialStageFocusApplied = true;
+  ) async {
+    if (currentLocation != null) {
+      setState(() => currentLocation = null);
       return;
     }
-    final distance = stages[initialIndex].accumulatedDistanceKm;
-    if (distance == null) {
-      initialStageFocusApplied = true;
-      return;
-    }
-    initialStageFocusApplied = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (isLocating) return;
+    setState(() => isLocating = true);
+    try {
+      final location = await ref.read(deviceLocationReaderProvider)();
       if (!mounted) return;
-      const scale = 4.0;
-      final width = MediaQuery.sizeOf(context).width - 32;
-      final position = direction.distanceFromStart(distance, totalDistance);
-      final fraction = (position / totalDistance).clamp(0.0, 1.0);
-      final translation = (width / 2 - fraction * width * scale).clamp(
-        width * (1 - scale),
-        0.0,
+      if (!location.accuracyM.isFinite ||
+          location.accuracyM < 0 ||
+          location.accuracyM > maximumUsableLocationAccuracyM) {
+        _showMessage('Your location could not be read right now.');
+        return;
+      }
+      final match = findNearbyTrailStage(
+        latitude: location.latitude,
+        longitude: location.longitude,
+        locationAccuracyM: location.accuracyM,
+        routePoints: routePoints,
+        stages: sourceStages,
+        direction: direction,
       );
-      final matrix = Matrix4.diagonal3Values(scale, 1, 1)
-        ..storage[12] = translation;
-      elevationTransformationController.value = matrix;
-    });
+      if (match == null) {
+        _showMessage('You are not on the trail.');
+        return;
+      }
+      final stageIndex = orderedStages.indexWhere(
+        (stage) => stage.id == match.stageId,
+      );
+      setState(() {
+        currentLocation = location;
+        if (stageIndex >= 0) selectedStageIndex = stageIndex;
+      });
+    } on LocationServicesDisabledException {
+      _showMessage('Turn on Location Services to show your position.');
+    } on LocationPermissionDeniedException {
+      _showMessage('Location permission is needed to show your position.');
+    } catch (_) {
+      _showMessage('Your location could not be read right now.');
+    } finally {
+      if (mounted) setState(() => isLocating = false);
+    }
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.t(message))));
   }
 
   @override
@@ -112,6 +173,19 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
     final stages = direction.isReversed
         ? sourceStages.reversed.toList(growable: false)
         : sourceStages;
+    final elevationPoints = elevation.value ?? const <RoutePoint>[];
+    final hasElevation = elevationPoints.isNotEmpty;
+    final location = currentLocation;
+    final locationMatch = location == null || !hasElevation
+        ? null
+        : findNearbyTrailStage(
+            latitude: location.latitude,
+            longitude: location.longitude,
+            locationAccuracyM: location.accuracyM,
+            routePoints: elevationPoints,
+            stages: sourceStages,
+            direction: direction,
+          );
     return Scaffold(
       backgroundColor: _sand,
       appBar: AppBar(
@@ -135,13 +209,33 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: _ElevationBottomNavigationBar(
+        locationActive: currentLocation != null,
+        isLocating: isLocating,
+        onBack: Navigator.of(context).canPop()
+            ? () => Navigator.of(context).pop()
+            : null,
+        onZoomOut: hasElevation ? () => _zoomElevation(1 / 1.5) : null,
+        onLocationToggle: !hasElevation || isLocating
+            ? null
+            : () => _toggleLocation(
+                elevationPoints,
+                sourceStages,
+                stages,
+                direction,
+              ),
+        onZoomIn: hasElevation ? () => _zoomElevation(1.5) : null,
+        onResetView: hasElevation
+            ? () => elevationTransformationController.value = Matrix4.identity()
+            : null,
+      ),
       body: Theme(
         data: EurotrexPalette.controlsTheme(Theme.of(context)),
         child: elevation.when(
           data: (points) {
-            if (points.isNotEmpty && stagesValue.hasValue) {
-              _focusInitialStage(stages, direction, points.last.distanceKm);
-            }
+            final smoothedPoints = points.isEmpty
+                ? const <RoutePoint>[]
+                : _smoothedPoints(points);
             return points.isEmpty
                 ? _ElevationError(
                     message: l10n.t('No elevation data is available.'),
@@ -149,41 +243,20 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
                         ref.read(elevationProvider.notifier).refresh(),
                   )
                 : _ElevationContent(
-                    points: points,
+                    points: smoothedPoints,
                     stages: stages,
                     direction: direction,
                     formatter: formatter,
-                    showStages: showStages,
-                    stagesExplicitlyHidden: stagesExplicitlyHidden,
-                    onToggleStages: stages.isEmpty
-                        ? null
-                        : () => setState(() {
-                            showStages = !showStages;
-                            stagesExplicitlyHidden = !showStages;
-                          }),
+                    scope: scope,
                     selectedStageIndex: selectedStageIndex,
                     transformationController: elevationTransformationController,
-                    onZoomIn: () => _zoomElevation(1.5),
-                    onZoomOut: () => _zoomElevation(1 / 1.5),
-                    onResetView: () => elevationTransformationController.value =
-                        Matrix4.identity(),
-                    onStageTap: (stageIndex) =>
-                        setState(() => selectedStageIndex = stageIndex),
-                    onStageSummaryTap: () {
-                      final stageIndex = selectedStageIndex;
-                      if (stageIndex == null) return;
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => StageDetailScreen(
-                            stages: stages,
-                            initialIndex: stageIndex,
-                            direction: direction,
-                          ),
-                        ),
-                      );
+                    onScopeChanged: _changeScope,
+                    gpsRouteDistanceKm: locationMatch?.projectedRouteDistanceKm,
+                    inspectedDistanceKm: inspectedDistanceKm,
+                    onInspectionChanged: (distanceKm) {
+                      if (distanceKm == inspectedDistanceKm) return;
+                      setState(() => inspectedDistanceKm = distanceKm);
                     },
-                    onStageSummaryClose: () =>
-                        setState(() => selectedStageIndex = null),
                     onRefresh: () =>
                         ref.read(elevationProvider.notifier).refresh(),
                   );
@@ -205,17 +278,13 @@ class _ElevationContent extends StatelessWidget {
     required this.stages,
     required this.direction,
     required this.formatter,
-    required this.showStages,
-    required this.stagesExplicitlyHidden,
-    required this.onToggleStages,
+    required this.scope,
     required this.selectedStageIndex,
     required this.transformationController,
-    required this.onZoomIn,
-    required this.onZoomOut,
-    required this.onResetView,
-    required this.onStageTap,
-    required this.onStageSummaryTap,
-    required this.onStageSummaryClose,
+    required this.onScopeChanged,
+    required this.gpsRouteDistanceKm,
+    required this.inspectedDistanceKm,
+    required this.onInspectionChanged,
     required this.onRefresh,
   });
 
@@ -223,57 +292,125 @@ class _ElevationContent extends StatelessWidget {
   final List<TrailStage> stages;
   final TrailDirection direction;
   final MeasurementFormatter formatter;
-  final bool showStages;
-  final bool stagesExplicitlyHidden;
-  final VoidCallback? onToggleStages;
+  final _ElevationScope scope;
   final int? selectedStageIndex;
   final TransformationController transformationController;
-  final VoidCallback onZoomIn;
-  final VoidCallback onZoomOut;
-  final VoidCallback onResetView;
-  final ValueChanged<int> onStageTap;
-  final VoidCallback onStageSummaryTap;
-  final VoidCallback onStageSummaryClose;
+  final ValueChanged<_ElevationScope> onScopeChanged;
+  final double? gpsRouteDistanceKm;
+  final double? inspectedDistanceKm;
+  final ValueChanged<double?> onInspectionChanged;
   final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    final highest = points.reduce((a, b) => a.altitudeM > b.altitudeM ? a : b);
-    final lowest = points.reduce((a, b) => a.altitudeM < b.altitudeM ? a : b);
-    final elevationTotals = calculateElevationTotals(points);
+    final profileLowest = points.reduce(
+      (a, b) => a.altitudeM < b.altitudeM ? a : b,
+    );
+    final totalDistance = points.last.distanceKm;
+    final selectedRange = selectedStageIndex == null
+        ? null
+        : _stageRange(
+            stages: stages,
+            stageIndex: selectedStageIndex!,
+            direction: direction,
+            totalDistanceKm: totalDistance,
+          );
+    final stagePoints = selectedRange == null
+        ? const <RoutePoint>[]
+        : elevationSection(
+            points,
+            startDistanceKm: selectedRange.startCanonicalKm,
+            endDistanceKm: selectedRange.endCanonicalKm,
+          );
+    final hasStageProfile =
+        selectedRange != null &&
+        selectedRange.distanceKm >= 0.01 &&
+        stagePoints.length >= 2;
+    final effectiveScope = scope == _ElevationScope.stage && hasStageProfile
+        ? _ElevationScope.stage
+        : _ElevationScope.fullTrail;
+    final metricPoints = effectiveScope == _ElevationScope.stage
+        ? stagePoints
+        : points;
+    final metricHighest = metricPoints.reduce(
+      (a, b) => a.altitudeM > b.altitudeM ? a : b,
+    );
+    final metricDistance = effectiveScope == _ElevationScope.stage
+        ? selectedRange!.distanceKm
+        : totalDistance;
+    final displayedProfilePoints = effectiveScope == _ElevationScope.stage
+        ? stagePoints
+        : points;
+    final displayedHighest = displayedProfilePoints.reduce(
+      (a, b) => a.altitudeM > b.altitudeM ? a : b,
+    );
+    final displayedLowest = displayedProfilePoints.reduce(
+      (a, b) => a.altitudeM < b.altitudeM ? a : b,
+    );
+    final chartDistanceOffset = effectiveScope == _ElevationScope.stage
+        ? selectedRange!.startChartKm
+        : 0.0;
+    final chartDistance = effectiveScope == _ElevationScope.stage
+        ? selectedRange!.distanceKm
+        : totalDistance;
+    double chartDistanceForCanonical(double canonicalDistanceKm) =>
+        direction.distanceFromStart(canonicalDistanceKm, totalDistance) -
+        chartDistanceOffset;
+    final elevationTotals = calculateElevationTotals(
+      metricPoints,
+      minimumChangeM: _minimumElevationChangeM,
+    );
     final totalAscentM = direction.isReversed
         ? elevationTotals.descentM
         : elevationTotals.ascentM;
     final totalDescentM = direction.isReversed
         ? elevationTotals.ascentM
         : elevationTotals.descentM;
-    final totalDistance = points.last.distanceKm;
-    final chartPoints = _downsample(points, 900);
-    final stageMarks = <({TrailStage stage, int stageIndex})>[
-      for (var index = 0; index < stages.length; index++)
-        if (stages[index].accumulatedDistanceKm != null &&
-            stages[index].altitudeM != null)
-          (stage: stages[index], stageIndex: index),
-    ];
+    final chartPoints = _downsample(displayedProfilePoints, 900);
     final selectedStage =
         selectedStageIndex != null &&
             selectedStageIndex! >= 0 &&
             selectedStageIndex! < stages.length
         ? stages[selectedStageIndex!]
         : null;
-    final startStageMark = stageMarks.isEmpty ? null : stageMarks.first;
-    final endStageMark = stageMarks.isEmpty ? null : stageMarks.last;
-    final displayedStageMarks = showStages
-        ? stageMarks
-        : stagesExplicitlyHidden
-        ? const <({TrailStage stage, int stageIndex})>[]
-        : selectedStageIndex == null
-        ? const <({TrailStage stage, int stageIndex})>[]
-        : stageMarks
-              .where((mark) => mark.stageIndex == selectedStageIndex)
-              .toList(growable: false);
-    final minAltitude = math.min(0.0, lowest.altitudeM).floorToDouble();
-    final maxAltitude = (highest.altitudeM / 100).ceil() * 100.0;
+    final minAltitude = effectiveScope == _ElevationScope.stage
+        ? math
+              .max(
+                0.0,
+                ((displayedLowest.altitudeM - 100) / 100).floor() * 100.0,
+              )
+              .toDouble()
+        : math.min(0.0, profileLowest.altitudeM).floorToDouble();
+    final roundedMaximum = (displayedHighest.altitudeM / 100).ceil() * 100.0;
+    final maxAltitude = math.max(roundedMaximum, minAltitude + 100.0);
+    final gpsPoint = gpsRouteDistanceKm == null
+        ? null
+        : routePointAtDistance(points, gpsRouteDistanceKm!);
+    final gpsChartDistance = gpsRouteDistanceKm == null
+        ? null
+        : chartDistanceForCanonical(gpsRouteDistanceKm!);
+    final inspectedCanonicalDistance = inspectedDistanceKm == null
+        ? null
+        : direction.isReversed
+        ? totalDistance - inspectedDistanceKm!
+        : inspectedDistanceKm!;
+    final inspectedPoint = inspectedCanonicalDistance == null
+        ? null
+        : routePointAtDistance(points, inspectedCanonicalDistance);
+    final inspectedChartDistance = inspectedDistanceKm == null
+        ? null
+        : inspectedDistanceKm! - chartDistanceOffset;
+    final horizontalScale = transformationController.value
+        .getMaxScaleOnAxis()
+        .clamp(1.0, 15.0);
+    final distanceInterval = _niceAxisInterval(
+      chartDistance / horizontalScale / 5,
+    );
+    final distanceRemainder = chartDistance % distanceInterval;
+    final includeMaximumDistanceLabel =
+        distanceRemainder < 0.000001 ||
+        distanceRemainder / distanceInterval >= 0.35;
+    final altitudeInterval = _niceAxisInterval((maxAltitude - minAltitude) / 4);
 
     return RefreshIndicator(
       key: const ValueKey('elevation-pull-to-refresh'),
@@ -281,61 +418,18 @@ class _ElevationContent extends StatelessWidget {
       onRefresh: onRefresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 36),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 36),
         children: [
-          Container(
-            key: const ValueKey('elevation-controls'),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: EurotrexPalette.navy,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: EurotrexPalette.navy.withValues(alpha: 0.16),
-                  blurRadius: 12,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _ElevationControl(
-                  key: const Key('elevation-zoom-out'),
-                  tooltip: context.l10n.t('Zoom out'),
-                  icon: Icons.remove_rounded,
-                  onPressed: onZoomOut,
-                ),
-                const SizedBox(width: 10),
-                _ElevationControl(
-                  key: const Key('elevation-zoom-in'),
-                  tooltip: context.l10n.t('Zoom in'),
-                  icon: Icons.add_rounded,
-                  onPressed: onZoomIn,
-                ),
-                const SizedBox(width: 10),
-                _ElevationControl(
-                  key: const Key('elevation-reset-view'),
-                  tooltip: context.l10n.t('Reset elevation view'),
-                  icon: Icons.fit_screen_rounded,
-                  onPressed: onResetView,
-                ),
-                const SizedBox(width: 10),
-                _ElevationControl(
-                  key: const Key('elevation-stage-toggle'),
-                  tooltip: context.l10n.t(
-                    showStages ? 'Hide stages' : 'Show stages',
-                  ),
-                  icon: showStages
-                      ? Icons.location_on_rounded
-                      : Icons.location_on_outlined,
-                  onPressed: onToggleStages,
-                  selected: showStages,
-                ),
-              ],
-            ),
+          _ElevationScopeSelector(
+            selected: effectiveScope,
+            stageEnabled: hasStageProfile,
+            onChanged: onScopeChanged,
           ),
-          const SizedBox(height: 14),
+          if (selectedStage != null) ...[
+            const SizedBox(height: 8),
+            _ElevationStageLabel(stageName: selectedStage.name),
+          ],
+          const SizedBox(height: 10),
           Container(
             key: const ValueKey('elevation-chart-card'),
             padding: const EdgeInsets.fromLTRB(10, 22, 18, 8),
@@ -361,14 +455,58 @@ class _ElevationContent extends StatelessWidget {
                       child: LineChart(
                         LineChartData(
                           minX: 0,
-                          maxX: totalDistance,
+                          maxX: chartDistance,
                           minY: minAltitude,
                           maxY: maxAltitude,
                           clipData: const FlClipData.all(),
+                          rangeAnnotations: RangeAnnotations(
+                            verticalRangeAnnotations: [
+                              if (selectedRange != null &&
+                                  selectedRange.distanceKm >= 0.01)
+                                VerticalRangeAnnotation(
+                                  x1:
+                                      selectedRange.startChartKm -
+                                      chartDistanceOffset,
+                                  x2:
+                                      selectedRange.endChartKm -
+                                      chartDistanceOffset,
+                                  color: EurotrexPalette.blue.withValues(
+                                    alpha: 0.09,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          extraLinesData: ExtraLinesData(
+                            extraLinesOnTop: true,
+                            verticalLines: [
+                              if (selectedRange != null &&
+                                  selectedRange.distanceKm >= 0.01) ...[
+                                _stageBoundaryLine(
+                                  selectedRange.startChartKm -
+                                      chartDistanceOffset,
+                                ),
+                                _stageBoundaryLine(
+                                  selectedRange.endChartKm -
+                                      chartDistanceOffset,
+                                ),
+                              ],
+                              if (inspectedChartDistance != null &&
+                                  inspectedChartDistance >= 0 &&
+                                  inspectedChartDistance <= chartDistance)
+                                VerticalLine(
+                                  x: inspectedChartDistance,
+                                  color: EurotrexPalette.navy.withValues(
+                                    alpha: 0.62,
+                                  ),
+                                  strokeWidth: 1.2,
+                                  dashArray: const [4, 4],
+                                ),
+                            ],
+                          ),
                           gridData: FlGridData(
                             drawVerticalLine: true,
-                            horizontalInterval: 500,
-                            verticalInterval: 100,
+                            horizontalInterval: altitudeInterval,
+                            verticalInterval: distanceInterval,
                             getDrawingHorizontalLine: (_) => const FlLine(
                               color: Color(0xFFE2E5E1),
                               strokeWidth: 1,
@@ -390,11 +528,9 @@ class _ElevationContent extends StatelessWidget {
                               sideTitles: SideTitles(
                                 showTitles: true,
                                 reservedSize: 42,
-                                interval: 500,
+                                interval: altitudeInterval,
+                                minIncluded: false,
                                 getTitlesWidget: (value, meta) {
-                                  if ((value % 500).abs() > 0.01) {
-                                    return const SizedBox.shrink();
-                                  }
                                   return Text(
                                     '${formatter.altitudeValue(value).round()} ${formatter.altitudeUnit}',
                                     style: const TextStyle(
@@ -409,15 +545,13 @@ class _ElevationContent extends StatelessWidget {
                               sideTitles: SideTitles(
                                 showTitles: true,
                                 reservedSize: 28,
-                                interval: 100,
+                                interval: distanceInterval,
+                                maxIncluded: includeMaximumDistanceLabel,
                                 getTitlesWidget: (value, meta) {
-                                  if ((value % 100).abs() > 0.01) {
-                                    return const SizedBox.shrink();
-                                  }
                                   return Padding(
                                     padding: const EdgeInsets.only(top: 7),
                                     child: Text(
-                                      '${formatter.distanceValue(value).round()} ${formatter.distanceUnit}',
+                                      '${formatter.distanceValue(value).toStringAsFixed(distanceInterval < 10 ? 1 : 0)} ${formatter.distanceUnit}',
                                       style: const TextStyle(
                                         fontSize: 9,
                                         color: Colors.black45,
@@ -433,23 +567,28 @@ class _ElevationContent extends StatelessWidget {
                             distanceCalculator: (touchPoint, spotPoint) =>
                                 (touchPoint - spotPoint).distance,
                             touchCallback: (event, response) {
-                              if (!showStages || event is! FlTapUpEvent) return;
+                              if (event is FlPanEndEvent ||
+                                  event is FlPanCancelEvent ||
+                                  event is FlLongPressEnd ||
+                                  event is FlPointerExitEvent) {
+                                onInspectionChanged(null);
+                                return;
+                              }
                               final touched = response?.lineBarSpots;
                               if (touched == null) return;
                               for (final spot in touched) {
-                                if (spot.barIndex == 1 &&
-                                    spot.spotIndex < stageMarks.length) {
-                                  onStageTap(
-                                    stageMarks[spot.spotIndex].stageIndex,
+                                if (spot.barIndex == 0) {
+                                  onInspectionChanged(
+                                    spot.x + chartDistanceOffset,
                                   );
-                                  return;
+                                  break;
                                 }
                               }
                             },
                             touchTooltipData: LineTouchTooltipData(
                               getTooltipColor: (_) => _ink,
                               getTooltipItems: (spots) => spots.map((spot) {
-                                if (showStages) return null;
+                                if (spot.barIndex != 0) return null;
                                 return LineTooltipItem(
                                   '${formatter.distance(spot.x)}\n${formatter.altitude(spot.y)}',
                                   const TextStyle(
@@ -469,79 +608,70 @@ class _ElevationContent extends StatelessWidget {
                                         : chartPoints)
                                   FlSpot(
                                     direction.isReversed
-                                        ? point.reverseDistanceKm
-                                        : point.distanceKm,
+                                        ? point.reverseDistanceKm -
+                                              chartDistanceOffset
+                                        : point.distanceKm -
+                                              chartDistanceOffset,
                                     point.altitudeM,
                                   ),
                               ],
                               isCurved: false,
                               color: EurotrexPalette.blue,
-                              barWidth: 3,
+                              barWidth: 2.2,
                               dotData: const FlDotData(show: false),
                               belowBarData: BarAreaData(
                                 show: true,
                                 gradient: _elevationContourGradient(
                                   minAltitude: minAltitude,
-                                  maxAltitude: highest.altitudeM,
+                                  maxAltitude: displayedHighest.altitudeM,
                                 ),
                               ),
                             ),
-                            if (displayedStageMarks.isNotEmpty)
+                            if (gpsPoint != null && gpsChartDistance != null)
                               LineChartBarData(
                                 spots: [
-                                  for (final mark in displayedStageMarks)
-                                    FlSpot(
-                                      direction.distanceFromStart(
-                                        mark.stage.accumulatedDistanceKm!,
-                                        totalDistance,
-                                      ),
-                                      mark.stage.altitudeM!,
-                                    ),
+                                  FlSpot(gpsChartDistance, gpsPoint.altitudeM),
                                 ],
                                 color: Colors.transparent,
                                 barWidth: 0,
                                 dotData: FlDotData(
                                   show: true,
-                                  getDotPainter: (spot, percent, bar, index) =>
+                                  getDotPainter: (_, _, _, _) =>
                                       FlDotCirclePainter(
-                                        radius:
-                                            displayedStageMarks[index]
-                                                    .stageIndex ==
-                                                selectedStageIndex
-                                            ? 4.5
-                                            : 2.5,
-                                        color:
-                                            displayedStageMarks[index]
-                                                    .stageIndex ==
-                                                selectedStageIndex
-                                            ? const Color(0xFF1565C0)
-                                            : displayedStageMarks[index]
-                                                      .stageIndex ==
-                                                  startStageMark?.stageIndex
-                                            ? _green
-                                            : displayedStageMarks[index]
-                                                      .stageIndex ==
-                                                  endStageMark?.stageIndex
-                                            ? _red
-                                            : const Color(0xFFF2C94C),
-                                        strokeWidth:
-                                            displayedStageMarks[index]
-                                                    .stageIndex ==
-                                                selectedStageIndex
-                                            ? 2.4
-                                            : 1.2,
-                                        strokeColor:
-                                            displayedStageMarks[index]
-                                                    .stageIndex ==
-                                                selectedStageIndex
-                                            ? Colors.white
-                                            : _ink,
+                                        radius: 6,
+                                        color: EurotrexPalette.navy,
+                                        strokeWidth: 3,
+                                        strokeColor: Colors.white,
+                                      ),
+                                ),
+                              ),
+                            if (inspectedPoint != null &&
+                                inspectedChartDistance != null &&
+                                inspectedChartDistance >= 0 &&
+                                inspectedChartDistance <= chartDistance)
+                              LineChartBarData(
+                                spots: [
+                                  FlSpot(
+                                    inspectedChartDistance,
+                                    inspectedPoint.altitudeM,
+                                  ),
+                                ],
+                                color: Colors.transparent,
+                                barWidth: 0,
+                                dotData: FlDotData(
+                                  show: true,
+                                  getDotPainter: (_, _, _, _) =>
+                                      FlDotCirclePainter(
+                                        radius: 4.5,
+                                        color: EurotrexPalette.blue,
+                                        strokeWidth: 2,
+                                        strokeColor: Colors.white,
                                       ),
                                 ),
                               ),
                           ],
                         ),
-                        duration: const Duration(milliseconds: 350),
+                        duration: Duration.zero,
                         transformationConfig: FlTransformationConfig(
                           scaleAxis: FlScaleAxis.horizontal,
                           minScale: 1,
@@ -553,25 +683,13 @@ class _ElevationContent extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (selectedStage != null && !stagesExplicitlyHidden)
-                      Align(
-                        alignment: Alignment.topCenter,
-                        child: _ElevationStageSummary(
-                          stage: selectedStage,
-                          formatter: formatter,
-                          distanceKm: direction.distanceFromStart(
-                            selectedStage.accumulatedDistanceKm!,
-                            totalDistance,
-                          ),
-                          onTap: onStageSummaryTap,
-                          onClose: onStageSummaryClose,
-                        ),
-                      ),
                   ],
                 ),
               ),
             ),
           ),
+          const SizedBox(height: 10),
+          _ContourLegend(formatter: formatter),
           const SizedBox(height: 14),
           Row(
             children: [
@@ -579,15 +697,19 @@ class _ElevationContent extends StatelessWidget {
                 child: _ElevationMetric(
                   key: const ValueKey('elevation-trail-distance'),
                   icon: Icons.hiking_rounded,
-                  value: formatter.distance(totalDistance),
-                  label: context.l10n.t('Trail distance'),
+                  value: formatter.distance(metricDistance),
+                  label: context.l10n.t(
+                    effectiveScope == _ElevationScope.stage
+                        ? 'Stage length'
+                        : 'Trail distance',
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _ElevationMetric(
                   icon: Icons.north_east_rounded,
-                  value: formatter.altitude(highest.altitudeM),
+                  value: formatter.altitude(metricHighest.altitudeM),
                   label: context.l10n.t('Highest point'),
                 ),
               ),
@@ -621,39 +743,107 @@ class _ElevationContent extends StatelessWidget {
   }
 }
 
+typedef _ElevationStageRange = ({
+  double startCanonicalKm,
+  double endCanonicalKm,
+  double startChartKm,
+  double endChartKm,
+  double distanceKm,
+});
+
+_ElevationStageRange? _stageRange({
+  required List<TrailStage> stages,
+  required int stageIndex,
+  required TrailDirection direction,
+  required double totalDistanceKm,
+}) {
+  if (stageIndex < 0 ||
+      stageIndex >= stages.length ||
+      !totalDistanceKm.isFinite ||
+      totalDistanceKm <= 0) {
+    return null;
+  }
+  final endDistance = stages[stageIndex].accumulatedDistanceKm;
+  if (endDistance == null || !endDistance.isFinite) return null;
+  final startDistance = stageIndex == 0
+      ? endDistance
+      : stages[stageIndex - 1].accumulatedDistanceKm;
+  if (startDistance == null || !startDistance.isFinite) return null;
+  final startCanonical = math.min(startDistance, endDistance);
+  final endCanonical = math.max(startDistance, endDistance);
+  final firstChart = direction.distanceFromStart(
+    startDistance,
+    totalDistanceKm,
+  );
+  final secondChart = direction.distanceFromStart(endDistance, totalDistanceKm);
+  return (
+    startCanonicalKm: startCanonical,
+    endCanonicalKm: endCanonical,
+    startChartKm: math.min(firstChart, secondChart),
+    endChartKm: math.max(firstChart, secondChart),
+    distanceKm: endCanonical - startCanonical,
+  );
+}
+
+double _niceAxisInterval(double rawInterval) {
+  if (!rawInterval.isFinite || rawInterval <= 0) return 1;
+  final magnitude = math.pow(10, (math.log(rawInterval) / math.ln10).floor());
+  final normalized = rawInterval / magnitude;
+  final niceNormalized = normalized <= 1
+      ? 1
+      : normalized <= 2
+      ? 2
+      : normalized <= 5
+      ? 5
+      : 10;
+  return (niceNormalized * magnitude).toDouble();
+}
+
+VerticalLine _stageBoundaryLine(double distanceKm) => VerticalLine(
+  x: distanceKm,
+  color: EurotrexPalette.blue.withValues(alpha: 0.55),
+  strokeWidth: 1.2,
+  dashArray: const [5, 4],
+);
+
 LinearGradient _elevationContourGradient({
   required double minAltitude,
   required double maxAltitude,
 }) {
   final effectiveMax = math.max(maxAltitude, minAltitude + 1);
   final altitudeRange = effectiveMax - minAltitude;
-  const bands = <({double ceiling, Color color})>[
-    (ceiling: 300, color: _contourLowland),
-    (ceiling: 700, color: _contourFoothill),
-    (ceiling: 1200, color: _contourUpland),
-    (ceiling: double.infinity, color: _contourPeak),
+  const anchors = <({double altitude, Color color})>[
+    (altitude: 0, color: Color(0x943E9ED0)),
+    (altitude: 300, color: Color(0x9461AF57)),
+    (altitude: 700, color: Color(0x94D8AA35)),
+    (altitude: 1200, color: Color(0x94D66B35)),
   ];
-  final colors = <Color>[];
-  final stops = <double>[];
-  var bandStart = minAltitude;
 
-  for (final band in bands) {
-    if (bandStart >= effectiveMax) break;
-    final bandEnd = math.min(band.ceiling, effectiveMax);
-    if (bandEnd <= bandStart) continue;
-    final startStop = ((bandStart - minAltitude) / altitudeRange).clamp(
-      0.0,
-      1.0,
-    );
-    final endStop = ((bandEnd - minAltitude) / altitudeRange).clamp(0.0, 1.0);
-    colors
-      ..add(band.color)
-      ..add(band.color);
-    stops
-      ..add(startStop)
-      ..add(endStop);
-    bandStart = bandEnd;
+  Color colorAt(double altitude) {
+    if (altitude <= anchors.first.altitude) return anchors.first.color;
+    for (var index = 1; index < anchors.length; index++) {
+      final start = anchors[index - 1];
+      final end = anchors[index];
+      if (altitude <= end.altitude) {
+        final progress =
+            (altitude - start.altitude) / (end.altitude - start.altitude);
+        return Color.lerp(start.color, end.color, progress)!;
+      }
+    }
+    return anchors.last.color;
   }
+
+  final colors = <Color>[colorAt(minAltitude)];
+  final stops = <double>[0];
+  for (final anchor in anchors) {
+    if (anchor.altitude <= minAltitude || anchor.altitude >= effectiveMax) {
+      continue;
+    }
+    colors.add(anchor.color);
+    stops.add((anchor.altitude - minAltitude) / altitudeRange);
+  }
+  colors.add(colorAt(effectiveMax));
+  stops.add(1);
 
   return LinearGradient(
     begin: Alignment.bottomCenter,
@@ -722,98 +912,169 @@ class _ElevationGestureSurfaceState extends State<_ElevationGestureSurface> {
   }
 }
 
-class _ElevationStageSummary extends StatelessWidget {
-  const _ElevationStageSummary({
-    required this.stage,
-    required this.distanceKm,
-    required this.formatter,
-    required this.onTap,
-    required this.onClose,
+class _ElevationScopeSelector extends StatelessWidget {
+  const _ElevationScopeSelector({
+    required this.selected,
+    required this.stageEnabled,
+    required this.onChanged,
   });
 
-  final TrailStage stage;
-  final double distanceKm;
-  final MeasurementFormatter formatter;
-  final VoidCallback onTap;
-  final VoidCallback onClose;
+  final _ElevationScope selected;
+  final bool stageEnabled;
+  final ValueChanged<_ElevationScope> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final details = <String>[
-      context.l10n.stage(stage.sequence),
-      formatter.distance(distanceKm),
-      if (stage.altitudeM != null) formatter.altitude(stage.altitudeM!),
-    ].join(' · ');
-
-    return SizedBox(
-      width: 208,
-      height: 68,
-      child: Material(
-        color: Colors.white,
-        elevation: 4,
-        shadowColor: EurotrexPalette.navy.withValues(alpha: 0.2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: EurotrexPalette.paleBlue),
+    return Center(
+      child: SegmentedButton<_ElevationScope>(
+        key: const ValueKey('elevation-scope-selector'),
+        style: ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          minimumSize: const WidgetStatePropertyAll(Size(0, 32)),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 7),
+          ),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith<Color?>(
+            (states) => states.contains(WidgetState.disabled)
+                ? EurotrexPalette.navy.withValues(alpha: 0.28)
+                : null,
+          ),
+          backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+            (states) => states.contains(WidgetState.disabled)
+                ? const Color(0xFFE3E5E4)
+                : null,
+          ),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: const Key('elevation-stage-summary'),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(11, 7, 3, 7),
-            child: Row(
+        segments: [
+          ButtonSegment(
+            value: _ElevationScope.fullTrail,
+            icon: const Icon(Icons.alt_route_rounded, size: 15),
+            label: Text(context.l10n.t('Full trail')),
+          ),
+          ButtonSegment(
+            value: _ElevationScope.stage,
+            icon: const Icon(Icons.hiking_rounded, size: 15),
+            label: Text(context.l10n.t('Stage')),
+            enabled: stageEnabled,
+          ),
+        ],
+        selected: {selected},
+        showSelectedIcon: false,
+        onSelectionChanged: (selection) => onChanged(selection.single),
+      ),
+    );
+  }
+}
+
+class _ContourLegend extends StatelessWidget {
+  const _ContourLegend({required this.formatter});
+
+  final MeasurementFormatter formatter;
+
+  @override
+  Widget build(BuildContext context) {
+    String value(double meters) =>
+        formatter.altitudeValue(meters).round().toString();
+    final unit = formatter.altitudeUnit;
+    return Semantics(
+      label: context.l10n.t('Altitude'),
+      child: Container(
+        key: const ValueKey('elevation-contour-legend'),
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+        decoration: BoxDecoration(
+          color: EurotrexPalette.paleBlue.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: EurotrexPalette.paleBlue),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              key: const ValueKey('elevation-contour-gradient'),
+              height: 10,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(
+                  color: EurotrexPalette.navy.withValues(alpha: 0.16),
+                ),
+                gradient: const LinearGradient(
+                  colors: [
+                    _contourLowland,
+                    _contourFoothill,
+                    _contourUpland,
+                    _contourPeak,
+                  ],
+                  stops: [0, 0.3, 0.65, 1],
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: const BoxDecoration(
-                    color: EurotrexPalette.paleBlue,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.hiking_rounded,
-                    size: 18,
-                    color: EurotrexPalette.blue,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        stage.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: _ink,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        details,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.black54,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  tooltip: context.l10n.t('Close stage summary'),
-                  visualDensity: VisualDensity.compact,
-                  onPressed: onClose,
-                  icon: const Icon(Icons.close_rounded, size: 17),
-                ),
+                _ContourLegendLabel('${value(0)} $unit'),
+                _ContourLegendLabel('${value(300)} $unit'),
+                _ContourLegendLabel('${value(700)} $unit'),
+                _ContourLegendLabel('${value(1200)}+ $unit'),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContourLegendLabel extends StatelessWidget {
+  const _ContourLegendLabel(this.value);
+
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      value,
+      style: TextStyle(
+        color: EurotrexPalette.navy.withValues(alpha: 0.72),
+        fontSize: 8.5,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+}
+
+class _ElevationStageLabel extends StatelessWidget {
+  const _ElevationStageLabel({required this.stageName});
+
+  final String stageName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        key: const Key('elevation-stage-summary'),
+        constraints: const BoxConstraints(maxWidth: 280),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: EurotrexPalette.paleBlue.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: EurotrexPalette.blue.withValues(alpha: 0.34),
+          ),
+        ),
+        child: Text(
+          stageName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: EurotrexPalette.navy,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
           ),
         ),
       ),
@@ -821,35 +1082,147 @@ class _ElevationStageSummary extends StatelessWidget {
   }
 }
 
-class _ElevationControl extends StatelessWidget {
-  const _ElevationControl({
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-    this.selected = false,
-    super.key,
+class _ElevationBottomNavigationBar extends StatelessWidget {
+  const _ElevationBottomNavigationBar({
+    required this.locationActive,
+    required this.isLocating,
+    required this.onBack,
+    required this.onZoomOut,
+    required this.onLocationToggle,
+    required this.onZoomIn,
+    required this.onResetView,
   });
 
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback? onPressed;
-  final bool selected;
+  final bool locationActive;
+  final bool isLocating;
+  final VoidCallback? onBack;
+  final VoidCallback? onZoomOut;
+  final VoidCallback? onLocationToggle;
+  final VoidCallback? onZoomIn;
+  final VoidCallback? onResetView;
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: onPressed,
-      style: IconButton.styleFrom(
-        backgroundColor: selected
-            ? EurotrexPalette.paleBlue
-            : Colors.transparent,
-        foregroundColor: selected ? EurotrexPalette.navy : Colors.white,
-        disabledForegroundColor: Colors.white38,
-        minimumSize: const Size.square(44),
-        shape: const CircleBorder(),
+    final l10n = context.l10n;
+    return Material(
+      key: const ValueKey('elevation-bottom-navigation'),
+      color: EurotrexPalette.navy,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          key: const ValueKey('elevation-bottom-navigation-size'),
+          height: 48,
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: Colors.white12)),
+          ),
+          child: Row(
+            children: [
+              _ElevationBottomAction(
+                key: const Key('elevation-back'),
+                icon: Icons.chevron_left_rounded,
+                label: MaterialLocalizations.of(context).backButtonTooltip,
+                onTap: onBack,
+              ),
+              _ElevationBottomAction(
+                key: const Key('elevation-zoom-out'),
+                icon: Icons.remove_rounded,
+                label: l10n.t('Zoom out'),
+                onTap: onZoomOut,
+              ),
+              _ElevationBottomAction(
+                key: const Key('elevation-location-toggle'),
+                icon: isLocating
+                    ? Icons.hourglass_top_rounded
+                    : locationActive
+                    ? Icons.gps_fixed_rounded
+                    : Icons.gps_not_fixed_rounded,
+                label: l10n.t('My location'),
+                isActive: locationActive,
+                isToggle: true,
+                isPrimary: true,
+                onTap: onLocationToggle,
+              ),
+              _ElevationBottomAction(
+                key: const Key('elevation-zoom-in'),
+                icon: Icons.add_rounded,
+                label: l10n.t('Zoom in'),
+                onTap: onZoomIn,
+              ),
+              _ElevationBottomAction(
+                key: const Key('elevation-reset-view'),
+                icon: Icons.fit_screen_rounded,
+                label: l10n.t('Reset elevation view'),
+                onTap: onResetView,
+              ),
+            ],
+          ),
+        ),
       ),
-      icon: Icon(icon, size: 22),
+    );
+  }
+}
+
+class _ElevationBottomAction extends StatelessWidget {
+  const _ElevationBottomAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.isActive = false,
+    this.isToggle = false,
+    this.isPrimary = false,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final bool isActive;
+  final bool isToggle;
+  final bool isPrimary;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = onTap == null ? Colors.white30 : Colors.white;
+    return Expanded(
+      child: Tooltip(
+        message: label,
+        child: Semantics(
+          button: true,
+          enabled: onTap != null,
+          selected: isToggle ? null : isActive,
+          toggled: isToggle ? isActive : null,
+          label: label,
+          child: InkWell(
+            splashColor: Colors.white12,
+            highlightColor: Colors.white10,
+            onTap: onTap == null
+                ? null
+                : () {
+                    HapticFeedback.selectionClick();
+                    onTap!();
+                  },
+            child: Center(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                width: isPrimary ? 36 : 32,
+                height: isPrimary ? 36 : 32,
+                decoration: BoxDecoration(
+                  color: isPrimary
+                      ? isActive
+                            ? EurotrexPalette.blue
+                            : Colors.white.withValues(alpha: 0.055)
+                      : isActive
+                      ? Colors.white.withValues(alpha: 0.16)
+                      : Colors.transparent,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: foreground, size: isPrimary ? 22 : 21),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -869,11 +1242,11 @@ class _ElevationMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 116),
-      padding: const EdgeInsets.all(14),
+      constraints: const BoxConstraints(minHeight: 62),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: EurotrexPalette.paleBlue),
         boxShadow: [
           BoxShadow(
@@ -883,33 +1256,44 @@ class _ElevationMetric extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 28,
+            height: 28,
             decoration: const BoxDecoration(
               color: EurotrexPalette.paleBlue,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: EurotrexPalette.blue, size: 19),
+            child: Icon(icon, color: EurotrexPalette.blue, size: 16),
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              color: EurotrexPalette.navy,
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: EurotrexPalette.navy.withValues(alpha: 0.68),
-              fontWeight: FontWeight.w600,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: EurotrexPalette.navy,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: EurotrexPalette.navy.withValues(alpha: 0.68),
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

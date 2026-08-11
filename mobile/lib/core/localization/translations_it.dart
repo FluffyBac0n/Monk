@@ -125,6 +125,7 @@ const italianTranslations = <String, String>{
   'Reset elevation view': 'Reimposta la vista altimetrica',
   'Hide stages': 'Nascondi tappe',
   'Show stages': 'Mostra tappe',
+  'Full trail': 'Intero percorso',
   'Trail distance': 'Distanza del sentiero',
   'Highest point': 'Punto più alto',
   'High point position': 'Posizione del punto più alto',

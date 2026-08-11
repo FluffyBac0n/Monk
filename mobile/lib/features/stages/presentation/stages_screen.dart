@@ -742,6 +742,16 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
     final formatter = MeasurementFormatter(
       ref.watch(appSettingsProvider).measurementSystem,
     );
+    final elevationStages = stages.hasValue
+        ? (direction.isReversed
+              ? stages.requireValue.reversed.toList(growable: false)
+              : stages.requireValue)
+        : const <TrailStage>[];
+    final gpsElevationStageIndex = _gpsSelectedStageId == null
+        ? null
+        : elevationStages.indexWhere(
+            (stage) => stage.id == _gpsSelectedStageId,
+          );
     ref.listen(stagesProvider, (previous, next) {
       if (!next.hasError || next.isLoading) return;
       final message = next.error is FirebaseNotConfiguredException
@@ -766,7 +776,15 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
           context,
         ).push(MaterialPageRoute<void>(builder: (_) => const MapScreen())),
         onElevation: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const ElevationScreen()),
+          MaterialPageRoute<void>(
+            builder: (_) => ElevationScreen(
+              initialStageIndex:
+                  gpsElevationStageIndex != null && gpsElevationStageIndex >= 0
+                  ? gpsElevationStageIndex
+                  : null,
+              initialLocation: _gpsLocation,
+            ),
+          ),
         ),
       ),
       body: RefreshIndicator(
@@ -3552,7 +3570,10 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
   void _openElevation() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ElevationScreen(initialStageIndex: index),
+        builder: (_) => ElevationScreen(
+          initialStageIndex: index,
+          initialLocation: _gpsLocation,
+        ),
       ),
     );
   }
