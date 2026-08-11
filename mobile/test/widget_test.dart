@@ -1340,23 +1340,37 @@ void main() {
         tester.getSize(find.byKey(const Key('stage-map-preview'))).height,
         220,
       );
-      expect(find.byKey(const Key('stage-elevation-preview')), findsOneWidget);
       expect(
-        tester.getSize(find.byKey(const Key('stage-elevation-preview'))).height,
-        120,
+        find.byKey(const Key('stage-elevation-preview')),
+        stageIndex == 0 ? findsNothing : findsOneWidget,
       );
+      if (stageIndex > 0) {
+        expect(
+          tester
+              .getSize(find.byKey(const Key('stage-elevation-preview')))
+              .height,
+          120,
+        );
+      }
       expect(
         tester
             .getSize(find.byKey(const Key('stage-route-preview-panel')))
             .height,
-        343,
+        stageIndex == 0 ? 222 : 343,
       );
-      expect(
-        tester
-            .getSize(find.byKey(const Key('stage-route-preview-divider')))
-            .height,
-        1,
-      );
+      if (stageIndex == 0) {
+        expect(
+          find.byKey(const Key('stage-route-preview-divider')),
+          findsNothing,
+        );
+      } else {
+        expect(
+          tester
+              .getSize(find.byKey(const Key('stage-route-preview-divider')))
+              .height,
+          1,
+        );
+      }
       expect(find.byKey(const Key('stage-trail-position-copy')), findsNothing);
       expect(find.text('Previous'), findsNothing);
       expect(find.text('Next'), findsNothing);
@@ -1632,6 +1646,8 @@ void main() {
     expect(find.byKey(const Key('stage-detail-ascent')), findsNothing);
     expect(find.byKey(const Key('stage-detail-descent')), findsNothing);
     expect(find.byKey(const Key('stage-detail-walking-time')), findsNothing);
+    expect(find.byKey(const Key('stage-elevation-preview')), findsNothing);
+    expect(find.byKey(const Key('stage-route-preview-divider')), findsNothing);
   });
 
   testWidgets('stage elevation preview opens the selected stage profile', (

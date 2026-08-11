@@ -3957,23 +3957,24 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
                         loadStageDetours: detours?.isNotEmpty == true,
                       ),
                     ),
-                    Container(
-                      key: const Key('stage-route-preview-divider'),
-                      height: 1,
-                      color: EurotrexPalette.blue.withValues(alpha: 0.55),
-                    ),
-                    _StageElevationPreview(
-                      routePoints: previewRoute ?? const [],
-                      startDistanceKm: index == 0
-                          ? stage.accumulatedDistanceKm
-                          : widget.stages[index - 1].accumulatedDistanceKm,
-                      finishDistanceKm: stage.accumulatedDistanceKm,
-                      reversed: widget.direction.isReversed,
-                      formatter: formatter,
-                      gpsRouteDistanceKm: previewGpsRouteDistanceKm,
-                      embedded: true,
-                      onTap: _openElevation,
-                    ),
+                    if (index > 0) ...[
+                      Container(
+                        key: const Key('stage-route-preview-divider'),
+                        height: 1,
+                        color: EurotrexPalette.blue.withValues(alpha: 0.55),
+                      ),
+                      _StageElevationPreview(
+                        routePoints: previewRoute ?? const [],
+                        startDistanceKm:
+                            widget.stages[index - 1].accumulatedDistanceKm,
+                        finishDistanceKm: stage.accumulatedDistanceKm,
+                        reversed: widget.direction.isReversed,
+                        formatter: formatter,
+                        gpsRouteDistanceKm: previewGpsRouteDistanceKm,
+                        embedded: true,
+                        onTap: _openElevation,
+                      ),
+                    ],
                   ],
                 ),
               ),
