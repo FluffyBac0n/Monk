@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -93,6 +94,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.byKey(const Key('stage-map-user-location-enabled')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('stage-elevation-user-location-enabled')),
         findsOneWidget,
       );
 
@@ -217,6 +222,28 @@ void main() {
       find.byKey(const Key('stage-map-user-location-enabled')),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const Key('stage-elevation-user-location-enabled')),
+      findsOneWidget,
+    );
+    var elevationPreviewChart = tester.widget<LineChart>(
+      find.descendant(
+        of: find.byKey(const Key('stage-elevation-preview')),
+        matching: find.byType(LineChart),
+      ),
+    );
+    expect(elevationPreviewChart.data.lineBarsData, hasLength(2));
+    final gpsSpot = elevationPreviewChart.data.lineBarsData.last.spots.single;
+    expect(gpsSpot.x, closeTo(4, 0.05));
+    expect(gpsSpot.y, closeTo(2340, 0.5));
+    expect(
+      elevationPreviewChart.data.extraLinesData.verticalLines,
+      hasLength(1),
+    );
+    expect(
+      elevationPreviewChart.data.extraLinesData.verticalLines.single.x,
+      closeTo(4, 0.05),
+    );
     _expectGpsToggleState(tester, gpsButton, isToggled: true);
 
     await tester.tap(gpsButton);
@@ -227,6 +254,18 @@ void main() {
       find.byKey(const Key('stage-map-user-location-enabled')),
       findsNothing,
     );
+    expect(
+      find.byKey(const Key('stage-elevation-user-location-enabled')),
+      findsNothing,
+    );
+    elevationPreviewChart = tester.widget<LineChart>(
+      find.descendant(
+        of: find.byKey(const Key('stage-elevation-preview')),
+        matching: find.byType(LineChart),
+      ),
+    );
+    expect(elevationPreviewChart.data.lineBarsData, hasLength(1));
+    expect(elevationPreviewChart.data.extraLinesData.verticalLines, isEmpty);
     _expectGpsToggleState(tester, gpsButton, isToggled: false);
   });
 

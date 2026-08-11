@@ -1340,6 +1340,23 @@ void main() {
         tester.getSize(find.byKey(const Key('stage-map-preview'))).height,
         220,
       );
+      expect(find.byKey(const Key('stage-elevation-preview')), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const Key('stage-elevation-preview'))).height,
+        120,
+      );
+      expect(
+        tester
+            .getSize(find.byKey(const Key('stage-route-preview-panel')))
+            .height,
+        343,
+      );
+      expect(
+        tester
+            .getSize(find.byKey(const Key('stage-route-preview-divider')))
+            .height,
+        1,
+      );
       expect(find.byKey(const Key('stage-trail-position-copy')), findsNothing);
       expect(find.text('Previous'), findsNothing);
       expect(find.text('Next'), findsNothing);
@@ -1617,7 +1634,7 @@ void main() {
     expect(find.byKey(const Key('stage-detail-walking-time')), findsNothing);
   });
 
-  testWidgets('stage detail elevation shortcut opens the selected stage', (
+  testWidgets('stage elevation preview opens the selected stage profile', (
     tester,
   ) async {
     const start = TrailStage(
@@ -1647,8 +1664,24 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('stage-detail-elevation')));
+    final preview = find.byKey(const Key('stage-elevation-preview'));
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pumpAndSettle();
+    final previewChart = find.descendant(
+      of: preview,
+      matching: find.byType(LineChart),
+    );
+    expect(previewChart, findsOneWidget);
+    final previewData = tester.widget<LineChart>(previewChart).data;
+    expect(previewData.lineTouchData.enabled, isFalse);
+    expect(previewData.titlesData.leftTitles.sideTitles.showTitles, isTrue);
+    expect(previewData.titlesData.bottomTitles.sideTitles.showTitles, isTrue);
+    expect(previewData.titlesData.topTitles.sideTitles.showTitles, isFalse);
+    expect(previewData.titlesData.rightTitles.sideTitles.showTitles, isFalse);
+
+    await tester.tap(find.byKey(const Key('stage-elevation-open')));
     await tester.pumpAndSettle();
     expect(find.byType(ElevationScreen), findsOneWidget);
     expect(find.byType(LineChart), findsOneWidget);
@@ -2468,6 +2501,16 @@ void main() {
       find.byKey(const ValueKey('accommodation-screen-lodging-stage')),
       findsOneWidget,
     );
+    expect(find.text('Places to stay near this stage'), findsNothing);
+    final lodgingCard = tester.widget<Container>(
+      find.byKey(const ValueKey('lodging-card-forest-inn')),
+    );
+    final lodgingCardDecoration = lodgingCard.decoration! as BoxDecoration;
+    expect(lodgingCardDecoration.color, Colors.white);
+    expect(
+      (lodgingCardDecoration.border! as Border).top.color,
+      EurotrexPalette.paleBlue,
+    );
     expect(
       find.byKey(const ValueKey('lodging-type-icon-lodging')),
       findsOneWidget,
@@ -2488,6 +2531,25 @@ void main() {
     expect(find.text('Forest Inn'), findsOneWidget);
     expect(find.textContaining('Platres'), findsNothing);
     expect(find.text('0.4 km'), findsOneWidget);
+    final distance = find.byKey(const ValueKey('lodging-distance-forest-inn'));
+    final factsRow = find.byKey(const ValueKey('lodging-facts-forest-inn'));
+    final contactsRow = find.byKey(
+      const ValueKey('lodging-contact-actions-forest-inn'),
+    );
+    expect(distance, findsOneWidget);
+    expect(factsRow, findsOneWidget);
+    expect(
+      find.descendant(of: factsRow, matching: find.text('|')),
+      findsNWidgets(4),
+    );
+    expect(
+      tester.getCenter(distance).dx,
+      greaterThan(tester.getCenter(find.text('Forest Inn')).dx),
+    );
+    expect(
+      tester.getCenter(contactsRow).dy,
+      lessThan(tester.getCenter(factsRow).dy),
+    );
     expect(
       find.byKey(const ValueKey('cyprus-country-flag-forest-inn')),
       findsNothing,
@@ -2580,9 +2642,7 @@ void main() {
       findsOneWidget,
     );
 
-    final contactActions = find.byKey(
-      const ValueKey('lodging-contact-actions-forest-inn'),
-    );
+    final contactActions = contactsRow;
     final map = find.byKey(const ValueKey('map-location-lodging-forest-inn'));
     final call = find.byKey(const ValueKey('call-lodging-forest-inn'));
     final email = find.byKey(const ValueKey('email-lodging-forest-inn'));
@@ -3016,10 +3076,28 @@ void main() {
     expect(unavailable, findsNothing);
     expect(find.text('Booking link unavailable'), findsNothing);
     expect(find.text('00:00'), findsNothing);
-    expect(
-      find.byKey(const ValueKey('map-location-lodging-mountain-shelter')),
-      findsNothing,
+    final disabledMap = find.byKey(
+      const ValueKey('map-location-lodging-mountain-shelter'),
     );
+    final disabledPhone = find.byKey(
+      const ValueKey('call-lodging-mountain-shelter'),
+    );
+    final disabledEmail = find.byKey(
+      const ValueKey('email-lodging-mountain-shelter'),
+    );
+    expect(disabledMap, findsOneWidget);
+    expect(disabledPhone, findsOneWidget);
+    expect(disabledEmail, findsOneWidget);
+    for (final action in [disabledMap, disabledPhone, disabledEmail]) {
+      expect(
+        tester
+            .widget<InkWell>(
+              find.descendant(of: action, matching: find.byType(InkWell)),
+            )
+            .onTap,
+        isNull,
+      );
+    }
     expect(find.text('View on map'), findsNothing);
 
     repository.lodgings = const [];

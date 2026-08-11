@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +17,7 @@ import '../../accommodation/domain/lodging.dart';
 import '../../accommodation/presentation/accommodation_controller.dart';
 import '../../accommodation/presentation/accommodation_screen.dart';
 import '../../accommodation/presentation/lodging_type_icon.dart';
+import '../../elevation/domain/elevation_profile.dart';
 import '../../elevation/domain/route_point.dart';
 import '../../elevation/presentation/elevation_controller.dart';
 import '../../elevation/presentation/elevation_screen.dart';
@@ -3467,6 +3469,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
   int _stageTransitionDirection = 1;
   String? _gpsStageId;
   DeviceLocation? _gpsLocation;
+  double? _gpsRouteDistanceKm;
   bool _isLocating = false;
   bool _isOpeningAccommodation = false;
 
@@ -3589,6 +3592,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
       setState(() {
         _gpsStageId = null;
         _gpsLocation = null;
+        _gpsRouteDistanceKm = null;
       });
       return;
     }
@@ -3650,6 +3654,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
         index = matchedIndex;
         _gpsStageId = match.stageId;
         _gpsLocation = location;
+        _gpsRouteDistanceKm = match.projectedRouteDistanceKm;
       });
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted) return;
@@ -3759,6 +3764,31 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
     );
   }
 
+  double? _projectedRouteDistanceForLocation({
+    required DeviceLocation? location,
+    required List<RoutePoint> routePoints,
+  }) {
+    if (location == null || routePoints.isEmpty || _gpsStageId == null) {
+      return null;
+    }
+    final canonicalStages = widget.stages.toList(growable: false)
+      ..sort(
+        (first, second) => (first.accumulatedDistanceKm ?? double.infinity)
+            .compareTo(second.accumulatedDistanceKm ?? double.infinity),
+      );
+    final match = findNearbyTrailStage(
+      latitude: location.latitude,
+      longitude: location.longitude,
+      locationAccuracyM: location.accuracyM,
+      routePoints: routePoints,
+      stages: canonicalStages,
+      direction: widget.direction,
+    );
+    return match?.stageId == _gpsStageId
+        ? match?.projectedRouteDistanceKm
+        : null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -3767,6 +3797,13 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
     );
     final showUserLocation = stage.id == _gpsStageId;
     final previewRoute = ref.watch(elevationProvider).value;
+    final previewGpsRouteDistanceKm = showUserLocation
+        ? _gpsRouteDistanceKm ??
+              _projectedRouteDistanceForLocation(
+                location: _gpsLocation,
+                routePoints: previewRoute ?? const [],
+              )
+        : null;
     final previewStartDistanceKm = index == 0
         ? stage.accumulatedDistanceKm
         : widget.stages[index - 1].accumulatedDistanceKm;
@@ -3881,24 +3918,63 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
                 detours: detours ?? const [],
               ),
               const SizedBox(height: 12),
-              _StageMapPreview(
-                key: _mapPreviewKey,
-                routePoints: previewRoute ?? const [],
-                startDistanceKm: previewStartDistanceKm,
-                finishDistanceKm: previewFinishDistanceKm,
-                showRoute: stagePreviewShowsRoute(index),
-                showFinishFlag: stagePreviewShowsFinishFlag(index),
-                lodgings: mappedLodgings,
-                excursions: excursionRoutes,
-                detours: detourRoutes,
-                showUserLocation: showUserLocation,
-                userLocation: showUserLocation ? _gpsLocation : null,
-                onTap: () => _openMap(
-                  lodgings: mappedLodgings,
-                  excursions: excursionRoutes,
-                  detours: detourRoutes,
-                  loadStageExcursions: excursions?.isNotEmpty == true,
-                  loadStageDetours: detours?.isNotEmpty == true,
+              Container(
+                key: const Key('stage-route-preview-panel'),
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: EurotrexPalette.paleBlue),
+                  boxShadow: [
+                    BoxShadow(
+                      color: EurotrexPalette.navy.withValues(alpha: 0.045),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _StageMapPreview(
+                      key: _mapPreviewKey,
+                      routePoints: previewRoute ?? const [],
+                      startDistanceKm: previewStartDistanceKm,
+                      finishDistanceKm: previewFinishDistanceKm,
+                      showRoute: stagePreviewShowsRoute(index),
+                      showFinishFlag: stagePreviewShowsFinishFlag(index),
+                      lodgings: mappedLodgings,
+                      excursions: excursionRoutes,
+                      detours: detourRoutes,
+                      showUserLocation: showUserLocation,
+                      userLocation: showUserLocation ? _gpsLocation : null,
+                      embedded: true,
+                      onTap: () => _openMap(
+                        lodgings: mappedLodgings,
+                        excursions: excursionRoutes,
+                        detours: detourRoutes,
+                        loadStageExcursions: excursions?.isNotEmpty == true,
+                        loadStageDetours: detours?.isNotEmpty == true,
+                      ),
+                    ),
+                    Container(
+                      key: const Key('stage-route-preview-divider'),
+                      height: 1,
+                      color: EurotrexPalette.blue.withValues(alpha: 0.55),
+                    ),
+                    _StageElevationPreview(
+                      routePoints: previewRoute ?? const [],
+                      startDistanceKm: index == 0
+                          ? stage.accumulatedDistanceKm
+                          : widget.stages[index - 1].accumulatedDistanceKm,
+                      finishDistanceKm: stage.accumulatedDistanceKm,
+                      reversed: widget.direction.isReversed,
+                      formatter: formatter,
+                      gpsRouteDistanceKm: previewGpsRouteDistanceKm,
+                      embedded: true,
+                      onTap: _openElevation,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -4850,6 +4926,391 @@ class _DetailSection extends StatelessWidget {
   }
 }
 
+class _StageElevationPreview extends StatelessWidget {
+  const _StageElevationPreview({
+    required this.routePoints,
+    required this.startDistanceKm,
+    required this.finishDistanceKm,
+    required this.reversed,
+    required this.formatter,
+    this.gpsRouteDistanceKm,
+    this.embedded = false,
+    required this.onTap,
+  });
+
+  final List<RoutePoint> routePoints;
+  final double? startDistanceKm;
+  final double? finishDistanceKm;
+  final bool reversed;
+  final MeasurementFormatter formatter;
+  final double? gpsRouteDistanceKm;
+  final bool embedded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final points = _stageElevationPreviewPoints(
+      routePoints: routePoints,
+      startDistanceKm: startDistanceKm,
+      finishDistanceKm: finishDistanceKm,
+      reversed: reversed,
+    );
+    return Semantics(
+      key: gpsRouteDistanceKm == null
+          ? null
+          : const Key('stage-elevation-user-location-enabled'),
+      label: context.l10n.t('Elevation'),
+      image: true,
+      button: true,
+      onTap: onTap,
+      child: GestureDetector(
+        key: const Key('stage-elevation-open'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          key: const Key('stage-elevation-preview'),
+          height: 120,
+          clipBehavior: Clip.antiAlias,
+          padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+          decoration: embedded
+              ? const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(17),
+                  ),
+                )
+              : BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: EurotrexPalette.paleBlue),
+                  boxShadow: [
+                    BoxShadow(
+                      color: EurotrexPalette.navy.withValues(alpha: 0.045),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+          child: points.length < 2
+              ? Center(
+                  child: Icon(
+                    Icons.landscape_outlined,
+                    size: 30,
+                    color: EurotrexPalette.navy.withValues(alpha: 0.28),
+                  ),
+                )
+              : IgnorePointer(
+                  child: _StageElevationChart(
+                    points: points,
+                    formatter: formatter,
+                    gpsRouteDistanceKm: gpsRouteDistanceKm,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StageElevationChart extends StatelessWidget {
+  const _StageElevationChart({
+    required this.points,
+    required this.formatter,
+    this.gpsRouteDistanceKm,
+  });
+
+  final List<RoutePoint> points;
+  final MeasurementFormatter formatter;
+  final double? gpsRouteDistanceKm;
+
+  @override
+  Widget build(BuildContext context) {
+    final firstDistance = points.first.distanceKm;
+    final chartPoints = [
+      for (final point in points)
+        FlSpot((point.distanceKm - firstDistance).abs(), point.altitudeM),
+    ];
+    final lowest = points.reduce(
+      (first, second) => first.altitudeM < second.altitudeM ? first : second,
+    );
+    final highest = points.reduce(
+      (first, second) => first.altitudeM > second.altitudeM ? first : second,
+    );
+    final altitudeSpan = math.max(1.0, highest.altitudeM - lowest.altitudeM);
+    final verticalPadding = math.max(8.0, altitudeSpan * 0.12);
+    final minY = lowest.altitudeM - verticalPadding;
+    final maxY = highest.altitudeM + verticalPadding;
+    final maxX = math.max(0.01, chartPoints.last.x);
+    final distanceInterval = _stageElevationAxisInterval(maxX / 4);
+    final altitudeInterval = _stageElevationAxisInterval((maxY - minY) / 3);
+    final gpsPoint = _stageElevationGpsPoint(
+      points: points,
+      routeDistanceKm: gpsRouteDistanceKm,
+    );
+    final gpsChartDistance = gpsPoint == null
+        ? null
+        : (gpsPoint.distanceKm - firstDistance).abs();
+
+    return LineChart(
+      LineChartData(
+        minX: 0,
+        maxX: maxX,
+        minY: minY,
+        maxY: maxY,
+        clipData: const FlClipData.vertical(),
+        borderData: FlBorderData(
+          show: true,
+          border: Border(
+            left: BorderSide(
+              color: EurotrexPalette.navy.withValues(alpha: 0.22),
+            ),
+            bottom: BorderSide(
+              color: EurotrexPalette.navy.withValues(alpha: 0.22),
+            ),
+          ),
+        ),
+        titlesData: FlTitlesData(
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 34,
+              interval: altitudeInterval,
+              minIncluded: false,
+              maxIncluded: false,
+              getTitlesWidget: (value, _) => Text(
+                '${formatter.altitudeValue(value).round()} ${formatter.altitudeUnit}',
+                style: const TextStyle(
+                  color: Colors.black45,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 20,
+              interval: distanceInterval,
+              minIncluded: true,
+              maxIncluded: false,
+              getTitlesWidget: (value, meta) => SideTitleWidget(
+                meta: meta,
+                space: 4,
+                fitInside: SideTitleFitInsideData.fromTitleMeta(
+                  meta,
+                  distanceFromEdge: 3,
+                ),
+                child: Text(
+                  '${formatter.distanceValue(value).toStringAsFixed(value == 0 || maxX >= 10 ? 0 : 1)} ${formatter.distanceUnit}',
+                  style: const TextStyle(
+                    color: Colors.black45,
+                    fontSize: 8,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        lineTouchData: const LineTouchData(enabled: false),
+        gridData: FlGridData(
+          drawVerticalLine: true,
+          horizontalInterval: altitudeInterval,
+          verticalInterval: distanceInterval,
+          getDrawingHorizontalLine: (_) => FlLine(
+            color: EurotrexPalette.navy.withValues(alpha: 0.08),
+            strokeWidth: 1,
+          ),
+          getDrawingVerticalLine: (_) => FlLine(
+            color: EurotrexPalette.navy.withValues(alpha: 0.05),
+            strokeWidth: 1,
+          ),
+        ),
+        extraLinesData: ExtraLinesData(
+          verticalLines: [
+            if (gpsChartDistance != null)
+              VerticalLine(
+                x: gpsChartDistance,
+                color: _bookingBlue.withValues(alpha: 0.55),
+                strokeWidth: 1.2,
+                dashArray: const [3, 3],
+              ),
+          ],
+        ),
+        lineBarsData: [
+          LineChartBarData(
+            spots: chartPoints,
+            isCurved: false,
+            color: EurotrexPalette.blue,
+            barWidth: 2,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: _stageElevationGradient(
+                minAltitude: minY,
+                maxAltitude: maxY,
+              ),
+            ),
+          ),
+          if (gpsPoint != null)
+            LineChartBarData(
+              spots: [
+                FlSpot(
+                  (gpsPoint.distanceKm - firstDistance).abs(),
+                  gpsPoint.altitudeM,
+                ),
+              ],
+              color: Colors.transparent,
+              barWidth: 0,
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (_, _, _, _) => FlDotCirclePainter(
+                  radius: 6.5,
+                  color: _bookingBlue,
+                  strokeWidth: 3,
+                  strokeColor: Colors.white,
+                ),
+              ),
+            ),
+        ],
+      ),
+      duration: Duration.zero,
+    );
+  }
+}
+
+double _stageElevationAxisInterval(double roughInterval) {
+  if (!roughInterval.isFinite || roughInterval <= 0) return 1;
+  final magnitude = math.pow(10, (math.log(roughInterval) / math.ln10).floor());
+  final normalized = roughInterval / magnitude;
+  final niceNormalized = normalized <= 1
+      ? 1.0
+      : normalized <= 2
+      ? 2.0
+      : normalized <= 5
+      ? 5.0
+      : 10.0;
+  return niceNormalized * magnitude;
+}
+
+RoutePoint? _stageElevationGpsPoint({
+  required List<RoutePoint> points,
+  required double? routeDistanceKm,
+}) {
+  if (points.length < 2 ||
+      routeDistanceKm == null ||
+      !routeDistanceKm.isFinite) {
+    return null;
+  }
+  final firstDistance = points.first.distanceKm;
+  final lastDistance = points.last.distanceKm;
+  final minimumDistance = math.min(firstDistance, lastDistance);
+  final maximumDistance = math.max(firstDistance, lastDistance);
+  if (routeDistanceKm < minimumDistance - 0.001 ||
+      routeDistanceKm > maximumDistance + 0.001) {
+    return null;
+  }
+  final ascendingPoints = firstDistance <= lastDistance
+      ? points
+      : points.reversed.toList(growable: false);
+  return routePointAtDistance(
+    ascendingPoints,
+    routeDistanceKm.clamp(minimumDistance, maximumDistance),
+  );
+}
+
+List<RoutePoint> _stageElevationPreviewPoints({
+  required List<RoutePoint> routePoints,
+  required double? startDistanceKm,
+  required double? finishDistanceKm,
+  required bool reversed,
+}) {
+  if (routePoints.length < 2 ||
+      startDistanceKm == null ||
+      finishDistanceKm == null ||
+      (finishDistanceKm - startDistanceKm).abs() < 0.001) {
+    return const [];
+  }
+  final section =
+      elevationSection(
+            smoothElevationProfile(routePoints),
+            startDistanceKm: startDistanceKm,
+            endDistanceKm: finishDistanceKm,
+          )
+          .where((point) {
+            return point.distanceKm.isFinite && point.altitudeM.isFinite;
+          })
+          .toList(growable: false);
+  if (section.length < 2) return const [];
+  final ordered = reversed ? section.reversed.toList(growable: false) : section;
+  return _downsampleStageElevation(ordered, 320);
+}
+
+List<RoutePoint> _downsampleStageElevation(
+  List<RoutePoint> points,
+  int maximumPoints,
+) {
+  if (points.length <= maximumPoints) return points;
+  final scale = (points.length - 1) / (maximumPoints - 1);
+  return [
+    for (var index = 0; index < maximumPoints; index++)
+      points[(index * scale).round().clamp(0, points.length - 1)],
+  ];
+}
+
+LinearGradient _stageElevationGradient({
+  required double minAltitude,
+  required double maxAltitude,
+}) {
+  final effectiveMax = math.max(maxAltitude, minAltitude + 1);
+  final altitudeRange = effectiveMax - minAltitude;
+  const anchors = <({double altitude, Color color})>[
+    (altitude: 0, color: Color(0x943E9ED0)),
+    (altitude: 300, color: Color(0x9461AF57)),
+    (altitude: 700, color: Color(0x94D8AA35)),
+    (altitude: 1200, color: Color(0x94D66B35)),
+  ];
+
+  Color colorAt(double altitude) {
+    if (altitude <= anchors.first.altitude) return anchors.first.color;
+    for (var index = 1; index < anchors.length; index++) {
+      final start = anchors[index - 1];
+      final end = anchors[index];
+      if (altitude <= end.altitude) {
+        final progress =
+            (altitude - start.altitude) / (end.altitude - start.altitude);
+        return Color.lerp(start.color, end.color, progress)!;
+      }
+    }
+    return anchors.last.color;
+  }
+
+  final colors = <Color>[colorAt(minAltitude)];
+  final stops = <double>[0];
+  for (final anchor in anchors) {
+    if (anchor.altitude <= minAltitude || anchor.altitude >= effectiveMax) {
+      continue;
+    }
+    colors.add(anchor.color);
+    stops.add((anchor.altitude - minAltitude) / altitudeRange);
+  }
+  colors.add(colorAt(effectiveMax));
+  stops.add(1);
+  return LinearGradient(
+    begin: Alignment.bottomCenter,
+    end: Alignment.topCenter,
+    colors: colors,
+    stops: stops,
+  );
+}
+
 class _StageMapPreview extends StatelessWidget {
   const _StageMapPreview({
     required this.routePoints,
@@ -4862,6 +5323,7 @@ class _StageMapPreview extends StatelessWidget {
     required this.detours,
     required this.showUserLocation,
     required this.userLocation,
+    this.embedded = false,
     required this.onTap,
     super.key,
   });
@@ -4876,6 +5338,7 @@ class _StageMapPreview extends StatelessWidget {
   final List<TrailDetourRoute> detours;
   final bool showUserLocation;
   final DeviceLocation? userLocation;
+  final bool embedded;
   final VoidCallback onTap;
 
   @override
@@ -4897,11 +5360,16 @@ class _StageMapPreview extends StatelessWidget {
         key: const Key('stage-map-preview'),
         height: 220,
         clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: _mint,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _green.withValues(alpha: 0.16)),
-        ),
+        decoration: embedded
+            ? const BoxDecoration(
+                color: _mint,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(17)),
+              )
+            : BoxDecoration(
+                color: _mint,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: _green.withValues(alpha: 0.16)),
+              ),
         child: mapboxAccessToken.isEmpty || preview == null
             ? GestureDetector(
                 key: const Key('stage-map-open'),

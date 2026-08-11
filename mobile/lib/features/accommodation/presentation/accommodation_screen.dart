@@ -16,10 +16,8 @@ import 'accommodation_controller.dart';
 import 'lodging_type_icon.dart';
 
 const _ink = Color(0xFF17201B);
-const _green = Color(0xFF277653);
 const _sand = Color(0xFFF4F2EC);
 const _yellow = Color(0xFFF2C94C);
-const _bookingBlue = Color(0xFF1565C0);
 const _stagesRouteName = '/trails/cyprus-e4/stages';
 const _distanceFilterOptionsKm = <double>[0.5, 1, 2, 5];
 
@@ -147,92 +145,66 @@ class _AccommodationScreenState extends ConsumerState<AccommodationScreen> {
           ],
         ),
       ),
-      body: lodgings.when(
-        loading: () => _AccommodationState(
-          key: const ValueKey('accommodation-loading'),
-          icon: Icons.hotel_rounded,
-          title: l10n.t('Finding accommodation…'),
-          progress: true,
-        ),
-        error: (_, _) => _AccommodationState(
-          key: const ValueKey('accommodation-error'),
-          icon: Icons.cloud_off_rounded,
-          title: l10n.t('Accommodation information is currently unavailable.'),
-          message: l10n.t('Please try again.'),
-          action: FilledButton.icon(
-            key: const ValueKey('accommodation-retry'),
-            onPressed: () => ref.invalidate(lodgingsForStageProvider(stage.id)),
-            icon: const Icon(Icons.refresh_rounded),
-            label: Text(l10n.t('Try again')),
+      body: Theme(
+        data: EurotrexPalette.controlsTheme(Theme.of(context)),
+        child: lodgings.when(
+          loading: () => _AccommodationState(
+            key: const ValueKey('accommodation-loading'),
+            icon: Icons.hotel_rounded,
+            title: l10n.t('Finding accommodation…'),
+            progress: true,
           ),
-        ),
-        data: (items) {
-          if (items.isEmpty) {
-            return _AccommodationState(
-              key: const ValueKey('accommodation-empty'),
-              icon: Icons.hotel_outlined,
-              title: l10n.t('No accommodation is listed for this stage.'),
-              message: l10n.t('Try another nearby stage.'),
-            );
-          }
-          final filteredItems = items
-              .where(filters.matches)
-              .toList(growable: false);
-          if (filteredItems.isEmpty) {
-            return _AccommodationState(
-              key: const ValueKey('accommodation-filter-empty'),
-              icon: Icons.filter_alt_off_outlined,
-              title: l10n.t('No accommodation matches these filters.'),
-              action: OutlinedButton(
-                key: const ValueKey('accommodation-clear-filters'),
-                onPressed: () =>
-                    setState(() => filters = const _AccommodationFilters()),
-                child: Text(l10n.t('Clear filters')),
+          error: (_, _) => _AccommodationState(
+            key: const ValueKey('accommodation-error'),
+            icon: Icons.cloud_off_rounded,
+            title: l10n.t(
+              'Accommodation information is currently unavailable.',
+            ),
+            message: l10n.t('Please try again.'),
+            action: FilledButton.icon(
+              key: const ValueKey('accommodation-retry'),
+              onPressed: () =>
+                  ref.invalidate(lodgingsForStageProvider(stage.id)),
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(l10n.t('Try again')),
+            ),
+          ),
+          data: (items) {
+            if (items.isEmpty) {
+              return _AccommodationState(
+                key: const ValueKey('accommodation-empty'),
+                icon: Icons.hotel_outlined,
+                title: l10n.t('No accommodation is listed for this stage.'),
+                message: l10n.t('Try another nearby stage.'),
+              );
+            }
+            final filteredItems = items
+                .where(filters.matches)
+                .toList(growable: false);
+            if (filteredItems.isEmpty) {
+              return _AccommodationState(
+                key: const ValueKey('accommodation-filter-empty'),
+                icon: Icons.filter_alt_off_outlined,
+                title: l10n.t('No accommodation matches these filters.'),
+                action: OutlinedButton(
+                  key: const ValueKey('accommodation-clear-filters'),
+                  onPressed: () =>
+                      setState(() => filters = const _AccommodationFilters()),
+                  child: Text(l10n.t('Clear filters')),
+                ),
+              );
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 28),
+              itemCount: filteredItems.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              itemBuilder: (context, index) => _LodgingCard(
+                lodging: filteredItems[index],
+                formatter: formatter,
               ),
             );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
-            itemCount: filteredItems.length + 1,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              if (index == 0) return _PageIntroduction(stage: stage);
-              return _LodgingCard(
-                lodging: filteredItems[index - 1],
-                formatter: formatter,
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _PageIntroduction extends StatelessWidget {
-  const _PageIntroduction({required this.stage});
-
-  final TrailStage stage;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 2, 4, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            context.l10n.t('Places to stay near this stage'),
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            context.l10n.t(stage.name),
-            style: const TextStyle(color: Colors.black54),
-          ),
-        ],
+          },
+        ),
       ),
     );
   }
@@ -828,8 +800,6 @@ class _LodgingCard extends ConsumerWidget {
       if (address != null && address.isNotEmpty) address,
       if (village != null && village.isNotEmpty && village != address) village,
     ].join(' · ');
-    final hasContactActions =
-        lodging.location != null || phoneUri != null || emailUri != null;
     final hasStaticLocation =
         lodging.location == null && locationText.isNotEmpty;
     final hasWhatsapp =
@@ -840,12 +810,6 @@ class _LodgingCard extends ConsumerWidget {
           icon: Icons.euro_rounded,
           label: l10n.t('Price'),
           value: price,
-        ),
-      if (lodging.distanceFromTrailKm case final distance?)
-        _LodgingFactData(
-          icon: Icons.gps_fixed_rounded,
-          label: l10n.t('Distance from trail'),
-          value: formatter.distance(distance),
         ),
       if (_nonEmpty(lodging.monthsOpen) case final season?)
         _LodgingFactData(
@@ -879,13 +843,22 @@ class _LodgingCard extends ConsumerWidget {
         ),
     ];
 
-    return Card(
+    return Container(
       key: ValueKey('lodging-card-${lodging.id}'),
-      color: Colors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: EurotrexPalette.paleBlue),
+        boxShadow: [
+          BoxShadow(
+            color: EurotrexPalette.navy.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -894,8 +867,8 @@ class _LodgingCard extends ConsumerWidget {
               children: [
                 Container(
                   key: ValueKey('lodging-type-marker-${lodging.id}'),
-                  width: 44,
-                  height: 44,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
                     color: markerColor,
                     shape: BoxShape.circle,
@@ -904,11 +877,11 @@ class _LodgingCard extends ConsumerWidget {
                     child: LodgingTypeIcon(
                       type: type,
                       color: Colors.white,
-                      size: 24,
+                      size: 21,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -917,16 +890,22 @@ class _LodgingCard extends ConsumerWidget {
                         name == null || name.isEmpty
                             ? l10n.t('Accommodation')
                             : l10n.t(name),
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: EurotrexPalette.navy,
+                              fontWeight: FontWeight.w900,
+                              height: 1.05,
+                            ),
                       ),
                       if (type != null && type.isNotEmpty) ...[
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 1),
                         Text(
                           l10n.t(type),
                           style: TextStyle(
                             color: markerColor,
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -934,95 +913,146 @@ class _LodgingCard extends ConsumerWidget {
                     ],
                   ),
                 ),
+                if (lodging.distanceFromTrailKm case final distance?) ...[
+                  const SizedBox(width: 8),
+                  _LodgingDistance(
+                    key: ValueKey('lodging-distance-${lodging.id}'),
+                    distance: formatter.distance(distance),
+                    isNearTrail: distance < 0.5,
+                  ),
+                ],
               ],
             ),
-            if (hasContactActions || hasStaticLocation || hasWhatsapp) ...[
-              const SizedBox(height: 14),
-              if (hasContactActions)
-                Row(
-                  key: ValueKey('lodging-contact-actions-${lodging.id}'),
-                  children: [
-                    if (lodging.location != null)
-                      _ContactActionButton(
-                        key: ValueKey('map-location-lodging-${lodging.id}'),
-                        tooltip: l10n.t('Show on map'),
-                        icon: const Icon(Icons.location_on_outlined),
-                        onTap: () => Navigator.of(context).push(
+            const SizedBox(height: 8),
+            Row(
+              key: ValueKey('lodging-contact-actions-${lodging.id}'),
+              children: [
+                _ContactActionButton(
+                  key: ValueKey('map-location-lodging-${lodging.id}'),
+                  tooltip: l10n.t('Show on map'),
+                  icon: const Icon(Icons.location_on_outlined),
+                  onTap: lodging.location == null
+                      ? null
+                      : () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
                             builder: (_) => MapScreen(initialLodging: lodging),
                           ),
                         ),
+                ),
+                const SizedBox(width: 6),
+                _ContactActionButton(
+                  key: ValueKey('call-lodging-${lodging.id}'),
+                  tooltip: phoneUri == null
+                      ? l10n.t('Phone')
+                      : '${l10n.t('Phone')}: ${_formatPhoneForDisplay(phone!)}',
+                  icon: const Icon(Icons.phone_outlined),
+                  onTap: phoneUri == null
+                      ? null
+                      : () => _openExternal(context, ref, phoneUri),
+                ),
+                const SizedBox(width: 6),
+                _ContactActionButton(
+                  key: ValueKey('email-lodging-${lodging.id}'),
+                  tooltip: emailUri == null
+                      ? l10n.t('Email')
+                      : '${l10n.t('Email')}: $email',
+                  icon: const Icon(Icons.email_outlined),
+                  onTap: emailUri == null
+                      ? null
+                      : () => _openExternal(context, ref, emailUri),
+                ),
+              ],
+            ),
+            if (facts.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _LodgingFactsRow(
+                key: ValueKey('lodging-facts-${lodging.id}'),
+                facts: facts,
+              ),
+            ],
+            if (hasStaticLocation || hasWhatsapp) ...[
+              const SizedBox(height: 8),
+              SelectionArea(
+                child: Column(
+                  children: [
+                    if (hasStaticLocation)
+                      _ContactRow(
+                        icon: Icons.location_on_outlined,
+                        value: locationText,
                       ),
-                    if (lodging.location != null && phoneUri != null)
-                      const SizedBox(width: 10),
-                    if (phoneUri != null)
-                      _ContactActionButton(
-                        key: ValueKey('call-lodging-${lodging.id}'),
-                        tooltip:
-                            '${l10n.t('Phone')}: ${_formatPhoneForDisplay(phone!)}',
-                        icon: const Icon(Icons.phone_outlined),
-                        onTap: () => _openExternal(context, ref, phoneUri),
-                      ),
-                    if ((lodging.location != null || phoneUri != null) &&
-                        emailUri != null)
-                      const SizedBox(width: 10),
-                    if (emailUri != null)
-                      _ContactActionButton(
-                        key: ValueKey('email-lodging-${lodging.id}'),
-                        tooltip: '${l10n.t('Email')}: $email',
-                        icon: const Icon(Icons.email_outlined),
-                        onTap: () => _openExternal(context, ref, emailUri),
+                    if (hasWhatsapp)
+                      _ContactRow(
+                        icon: Icons.chat_outlined,
+                        label: l10n.t('WhatsApp'),
+                        value: whatsapp,
                       ),
                   ],
                 ),
-              if (hasContactActions && (hasStaticLocation || hasWhatsapp))
-                const SizedBox(height: 8),
-              if (hasStaticLocation || hasWhatsapp)
-                SelectionArea(
-                  child: Column(
-                    children: [
-                      if (hasStaticLocation)
-                        _ContactRow(
-                          icon: Icons.location_on_outlined,
-                          value: locationText,
-                        ),
-                      if (hasWhatsapp)
-                        _ContactRow(
-                          icon: Icons.chat_outlined,
-                          label: l10n.t('WhatsApp'),
-                          value: whatsapp,
-                        ),
-                    ],
-                  ),
-                ),
-            ],
-            if (facts.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [for (final fact in facts) _LodgingFact(data: fact)],
               ),
             ],
             if (bookingUri != null) ...[
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
                 child: FilledButton.icon(
                   key: ValueKey('book-lodging-${lodging.id}'),
                   onPressed: () => _openExternal(context, ref, bookingUri),
                   style: FilledButton.styleFrom(
-                    backgroundColor: _bookingBlue,
+                    backgroundColor: EurotrexPalette.blue,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    minimumSize: const Size(0, 36),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    shape: const StadiumBorder(),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                  icon: const Icon(Icons.open_in_new_rounded),
+                  icon: const Icon(Icons.open_in_new_rounded, size: 16),
                   label: Text(l10n.t('Book')),
                 ),
               ),
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LodgingDistance extends StatelessWidget {
+  const _LodgingDistance({
+    required this.distance,
+    required this.isNearTrail,
+    super.key,
+  });
+
+  final String distance;
+  final bool isNearTrail;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isNearTrail
+        ? const Color(0xFF277653)
+        : const Color(0xFFC28A00);
+    return Tooltip(
+      message: context.l10n.t('Distance from trail'),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.gps_fixed_rounded, size: 14, color: color),
+          const SizedBox(width: 3),
+          Text(
+            distance,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1039,16 +1069,17 @@ class _ContactRow extends StatelessWidget {
   Widget build(BuildContext context) {
     if (value.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: _green),
-          const SizedBox(width: 8),
+          const SizedBox(width: 1),
+          Icon(icon, size: 15, color: EurotrexPalette.blue),
+          const SizedBox(width: 6),
           Expanded(
             child: Text(
               label == null ? value : '${label!}: $value',
-              style: const TextStyle(color: Colors.black87),
+              style: const TextStyle(color: EurotrexPalette.navy, fontSize: 11),
             ),
           ),
         ],
@@ -1067,29 +1098,40 @@ class _ContactActionButton extends StatelessWidget {
 
   final String tooltip;
   final Widget icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    final foreground = enabled
+        ? EurotrexPalette.blue
+        : EurotrexPalette.navy.withValues(alpha: 0.25);
     return Semantics(
       button: true,
+      enabled: enabled,
       label: tooltip,
       excludeSemantics: true,
       child: Tooltip(
         message: tooltip,
         child: Material(
-          color: _bookingBlue.withValues(alpha: 0.07),
+          color: enabled
+              ? EurotrexPalette.paleBlue.withValues(alpha: 0.58)
+              : const Color(0xFFF0F1F1),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: _bookingBlue.withValues(alpha: 0.18)),
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(
+              color: enabled
+                  ? EurotrexPalette.blue.withValues(alpha: 0.22)
+                  : EurotrexPalette.navy.withValues(alpha: 0.1),
+            ),
           ),
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 48, minHeight: 44),
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               child: IconTheme(
-                data: const IconThemeData(color: _bookingBlue, size: 22),
+                data: IconThemeData(color: foreground, size: 19),
                 child: Center(child: icon),
               ),
             ),
@@ -1112,6 +1154,49 @@ class _LodgingFactData {
   final String value;
 }
 
+class _LodgingFactsRow extends StatelessWidget {
+  const _LodgingFactsRow({required this.facts, super.key});
+
+  final List<_LodgingFactData> facts;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      decoration: BoxDecoration(
+        border: Border.symmetric(
+          horizontal: BorderSide(
+            color: EurotrexPalette.paleBlue.withValues(alpha: 0.9),
+          ),
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var index = 0; index < facts.length; index++) ...[
+              _LodgingFact(data: facts[index]),
+              if (index < facts.length - 1)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 9),
+                  child: Text(
+                    '|',
+                    style: TextStyle(
+                      color: EurotrexPalette.navy.withValues(alpha: 0.24),
+                      fontSize: 20,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _LodgingFact extends StatelessWidget {
   const _LodgingFact({required this.data});
 
@@ -1119,28 +1204,28 @@ class _LodgingFact extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: _sand,
-        borderRadius: BorderRadius.circular(12),
-      ),
+    return Tooltip(
+      message: data.label,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(data.icon, size: 17, color: _green),
-          const SizedBox(width: 6),
+          Icon(data.icon, size: 15, color: EurotrexPalette.blue),
+          const SizedBox(width: 5),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 data.label,
-                style: const TextStyle(fontSize: 10, color: Colors.black54),
+                style: TextStyle(
+                  fontSize: 8.5,
+                  color: EurotrexPalette.navy.withValues(alpha: 0.62),
+                ),
               ),
               Text(
                 data.value,
                 style: const TextStyle(
-                  fontSize: 12,
+                  color: EurotrexPalette.navy,
+                  fontSize: 11,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -1171,32 +1256,61 @@ class _AccommodationState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
+      child: Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: EurotrexPalette.paleBlue),
+          boxShadow: [
+            BoxShadow(
+              color: EurotrexPalette.navy.withValues(alpha: 0.05),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (progress)
-              const CircularProgressIndicator()
+              const SizedBox.square(
+                dimension: 34,
+                child: CircularProgressIndicator(strokeWidth: 3),
+              )
             else
-              Icon(icon, size: 58, color: _green),
-            const SizedBox(height: 18),
+              Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  color: EurotrexPalette.paleBlue,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 25, color: EurotrexPalette.blue),
+              ),
+            const SizedBox(height: 14),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: EurotrexPalette.navy,
+                fontWeight: FontWeight.w900,
+              ),
             ),
             if (message != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 message!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.black54),
+                style: TextStyle(
+                  color: EurotrexPalette.navy.withValues(alpha: 0.62),
+                  fontSize: 12,
+                ),
               ),
             ],
-            if (action != null) ...[const SizedBox(height: 18), action!],
+            if (action != null) ...[const SizedBox(height: 14), action!],
           ],
         ),
       ),
