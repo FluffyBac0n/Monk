@@ -116,6 +116,7 @@ const frenchTranslations = <String, String>{
   'Download this trail for offline use':
       'Télécharger ce sentier pour une utilisation hors ligne',
   'Trail map': 'Carte du sentier',
+  'Map layers': 'Couches de la carte',
   'Refresh elevation data': 'Actualiser les données altimétriques',
   'No elevation data is available.':
       'Aucune donnée altimétrique n’est disponible.',
@@ -309,6 +310,8 @@ const frenchTranslations = <String, String>{
   'Selected stage': 'Étape sélectionnée',
   'Other stages': 'Autres étapes',
   'My location': 'Ma position',
+  'Near {stage} · {distance} from the trail':
+      'Près de {stage} · à {distance} du sentier',
   'Offline maps': 'Cartes hors ligne',
   'Downloaded': 'Téléchargée',
   'Checking offline maps…': 'Vérification des cartes hors ligne…',

@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart' as geo;
@@ -18,6 +21,7 @@ import '../../detours/presentation/detour_controller.dart';
 import '../../excursions/domain/trail_excursion.dart';
 import '../../excursions/presentation/excursion_controller.dart';
 import '../../stages/domain/stage.dart';
+import '../../stages/domain/trail_location_matcher.dart';
 import '../../stages/presentation/stages_controller.dart';
 import '../../stages/presentation/stages_screen.dart';
 import '../../trail/domain/trail_direction.dart';
@@ -42,6 +46,80 @@ const _markerEntranceSteps = 10;
 const _markerEntranceFrame = Duration(milliseconds: 24);
 const _stageDropDistance = 20.0;
 const _lodgingDropDistance = 28.0;
+const _directionMarkerMinimumZoom = 9.75;
+const _routeTapInteractionId = 'eurotrex-route-stage-discovery';
+
+int mapStageVisibilityStride(double zoom) {
+  if (zoom >= 11) return 1;
+  if (zoom >= 9.75) return 2;
+  if (zoom >= 8.75) return 4;
+  return 8;
+}
+
+List<int> mapProgressiveStageIndexes({
+  required List<int> stageIndexes,
+  required double zoom,
+  int? selectedStageIndex,
+}) {
+  final stride = mapStageVisibilityStride(zoom);
+  if (stride == 1) return List.unmodifiable(stageIndexes);
+  return stageIndexes
+      .where(
+        (index) =>
+            index == selectedStageIndex ||
+            stageIndexes.indexOf(index) % stride == 0,
+      )
+      .toList(growable: false);
+}
+
+double mapTrailTapToleranceM(double zoom) {
+  if (zoom >= 13) return 180;
+  if (zoom >= 11) return 350;
+  if (zoom >= 9) return 900;
+  return 2200;
+}
+
+Color mapLodgingMarkerOutlineColor({required bool isSelected}) =>
+    isSelected ? EurotrexPalette.blue : Colors.white;
+
+double mapLodgingSelectionZoom(double currentZoom) {
+  if (!currentZoom.isFinite) return 12;
+  return math.min(15, currentZoom + 0.75);
+}
+
+typedef MapRouteDirectionMarker = ({RoutePoint point, double bearingDegrees});
+
+List<MapRouteDirectionMarker> mapRouteDirectionMarkers(
+  List<RoutePoint> points,
+  TrailDirection direction, {
+  double spacingKm = 8,
+}) {
+  if (points.length < 3 || spacingKm <= 0) return const [];
+  final markers = <MapRouteDirectionMarker>[];
+  var nextDistanceKm = points.first.distanceKm + spacingKm;
+  for (var index = 1; index < points.length - 1; index++) {
+    final point = points[index];
+    if (point.distanceKm < nextDistanceKm) continue;
+    final previous = points[index - 1];
+    final next = points[index + 1];
+    var bearing = _mapBearingDegrees(previous, next);
+    if (direction.isReversed) bearing = (bearing + 180) % 360;
+    markers.add((point: point, bearingDegrees: bearing));
+    nextDistanceKm = point.distanceKm + spacingKm;
+  }
+  return List.unmodifiable(markers);
+}
+
+double _mapBearingDegrees(RoutePoint from, RoutePoint to) {
+  final fromLat = from.lat * math.pi / 180;
+  final toLat = to.lat * math.pi / 180;
+  final deltaLng = (to.lng - from.lng) * math.pi / 180;
+  final y = math.sin(deltaLng) * math.cos(toLat);
+  final x =
+      math.cos(fromLat) * math.sin(toLat) -
+      math.sin(fromLat) * math.cos(toLat) * math.cos(deltaLng);
+  return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
+}
 
 ({int startIndex, int finishIndex}) mapStageEndpointIndexes(
   List<TrailStage> stages,
@@ -82,6 +160,7 @@ List<int> mapVisibleStageIndexes({
   required bool stagesVisible,
   required bool stagesExplicitlyHidden,
   int? initialStageIndex,
+  int? selectedStageIndex,
 }) {
   if (stagesVisible) return List.unmodifiable(locatedStageIndexes);
   return locatedStageIndexes
@@ -89,6 +168,7 @@ List<int> mapVisibleStageIndexes({
         (index) =>
             index == endpointIndexes.startIndex ||
             index == endpointIndexes.finishIndex ||
+            index == selectedStageIndex ||
             (!stagesExplicitlyHidden && index == initialStageIndex),
       )
       .toList(growable: false);
@@ -100,6 +180,7 @@ List<int> mapVisibleIntermediateStageIndexes({
   required bool stagesVisible,
   required bool stagesExplicitlyHidden,
   int? initialStageIndex,
+  int? selectedStageIndex,
 }) {
   return mapVisibleStageIndexes(
         locatedStageIndexes: locatedStageIndexes,
@@ -107,6 +188,7 @@ List<int> mapVisibleIntermediateStageIndexes({
         stagesVisible: stagesVisible,
         stagesExplicitlyHidden: stagesExplicitlyHidden,
         initialStageIndex: initialStageIndex,
+        selectedStageIndex: selectedStageIndex,
       )
       .where(
         (index) =>
@@ -548,6 +630,8 @@ class _RouteMap extends ConsumerStatefulWidget {
 class _RouteMapState extends ConsumerState<_RouteMap> {
   late final CameraViewportState _initialViewport;
   MapboxMap? _map;
+  PolylineAnnotationManager? _routeManager;
+  PointAnnotationManager? _directionMarkerManager;
   PointAnnotationManager? _endpointManager;
   PointAnnotationManager? _endpointLabelManager;
   Cancelable? _endpointTapListener;
@@ -562,14 +646,22 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   final Map<String, String?> _lodgingStyleImages = {};
   List<Lodging> _mappedLodgings = const [];
   PolylineAnnotationManager? _excursionRouteManager;
+  Cancelable? _excursionTapListener;
+  final Map<String, int> _excursionIndexByAnnotation = {};
   List<TrailExcursionRoute> _mappedExcursions = const [];
   PolylineAnnotationManager? _detourRouteManager;
+  Cancelable? _detourTapListener;
+  final Map<String, int> _detourIndexByAnnotation = {};
   List<TrailDetourRoute> _mappedDetours = const [];
   int? _selectedStageIndex;
   int? _selectedLodgingIndex;
-  Point? _selectedLodgingPoint;
-  ScreenCoordinate? _selectedLodgingScreenPosition;
+  int? _selectedExcursionIndex;
+  int? _selectedDetourIndex;
   bool _locating = false;
+  bool _locationTrackingActive = false;
+  StreamSubscription<geo.Position>? _positionSubscription;
+  int? _gpsNearestStageIndex;
+  double? _gpsDistanceFromTrailM;
   bool _stagesVisible = false;
   bool _stagesExplicitlyHidden = false;
   bool _changingStageVisibility = false;
@@ -588,6 +680,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   int _stageSheetGeneration = 0;
   int _stageAnimationGeneration = 0;
   int _lodgingAnimationGeneration = 0;
+  double _currentZoom = 7;
+  int _currentStageVisibilityStride = mapStageVisibilityStride(7);
+  bool _updatingZoomLayers = false;
+  DateTime? _lastAnnotationTapAt;
 
   @override
   void initState() {
@@ -612,11 +708,19 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     _endpointTapListener?.cancel();
     _stageTapListener?.cancel();
     _lodgingTapListener?.cancel();
+    _excursionTapListener?.cancel();
+    _detourTapListener?.cancel();
+    _positionSubscription?.cancel();
+    _map?.removeInteraction(_routeTapInteractionId);
     super.dispose();
   }
 
   Future<void> _onMapCreated(MapboxMap map) async {
     _map = map;
+    map.addInteraction(
+      TapInteraction.onMap(_handleMapTap, stopPropagation: false),
+      interactionID: _routeTapInteractionId,
+    );
     await _drawRoute(map);
   }
 
@@ -629,7 +733,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     await _drawStages(map, animate: true);
     if (widget.locationStageId != null) {
       try {
-        await _enableLocationPuck();
+        await _startLocationTracking(focus: false);
       } catch (_) {
         // Keep the selected stage usable if location rendering is unavailable.
       }
@@ -687,8 +791,6 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       _lodgingsVisible = true;
       _lodgingsLoaded = false;
       _selectedLodgingIndex = null;
-      _selectedLodgingPoint = null;
-      _selectedLodgingScreenPosition = null;
     });
     await _drawLodgings(map, animate: true);
   }
@@ -728,8 +830,6 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       _mappedLodgings = [lodging];
       _lodgingsVisible = true;
       _selectedLodgingIndex = 0;
-      _selectedLodgingPoint = point;
-      _selectedLodgingScreenPosition = null;
       _selectedStageIndex = null;
     });
     await _drawLodgings(map, animate: true);
@@ -737,7 +837,6 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       CameraOptions(center: point, zoom: 15, bearing: 0),
       MapAnimationOptions(duration: 700, startDelay: 0),
     );
-    await _updateSelectedLodgingPosition();
     await _hydrateInitialLodgingLayer(lodging);
   }
 
@@ -765,35 +864,26 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     final selectedIndex = selectedId == null
         ? -1
         : mappedLodgings.indexWhere((lodging) => lodging.id == selectedId);
-    final selectedLocation = selectedIndex < 0
-        ? null
-        : mappedLodgings[selectedIndex].location;
-
     setState(() {
       _mappedLodgings = mappedLodgings;
       _lodgingsLoaded = true;
       _selectedLodgingIndex = selectedIndex < 0 ? null : selectedIndex;
-      _selectedLodgingPoint = selectedLocation == null
-          ? null
-          : Point(
-              coordinates: Position(
-                selectedLocation.longitude,
-                selectedLocation.latitude,
-              ),
-            );
-      if (selectedIndex < 0) {
-        _selectedLodgingScreenPosition = null;
-      }
     });
     final map = _map;
     if (_lodgingsVisible && map != null) {
       await _drawLodgings(map);
-      await _updateSelectedLodgingPosition();
     }
   }
 
   Future<void> _drawRoute(MapboxMap map) async {
+    final previousManager = _routeManager;
+    if (previousManager != null) {
+      await map.annotations.removeAnnotationManager(previousManager);
+    }
     final manager = await map.annotations.createPolylineAnnotationManager();
+    _routeManager = manager;
+    await manager.setLineCap(LineCap.ROUND);
+    await manager.setLineJoin(LineJoin.ROUND);
     await manager.create(
       PolylineAnnotationOptions(
         geometry: LineString(
@@ -810,7 +900,44 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     );
   }
 
+  Future<void> _drawDirectionMarkers(MapboxMap map) async {
+    final previousManager = _directionMarkerManager;
+    _directionMarkerManager = null;
+    if (previousManager != null) {
+      await map.annotations.removeAnnotationManager(previousManager);
+    }
+    if (_currentZoom < _directionMarkerMinimumZoom) return;
+
+    final markers = mapRouteDirectionMarkers(widget.points, widget.direction);
+    if (markers.isEmpty) return;
+    final manager = await map.annotations.createPointAnnotationManager(
+      below: _endpointManager?.id,
+    );
+    _directionMarkerManager = manager;
+    await manager.setTextAllowOverlap(false);
+    await manager.setTextIgnorePlacement(false);
+    await manager.setTextRotationAlignment(TextRotationAlignment.MAP);
+    await manager.createMulti([
+      for (final marker in markers)
+        PointAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(marker.point.lng, marker.point.lat),
+          ),
+          textField: '➤',
+          textRotate: marker.bearingDegrees - 90,
+          textSize: 13,
+          textColor: _routeBlue.withValues(alpha: 0.72).toARGB32(),
+          textHaloColor: Colors.white.withValues(alpha: 0.88).toARGB32(),
+          textHaloWidth: 1.5,
+          symbolSortKey: 0,
+        ),
+    ]);
+  }
+
   Future<void> _removeExcursionRoutes(MapboxMap map) async {
+    _excursionTapListener?.cancel();
+    _excursionTapListener = null;
+    _excursionIndexByAnnotation.clear();
     final manager = _excursionRouteManager;
     _excursionRouteManager = null;
     if (manager != null) {
@@ -830,8 +957,9 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       below: _endpointManager?.id,
     );
     _excursionRouteManager = manager;
-    for (final route in routes) {
-      await manager.create(
+    for (var index = 0; index < routes.length; index++) {
+      final route = routes[index];
+      final annotation = await manager.create(
         PolylineAnnotationOptions(
           geometry: LineString(
             coordinates: [
@@ -845,10 +973,22 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
           lineOpacity: 0.95,
         ),
       );
+      _excursionIndexByAnnotation[annotation.id] = index;
     }
+    _excursionTapListener = manager.tapEvents(
+      onTap: (annotation) {
+        final routeIndex = _excursionIndexByAnnotation[annotation.id];
+        if (routeIndex == null || !mounted) return;
+        _recordAnnotationTap();
+        _selectExcursion(routeIndex);
+      },
+    );
   }
 
   Future<void> _removeDetourRoutes(MapboxMap map) async {
+    _detourTapListener?.cancel();
+    _detourTapListener = null;
+    _detourIndexByAnnotation.clear();
     final manager = _detourRouteManager;
     _detourRouteManager = null;
     if (manager != null) {
@@ -868,8 +1008,9 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       below: _endpointManager?.id,
     );
     _detourRouteManager = manager;
-    for (final route in routes) {
-      await manager.create(
+    for (var index = 0; index < routes.length; index++) {
+      final route = routes[index];
+      final annotation = await manager.create(
         PolylineAnnotationOptions(
           geometry: LineString(
             coordinates: [
@@ -883,7 +1024,16 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
           lineOpacity: 0.95,
         ),
       );
+      _detourIndexByAnnotation[annotation.id] = index;
     }
+    _detourTapListener = manager.tapEvents(
+      onTap: (annotation) {
+        final routeIndex = _detourIndexByAnnotation[annotation.id];
+        if (routeIndex == null || !mounted) return;
+        _recordAnnotationTap();
+        _selectDetour(routeIndex);
+      },
+    );
   }
 
   List<({int index, TrailStage stage, RoutePoint point})> _locatedStages() {
@@ -965,6 +1115,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       onTap: (annotation) {
         final stageIndex = _endpointIndexByAnnotation[annotation.id];
         if (stageIndex == null || !mounted) return;
+        _recordAnnotationTap();
         _selectStage(stageIndex);
       },
     );
@@ -1018,19 +1169,28 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       stagesVisible: _stagesVisible,
       stagesExplicitlyHidden: _stagesExplicitlyHidden,
       initialStageIndex: widget.initialStageIndex,
-    ).toSet();
+      selectedStageIndex: _selectedStageIndex,
+    );
+    final progressiveStageIndexes = _stagesVisible
+        ? mapProgressiveStageIndexes(
+            stageIndexes: visibleStageIndexes,
+            zoom: _currentZoom,
+            selectedStageIndex: _selectedStageIndex,
+          )
+        : visibleStageIndexes;
+    final displayedStageIndexes = progressiveStageIndexes.toSet();
     final displayedStages = locatedStages
-        .where((item) => visibleStageIndexes.contains(item.index))
+        .where((item) => displayedStageIndexes.contains(item.index))
         .toList(growable: false);
     if (displayedStages.isEmpty) return;
 
     final stageIcon = await _resolveStageStyleImage(map, 'marker-stroked');
     final manager = await map.annotations.createPointAnnotationManager();
     _stageManager = manager;
-    await manager.setIconAllowOverlap(true);
-    await manager.setIconIgnorePlacement(true);
-    await manager.setTextAllowOverlap(true);
-    await manager.setTextIgnorePlacement(true);
+    await manager.setIconAllowOverlap(false);
+    await manager.setIconIgnorePlacement(false);
+    await manager.setTextAllowOverlap(false);
+    await manager.setTextIgnorePlacement(false);
     if (shouldAnimate) {
       await Future.wait([
         manager.setIconTranslateAnchor(IconTranslateAnchor.VIEWPORT),
@@ -1080,6 +1240,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       onTap: (annotation) {
         final stageIndex = _stageIndexByAnnotation[annotation.id];
         if (stageIndex == null || !mounted) return;
+        _recordAnnotationTap();
         _selectStage(stageIndex);
       },
     );
@@ -1144,8 +1305,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
               styleImages[lodgingMakiIconName(_mappedLodgings[index].type)],
           iconSize: index == _selectedLodgingIndex ? 1.65 : 1.4,
           iconColor: _accommodationBlue.toARGB32(),
-          iconHaloColor: Colors.white.toARGB32(),
-          iconHaloWidth: index == _selectedLodgingIndex ? 3.5 : 2,
+          iconHaloColor: mapLodgingMarkerOutlineColor(
+            isSelected: index == _selectedLodgingIndex,
+          ).toARGB32(),
+          iconHaloWidth: index == _selectedLodgingIndex ? 4.25 : 2,
           iconHaloBlur: 0.5,
           textField:
               styleImages[lodgingMakiIconName(_mappedLodgings[index].type)] ==
@@ -1154,8 +1317,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
               : null,
           textSize: index == _selectedLodgingIndex ? 25 : 21,
           textColor: _accommodationBlue.toARGB32(),
-          textHaloColor: Colors.white.toARGB32(),
-          textHaloWidth: index == _selectedLodgingIndex ? 3.5 : 2,
+          textHaloColor: mapLodgingMarkerOutlineColor(
+            isSelected: index == _selectedLodgingIndex,
+          ).toARGB32(),
+          textHaloWidth: index == _selectedLodgingIndex ? 4.25 : 2,
           symbolSortKey: index == _selectedLodgingIndex ? 2 : 1,
           customData: {
             'lodgingIndex': index,
@@ -1176,6 +1341,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       onTap: (annotation) {
         final lodgingIndex = _lodgingIndexByAnnotation[annotation.id];
         if (lodgingIndex == null || !mounted) return;
+        _recordAnnotationTap();
         if (lodgingIndex == _selectedLodgingIndex) {
           _openSelectedLodgingBooking();
           return;
@@ -1310,8 +1476,6 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         setState(() {
           _lodgingsVisible = false;
           _selectedLodgingIndex = null;
-          _selectedLodgingPoint = null;
-          _selectedLodgingScreenPosition = null;
         });
         await _removeLodgingAnnotations(map);
         return;
@@ -1337,8 +1501,6 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         setState(() {
           _lodgingsVisible = false;
           _selectedLodgingIndex = null;
-          _selectedLodgingPoint = null;
-          _selectedLodgingScreenPosition = null;
         });
         ref.invalidate(lodgingsForTrailProvider);
         try {
@@ -1361,7 +1523,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     setState(() => _changingExcursionVisibility = true);
     try {
       if (_excursionsVisible) {
-        setState(() => _excursionsVisible = false);
+        setState(() {
+          _excursionsVisible = false;
+          _selectedExcursionIndex = null;
+        });
         await _removeExcursionRoutes(map);
         return;
       }
@@ -1403,7 +1568,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     setState(() => _changingDetourVisibility = true);
     try {
       if (_detoursVisible) {
-        setState(() => _detoursVisible = false);
+        setState(() {
+          _detoursVisible = false;
+          _selectedDetourIndex = null;
+        });
         await _removeDetourRoutes(map);
         return;
       }
@@ -1466,8 +1634,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       _selectedStageIndex = stageIndex;
       _stageSheetGeneration++;
       _selectedLodgingIndex = null;
-      _selectedLodgingPoint = null;
-      _selectedLodgingScreenPosition = null;
+      _selectedExcursionIndex = null;
+      _selectedDetourIndex = null;
     });
     await _drawStages(map);
     if (lodgingWasSelected && _lodgingsVisible) {
@@ -1501,27 +1669,34 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     final location = _mappedLodgings[lodgingIndex].location;
     if (location == null) return;
     final stageWasSelected = _selectedStageIndex != null;
-    final point = Point(
-      coordinates: Position(location.longitude, location.latitude),
-    );
     setState(() {
       _selectedLodgingIndex = lodgingIndex;
-      _selectedLodgingPoint = point;
-      _selectedLodgingScreenPosition = null;
       _selectedStageIndex = null;
+      _selectedExcursionIndex = null;
+      _selectedDetourIndex = null;
     });
     if (stageWasSelected) {
       await _drawStages(map);
     }
     await _drawLodgings(map);
-    await _updateSelectedLodgingPosition();
+    if (!mounted || _selectedLodgingIndex != lodgingIndex) return;
+    final camera = await map.getCameraState();
+    if (!mounted || _selectedLodgingIndex != lodgingIndex) return;
+    await map.easeTo(
+      CameraOptions(
+        center: Point(
+          coordinates: Position(location.longitude, location.latitude),
+        ),
+        zoom: mapLodgingSelectionZoom(camera.zoom),
+        bearing: camera.bearing,
+      ),
+      MapAnimationOptions(duration: 520, startDelay: 0),
+    );
   }
 
   Future<void> _clearSelectedLodging() async {
     setState(() {
       _selectedLodgingIndex = null;
-      _selectedLodgingPoint = null;
-      _selectedLodgingScreenPosition = null;
     });
     final map = _map;
     if (map != null && _lodgingsVisible) {
@@ -1529,16 +1704,48 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     }
   }
 
-  Future<void> _updateSelectedLodgingPosition() async {
-    if (!_lodgingsVisible) return;
+  Future<void> _selectExcursion(int routeIndex) async {
+    if (routeIndex < 0 || routeIndex >= _mappedExcursions.length) return;
     final map = _map;
-    final point = _selectedLodgingPoint;
-    if (map == null || point == null) return;
-    final position = await map.pixelForCoordinate(point);
-    if (!mounted || !_lodgingsVisible || point != _selectedLodgingPoint) {
-      return;
+    final stageWasSelected = _selectedStageIndex != null;
+    final lodgingWasSelected = _selectedLodgingIndex != null;
+    setState(() {
+      _selectedExcursionIndex = routeIndex;
+      _selectedDetourIndex = null;
+      _selectedStageIndex = null;
+      _selectedLodgingIndex = null;
+    });
+    if (map != null) {
+      if (stageWasSelected) await _drawStages(map);
+      if (lodgingWasSelected && _lodgingsVisible) await _drawLodgings(map);
     }
-    setState(() => _selectedLodgingScreenPosition = position);
+  }
+
+  void _clearSelectedExcursion() {
+    if (!mounted) return;
+    setState(() => _selectedExcursionIndex = null);
+  }
+
+  Future<void> _selectDetour(int routeIndex) async {
+    if (routeIndex < 0 || routeIndex >= _mappedDetours.length) return;
+    final map = _map;
+    final stageWasSelected = _selectedStageIndex != null;
+    final lodgingWasSelected = _selectedLodgingIndex != null;
+    setState(() {
+      _selectedDetourIndex = routeIndex;
+      _selectedExcursionIndex = null;
+      _selectedStageIndex = null;
+      _selectedLodgingIndex = null;
+    });
+    if (map != null) {
+      if (stageWasSelected) await _drawStages(map);
+      if (lodgingWasSelected && _lodgingsVisible) await _drawLodgings(map);
+    }
+  }
+
+  void _clearSelectedDetour() {
+    if (!mounted) return;
+    setState(() => _selectedDetourIndex = null);
   }
 
   Future<void> _openSelectedLodgingBooking() async {
@@ -1569,6 +1776,16 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     }
   }
 
+  Future<void> _openLodgingExternal(Uri uri) async {
+    var launched = false;
+    try {
+      launched = await ref.read(externalUrlLauncherProvider)(uri);
+    } catch (_) {
+      launched = false;
+    }
+    if (!launched) _showMessage('Could not open this link.');
+  }
+
   void _openSelectedStage() {
     final stageIndex = _selectedStageIndex;
     if (stageIndex == null) return;
@@ -1584,6 +1801,97 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
               : null,
         ),
       ),
+    );
+  }
+
+  Future<void> _handleMapTap(MapContentGestureContext gesture) async {
+    final lastAnnotationTapAt = _lastAnnotationTapAt;
+    if (lastAnnotationTapAt != null &&
+        DateTime.now().difference(lastAnnotationTapAt) <
+            const Duration(milliseconds: 250)) {
+      return;
+    }
+    final coordinates = gesture.point.coordinates;
+    final match = findNearbyTrailStage(
+      latitude: coordinates.lat.toDouble(),
+      longitude: coordinates.lng.toDouble(),
+      locationAccuracyM: 0,
+      routePoints: widget.points,
+      stages: widget.stages,
+      direction: widget.direction,
+      proximityThresholdM: mapTrailTapToleranceM(_currentZoom),
+    );
+    if (match == null || !mounted) return;
+    final stageIndex = widget.stages.indexWhere(
+      (stage) => stage.id == match.stageId,
+    );
+    if (stageIndex >= 0) await _selectStage(stageIndex);
+  }
+
+  void _recordAnnotationTap() {
+    _lastAnnotationTapAt = DateTime.now();
+  }
+
+  Future<void> _handleMapIdle() async {
+    if (_updatingZoomLayers) return;
+    final map = _map;
+    if (map == null) return;
+    _updatingZoomLayers = true;
+    try {
+      final camera = await map.getCameraState();
+      if (!mounted) return;
+      final previousZoom = _currentZoom;
+      final nextZoom = camera.zoom;
+      final nextStride = mapStageVisibilityStride(nextZoom);
+      _currentZoom = nextZoom;
+      if (_stagesVisible && nextStride != _currentStageVisibilityStride) {
+        _currentStageVisibilityStride = nextStride;
+        await _drawStages(map);
+      } else {
+        _currentStageVisibilityStride = nextStride;
+      }
+      final crossedDirectionThreshold =
+          (previousZoom < _directionMarkerMinimumZoom) !=
+          (nextZoom < _directionMarkerMinimumZoom);
+      if (crossedDirectionThreshold) await _drawDirectionMarkers(map);
+    } catch (_) {
+      // Camera-dependent decoration should never interrupt map interaction.
+    } finally {
+      _updatingZoomLayers = false;
+    }
+  }
+
+  Future<void> _openLayersSheet() async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            Future<void> toggle(Future<void> Function() action) async {
+              await action();
+              if (sheetContext.mounted) setSheetState(() {});
+            }
+
+            return _MapLayersSheet(
+              stagesVisible: _stagesVisible,
+              lodgingsVisible: _lodgingsVisible,
+              excursionsVisible: _excursionsVisible,
+              detoursVisible: _detoursVisible,
+              stagesBusy: _changingStageVisibility,
+              lodgingsBusy: _changingLodgingVisibility,
+              excursionsBusy: _changingExcursionVisibility,
+              detoursBusy: _changingDetourVisibility,
+              onToggleStages: () => toggle(_toggleStages),
+              onToggleLodgings: () => toggle(_toggleLodgings),
+              onToggleExcursions: () => toggle(_toggleExcursions),
+              onToggleDetours: () => toggle(_toggleDetours),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1612,8 +1920,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         infiniteBounds: false,
       ),
       portrait
-          ? MbxEdgeInsets(top: 76, left: 44, bottom: 102, right: 72)
-          : MbxEdgeInsets(top: 48, left: 44, bottom: 82, right: 72),
+          ? MbxEdgeInsets(top: 56, left: 24, bottom: 78, right: 48)
+          : MbxEdgeInsets(top: 38, left: 30, bottom: 60, right: 48),
       bearing,
       0,
       null,
@@ -1689,7 +1997,16 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     await map.flyTo(camera, MapAnimationOptions(duration: 700, startDelay: 0));
   }
 
-  Future<void> _showCurrentLocation() async {
+  Future<void> _toggleCurrentLocation() async {
+    if (_locating) return;
+    if (_locationTrackingActive) {
+      await _stopLocationTracking();
+      return;
+    }
+    await _startLocationTracking();
+  }
+
+  Future<void> _startLocationTracking({bool focus = true}) async {
     if (_locating) return;
     setState(() => _locating = true);
     try {
@@ -1716,21 +2033,93 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       final map = _map;
       if (map == null) return;
       await _enableLocationPuck();
-      await map.flyTo(
-        CameraOptions(
-          center: Point(
-            coordinates: Position(position.longitude, position.latitude),
-          ),
-          zoom: 14,
-          bearing: 0,
-        ),
-        MapAnimationOptions(duration: 700, startDelay: 0),
-      );
+      if (!mounted) return;
+      setState(() => _locationTrackingActive = true);
+      await _handleGpsPosition(position, focus: focus);
+      await _positionSubscription?.cancel();
+      _positionSubscription =
+          geo.Geolocator.getPositionStream(
+            locationSettings: const geo.LocationSettings(
+              accuracy: geo.LocationAccuracy.high,
+              distanceFilter: 10,
+            ),
+          ).listen(
+            (nextPosition) => _handleGpsPosition(nextPosition),
+            onError: (_) {
+              if (mounted) {
+                _showMessage('Your location could not be read right now.');
+              }
+            },
+          );
     } catch (_) {
       _showMessage('Your location could not be read right now.');
+      if (mounted) setState(() => _locationTrackingActive = false);
     } finally {
       if (mounted) setState(() => _locating = false);
     }
+  }
+
+  Future<void> _stopLocationTracking() async {
+    await _positionSubscription?.cancel();
+    _positionSubscription = null;
+    final map = _map;
+    if (map != null) {
+      try {
+        await map.location.updateSettings(
+          LocationComponentSettings(enabled: false),
+        );
+      } catch (_) {
+        // The native location component may already have been disposed.
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _locationTrackingActive = false;
+      _gpsNearestStageIndex = null;
+      _gpsDistanceFromTrailM = null;
+    });
+  }
+
+  Future<void> _handleGpsPosition(
+    geo.Position position, {
+    bool focus = true,
+  }) async {
+    if (!mounted || !_locationTrackingActive) return;
+    final match = findNearbyTrailStage(
+      latitude: position.latitude,
+      longitude: position.longitude,
+      locationAccuracyM: position.accuracy,
+      routePoints: widget.points,
+      stages: widget.stages,
+      direction: widget.direction,
+      proximityThresholdM: 100000,
+    );
+    final distanceM = distanceFromTrailM(
+      latitude: position.latitude,
+      longitude: position.longitude,
+      routePoints: widget.points,
+    );
+    final stageIndex = match == null
+        ? -1
+        : widget.stages.indexWhere((stage) => stage.id == match.stageId);
+    if (mounted) {
+      setState(() {
+        _gpsNearestStageIndex = stageIndex < 0 ? null : stageIndex;
+        _gpsDistanceFromTrailM = distanceM;
+      });
+    }
+    final map = _map;
+    if (!focus || map == null || !_locationTrackingActive) return;
+    await map.easeTo(
+      CameraOptions(
+        center: Point(
+          coordinates: Position(position.longitude, position.latitude),
+        ),
+        zoom: math.max(_currentZoom, 14),
+        bearing: 0,
+      ),
+      MapAnimationOptions(duration: 650, startDelay: 0),
+    );
   }
 
   Future<void> _enableLocationPuck() async {
@@ -1746,6 +2135,31 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     );
   }
 
+  String _gpsStatusText(BuildContext context) {
+    final distanceM = _gpsDistanceFromTrailM;
+    final stageIndex = _gpsNearestStageIndex;
+    if (stageIndex != null &&
+        stageIndex >= 0 &&
+        stageIndex < widget.stages.length) {
+      final distance = distanceM == null
+          ? null
+          : widget.formatter.altitude(distanceM);
+      if (distance != null) {
+        return context.l10n.nearStageDistance(
+          widget.stages[stageIndex].name,
+          distance,
+        );
+      }
+      return widget.stages[stageIndex].name;
+    }
+    if (distanceM != null) {
+      return context.l10n.offTrailDistance(
+        widget.formatter.altitude(distanceM),
+      );
+    }
+    return context.l10n.t('My location');
+  }
+
   void _showMessage(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -1757,19 +2171,23 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final hasSelection =
+            _selectedStageIndex != null ||
+            _selectedLodgingIndex != null ||
+            _selectedExcursionIndex != null ||
+            _selectedDetourIndex != null;
+        final hasActiveLayers =
+            _stagesVisible ||
+            _lodgingsVisible ||
+            _excursionsVisible ||
+            _detoursVisible;
         if (_lastMapSize != constraints.biggest) {
           _lastMapSize = constraints.biggest;
           final selectedStageIndex = _selectedStageIndex;
-          final selectedLodgingIndex = _selectedLodgingIndex;
-          if ((selectedStageIndex != null && !_stagesExplicitlyHidden) ||
-              (selectedLodgingIndex != null && _lodgingsVisible)) {
+          if (selectedStageIndex != null && !_stagesExplicitlyHidden) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && _selectedStageIndex == selectedStageIndex) {
-                if (selectedStageIndex != null) {
-                  _focusStage(selectedStageIndex);
-                } else if (_selectedLodgingIndex == selectedLodgingIndex) {
-                  _updateSelectedLodgingPosition();
-                }
+                _focusStage(selectedStageIndex);
               }
             });
           }
@@ -1782,131 +2200,84 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
               viewport: _initialViewport,
               onMapCreated: _onMapCreated,
               onMapLoadedListener: _onMapLoaded,
-              onMapIdleListener: (_) {
-                _updateSelectedLodgingPosition();
-              },
+              onMapIdleListener: (_) => _handleMapIdle(),
             ),
-            if (_selectedLodgingIndex != null &&
-                _selectedLodgingScreenPosition != null)
-              _LodgingSummaryPopup(
-                lodging: _mappedLodgings[_selectedLodgingIndex!],
-                formatter: widget.formatter,
-                mapPosition: _selectedLodgingScreenPosition!,
-                mapSize: constraints.biggest,
-                onTap: _openSelectedLodgingBooking,
-                onClose: _clearSelectedLodging,
+            if (!hasSelection)
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 18,
+                child: Center(
+                  child: Container(
+                    key: const ValueKey('map-trail-summary'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _ink.withValues(alpha: 0.88),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _locationTrackingActive
+                              ? Icons.my_location_rounded
+                              : Icons.hiking_rounded,
+                          size: 15,
+                          color: _locationTrackingActive
+                              ? Colors.lightBlueAccent
+                              : _routeBlue,
+                        ),
+                        const SizedBox(width: 7),
+                        Flexible(
+                          child: Text(
+                            _locationTrackingActive
+                                ? _gpsStatusText(context)
+                                : '${context.l10n.t('Cyprus E4')} · ${widget.formatter.distance(widget.points.last.distanceKm, decimals: 0)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             Positioned(
-              top: 12,
               right: 12,
-              child: Container(
-                key: const ValueKey('map-trail-summary'),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: _ink.withValues(alpha: 0.88),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 22,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: _routeBlue,
-                        borderRadius: BorderRadius.circular(2),
-                        border: Border.all(color: Colors.white, width: 0.7),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Cyprus E4 · ${widget.formatter.distance(widget.points.last.distanceKm, decimals: 0)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              right: 12,
-              bottom: _selectedStageIndex == null ? 28 : 116,
+              bottom: hasSelection ? 116 : 90,
               child: Column(
                 children: [
                   _MapControl(
-                    key: const ValueKey('map-detour-toggle'),
-                    tooltip: context.l10n.t(
-                      _detoursVisible ? 'Hide detours' : 'Show detours',
-                    ),
-                    icon: _changingDetourVisibility
-                        ? null
-                        : Icons.fork_right_rounded,
-                    isSelected: _detoursVisible,
-                    selectedColor: _detourPurple,
-                    onPressed: _toggleDetours,
+                    key: const ValueKey('map-layers-control'),
+                    tooltip: context.l10n.t('Map layers'),
+                    icon: Icons.layers_outlined,
+                    isSelected: hasActiveLayers,
+                    selectedColor: EurotrexPalette.navy,
+                    onPressed: _openLayersSheet,
                   ),
                   const SizedBox(height: 10),
                   _MapControl(
-                    key: const ValueKey('map-excursion-toggle'),
-                    tooltip: context.l10n.t(
-                      _excursionsVisible
-                          ? 'Hide excursions'
-                          : 'Show excursions',
-                    ),
-                    icon: _changingExcursionVisibility
-                        ? null
-                        : Icons.alt_route_rounded,
-                    isSelected: _excursionsVisible,
-                    selectedColor: _excursionLightBlue,
-                    selectedForegroundColor: _excursionBlueTeal,
-                    onPressed: _toggleExcursions,
-                  ),
-                  const SizedBox(height: 10),
-                  _MapControl(
-                    key: const ValueKey('map-accommodation-toggle'),
-                    tooltip: context.l10n.t(
-                      _lodgingsVisible
-                          ? 'Hide accommodation'
-                          : 'Show accommodation',
-                    ),
-                    icon: _changingLodgingVisibility
-                        ? null
-                        : _lodgingsVisible
-                        ? Icons.hotel_rounded
-                        : Icons.hotel_outlined,
-                    isSelected: _lodgingsVisible,
-                    onPressed: _toggleLodgings,
-                  ),
-                  const SizedBox(height: 10),
-                  _MapControl(
-                    key: const ValueKey('map-stage-toggle'),
-                    tooltip: context.l10n.t(
-                      _stagesVisible ? 'Hide stages' : 'Show stages',
-                    ),
-                    icon: _changingStageVisibility
-                        ? null
-                        : _stagesVisible
-                        ? Icons.location_on_rounded
-                        : Icons.location_on_outlined,
-                    onPressed: _toggleStages,
-                  ),
-                  const SizedBox(height: 10),
-                  _MapControl(
+                    key: const ValueKey('map-fit-trail-control'),
                     tooltip: context.l10n.t('Show the whole trail'),
                     icon: Icons.hiking_rounded,
                     onPressed: _fitRoute,
                   ),
                   const SizedBox(height: 10),
                   _MapControl(
+                    key: const ValueKey('map-location-control'),
                     tooltip: context.l10n.t('My location'),
                     icon: _locating ? null : Icons.my_location_rounded,
-                    onPressed: _showCurrentLocation,
+                    isSelected: _locationTrackingActive,
+                    selectedColor: EurotrexPalette.blue,
+                    onPressed: _toggleCurrentLocation,
                   ),
                 ],
               ),
@@ -1938,9 +2309,848 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
                 onOpenDetails: _openSelectedStage,
                 onClose: _clearSelectedStage,
               ),
+            if (_selectedLodgingIndex case final lodgingIndex?)
+              MapLodgingInfoSheet(
+                lodging: _mappedLodgings[lodgingIndex],
+                formatter: widget.formatter,
+                onBook: _openSelectedLodgingBooking,
+                onOpenExternal: _openLodgingExternal,
+                onClose: _clearSelectedLodging,
+              ),
+            if (_selectedExcursionIndex case final excursionIndex?)
+              MapAlternativeRouteInfoSheet.excursion(
+                route: _mappedExcursions[excursionIndex],
+                formatter: widget.formatter,
+                onClose: _clearSelectedExcursion,
+              ),
+            if (_selectedDetourIndex case final detourIndex?)
+              MapAlternativeRouteInfoSheet.detour(
+                route: _mappedDetours[detourIndex],
+                formatter: widget.formatter,
+                onClose: _clearSelectedDetour,
+              ),
           ],
         );
       },
+    );
+  }
+}
+
+class _MapLayersSheet extends StatelessWidget {
+  const _MapLayersSheet({
+    required this.stagesVisible,
+    required this.lodgingsVisible,
+    required this.excursionsVisible,
+    required this.detoursVisible,
+    required this.stagesBusy,
+    required this.lodgingsBusy,
+    required this.excursionsBusy,
+    required this.detoursBusy,
+    required this.onToggleStages,
+    required this.onToggleLodgings,
+    required this.onToggleExcursions,
+    required this.onToggleDetours,
+  });
+
+  final bool stagesVisible;
+  final bool lodgingsVisible;
+  final bool excursionsVisible;
+  final bool detoursVisible;
+  final bool stagesBusy;
+  final bool lodgingsBusy;
+  final bool excursionsBusy;
+  final bool detoursBusy;
+  final VoidCallback onToggleStages;
+  final VoidCallback onToggleLodgings;
+  final VoidCallback onToggleExcursions;
+  final VoidCallback onToggleDetours;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Material(
+      key: const ValueKey('map-layers-sheet'),
+      color: _sand,
+      elevation: 14,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          10,
+          16,
+          12 + MediaQuery.paddingOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(Icons.layers_outlined, color: EurotrexPalette.navy),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    l10n.t('Map layers'),
+                    style: const TextStyle(
+                      color: EurotrexPalette.navy,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: l10n.t('Close'),
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            _MapLayerRow(
+              key: const ValueKey('map-layer-stages'),
+              label: l10n.t('Stages'),
+              icon: Icons.location_on_outlined,
+              color: _green,
+              selected: stagesVisible,
+              busy: stagesBusy,
+              onTap: onToggleStages,
+            ),
+            _MapLayerRow(
+              key: const ValueKey('map-layer-accommodation'),
+              label: l10n.t('Accommodation'),
+              icon: Icons.hotel_outlined,
+              color: _accommodationBlue,
+              selected: lodgingsVisible,
+              busy: lodgingsBusy,
+              onTap: onToggleLodgings,
+            ),
+            _MapLayerRow(
+              key: const ValueKey('map-layer-excursions'),
+              label: l10n.t('Excursions'),
+              icon: Icons.alt_route_rounded,
+              color: _excursionBlueTeal,
+              selected: excursionsVisible,
+              busy: excursionsBusy,
+              onTap: onToggleExcursions,
+            ),
+            _MapLayerRow(
+              key: const ValueKey('map-layer-detours'),
+              label: l10n.t('Detours'),
+              icon: Icons.fork_right_rounded,
+              color: _detourPurple,
+              selected: detoursVisible,
+              busy: detoursBusy,
+              onTap: onToggleDetours,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MapLayerRow extends StatelessWidget {
+  const _MapLayerRow({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.selected,
+    required this.busy,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool selected;
+  final bool busy;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: busy ? null : onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 7, 8, 7),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: selected ? 0.18 : 0.09),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      color: _ink,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (busy)
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else
+                  Switch.adaptive(
+                    value: selected,
+                    activeTrackColor: color,
+                    onChanged: (_) => onTap(),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class MapLodgingInfoSheet extends StatelessWidget {
+  const MapLodgingInfoSheet({
+    required this.lodging,
+    required this.formatter,
+    required this.onBook,
+    this.onOpenExternal,
+    required this.onClose,
+    super.key,
+  });
+
+  final Lodging lodging;
+  final MeasurementFormatter formatter;
+  final VoidCallback onBook;
+  final ValueChanged<Uri>? onOpenExternal;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final name = lodging.name?.trim();
+    final type = lodging.type?.trim();
+    final village = lodging.village?.trim();
+    final address = lodging.address?.trim();
+    final phoneUri = lodging.phoneUri;
+    final emailUri = lodging.emailUri;
+    final phone = lodging.dialingPhoneNumber;
+    final email = lodging.email?.trim();
+    final details = [
+      if (type != null && type.isNotEmpty) l10n.t(type),
+      if (village != null && village.isNotEmpty) l10n.t(village),
+      if (lodging.distanceFromTrailKm case final distance?)
+        formatter.distance(distance),
+    ];
+    final facts = <_MapLodgingFactData>[
+      if (_formatMapLodgingPrice(lodging, l10n) case final price?)
+        _MapLodgingFactData(
+          icon: Icons.euro_rounded,
+          label: l10n.t('Price'),
+          value: price,
+        ),
+      if (_mapNonEmpty(lodging.monthsOpen) case final season?)
+        _MapLodgingFactData(
+          icon: Icons.calendar_month_rounded,
+          label: l10n.t('Season'),
+          value: l10n.t(season),
+        ),
+      if (_mapLodgingOpeningHours(lodging) case final hours?)
+        _MapLodgingFactData(
+          icon: Icons.schedule_rounded,
+          label: l10n.t('Opening hours'),
+          value: hours,
+        ),
+      if (lodging.capacityPeople case final capacity?)
+        _MapLodgingFactData(
+          icon: Icons.groups_rounded,
+          label: l10n.t('Capacity'),
+          value: '$capacity ${l10n.t(capacity == 1 ? 'person' : 'people')}',
+        ),
+      if (_mapMeaningfulTime(lodging.checkInTime) case final checkIn?)
+        _MapLodgingFactData(
+          icon: Icons.login_rounded,
+          label: l10n.t('Check-in'),
+          value: checkIn,
+        ),
+      if (_mapMeaningfulTime(lodging.checkOutTime) case final checkOut?)
+        _MapLodgingFactData(
+          icon: Icons.logout_rounded,
+          label: l10n.t('Check-out'),
+          value: checkOut,
+        ),
+    ];
+    return _MapSelectionSheet(
+      key: ValueKey('map-lodging-info-sheet-${lodging.id}'),
+      title: name == null || name.isEmpty
+          ? l10n.t('Accommodation')
+          : l10n.t(name),
+      subtitle: details.join(' · '),
+      icon: Icons.hotel_rounded,
+      accentColor: _accommodationBlue,
+      onClose: onClose,
+      children: [
+        Row(
+          key: ValueKey('map-lodging-contact-actions-${lodging.id}'),
+          children: [
+            _MapContactActionButton(
+              key: ValueKey('map-call-lodging-${lodging.id}'),
+              tooltip: phoneUri == null
+                  ? l10n.t('Phone')
+                  : '${l10n.t('Phone')}: ${_formatMapPhoneForDisplay(phone!)}',
+              icon: Icons.phone_outlined,
+              onTap: phoneUri == null || onOpenExternal == null
+                  ? null
+                  : () => onOpenExternal!(phoneUri),
+            ),
+            const SizedBox(width: 8),
+            _MapContactActionButton(
+              key: ValueKey('map-email-lodging-${lodging.id}'),
+              tooltip: emailUri == null
+                  ? l10n.t('Email')
+                  : '${l10n.t('Email')}: $email',
+              icon: Icons.email_outlined,
+              onTap: emailUri == null || onOpenExternal == null
+                  ? null
+                  : () => onOpenExternal!(emailUri),
+            ),
+          ],
+        ),
+        if (facts.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _MapLodgingFactsRow(facts: facts),
+        ],
+        if (address != null && address.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _MapSelectionDetail(icon: Icons.location_on_outlined, value: address),
+        ],
+        if (lodging.bookingUri != null) ...[
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            key: const ValueKey('map-lodging-book'),
+            onPressed: onBook,
+            style: FilledButton.styleFrom(
+              backgroundColor: EurotrexPalette.blue,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(46),
+            ),
+            icon: const Icon(Icons.open_in_new_rounded),
+            label: Text(l10n.t('Book')),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MapContactActionButton extends StatelessWidget {
+  const _MapContactActionButton({
+    super.key,
+    required this.tooltip,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: enabled
+            ? EurotrexPalette.paleBlue.withValues(alpha: 0.55)
+            : Colors.black.withValues(alpha: 0.035),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: SizedBox.square(
+            dimension: 42,
+            child: Icon(
+              icon,
+              size: 20,
+              color: enabled ? EurotrexPalette.blue : Colors.black26,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MapLodgingFactData {
+  const _MapLodgingFactData({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+}
+
+class _MapLodgingFactsRow extends StatelessWidget {
+  const _MapLodgingFactsRow({required this.facts});
+
+  final List<_MapLodgingFactData> facts;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        border: Border.symmetric(
+          horizontal: BorderSide(
+            color: EurotrexPalette.paleBlue.withValues(alpha: 0.9),
+          ),
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var index = 0; index < facts.length; index++) ...[
+              _MapLodgingFact(data: facts[index]),
+              if (index < facts.length - 1)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 9),
+                  child: Text(
+                    '|',
+                    style: TextStyle(
+                      color: EurotrexPalette.navy.withValues(alpha: 0.24),
+                      fontSize: 20,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MapLodgingFact extends StatelessWidget {
+  const _MapLodgingFact({required this.data});
+
+  final _MapLodgingFactData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: data.label,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(data.icon, size: 15, color: EurotrexPalette.blue),
+          const SizedBox(width: 5),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                data.label,
+                style: TextStyle(
+                  fontSize: 8.5,
+                  color: EurotrexPalette.navy.withValues(alpha: 0.62),
+                ),
+              ),
+              Text(
+                data.value,
+                style: const TextStyle(
+                  color: EurotrexPalette.navy,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String? _mapNonEmpty(String? value) {
+  final trimmed = value?.trim();
+  return trimmed == null || trimmed.isEmpty ? null : trimmed;
+}
+
+String? _mapMeaningfulTime(String? value) {
+  final time = _mapNonEmpty(value);
+  return time == '00:00' || time == '0:00' ? null : time;
+}
+
+String? _mapLodgingOpeningHours(Lodging lodging) {
+  final opening = _mapMeaningfulTime(lodging.openingTime);
+  final closing = _mapMeaningfulTime(lodging.closingTime);
+  if (opening == null) return closing;
+  if (closing == null) return opening;
+  return '$opening–$closing';
+}
+
+String? _formatMapLodgingPrice(Lodging lodging, AppLocalizations l10n) {
+  final minimum = lodging.priceMinEur;
+  final maximum = lodging.priceMaxEur;
+  if (minimum != null || maximum != null) {
+    final low = minimum ?? maximum!;
+    final high = maximum ?? minimum!;
+    if (low == 0 && high == 0) return l10n.t('Free');
+    return _formatMapEuro(low, high > low ? high : null, l10n);
+  }
+  return _mapNonEmpty(lodging.minPriceText);
+}
+
+String _formatMapEuro(double minimum, double? maximum, AppLocalizations l10n) {
+  final low = _formatMapNumber(minimum, l10n);
+  final high = maximum == null ? null : _formatMapNumber(maximum, l10n);
+  if (const {'de', 'es', 'it', 'fr'}.contains(l10n.locale.languageCode)) {
+    return '${high == null ? low : '$low–$high'}\u00a0€';
+  }
+  return high == null ? '€$low' : '€$low–€$high';
+}
+
+String _formatMapNumber(double value, AppLocalizations l10n) {
+  final amount = value == value.roundToDouble()
+      ? value.toStringAsFixed(0)
+      : value.toStringAsFixed(2);
+  return const {'de', 'es', 'it', 'fr'}.contains(l10n.locale.languageCode)
+      ? amount.replaceFirst('.', ',')
+      : amount;
+}
+
+String _formatMapPhoneForDisplay(String number) {
+  if (!number.startsWith('+357')) return number;
+  final national = number.substring(4);
+  if (national.length != 8) return '+357 $national';
+  return '+357 ${national.substring(0, 2)} '
+      '${national.substring(2, 5)} ${national.substring(5)}';
+}
+
+class MapAlternativeRouteInfoSheet extends StatelessWidget {
+  const MapAlternativeRouteInfoSheet.excursion({
+    required TrailExcursionRoute route,
+    required this.formatter,
+    required this.onClose,
+    super.key,
+  }) : excursionRoute = route,
+       detourRoute = null;
+
+  const MapAlternativeRouteInfoSheet.detour({
+    required TrailDetourRoute route,
+    required this.formatter,
+    required this.onClose,
+    super.key,
+  }) : detourRoute = route,
+       excursionRoute = null;
+
+  final TrailExcursionRoute? excursionRoute;
+  final TrailDetourRoute? detourRoute;
+  final MeasurementFormatter formatter;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final excursion = excursionRoute?.excursion;
+    final detour = detourRoute?.detour;
+    final isExcursion = excursion != null;
+    final title = excursion?.displayName ?? detour!.name;
+    final distanceKm = excursion?.routeDistanceKm ?? detour!.routeDistanceKm;
+    final walkingMinutes =
+        excursion?.estimatedWalkingTimeMinutes ??
+        detour!.estimatedWalkingTimeMinutes;
+    final ascentM = excursion?.elevationUpM ?? detour!.elevationUpM;
+    final descentM = excursion?.elevationDownM ?? detour!.elevationDownM;
+    return _MapSelectionSheet(
+      key: ValueKey(
+        'map-alternative-route-sheet-${excursion?.id ?? detour?.id}',
+      ),
+      title: title,
+      subtitle: l10n.t(isExcursion ? 'Excursion' : 'Detour'),
+      icon: isExcursion ? Icons.alt_route_rounded : Icons.fork_right_rounded,
+      accentColor: isExcursion ? _excursionBlueTeal : _detourPurple,
+      onClose: onClose,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _MapMetricChip(
+              icon: Icons.route_outlined,
+              value: formatter.distance(distanceKm),
+            ),
+            _MapMetricChip(
+              icon: Icons.schedule_rounded,
+              value: _formatMapWalkingTime(walkingMinutes, l10n),
+            ),
+            _MapMetricChip(
+              icon: Icons.arrow_upward_rounded,
+              value: formatter.altitude(ascentM),
+            ),
+            _MapMetricChip(
+              icon: Icons.arrow_downward_rounded,
+              value: formatter.altitude(descentM),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+String _formatMapWalkingTime(int minutes, AppLocalizations l10n) {
+  final hours = minutes ~/ 60;
+  final remaining = minutes % 60;
+  if (hours == 0) return '$remaining ${l10n.t('min')}';
+  if (remaining == 0) return '$hours ${l10n.t('h')}';
+  return '$hours ${l10n.t('h')} $remaining ${l10n.t('min')}';
+}
+
+class _MapSelectionSheet extends StatefulWidget {
+  const _MapSelectionSheet({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.accentColor,
+    required this.onClose,
+    required this.children,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color accentColor;
+  final VoidCallback onClose;
+  final List<Widget> children;
+
+  @override
+  State<_MapSelectionSheet> createState() => _MapSelectionSheetState();
+}
+
+class _MapSelectionSheetState extends State<_MapSelectionSheet> {
+  static const _compactSize = 0.14;
+  final DraggableScrollableController _controller =
+      DraggableScrollableController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggleExpanded() async {
+    if (!_controller.isAttached) return;
+    await _controller.animateTo(
+      _controller.size < 0.3 ? 0.44 : _compactSize,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: DraggableScrollableSheet(
+        controller: _controller,
+        initialChildSize: _compactSize,
+        minChildSize: 0.11,
+        maxChildSize: 0.62,
+        snap: true,
+        snapSizes: const [_compactSize, 0.44, 0.62],
+        expand: false,
+        builder: (context, scrollController) {
+          return Material(
+            color: _sand,
+            elevation: 12,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: ListView(
+              controller: scrollController,
+              padding: EdgeInsets.only(
+                bottom: 16 + MediaQuery.paddingOf(context).bottom,
+              ),
+              children: [
+                InkWell(
+                  onTap: _toggleExpanded,
+                  child: Ink(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [EurotrexPalette.navy, EurotrexPalette.blue],
+                      ),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.white54,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: widget.accentColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                widget.icon,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  if (widget.subtitle.isNotEmpty)
+                                    Text(
+                                      widget.subtitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: context.l10n.t('Close'),
+                              color: Colors.white,
+                              onPressed: widget.onClose,
+                              icon: const Icon(Icons.close_rounded),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: widget.children,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MapSelectionDetail extends StatelessWidget {
+  const _MapSelectionDetail({required this.icon, required this.value});
+
+  final IconData icon;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: EurotrexPalette.blue),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(value, style: const TextStyle(color: _ink, fontSize: 13)),
+        ),
+      ],
+    );
+  }
+}
+
+class _MapMetricChip extends StatelessWidget {
+  const _MapMetricChip({required this.icon, required this.value});
+
+  final IconData icon;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: EurotrexPalette.blue),
+          const SizedBox(width: 5),
+          Text(
+            value,
+            style: const TextStyle(
+              color: _ink,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -2132,51 +3342,6 @@ class _MapStageInfoSheetState extends State<MapStageInfoSheet> {
   }
 }
 
-class _LodgingSummaryPopup extends StatelessWidget {
-  const _LodgingSummaryPopup({
-    required this.lodging,
-    required this.formatter,
-    required this.mapPosition,
-    required this.mapSize,
-    required this.onTap,
-    required this.onClose,
-  });
-
-  static const double _width = 244;
-  static const double _height = 76;
-
-  final Lodging lodging;
-  final MeasurementFormatter formatter;
-  final ScreenCoordinate mapPosition;
-  final Size mapSize;
-  final VoidCallback onTap;
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context) {
-    final left = (mapPosition.x - _width / 2).clamp(
-      8.0,
-      mapSize.width - _width - 8,
-    );
-    final top = (mapPosition.y - _height - 12).clamp(
-      8.0,
-      mapSize.height - _height - 8,
-    );
-    return Positioned(
-      left: left,
-      top: top,
-      width: _width,
-      height: _height,
-      child: LodgingMapSummaryCard(
-        lodging: lodging,
-        formatter: formatter,
-        onTap: onTap,
-        onClose: onClose,
-      ),
-    );
-  }
-}
-
 class LodgingMapSummaryCard extends StatelessWidget {
   const LodgingMapSummaryCard({
     required this.lodging,
@@ -2286,7 +3451,6 @@ class _MapControl extends StatelessWidget {
     required this.onPressed,
     this.isSelected = false,
     this.selectedColor = _accommodationBlue,
-    this.selectedForegroundColor = Colors.white,
   });
 
   final String tooltip;
@@ -2294,7 +3458,6 @@ class _MapControl extends StatelessWidget {
   final VoidCallback onPressed;
   final bool isSelected;
   final Color selectedColor;
-  final Color selectedForegroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -2310,10 +3473,10 @@ class _MapControl extends StatelessWidget {
                 dimension: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  color: isSelected ? selectedForegroundColor : _ink,
+                  color: isSelected ? Colors.white : _ink,
                 ),
               )
-            : Icon(icon, color: isSelected ? selectedForegroundColor : _ink),
+            : Icon(icon, color: isSelected ? Colors.white : _ink),
       ),
     );
   }

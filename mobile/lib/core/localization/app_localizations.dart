@@ -37,6 +37,10 @@ class AppLocalizations {
     'You are approximately {distance} from the trail.',
   ).replaceAll('{distance}', distance);
 
+  String nearStageDistance(String stage, String distance) => t(
+    'Near {stage} · {distance} from the trail',
+  ).replaceAll('{stage}', stage).replaceAll('{distance}', distance);
+
   String get pafosAirport => t('Pafos Airport');
   String get larnakaAirport => t('Larnaka Airport');
 
@@ -188,6 +192,7 @@ const _translations = <String, Map<String, String>>{
     'Download this trail for offline use':
         'Diesen Weg für die Offline-Nutzung herunterladen',
     'Trail map': 'Wanderkarte',
+    'Map layers': 'Kartenebenen',
     'Refresh elevation data': 'Höhendaten aktualisieren',
     'No elevation data is available.': 'Keine Höhendaten verfügbar.',
     'Could not download the elevation profile.':
@@ -380,6 +385,8 @@ const _translations = <String, Map<String, String>>{
     'Selected stage': 'Ausgewählte Etappe',
     'Other stages': 'Weitere Etappen',
     'My location': 'Mein Standort',
+    'Near {stage} · {distance} from the trail':
+        'Nahe {stage} · {distance} vom Weg',
     'Offline maps': 'Offline-Karten',
     'Downloaded': 'Heruntergeladen',
     'Checking offline maps…': 'Offline-Karten werden geprüft…',
@@ -569,6 +576,7 @@ const _translations = <String, Map<String, String>>{
     'Download this trail for offline use':
         'Descarga esta ruta para usarla sin conexión',
     'Trail map': 'Mapa de la ruta',
+    'Map layers': 'Capas del mapa',
     'Refresh elevation data': 'Actualizar datos de desnivel',
     'No elevation data is available.': 'No hay datos de desnivel.',
     'Could not download the elevation profile.':
@@ -759,6 +767,8 @@ const _translations = <String, Map<String, String>>{
     'Selected stage': 'Etapa seleccionada',
     'Other stages': 'Otras etapas',
     'My location': 'Mi ubicación',
+    'Near {stage} · {distance} from the trail':
+        'Cerca de {stage} · a {distance} de la ruta',
     'Offline maps': 'Mapas sin conexión',
     'Downloaded': 'Descargado',
     'Checking offline maps…': 'Comprobando mapas sin conexión…',

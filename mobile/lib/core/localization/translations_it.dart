@@ -116,6 +116,7 @@ const italianTranslations = <String, String>{
   'Download this trail for offline use':
       'Scarica questo sentiero per utilizzarlo offline',
   'Trail map': 'Mappa del sentiero',
+  'Map layers': 'Livelli della mappa',
   'Refresh elevation data': 'Aggiorna i dati altimetrici',
   'No elevation data is available.': 'Non sono disponibili dati altimetrici.',
   'Could not download the elevation profile.':
@@ -306,6 +307,8 @@ const italianTranslations = <String, String>{
   'Selected stage': 'Tappa selezionata',
   'Other stages': 'Altre tappe',
   'My location': 'La mia posizione',
+  'Near {stage} · {distance} from the trail':
+      'Vicino a {stage} · a {distance} dal sentiero',
   'Offline maps': 'Mappe offline',
   'Downloaded': 'Scaricata',
   'Checking offline maps…': 'Verifica delle mappe offline…',

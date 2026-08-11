@@ -113,6 +113,76 @@ void main() {
     );
   });
 
+  test('selected stage remains visible when the stage layer is hidden', () {
+    expect(
+      mapVisibleIntermediateStageIndexes(
+        locatedStageIndexes: const [0, 1, 2, 3],
+        endpointIndexes: (startIndex: 0, finishIndex: 3),
+        stagesVisible: false,
+        stagesExplicitlyHidden: true,
+        selectedStageIndex: 2,
+      ),
+      [2],
+    );
+  });
+
+  test('stage markers progressively reveal as the map zooms in', () {
+    final indexes = List<int>.generate(16, (index) => index);
+
+    expect(mapStageVisibilityStride(7), 8);
+    expect(mapStageVisibilityStride(9), 4);
+    expect(mapStageVisibilityStride(10), 2);
+    expect(mapStageVisibilityStride(11), 1);
+    expect(
+      mapProgressiveStageIndexes(
+        stageIndexes: indexes,
+        zoom: 7,
+        selectedStageIndex: 7,
+      ),
+      [0, 7, 8],
+    );
+    expect(
+      mapProgressiveStageIndexes(stageIndexes: indexes, zoom: 11),
+      indexes,
+    );
+  });
+
+  test('trail tap tolerance becomes more precise when zoomed in', () {
+    expect(mapTrailTapToleranceM(7), 2200);
+    expect(mapTrailTapToleranceM(9), 900);
+    expect(mapTrailTapToleranceM(11), 350);
+    expect(mapTrailTapToleranceM(13), 180);
+  });
+
+  test('route chevrons reverse their bearing with the trail direction', () {
+    const middle = RoutePoint(
+      pointIndex: 1,
+      lat: 34.8,
+      lng: 33,
+      altitudeM: 10,
+      distanceKm: 50,
+      reverseDistanceKm: 50,
+    );
+    final forward = mapRouteDirectionMarkers(
+      const [west, middle, east],
+      TrailDirection.pafosToLarnaka,
+      spacingKm: 5,
+    );
+    final reversed = mapRouteDirectionMarkers(
+      const [west, middle, east],
+      TrailDirection.larnakaToPafos,
+      spacingKm: 5,
+    );
+
+    expect(forward, hasLength(1));
+    expect(forward.single.bearingDegrees, closeTo(90, 0.5));
+    expect(
+      (reversed.single.bearingDegrees - forward.single.bearingDegrees + 360) %
+          360,
+      closeTo(180, 0.01),
+    );
+  });
+
   test('map stage points use the shared trail-distance colours', () {
     const onTrail = TrailStage(
       id: 'on-trail',
@@ -135,6 +205,16 @@ void main() {
       mapStagePointColor(offTrail, isSelected: true),
       const Color(0xFF1565C0),
     );
+  });
+
+  test('selected accommodation uses a blue outline and a slight zoom', () {
+    expect(
+      mapLodgingMarkerOutlineColor(isSelected: true),
+      EurotrexPalette.blue,
+    );
+    expect(mapLodgingMarkerOutlineColor(isSelected: false), Colors.white);
+    expect(mapLodgingSelectionZoom(11), 11.75);
+    expect(mapLodgingSelectionZoom(14.75), 15);
   });
 
   test('stage snapshot keeps start and finish ordered in reverse', () {
@@ -362,6 +442,79 @@ void main() {
       find.byKey(const ValueKey('lodging-map-summary-forest-inn')),
     );
     expect(tapCount, 1);
+  });
+
+  testWidgets('lodging selection uses the map bottom-sheet actions', (
+    tester,
+  ) async {
+    var bookCount = 0;
+    var closeCount = 0;
+    final openedUris = <Uri>[];
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              const ColoredBox(color: Colors.green),
+              MapLodgingInfoSheet(
+                lodging: const Lodging(
+                  id: 'forest-inn-sheet',
+                  name: 'Forest Inn',
+                  type: 'Guesthouse',
+                  village: 'Troodos',
+                  distanceFromTrailKm: 0.4,
+                  address: 'Forest Road 1',
+                  phone: '99123456',
+                  email: 'stay@example.com',
+                  priceMinEur: 30,
+                  priceMaxEur: 50,
+                  monthsOpen: 'May–October',
+                  openingTime: '08:00',
+                  closingTime: '22:00',
+                  capacityPeople: 4,
+                  checkInTime: '14:00',
+                  checkOutTime: '11:00',
+                  website: 'https://booking.example.com/forest-inn',
+                ),
+                formatter: const MeasurementFormatter(MeasurementSystem.metric),
+                onBook: () => bookCount++,
+                onOpenExternal: openedUris.add,
+                onClose: () => closeCount++,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Forest Inn'), findsOneWidget);
+    expect(find.text('Guesthouse · Troodos · 0.4 km'), findsOneWidget);
+    await tester.drag(find.text('Forest Inn'), const Offset(0, -320));
+    await tester.pumpAndSettle();
+    expect(find.text('Price'), findsOneWidget);
+    expect(find.text('€30–€50'), findsOneWidget);
+    expect(find.text('Check-in'), findsOneWidget);
+    expect(find.text('14:00'), findsOneWidget);
+    expect(find.text('Check-out'), findsOneWidget);
+    expect(find.text('11:00'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('map-call-lodging-forest-inn-sheet')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('map-email-lodging-forest-inn-sheet')),
+    );
+    expect(openedUris, [
+      Uri.parse('tel:+35799123456'),
+      Uri.parse('mailto:stay@example.com'),
+    ]);
+    await tester.tap(find.byKey(const ValueKey('map-lodging-book')));
+    expect(bookCount, 1);
+    await tester.tap(find.byTooltip('Close'));
+    expect(closeCount, 1);
   });
 
   testWidgets('lodging map summary localizes an unavailable booking link', (

@@ -151,6 +151,25 @@ void main() {
       expect(result, isNull);
     });
 
+    test(
+      'supports a wider map-tap tolerance without changing GPS defaults',
+      () {
+        final result = findNearbyTrailStage(
+          latitude: 35.002,
+          longitude: _longitudeAtDistance(5),
+          locationAccuracyM: 5,
+          routePoints: _sectionRoute,
+          stages: _sectionStages,
+          direction: TrailDirection.pafosToLarnaka,
+          proximityThresholdM: 300,
+        );
+
+        expect(result, isNotNull);
+        expect(result!.stageId, 'long-leg-end');
+        expect(result.distanceFromTrailM, inInclusiveRange(220, 225));
+      },
+    );
+
     test('uses reported accuracy to expand the trail tolerance', () {
       const latitudeAbout130MetersFromTrail = 35.00117;
 

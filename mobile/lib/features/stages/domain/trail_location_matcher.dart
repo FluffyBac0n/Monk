@@ -68,6 +68,7 @@ NearbyTrailStage? findNearbyTrailStage({
   required List<RoutePoint> routePoints,
   required List<TrailStage> stages,
   required TrailDirection direction,
+  double? proximityThresholdM,
 }) {
   if (!latitude.isFinite ||
       !longitude.isFinite ||
@@ -93,10 +94,13 @@ NearbyTrailStage? findNearbyTrailStage({
   final accuracyAllowanceM = locationAccuracyM.isFinite
       ? locationAccuracyM.clamp(0, maximumUsableLocationAccuracyM)
       : 0.0;
-  final trailToleranceM = math.max(
-    defaultTrailProximityM,
-    accuracyAllowanceM + 25,
-  );
+  final requestedThreshold = proximityThresholdM;
+  final trailToleranceM =
+      requestedThreshold != null &&
+          requestedThreshold.isFinite &&
+          requestedThreshold > 0
+      ? requestedThreshold
+      : math.max(defaultTrailProximityM, accuracyAllowanceM + 25);
   if (match.distanceM > trailToleranceM) return null;
 
   return NearbyTrailStage(
