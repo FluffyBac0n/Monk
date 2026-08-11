@@ -559,7 +559,7 @@ void main() {
     );
     expect(
       tester.widget<Padding>(trailHeaderContent).padding,
-      const EdgeInsets.all(16),
+      const EdgeInsets.fromLTRB(16, 14, 16, 14),
     );
     final trailWatermark = find.byKey(
       const ValueKey('trail-card-watermark-cyprus-e4'),
@@ -572,7 +572,8 @@ void main() {
       (tester.widget<Image>(trailWatermark).image as AssetImage).assetName,
       'assets/branding/cyprus_e4_forest.jpg',
     );
-    expect(tester.getSize(trailHeader).height, greaterThanOrEqualTo(165));
+    expect(tester.getSize(trailHeader).height, greaterThanOrEqualTo(150));
+    expect(tester.getSize(trailHeader).height, lessThan(165));
     final trailWatermarkFade = find.byKey(
       const ValueKey('trail-card-watermark-fade-cyprus-e4'),
     );
@@ -695,20 +696,19 @@ void main() {
     );
 
     final website = find.byKey(const ValueKey('about-website'));
-    await tester.scrollUntilVisible(
-      website,
-      300,
-      scrollable: find.byType(Scrollable).last,
+    expect(find.byType(FilledButton), findsWidgets);
+    expect(
+      Theme.of(tester.element(website)).colorScheme.primary,
+      EurotrexPalette.blue,
     );
+    await tester.ensureVisible(website);
+    await tester.pumpAndSettle();
     await tester.tap(website);
     await tester.pump();
 
     final suggestions = find.byKey(const ValueKey('about-suggestions-email'));
-    await tester.scrollUntilVisible(
-      suggestions,
-      300,
-      scrollable: find.byType(Scrollable).last,
-    );
+    await tester.ensureVisible(suggestions);
+    await tester.pumpAndSettle();
     await tester.tap(suggestions);
     await tester.pump();
 
@@ -743,9 +743,11 @@ void main() {
       final suggestions = find.byKey(const ValueKey('about-suggestions-email'));
       await tester.scrollUntilVisible(
         suggestions,
-        300,
+        350,
         scrollable: find.byType(Scrollable).last,
       );
+      await tester.drag(find.byType(Scrollable).last, const Offset(0, -80));
+      await tester.pumpAndSettle();
       await tester.tap(suggestions);
       await tester.pump();
 
@@ -1899,6 +1901,20 @@ void main() {
     expect(troodosNumber, findsOneWidget);
     expect(tester.widget<Text>(troodosNumber).data, '2');
     expect(tester.widget<Text>(troodosNumber).style?.fontSize, 12);
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
+    await tester.pumpAndSettle();
+    final draggableFilter = find.byKey(
+      const ValueKey('stage-filter-draggable-sheet'),
+    );
+    expect(draggableFilter, findsOneWidget);
+    await tester.drag(draggableFilter, const Offset(0, 520));
+    await tester.pumpAndSettle();
+    expect(draggableFilter, findsNothing);
+    expect(
+      find.byKey(const ValueKey('stage-bottom-navigation')),
+      findsOneWidget,
+    );
+
     await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
     await tester.pumpAndSettle();
     expect(find.text('Filter stages'), findsNothing);
@@ -3110,6 +3126,19 @@ void main() {
       ).colorScheme.primary,
       EurotrexPalette.blue,
     );
+    final languageSelector = tester.widget<DropdownButton<AppLanguage>>(
+      find.byKey(const Key('language-setting')),
+    );
+    expect(languageSelector.isExpanded, isTrue);
+    expect(languageSelector.dropdownColor, const Color(0xFFFBFAF6));
+    expect(languageSelector.borderRadius, BorderRadius.circular(16));
+    expect(
+      languageSelector.style?.fontSize,
+      Theme.of(
+        tester.element(find.byKey(const Key('measurement-setting'))),
+      ).textTheme.labelLarge?.fontSize,
+    );
+    expect(find.byKey(const ValueKey('language-flag-en')), findsOneWidget);
     expect(
       find.byKey(const Key('settings-delete-offline-maps')),
       findsOneWidget,
@@ -3168,6 +3197,7 @@ void main() {
   testWidgets('elevation stage markers can be shown and hidden', (
     tester,
   ) async {
+    _FakeElevationController.refreshCount = 0;
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -3178,6 +3208,35 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+
+    final controls = tester.widget<Container>(
+      find.byKey(const ValueKey('elevation-controls')),
+    );
+    expect((controls.decoration! as BoxDecoration).color, EurotrexPalette.navy);
+    final chartCard = tester.widget<Container>(
+      find.byKey(const ValueKey('elevation-chart-card')),
+    );
+    expect(
+      ((chartCard.decoration! as BoxDecoration).border! as Border).top.color,
+      EurotrexPalette.paleBlue,
+    );
+    expect(find.byTooltip('Refresh elevation data'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('elevation-trail-distance')),
+        matching: find.byIcon(Icons.hiking_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('The Troodos section contains'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('elevation-pull-to-refresh')),
+      findsOneWidget,
+    );
+
+    await tester.drag(find.byType(ListView), const Offset(0, 320));
+    await tester.pumpAndSettle();
+    expect(_FakeElevationController.refreshCount, 1);
 
     expect(
       find.descendant(
@@ -3200,6 +3259,7 @@ void main() {
     final chart = tester.widget<LineChart>(find.byType(LineChart));
     expect(chart.transformationConfig.scaleAxis, FlScaleAxis.horizontal);
     expect(chart.transformationConfig.maxScale, 15);
+    expect(chart.data.lineBarsData.first.color, EurotrexPalette.blue);
     final transformationController =
         chart.transformationConfig.transformationController!;
     final chartCenter = tester.getCenter(find.byType(LineChart));
@@ -3263,6 +3323,45 @@ void main() {
     );
   });
 
+  testWidgets('elevation profile uses altitude contour bands', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          elevationProvider.overrideWith(_ContourElevationController.new),
+          stagesProvider.overrideWith(_FakeStagesController.new),
+        ],
+        child: const MaterialApp(home: ElevationScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<LineChart>(find.byType(LineChart));
+    final gradient =
+        chart.data.lineBarsData.first.belowBarData.gradient! as LinearGradient;
+    expect(gradient.begin, Alignment.bottomCenter);
+    expect(gradient.end, Alignment.topCenter);
+    expect(gradient.colors, const [
+      Color(0x737DC8C1),
+      Color(0x737DC8C1),
+      Color(0x7396C77D),
+      Color(0x7396C77D),
+      Color(0x73CCBD69),
+      Color(0x73CCBD69),
+      Color(0x73D89B55),
+      Color(0x73D89B55),
+    ]);
+    expect(gradient.stops, const [
+      0,
+      0.2,
+      0.2,
+      0.4666666666666667,
+      0.4666666666666667,
+      0.8,
+      0.8,
+      1,
+    ]);
+  });
+
   testWidgets('map hides provider details when configuration is missing', (
     tester,
   ) async {
@@ -3282,6 +3381,8 @@ void main() {
 }
 
 class _FakeElevationController extends ElevationController {
+  static int refreshCount = 0;
+
   @override
   Future<List<RoutePoint>> build() async => const [
     RoutePoint(
@@ -3298,6 +3399,57 @@ class _FakeElevationController extends ElevationController {
       lng: 32.5,
       altitudeM: 100,
       distanceKm: 10,
+      reverseDistanceKm: 0,
+    ),
+  ];
+
+  @override
+  Future<void> refresh() async {
+    refreshCount += 1;
+  }
+}
+
+class _ContourElevationController extends ElevationController {
+  @override
+  Future<List<RoutePoint>> build() async => const [
+    RoutePoint(
+      pointIndex: 0,
+      lat: 34.7,
+      lng: 32.4,
+      altitudeM: 0,
+      distanceKm: 0,
+      reverseDistanceKm: 4,
+    ),
+    RoutePoint(
+      pointIndex: 1,
+      lat: 34.71,
+      lng: 32.41,
+      altitudeM: 300,
+      distanceKm: 1,
+      reverseDistanceKm: 3,
+    ),
+    RoutePoint(
+      pointIndex: 2,
+      lat: 34.72,
+      lng: 32.42,
+      altitudeM: 700,
+      distanceKm: 2,
+      reverseDistanceKm: 2,
+    ),
+    RoutePoint(
+      pointIndex: 3,
+      lat: 34.73,
+      lng: 32.43,
+      altitudeM: 1200,
+      distanceKm: 3,
+      reverseDistanceKm: 1,
+    ),
+    RoutePoint(
+      pointIndex: 4,
+      lat: 34.74,
+      lng: 32.44,
+      altitudeM: 1500,
+      distanceKm: 4,
       reverseDistanceKm: 0,
     ),
   ];

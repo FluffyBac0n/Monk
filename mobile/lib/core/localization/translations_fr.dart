@@ -268,6 +268,7 @@ const frenchTranslations = <String, String>{
   'Toilets': 'Toilettes',
   'Medical': 'Soins médicaux',
   'Pharmacy': 'Pharmacie',
+  'ATM': 'Distributeur automatique',
   'Bus': 'Bus',
   'Offline map downloaded': 'Carte hors ligne téléchargée',
   'Offline map not downloaded': 'Carte hors ligne non téléchargée',

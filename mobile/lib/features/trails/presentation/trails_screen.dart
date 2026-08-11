@@ -234,7 +234,7 @@ class _TrailCard extends StatelessWidget {
               key: ValueKey('trail-card-header-${trail.id}'),
               width: double.infinity,
               constraints: trail.id == 'cyprus-e4'
-                  ? const BoxConstraints(minHeight: 165)
+                  ? const BoxConstraints(minHeight: 150)
                   : null,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -279,7 +279,7 @@ class _TrailCard extends StatelessWidget {
                     ),
                   Padding(
                     key: ValueKey('trail-card-header-content-${trail.id}'),
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -314,7 +314,7 @@ class _TrailCard extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 36),
+                        const SizedBox(height: 24),
                         Text(
                           trail.name,
                           style: Theme.of(context).textTheme.headlineMedium

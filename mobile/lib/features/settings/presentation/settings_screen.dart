@@ -44,24 +44,9 @@ class SettingsScreen extends ConsumerWidget {
             _SettingsCard(
               icon: Icons.translate_rounded,
               title: l10n.t('Language'),
-              child: DropdownButtonFormField<AppLanguage>(
-                key: const Key('language-setting'),
-                initialValue: settings.language,
-                decoration: const InputDecoration(),
-                items: [
-                  for (final language in AppLanguage.values)
-                    DropdownMenuItem(
-                      value: language,
-                      child: Text(language.displayName),
-                    ),
-                ],
-                onChanged: (language) {
-                  if (language != null) {
-                    ref
-                        .read(appSettingsProvider.notifier)
-                        .setLanguage(language);
-                  }
-                },
+              child: _LanguageSelector(
+                value: settings.language,
+                onChanged: ref.read(appSettingsProvider.notifier).setLanguage,
               ),
             ),
             const SizedBox(height: 14),
@@ -204,6 +189,117 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LanguageSelector extends StatelessWidget {
+  const _LanguageSelector({required this.value, required this.onChanged});
+
+  final AppLanguage value;
+  final ValueChanged<AppLanguage> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: EurotrexPalette.paleBlue.withValues(alpha: 0.52),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: EurotrexPalette.blue, width: 1.4),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<AppLanguage>(
+          key: const Key('language-setting'),
+          value: value,
+          isExpanded: true,
+          elevation: 2,
+          padding: const EdgeInsets.fromLTRB(14, 4, 12, 4),
+          dropdownColor: const Color(0xFFFBFAF6),
+          borderRadius: BorderRadius.circular(16),
+          menuMaxHeight: 320,
+          focusColor: Colors.transparent,
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: EurotrexPalette.blue,
+          ),
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: EurotrexPalette.navy,
+            fontWeight: FontWeight.w500,
+          ),
+          selectedItemBuilder: (context) => [
+            for (final language in AppLanguage.values)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  children: [
+                    _LanguageFlag(language: language),
+                    const SizedBox(width: 10),
+                    Text(language.displayName),
+                  ],
+                ),
+              ),
+          ],
+          items: [
+            for (final language in AppLanguage.values)
+              DropdownMenuItem(
+                value: language,
+                child: Row(
+                  children: [
+                    _LanguageFlag(language: language),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        language.displayName,
+                        style: TextStyle(
+                          color: EurotrexPalette.navy,
+                          fontWeight: language == value
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (language == value) ...[
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        size: 19,
+                        color: EurotrexPalette.blue,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+          ],
+          onChanged: (language) {
+            if (language != null) onChanged(language);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _LanguageFlag extends StatelessWidget {
+  const _LanguageFlag({required this.language});
+
+  final AppLanguage language;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: ValueKey('language-flag-${language.code}'),
+      width: 32,
+      height: 27,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: EurotrexPalette.paleBlue),
+      ),
+      child: Text(
+        language.flagEmoji,
+        style: const TextStyle(fontSize: 18, height: 1),
       ),
     );
   }

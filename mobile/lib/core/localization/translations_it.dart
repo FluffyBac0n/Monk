@@ -267,6 +267,7 @@ const italianTranslations = <String, String>{
   'Toilets': 'Servizi igienici',
   'Medical': 'Assistenza medica',
   'Pharmacy': 'Farmacia',
+  'ATM': 'Bancomat',
   'Bus': 'Autobus',
   'Offline map downloaded': 'Mappa offline scaricata',
   'Offline map not downloaded': 'Mappa offline non scaricata',

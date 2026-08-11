@@ -18,10 +18,7 @@ String _encodeQueryParameters(Map<String, String> parameters) {
       .join('&');
 }
 
-const _ink = Color(0xFF17201B);
-const _green = Color(0xFF277653);
 const _sand = Color(0xFFF4F2EC);
-const _blue = Color(0xFF1565C0);
 
 class AboutScreen extends ConsumerWidget {
   const AboutScreen({super.key});
@@ -96,126 +93,149 @@ class AboutScreen extends ConsumerWidget {
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
-        children: [
-          const _AboutHero(),
-          const SizedBox(height: 14),
-          _AboutCard(
-            icon: Icons.explore_rounded,
-            title: l10n.t('Our mission'),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.t(
-                    'EUROTREX brings long-distance trails, stages, maps, elevation profiles and practical information together in one place.',
+      body: Theme(
+        data: EurotrexPalette.controlsTheme(Theme.of(context)),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+          children: [
+            const _AboutHero(),
+            const SizedBox(height: 14),
+            _AboutCard(
+              icon: Icons.explore_rounded,
+              title: l10n.t('Our mission'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.t(
+                      'EUROTREX brings long-distance trails, stages, maps, elevation profiles and practical information together in one place.',
+                    ),
+                    style: const TextStyle(
+                      color: EurotrexPalette.navy,
+                      height: 1.45,
+                    ),
                   ),
-                  style: const TextStyle(color: Colors.black87, height: 1.45),
-                ),
-                const SizedBox(height: 14),
-                OutlinedButton.icon(
-                  key: const ValueKey('about-website'),
-                  onPressed: () => _openExternal(
-                    context,
-                    ref,
-                    Uri.parse(eurotrexWebsiteUrl),
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    key: const ValueKey('about-website'),
+                    onPressed: () => _openExternal(
+                      context,
+                      ref,
+                      Uri.parse(eurotrexWebsiteUrl),
+                    ),
+                    icon: const Icon(Icons.language_rounded),
+                    label: Text(l10n.t('Visit our website')),
                   ),
-                  icon: const Icon(Icons.language_rounded),
-                  label: Text(l10n.t('Visit our website')),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
-          _AboutCard(
-            icon: Icons.handshake_outlined,
-            title: l10n.t('Project funding'),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.t(
-                    'The EUROTREX project is co-funded by the European Union and the Republic of Cyprus.',
+            const SizedBox(height: 14),
+            _AboutCard(
+              icon: Icons.handshake_outlined,
+              title: l10n.t('Project funding'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.t(
+                      'The EUROTREX project is co-funded by the European Union and the Republic of Cyprus.',
+                    ),
+                    style: const TextStyle(
+                      color: EurotrexPalette.navy,
+                      height: 1.45,
+                    ),
                   ),
-                  style: const TextStyle(color: Colors.black87, height: 1.45),
-                ),
-                const SizedBox(height: 16),
-                _PartnerRow(
-                  semanticLabel: l10n.t('Co-funded by the European Union'),
-                  imageKey: const ValueKey('about-eu-logo'),
-                  asset: 'assets/branding/eu_flag_color.png',
-                  label: l10n.t('Co-funded by the European Union'),
-                  imageHeight: 42,
-                ),
-                const SizedBox(height: 10),
-                _PartnerRow(
-                  semanticLabel: l10n.t('Co-funded by the Republic of Cyprus'),
-                  imageKey: const ValueKey('about-cyprus-logo'),
-                  asset: 'assets/branding/republic_of_cyprus_emblem.png',
-                  label: l10n.t('Co-funded by the Republic of Cyprus'),
-                  imageHeight: 50,
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  _PartnerRow(
+                    semanticLabel: l10n.t('Co-funded by the European Union'),
+                    imageKey: const ValueKey('about-eu-logo'),
+                    asset: 'assets/branding/eu_flag_color.png',
+                    label: l10n.t('Co-funded by the European Union'),
+                    imageHeight: 42,
+                  ),
+                  const SizedBox(height: 10),
+                  _PartnerRow(
+                    semanticLabel: l10n.t(
+                      'Co-funded by the Republic of Cyprus',
+                    ),
+                    imageKey: const ValueKey('about-cyprus-logo'),
+                    asset: 'assets/branding/republic_of_cyprus_emblem.png',
+                    label: l10n.t('Co-funded by the Republic of Cyprus'),
+                    imageHeight: 50,
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
-          _AboutCard(
-            icon: Icons.lightbulb_outline_rounded,
-            title: l10n.t('Contact us'),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.t(
-                    'Have an idea that could improve EUROTREX? Send us your suggestion.',
+            const SizedBox(height: 14),
+            _AboutCard(
+              icon: Icons.lightbulb_outline_rounded,
+              title: l10n.t('Contact us'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.t(
+                      'Have an idea that could improve EUROTREX? Send us your suggestion.',
+                    ),
+                    style: const TextStyle(
+                      color: EurotrexPalette.navy,
+                      height: 1.45,
+                    ),
                   ),
-                  style: const TextStyle(color: Colors.black87, height: 1.45),
-                ),
-                const SizedBox(height: 14),
-                FilledButton.icon(
-                  key: const ValueKey('about-suggestions-email'),
-                  onPressed: () => _sendSuggestion(context, ref),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _blue,
-                    foregroundColor: Colors.white,
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    key: const ValueKey('about-suggestions-email'),
+                    onPressed: () => _sendSuggestion(context, ref),
+                    icon: const Icon(Icons.mail_outline_rounded),
+                    label: Text(l10n.t('Send a suggestion')),
                   ),
-                  icon: const Icon(Icons.mail_outline_rounded),
-                  label: Text(l10n.t('Send a suggestion')),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  eurotrexSuggestionsEmail,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.black54),
-                ),
-              ],
+                  const SizedBox(height: 9),
+                  Text(
+                    eurotrexSuggestionsEmail,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: EurotrexPalette.navy.withValues(alpha: 0.62),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 18),
-          version.when(
-            loading: () => const SizedBox(
-              height: 18,
-              child: Center(
-                child: SizedBox.square(
-                  dimension: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+            const SizedBox(height: 18),
+            version.when(
+              loading: () => const SizedBox(
+                height: 18,
+                child: Center(
+                  child: SizedBox.square(
+                    dimension: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+              error: (_, _) => const SizedBox.shrink(),
+              data: (value) => Center(
+                child: Container(
+                  key: const ValueKey('about-version'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: EurotrexPalette.paleBlue.withValues(alpha: 0.52),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: EurotrexPalette.paleBlue),
+                  ),
+                  child: Text(
+                    '${l10n.t('Version')} $value',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: EurotrexPalette.navy,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             ),
-            error: (_, _) => const SizedBox.shrink(),
-            data: (value) => Text(
-              '${l10n.t('Version')} $value',
-              key: const ValueKey('about-version'),
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.black54),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -233,9 +253,12 @@ class _AboutHero extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [EurotrexPalette.navy, EurotrexPalette.blue],
+          colors: [EurotrexPalette.navy, Color(0xFF40566F)],
         ),
         borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: EurotrexPalette.paleBlue.withValues(alpha: 0.36),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,21 +303,29 @@ class _AboutCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _ink.withValues(alpha: 0.06)),
+        border: Border.all(color: EurotrexPalette.paleBlue),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Icon(icon, color: _green),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: const BoxDecoration(
+                  color: EurotrexPalette.paleBlue,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: EurotrexPalette.navy, size: 19),
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   title,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],
@@ -331,21 +362,28 @@ class _PartnerRow extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: _sand,
+            color: EurotrexPalette.paleBlue.withValues(alpha: 0.42),
             borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: EurotrexPalette.paleBlue),
           ),
           child: Row(
             children: [
               SizedBox(
-                width: 72,
+                width: 66,
                 height: 54,
-                child: Center(
-                  child: Image.asset(
-                    asset,
-                    key: imageKey,
-                    height: imageHeight,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Image.asset(
+                      asset,
+                      key: imageKey,
+                      height: imageHeight,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                    ),
                   ),
                 ),
               ),

@@ -1,14 +1,15 @@
 enum AppLanguage {
-  english('en', 'English'),
-  german('de', 'Deutsch'),
-  spanish('es', 'Español'),
-  italian('it', 'Italiano'),
-  french('fr', 'Français');
+  english('en', 'English', '🇬🇧'),
+  german('de', 'Deutsch', '🇩🇪'),
+  spanish('es', 'Español', '🇪🇸'),
+  italian('it', 'Italiano', '🇮🇹'),
+  french('fr', 'Français', '🇫🇷');
 
-  const AppLanguage(this.code, this.displayName);
+  const AppLanguage(this.code, this.displayName, this.flagEmoji);
 
   final String code;
   final String displayName;
+  final String flagEmoji;
 
   static AppLanguage fromCode(String? code) => values.firstWhere(
     (language) => language.code == code,

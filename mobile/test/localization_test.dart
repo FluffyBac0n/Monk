@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monk_mobile/core/localization/app_localizations.dart';
@@ -11,6 +13,13 @@ void main() {
       AppLocalizations.supportedLocales.map((locale) => locale.languageCode),
       containsAll(<String>['en', 'de', 'es', 'it', 'fr']),
     );
+    expect(AppLanguage.values.map((language) => language.flagEmoji), <String>[
+      '🇬🇧',
+      '🇩🇪',
+      '🇪🇸',
+      '🇮🇹',
+      '🇫🇷',
+    ]);
   });
 
   test('every translated locale covers the complete UI catalog', () {
@@ -23,7 +32,36 @@ void main() {
         referenceKeys,
         reason: '${locale.languageCode} should not fall back to English',
       );
+      final localizations = AppLocalizations(locale);
+      for (final key in translatedKeys) {
+        expect(
+          localizations.t(key).trim(),
+          isNotEmpty,
+          reason: '${locale.languageCode} must provide a value for "$key"',
+        );
+      }
     }
+  });
+
+  test('every directly localized UI string exists in the catalog', () {
+    final catalog = AppLocalizations.translationKeys(const Locale('de'));
+    final localizedString = RegExp(
+      r"\.t\(\s*'((?:\\.|[^'])*)'",
+      multiLine: true,
+      dotAll: true,
+    );
+    final missing = <String, String>{};
+
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      final source = entity.readAsStringSync();
+      for (final match in localizedString.allMatches(source)) {
+        final key = match.group(1)!.replaceAll(r"\'", "'");
+        if (!catalog.contains(key)) missing[key] = entity.path;
+      }
+    }
+
+    expect(missing, isEmpty, reason: 'Missing translation keys: $missing');
   });
 
   test('Italian and French localize representative app flows', () {
@@ -45,6 +83,7 @@ void main() {
     expect(italian.t('Religious Sites'), 'Luoghi religiosi');
     expect(italian.t('Natural Landmarks'), 'Luoghi naturali');
     expect(italian.t('Forests/Parks'), 'Boschi/parchi');
+    expect(italian.t('ATM'), 'Bancomat');
     expect(
       italian.t('Tap the E4 sign to open trail information.'),
       'Tocca il segnale E4 per aprire le informazioni sul sentiero.',
@@ -79,6 +118,7 @@ void main() {
     expect(french.t('Religious Sites'), 'Sites religieux');
     expect(french.t('Natural Landmarks'), 'Sites naturels');
     expect(french.t('Forests/Parks'), 'Forêts/parcs');
+    expect(french.t('ATM'), 'Distributeur automatique');
     expect(
       french.t('Tap the E4 sign to open trail information.'),
       'Touchez le balisage E4 pour ouvrir les informations du sentier.',
@@ -154,6 +194,7 @@ void main() {
     expect(german.t('Religious Sites'), 'Religiöse Stätten');
     expect(german.t('Natural Landmarks'), 'Naturdenkmäler');
     expect(german.t('Forests/Parks'), 'Wälder/Parks');
+    expect(german.t('ATM'), 'Geldautomat');
     expect(
       german.t('Tap the E4 sign to open trail information.'),
       'Tippe auf das E4-Zeichen, um die Weginformationen zu öffnen.',

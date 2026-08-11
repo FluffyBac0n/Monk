@@ -362,9 +362,18 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
       showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: _sand,
-      builder: (_) => _ServiceFilterSheet(
-        selected: selectedServices,
-        stages: orderedStages,
+      builder: (_) => DraggableScrollableSheet(
+        key: const ValueKey('stage-filter-draggable-sheet'),
+        expand: false,
+        initialChildSize: 0.9,
+        minChildSize: 0.18,
+        maxChildSize: 0.96,
+        shouldCloseOnMinExtent: true,
+        builder: (context, scrollController) => _ServiceFilterSheet(
+          selected: selectedServices,
+          stages: orderedStages,
+          scrollController: scrollController,
+        ),
       ),
     );
     if (selection != null && mounted) {
@@ -2207,7 +2216,7 @@ class _DetourMainStageCard extends StatelessWidget {
                     children: [
                       for (final service in activeServices)
                         Tooltip(
-                          message: context.l10n.t(_serviceLabel(service.key)),
+                          message: _serviceLabel(service.key, context.l10n),
                           child: Icon(
                             _serviceIcon(service.key),
                             size: 16,
@@ -2800,8 +2809,9 @@ class _StageTimelineRow extends StatelessWidget {
                                             for (final service
                                                 in activeServices.take(7))
                                               Tooltip(
-                                                message: context.l10n.t(
-                                                  _serviceLabel(service.key),
+                                                message: _serviceLabel(
+                                                  service.key,
+                                                  context.l10n,
                                                 ),
                                                 child: Icon(
                                                   _serviceIcon(service.key),
@@ -4109,7 +4119,7 @@ class StageInfoCards extends StatelessWidget {
                       size: 17,
                       color: _serviceColor(service.key),
                     ),
-                    label: Text(l10n.t(_serviceLabel(service.key))),
+                    label: Text(_serviceLabel(service.key, l10n)),
                     backgroundColor: _sand,
                     side: BorderSide.none,
                   ),
@@ -5316,10 +5326,15 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
 }
 
 class _ServiceFilterSheet extends StatefulWidget {
-  const _ServiceFilterSheet({required this.selected, required this.stages});
+  const _ServiceFilterSheet({
+    required this.selected,
+    required this.stages,
+    required this.scrollController,
+  });
 
   final Set<String> selected;
   final List<TrailStage> stages;
+  final ScrollController scrollController;
 
   @override
   State<_ServiceFilterSheet> createState() => _ServiceFilterSheetState();
@@ -5376,6 +5391,7 @@ class _ServiceFilterSheetState extends State<_ServiceFilterSheet> {
       data: EurotrexPalette.controlsTheme(Theme.of(context)),
       child: SafeArea(
         child: SingleChildScrollView(
+          controller: widget.scrollController,
           padding: EdgeInsets.fromLTRB(
             20,
             4,
@@ -5494,7 +5510,7 @@ class _ServiceFilterSheetState extends State<_ServiceFilterSheet> {
                           size: 18,
                           color: _serviceColor(service),
                         ),
-                        label: Text(l10n.t(_serviceLabel(service))),
+                        label: Text(_serviceLabel(service, l10n)),
                         onSelected: (isSelected) => setState(() {
                           if (isSelected) {
                             selected.add(service);
@@ -5784,19 +5800,19 @@ IconData _serviceIcon(String value) {
   };
 }
 
-String _serviceLabel(String value) {
+String _serviceLabel(String value, AppLocalizations l10n) {
   return switch (value) {
-    'lodging' => 'Lodging',
-    'tent' => 'Camping',
-    'food' => 'Food',
-    'grocery' => 'Groceries',
-    'drinkableWater' => 'Drinking water',
-    'nonDrinkableWater' => 'Non-drinking water',
-    'toilets' => 'Toilets',
-    'medical' => 'Medical',
-    'pharmacy' => 'Pharmacy',
-    'atm' => 'ATM',
-    'busStop' => 'Bus',
+    'lodging' => l10n.t('Lodging'),
+    'tent' => l10n.t('Camping'),
+    'food' => l10n.t('Food'),
+    'grocery' => l10n.t('Groceries'),
+    'drinkableWater' => l10n.t('Drinking water'),
+    'nonDrinkableWater' => l10n.t('Non-drinking water'),
+    'toilets' => l10n.t('Toilets'),
+    'medical' => l10n.t('Medical'),
+    'pharmacy' => l10n.t('Pharmacy'),
+    'atm' => l10n.t('ATM'),
+    'busStop' => l10n.t('Bus'),
     _ => value,
   };
 }

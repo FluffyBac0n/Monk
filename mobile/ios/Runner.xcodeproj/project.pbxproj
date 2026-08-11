@@ -72,6 +72,8 @@
 		C0D3C10232A1234500000001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		C0D3C10332A1234500000001 /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		C0D3C10432A1234500000001 /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		C0D3C10532A1234500000001 /* it */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		C0D3C10632A1234500000001 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		E577F245E2EFA6BF9733DA0F /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -248,6 +250,8 @@
 				en,
 				de,
 				es,
+				it,
+				fr,
 				Base,
 			);
 			mainGroup = 97C146E51CF9000F007C117D;
@@ -415,6 +419,8 @@
 				C0D3C10232A1234500000001 /* en */,
 				C0D3C10332A1234500000001 /* de */,
 				C0D3C10432A1234500000001 /* es */,
+				C0D3C10532A1234500000001 /* it */,
+				C0D3C10632A1234500000001 /* fr */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
