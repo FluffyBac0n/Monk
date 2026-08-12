@@ -1111,7 +1111,7 @@ class _ElevationBottomNavigationBar extends StatelessWidget {
         top: false,
         child: Container(
           key: const ValueKey('elevation-bottom-navigation-size'),
-          height: 48,
+          height: 58,
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: Colors.white12)),
           ),
@@ -1121,12 +1121,14 @@ class _ElevationBottomNavigationBar extends StatelessWidget {
                 key: const Key('elevation-back'),
                 icon: Icons.chevron_left_rounded,
                 label: MaterialLocalizations.of(context).backButtonTooltip,
+                visibleLabel: l10n.t('Back'),
                 onTap: onBack,
               ),
               _ElevationBottomAction(
                 key: const Key('elevation-zoom-out'),
                 icon: Icons.remove_rounded,
                 label: l10n.t('Zoom out'),
+                visibleLabel: l10n.t('Zoom out'),
                 onTap: onZoomOut,
               ),
               _ElevationBottomAction(
@@ -1137,6 +1139,7 @@ class _ElevationBottomNavigationBar extends StatelessWidget {
                     ? Icons.gps_fixed_rounded
                     : Icons.gps_not_fixed_rounded,
                 label: l10n.t('My location'),
+                visibleLabel: l10n.t('GPS'),
                 isActive: locationActive,
                 isToggle: true,
                 isPrimary: true,
@@ -1146,12 +1149,14 @@ class _ElevationBottomNavigationBar extends StatelessWidget {
                 key: const Key('elevation-zoom-in'),
                 icon: Icons.add_rounded,
                 label: l10n.t('Zoom in'),
+                visibleLabel: l10n.t('Zoom in'),
                 onTap: onZoomIn,
               ),
               _ElevationBottomAction(
                 key: const Key('elevation-reset-view'),
                 icon: Icons.fit_screen_rounded,
                 label: l10n.t('Reset elevation view'),
+                visibleLabel: l10n.t('Reset'),
                 onTap: onResetView,
               ),
             ],
@@ -1166,6 +1171,7 @@ class _ElevationBottomAction extends StatelessWidget {
   const _ElevationBottomAction({
     required this.icon,
     required this.label,
+    required this.visibleLabel,
     required this.onTap,
     this.isActive = false,
     this.isToggle = false,
@@ -1175,6 +1181,7 @@ class _ElevationBottomAction extends StatelessWidget {
 
   final IconData icon;
   final String label;
+  final String visibleLabel;
   final VoidCallback? onTap;
   final bool isActive;
   final bool isToggle;
@@ -1189,6 +1196,7 @@ class _ElevationBottomAction extends StatelessWidget {
         child: Semantics(
           button: true,
           enabled: onTap != null,
+          excludeSemantics: true,
           selected: isToggle ? null : isActive,
           toggled: isToggle ? isActive : null,
           label: label,
@@ -1202,22 +1210,57 @@ class _ElevationBottomAction extends StatelessWidget {
                     onTap!();
                   },
             child: Center(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                width: isPrimary ? 36 : 32,
-                height: isPrimary ? 36 : 32,
-                decoration: BoxDecoration(
-                  color: isPrimary
-                      ? isActive
-                            ? EurotrexPalette.blue
-                            : Colors.white.withValues(alpha: 0.055)
-                      : isActive
-                      ? Colors.white.withValues(alpha: 0.16)
-                      : Colors.transparent,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: foreground, size: isPrimary ? 22 : 21),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    height: 36,
+                    child: Center(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOutCubic,
+                        width: isPrimary ? 36 : 32,
+                        height: isPrimary ? 36 : 32,
+                        decoration: BoxDecoration(
+                          color: isPrimary
+                              ? isActive
+                                    ? EurotrexPalette.blue
+                                    : Colors.white.withValues(alpha: 0.055)
+                              : isActive
+                              ? Colors.white.withValues(alpha: 0.16)
+                              : Colors.transparent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          icon,
+                          color: foreground,
+                          size: isPrimary ? 22 : 21,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 11,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      child: Text(
+                        visibleLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: foreground,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

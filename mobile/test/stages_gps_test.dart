@@ -71,6 +71,15 @@ void main() {
       );
       expect(
         (selectedMarker.decoration! as BoxDecoration).color,
+        const Color(0xFF277653),
+      );
+      final selectedRing = tester.widget<Container>(
+        find.byKey(const ValueKey('stage-marker-selection-gps-stage-24')),
+      );
+      expect(
+        ((selectedRing.decoration! as BoxDecoration).border! as Border)
+            .top
+            .color,
         const Color(0xFF1565C0),
       );
       expect(find.textContaining('Nearby stage'), findsNothing);
@@ -129,7 +138,11 @@ void main() {
                     .decoration!
                 as BoxDecoration)
             .color,
-        const Color(0xFF17201B),
+        const Color(0xFF277653),
+      );
+      expect(
+        find.byKey(const ValueKey('stage-marker-selection-gps-stage-24')),
+        findsNothing,
       );
       semanticsHandle.dispose();
     },
@@ -319,7 +332,11 @@ void main() {
                   .decoration!
               as BoxDecoration)
           .color,
-      const Color(0xFF1565C0),
+      const Color(0xFFF2C94C),
+    );
+    expect(
+      find.byKey(const ValueKey('stage-marker-selection-gps-stage-3')),
+      findsOneWidget,
     );
   });
 
@@ -463,6 +480,11 @@ List<TrailStage> get _gpsStages => List.generate(
     sequence: _gpsStageCount - index,
     name: 'GPS stage $index',
     accumulatedDistanceKm: (index * _gpsStageSpacingKm).toDouble(),
+    distanceFromPathKm: index == 24
+        ? 0.2
+        : index == 3
+        ? 0.7
+        : null,
     segmentLengthKm: index == 0 ? 0 : _gpsStageSpacingKm.toDouble(),
     altitudeM: index * 10,
     services: const {},

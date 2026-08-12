@@ -147,11 +147,20 @@ void main() {
       find.byKey(const ValueKey('stage-length-66-spilia')),
       findsOneWidget,
     );
+    final stageDistance = find.byKey(
+      const ValueKey('stage-card-distance-66-spilia'),
+    );
+    expect(stageDistance, findsOneWidget);
     expect(
-      tester.widget(
-        find.byKey(const ValueKey('stage-card-distance-66-spilia')),
+      find.descendant(of: stageDistance, matching: find.byType(Text)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: stageDistance,
+        matching: find.byIcon(Icons.hiking_rounded),
       ),
-      isA<Text>(),
+      findsOneWidget,
     );
     expect(
       find.byKey(const ValueKey('stage-card-altitude-66-spilia')),

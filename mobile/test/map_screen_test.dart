@@ -215,6 +215,8 @@ void main() {
     expect(mapLodgingMarkerOutlineColor(isSelected: false), Colors.white);
     expect(mapLodgingSelectionZoom(11), 11.75);
     expect(mapLodgingSelectionZoom(14.75), 15);
+    expect(mapSelectedLodgingRingRadius, 12.5);
+    expect(mapSelectedLodgingRingWidth, 2.5);
   });
 
   test('stage snapshot keeps start and finish ordered in reverse', () {
@@ -466,6 +468,7 @@ void main() {
                   type: 'Guesthouse',
                   village: 'Troodos',
                   distanceFromTrailKm: 0.4,
+                  location: LodgingLocation(latitude: 34.9, longitude: 32.9),
                   address: 'Forest Road 1',
                   phone: '99123456',
                   email: 'stay@example.com',
@@ -501,6 +504,20 @@ void main() {
     expect(find.text('14:00'), findsOneWidget);
     expect(find.text('Check-out'), findsOneWidget);
     expect(find.text('11:00'), findsOneWidget);
+    final contactActions = find.byKey(
+      const ValueKey('map-lodging-contact-actions-forest-inn-sheet'),
+    );
+    final contactIcons = tester
+        .widgetList<Icon>(
+          find.descendant(of: contactActions, matching: find.byType(Icon)),
+        )
+        .map((icon) => icon.icon)
+        .toList();
+    expect(contactIcons.take(3), [Icons.phone_outlined, Icons.email_outlined]);
+    expect(
+      find.byKey(const ValueKey('map-location-lodging-forest-inn-sheet')),
+      findsNothing,
+    );
     await tester.tap(
       find.byKey(const ValueKey('map-call-lodging-forest-inn-sheet')),
     );

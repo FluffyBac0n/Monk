@@ -1123,7 +1123,7 @@ class _StageBottomNavigationBar extends StatelessWidget {
         top: false,
         child: Container(
           key: const ValueKey('stage-bottom-navigation-size'),
-          height: 48,
+          height: 58,
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: Colors.white12)),
           ),
@@ -1139,12 +1139,14 @@ class _StageBottomNavigationBar extends StatelessWidget {
                       ? 'Walk from Pafos to Larnaka'
                       : 'Walk from Larnaka to Pafos',
                 ),
+                visibleLabel: l10n.t('Reverse'),
                 onTap: onReverse,
               ),
               _StageBottomAction(
                 key: const ValueKey('stage-bottom-filter'),
                 icon: Icons.filter_list_rounded,
                 label: l10n.t('Filter'),
+                visibleLabel: l10n.t('Filter'),
                 isActive: selectedServiceCount > 0,
                 badgeCount: selectedServiceCount,
                 onTap: onFilter,
@@ -1157,6 +1159,7 @@ class _StageBottomNavigationBar extends StatelessWidget {
                     ? Icons.gps_fixed_rounded
                     : Icons.gps_not_fixed_rounded,
                 label: l10n.t('Find my stage'),
+                visibleLabel: l10n.t('GPS'),
                 isActive: hasGpsSelection,
                 isToggle: true,
                 isPrimary: true,
@@ -1166,12 +1169,14 @@ class _StageBottomNavigationBar extends StatelessWidget {
                 key: const ValueKey('stage-bottom-map'),
                 icon: Icons.map_outlined,
                 label: l10n.t('Map'),
+                visibleLabel: l10n.t('Map'),
                 onTap: onMap,
               ),
               _StageBottomAction(
                 key: const ValueKey('stage-bottom-elevation'),
                 icon: Icons.landscape_outlined,
                 label: l10n.t('Elevation'),
+                visibleLabel: l10n.t('Elevation'),
                 onTap: onElevation,
               ),
             ],
@@ -1186,6 +1191,7 @@ class _StageBottomAction extends StatelessWidget {
   const _StageBottomAction({
     required this.icon,
     required this.label,
+    required this.visibleLabel,
     required this.onTap,
     this.isActive = false,
     this.isToggle = false,
@@ -1197,6 +1203,7 @@ class _StageBottomAction extends StatelessWidget {
 
   final IconData icon;
   final String label;
+  final String visibleLabel;
   final VoidCallback? onTap;
   final bool isActive;
   final bool isToggle;
@@ -1215,6 +1222,8 @@ class _StageBottomAction extends StatelessWidget {
         message: label,
         child: Semantics(
           button: true,
+          enabled: onTap != null,
+          excludeSemantics: true,
           selected: isToggle ? null : isActive,
           toggled: isToggle ? isActive : null,
           label: label,
@@ -1227,46 +1236,72 @@ class _StageBottomAction extends StatelessWidget {
                     unawaited(HapticFeedback.selectionClick());
                     onTap!();
                   },
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Center(
-                  child: Badge(
-                    isLabelVisible: badgeCount > 0,
-                    backgroundColor: _yellow,
-                    textColor: _ink,
-                    label: Text('$badgeCount'),
-                    child: isPrimary
-                        ? AnimatedContainer(
-                            key: const ValueKey('stage-bottom-gps-surface'),
-                            duration: const Duration(milliseconds: 180),
-                            curve: Curves.easeOutCubic,
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: isActive
-                                  ? EurotrexPalette.blue
-                                  : Colors.white.withValues(alpha: 0.055),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(child: buildIcon(22)),
-                          )
-                        : AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            curve: Curves.easeOutCubic,
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: isActive
-                                  ? Colors.white.withValues(alpha: 0.16)
-                                  : Colors.transparent,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(child: buildIcon(22)),
-                          ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    height: 36,
+                    child: Center(
+                      child: Badge(
+                        isLabelVisible: badgeCount > 0,
+                        backgroundColor: _yellow,
+                        textColor: _ink,
+                        label: Text('$badgeCount'),
+                        child: isPrimary
+                            ? AnimatedContainer(
+                                key: const ValueKey('stage-bottom-gps-surface'),
+                                duration: const Duration(milliseconds: 180),
+                                curve: Curves.easeOutCubic,
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: isActive
+                                      ? EurotrexPalette.blue
+                                      : Colors.white.withValues(alpha: 0.055),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(child: buildIcon(22)),
+                              )
+                            : AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                curve: Curves.easeOutCubic,
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: isActive
+                                      ? Colors.white.withValues(alpha: 0.16)
+                                      : Colors.transparent,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(child: buildIcon(22)),
+                              ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 1),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 11,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      child: Text(
+                        visibleLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: foreground,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1386,7 +1421,7 @@ class _TrailAppBar extends StatelessWidget {
                 onStageMetricsHintReset();
               }
             },
-            icon: const Icon(Icons.tune_rounded),
+            icon: const Icon(Icons.settings_outlined),
           ),
           const SizedBox(width: 8),
         ],
@@ -1988,25 +2023,45 @@ class _DetourRouteChoicePanel extends StatelessWidget {
               ),
               for (var index = 0; index < mainStages.length; index++)
                 Positioned(
-                  left: timelineX - 8.5,
+                  left: timelineX - 11.5,
                   top:
                       connectorHeight +
                       index * (mainCardHeight + cardGap) +
-                      (mainCardHeight - 17) / 2,
-                  child: Container(
-                    key: ValueKey(
-                      'stage-detour-e4-path-marker-${mainStages[index].id}',
-                    ),
-                    width: 17,
-                    height: 17,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: stageIsOnTrail(mainStages[index]) == false
-                          ? _yellow
-                          : _green,
-                      border: Border.all(color: _sand, width: 3),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black12, blurRadius: 2),
+                      (mainCardHeight - 23) / 2,
+                  child: SizedBox.square(
+                    dimension: 23,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (mainStages[index].id == selectedStageId)
+                          Container(
+                            key: ValueKey(
+                              'stage-marker-selection-${mainStages[index].id}',
+                            ),
+                            width: 23,
+                            height: 23,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: _bookingBlue, width: 2),
+                            ),
+                          ),
+                        Container(
+                          key: ValueKey(
+                            'stage-detour-e4-path-marker-${mainStages[index].id}',
+                          ),
+                          width: 17,
+                          height: 17,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: stageIsOnTrail(mainStages[index]) == false
+                                ? _yellow
+                                : _green,
+                            border: Border.all(color: _sand, width: 3),
+                            boxShadow: const [
+                              BoxShadow(color: Colors.black12, blurRadius: 2),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -2263,14 +2318,9 @@ class _DetourMainStageCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (distanceFromStart != null)
-                          Text(
-                            formatter.distance(distanceFromStart),
+                          _StageCumulativeDistance(
                             key: ValueKey('stage-card-distance-${stage.id}'),
-                            style: const TextStyle(
-                              color: _green,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 10.5,
-                            ),
+                            distance: formatter.distance(distanceFromStart),
                           ),
                         if (distanceFromStart != null &&
                             stage.altitudeM != null)
@@ -2343,18 +2393,18 @@ class _DetourMainStageSideMetrics extends StatelessWidget {
         ),
         _StageSideMetric(
           key: ValueKey('stage-length-${stage.id}'),
-          icon: null,
+          icon: Icons.straighten_rounded,
           value: legMetrics.lengthKm == null
               ? '—'
               : _compactMeasurement(formatter.distance(legMetrics.lengthKm!)),
           tooltip: context.l10n.t('Stage length'),
           color: _filterBlueTeal,
         ),
-        if (distanceFromPathKm != null) ...[
+        if (stageIsOnTrail(stage) == false) ...[
           const SizedBox(height: 2),
           _StageTrailDistanceLabel(
             stageId: stage.id,
-            distance: _trimmedDistance(formatter, distanceFromPathKm),
+            distance: _trimmedDistance(formatter, distanceFromPathKm!),
           ),
         ],
       ],
@@ -2508,10 +2558,8 @@ class _StageTimelineRow extends StatelessWidget {
     final showDistance = !isTrailStart && distanceKm != null;
     final distanceFromPathKm = stage.distanceFromPathKm;
     final isOnTrail = stageIsOnTrail(stage);
-    final hasDistanceFromPath = isOnTrail != null;
-    final dotColor = isSelected
-        ? _bookingBlue
-        : hasDistanceFromPath
+    final hasDistanceFromPath = isOnTrail == false;
+    final dotColor = isOnTrail != null
         ? isOnTrail == true
               ? _green
               : _yellow
@@ -2545,7 +2593,7 @@ class _StageTimelineRow extends StatelessWidget {
         ),
         _StageSideMetric(
           key: ValueKey('stage-length-${stage.id}'),
-          icon: null,
+          icon: Icons.straighten_rounded,
           value: segmentLengthKm == null
               ? '—'
               : _compactMeasurement(formatter.distance(segmentLengthKm!)),
@@ -2622,16 +2670,42 @@ class _StageTimelineRow extends StatelessWidget {
                                   : Colors.transparent,
                             ),
                           ),
-                          Container(
-                            key: ValueKey('stage-marker-${stage.id}'),
-                            width: 15,
-                            height: 15,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: dotColor,
-                              border: Border.all(color: _sand, width: 3),
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black12, blurRadius: 2),
+                          SizedBox.square(
+                            dimension: 23,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                if (isSelected)
+                                  Container(
+                                    key: ValueKey(
+                                      'stage-marker-selection-${stage.id}',
+                                    ),
+                                    width: 23,
+                                    height: 23,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: _bookingBlue,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  ),
+                                Container(
+                                  key: ValueKey('stage-marker-${stage.id}'),
+                                  width: 15,
+                                  height: 15,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: dotColor,
+                                    border: Border.all(color: _sand, width: 3),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 2,
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -2657,7 +2731,13 @@ class _StageTimelineRow extends StatelessWidget {
               padding: EdgeInsets.only(top: hasDetours ? 11 : 0, bottom: 10),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  minHeight: hasDistanceFromPath ? 92 : 0,
+                  minHeight: isTrailEnd
+                      ? hasDistanceFromPath
+                            ? 118
+                            : 104
+                      : hasDistanceFromPath
+                      ? 92
+                      : 0,
                 ),
                 child: Stack(
                   clipBehavior: Clip.none,
@@ -2856,17 +2936,12 @@ class _StageTimelineRow extends StatelessWidget {
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               if (showDistance)
-                                                Text(
-                                                  formatter.distance(
-                                                    distanceKm!,
-                                                  ),
+                                                _StageCumulativeDistance(
                                                   key: ValueKey(
                                                     'stage-card-distance-${stage.id}',
                                                   ),
-                                                  style: const TextStyle(
-                                                    color: _green,
-                                                    fontWeight: FontWeight.w800,
-                                                    fontSize: 10.5,
+                                                  distance: formatter.distance(
+                                                    distanceKm!,
                                                   ),
                                                 ),
                                               if (showDistance &&
@@ -3064,10 +3139,7 @@ class _DetourBranchPainter extends CustomPainter {
 String _compactMeasurement(String value) => value.replaceAll(' ', '');
 
 String _trimmedDistance(MeasurementFormatter formatter, double distanceKm) {
-  final value = formatter
-      .distanceValue(distanceKm)
-      .toStringAsFixed(2)
-      .replaceFirst(RegExp(r'\.?0+$'), '');
+  final value = formatter.distanceValue(distanceKm).toStringAsFixed(1);
   return '$value${formatter.distanceUnit}';
 }
 
@@ -3087,24 +3159,67 @@ class _StageTrailDistanceLabel extends StatelessWidget {
       message: label,
       child: Semantics(
         label: '$label: $distance',
-        child: Row(
+        excludeSemantics: true,
+        child: SizedBox(
           key: ValueKey('stage-distance-from-trail-$stageId'),
+          width: 72,
+          child: Row(
+            children: [
+              SizedBox(
+                width: 15,
+                child: Icon(
+                  Icons.add_rounded,
+                  key: ValueKey('stage-distance-from-trail-icon-$stageId'),
+                  size: 14,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(width: 3),
+              Expanded(
+                child: Text(
+                  distance,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                    height: 1.15,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StageCumulativeDistance extends StatelessWidget {
+  const _StageCumulativeDistance({required this.distance, super.key});
+
+  final String distance;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.t('From Start');
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        label: '$label: $distance',
+        excludeSemantics: true,
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.add_rounded,
-              key: ValueKey('stage-distance-from-trail-icon-$stageId'),
-              size: 11,
-              color: Colors.black54,
-            ),
-            const SizedBox(width: 1),
+            const Icon(Icons.hiking_rounded, color: _green, size: 13),
+            const SizedBox(width: 3),
             Text(
               distance,
               style: const TextStyle(
-                color: Colors.black54,
-                fontSize: 10,
+                color: _green,
                 fontWeight: FontWeight.w800,
-                height: 1.1,
+                fontSize: 10.5,
               ),
             ),
           ],
@@ -3179,23 +3294,30 @@ class _StageSideMetric extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: tooltip,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 12, color: color),
-            const SizedBox(width: 3),
-          ],
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.black54,
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              height: 1.2,
+      child: SizedBox(
+        width: 72,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 15,
+              child: icon == null ? null : Icon(icon, size: 14, color: color),
             ),
-          ),
-        ],
+            const SizedBox(width: 3),
+            Expanded(
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  color: Colors.black54,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                  height: 1.15,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -4307,7 +4429,7 @@ class _StageDetailBottomNavigationBar extends StatelessWidget {
         top: false,
         child: Container(
           key: const ValueKey('stage-detail-bottom-navigation-size'),
-          height: 48,
+          height: 58,
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: Colors.white12)),
           ),
@@ -4318,6 +4440,7 @@ class _StageDetailBottomNavigationBar extends StatelessWidget {
                 key: const Key('stage-detail-stages-shortcut'),
                 icon: Icons.hiking_rounded,
                 label: l10n.t('Back to stages'),
+                visibleLabel: l10n.t('Stages'),
                 onTap: onStages,
               ),
               _StageBottomAction(
@@ -4330,6 +4453,7 @@ class _StageDetailBottomNavigationBar extends StatelessWidget {
                       ? 'No accommodation is listed for this stage.'
                       : 'Accommodation',
                 ),
+                visibleLabel: l10n.t('Lodging'),
                 badgeCount: accommodationCount,
                 onTap: isLoadingAccommodation ? null : onAccommodation,
               ),
@@ -4341,6 +4465,7 @@ class _StageDetailBottomNavigationBar extends StatelessWidget {
                     ? Icons.gps_fixed_rounded
                     : Icons.gps_not_fixed_rounded,
                 label: l10n.t('Find my stage'),
+                visibleLabel: l10n.t('GPS'),
                 isActive: hasGpsLocation,
                 isToggle: true,
                 isPrimary: true,
@@ -4350,12 +4475,14 @@ class _StageDetailBottomNavigationBar extends StatelessWidget {
                 key: const ValueKey('stage-detail-map'),
                 icon: Icons.map_outlined,
                 label: l10n.t('Show on map'),
+                visibleLabel: l10n.t('Map'),
                 onTap: onMap,
               ),
               _StageBottomAction(
                 key: const ValueKey('stage-detail-elevation'),
                 icon: Icons.landscape_outlined,
                 label: l10n.t('Elevation'),
+                visibleLabel: l10n.t('Elevation'),
                 onTap: onElevation,
               ),
             ],

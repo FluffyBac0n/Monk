@@ -68,13 +68,14 @@ class TrailsScreen extends ConsumerWidget {
                 icon: const Icon(Icons.info_outline_rounded),
               ),
               IconButton(
+                key: const ValueKey('landing-settings'),
                 tooltip: l10n.t('Settings'),
                 onPressed: () => Navigator.of(context).push<DebugHintReset>(
                   MaterialPageRoute<DebugHintReset>(
                     builder: (_) => const SettingsScreen(),
                   ),
                 ),
-                icon: const Icon(Icons.tune_rounded),
+                icon: const Icon(Icons.settings_outlined),
               ),
               const SizedBox(width: 8),
             ],

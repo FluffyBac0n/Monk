@@ -125,6 +125,13 @@ void main() {
       const ValueKey('stage-bottom-navigation'),
     );
     expect(information, findsOneWidget);
+    expect(
+      find.descendant(
+        of: settings,
+        matching: find.byIcon(Icons.settings_outlined),
+      ),
+      findsOneWidget,
+    );
     expect(informationHelper, findsOneWidget);
     expect(
       find.descendant(
@@ -381,9 +388,11 @@ void main() {
     );
     await tester.scrollUntilVisible(
       resetMetricsHint,
-      300,
+      500,
       scrollable: find.byType(Scrollable).last,
     );
+    await tester.ensureVisible(resetMetricsHint);
+    await tester.pumpAndSettle();
     await tester.tap(resetMetricsHint);
     await tester.pumpAndSettle();
 
@@ -502,6 +511,22 @@ void main() {
       const ValueKey('landing-eurotrex-wordmark'),
     );
     expect(landingWordmark, findsOneWidget);
+    final landingSettings = find.byKey(const ValueKey('landing-settings'));
+    expect(landingSettings, findsOneWidget);
+    expect(
+      find.descendant(
+        of: landingSettings,
+        matching: find.byIcon(Icons.settings_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: landingSettings,
+        matching: find.byIcon(Icons.tune_rounded),
+      ),
+      findsNothing,
+    );
     expect(find.text('EUROTREX'), findsNothing);
     expect(find.text('MONK'), findsNothing);
     expect(find.text('TRAIL LIBRARY'), findsNothing);
@@ -1776,6 +1801,21 @@ void main() {
     expect(pafosDistance, findsNothing);
     expect(pafosAltitude, findsOneWidget);
     expect(larnakaDistance, findsOneWidget);
+    expect(
+      find.descendant(of: larnakaDistance, matching: find.text('10.0 km')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: larnakaDistance,
+        matching: find.byIcon(Icons.hiking_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: larnakaDistance, matching: find.text('From Start')),
+      findsNothing,
+    );
     expect(larnakaAltitude, findsOneWidget);
     expect(
       tester.getCenter(larnakaDistance).dx,
@@ -1789,38 +1829,19 @@ void main() {
       tester.getCenter(larnakaSideMetrics).dx,
       lessThan(tester.getCenter(larnakaMarker).dx),
     );
-    expect(pafosTrailDistance, findsOneWidget);
+    expect(pafosTrailDistance, findsNothing);
     expect(larnakaTrailDistance, findsOneWidget);
     expect(
       (tester.widget<Container>(pafosMarker).decoration as BoxDecoration).color,
       const Color(0xFF277653),
     );
     expect(
-      find.descendant(
-        of: pafosTrailDistance,
-        matching: find.byIcon(Icons.add_rounded),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: pafosTrailDistance, matching: find.text('0.49km')),
-      findsOneWidget,
-    );
-    expect(
       (tester.widget<Container>(larnakaMarker).decoration as BoxDecoration)
           .color,
       const Color(0xFFF2C94C),
     );
-    expect(tester.widget(pafosTrailDistance), isA<Row>());
     expect(
-      find.descendant(
-        of: pafosTrailDistance,
-        matching: find.byType(DecoratedBox),
-      ),
-      findsNothing,
-    );
-    expect(
-      find.descendant(of: larnakaTrailDistance, matching: find.text('0.5km')),
+      find.descendant(of: larnakaTrailDistance, matching: find.text('0.6km')),
       findsOneWidget,
     );
     expect(
@@ -1840,8 +1861,12 @@ void main() {
         of: larnakaLength,
         matching: find.byIcon(Icons.straighten_rounded),
       ),
-      findsNothing,
+      findsOneWidget,
     );
+    final trailOffsetIcon = tester.widget<Icon>(
+      find.byKey(const ValueKey('stage-distance-from-trail-icon-larnaka')),
+    );
+    expect(trailOffsetIcon.color, Colors.black54);
     expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
     expect(
       find.descendant(of: pafosEndpoint, matching: find.text('Start')),
@@ -1885,6 +1910,10 @@ void main() {
     expect(find.text('Larnaka Airport  →  Pafos Airport'), findsNothing);
     expect(larnakaDistance, findsNothing);
     expect(pafosDistance, findsOneWidget);
+    expect(
+      find.descendant(of: pafosDistance, matching: find.text('10.0 km')),
+      findsOneWidget,
+    );
     expect(larnakaAscent, findsNothing);
     expect(larnakaDescent, findsNothing);
     expect(larnakaLength, findsNothing);
@@ -2321,7 +2350,13 @@ void main() {
       find.byKey(const ValueKey('reverse-trail-direction')),
       findsOneWidget,
     );
-    expect(find.byIcon(Icons.swap_horiz_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('reverse-trail-direction')),
+        matching: find.byIcon(Icons.swap_horiz_rounded),
+      ),
+      findsOneWidget,
+    );
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('reverse-trail-direction')),
@@ -2385,15 +2420,35 @@ void main() {
     expect(find.byKey(const ValueKey('stage-e4-waymark')), findsOneWidget);
     expect(
       find.descendant(of: bottomNavigation, matching: find.text('Filter')),
-      findsNothing,
+      findsOneWidget,
     );
     expect(
       find.descendant(of: bottomNavigation, matching: find.text('Map')),
-      findsNothing,
+      findsOneWidget,
     );
     expect(
       find.descendant(of: bottomNavigation, matching: find.text('Elevation')),
-      findsNothing,
+      findsOneWidget,
+    );
+    final filterLabel = find.descendant(
+      of: find.byKey(const ValueKey('stage-bottom-filter')),
+      matching: find.text('Filter'),
+    );
+    final gpsLabel = find.descendant(
+      of: find.byKey(const ValueKey('stage-bottom-gps')),
+      matching: find.text('GPS'),
+    );
+    final mapLabel = find.descendant(
+      of: find.byKey(const ValueKey('stage-bottom-map')),
+      matching: find.text('Map'),
+    );
+    expect(
+      tester.getCenter(gpsLabel).dy,
+      moreOrLessEquals(tester.getCenter(filterLabel).dy, epsilon: 0.1),
+    );
+    expect(
+      tester.getCenter(gpsLabel).dy,
+      moreOrLessEquals(tester.getCenter(mapLabel).dy, epsilon: 0.1),
     );
     expect(
       tester.widget<Material>(bottomNavigation).color,
@@ -2407,7 +2462,7 @@ void main() {
     final reverse = find.byKey(const ValueKey('reverse-trail-direction'));
     final gps = find.byKey(const ValueKey('stage-bottom-gps'));
     final initialBottom = tester.getBottomLeft(bottomNavigation).dy;
-    expect(tester.getSize(navigationSize), const Size(800, 48));
+    expect(tester.getSize(navigationSize), const Size(800, 58));
     expect(tester.getCenter(reverse).dx, lessThan(tester.getCenter(filter).dx));
     expect(tester.getCenter(filter).dx, lessThan(tester.getCenter(gps).dx));
     expect(
@@ -2417,12 +2472,12 @@ void main() {
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -500));
     await tester.pumpAndSettle();
-    expect(tester.getSize(navigationSize), const Size(800, 48));
+    expect(tester.getSize(navigationSize), const Size(800, 58));
     expect(tester.getBottomLeft(bottomNavigation).dy, initialBottom);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, 300));
     await tester.pumpAndSettle();
-    expect(tester.getSize(navigationSize), const Size(800, 48));
+    expect(tester.getSize(navigationSize), const Size(800, 58));
     expect(tester.getBottomLeft(bottomNavigation).dy, initialBottom);
 
     await tester.tap(find.byKey(const ValueKey('stage-bottom-map')));
@@ -2656,6 +2711,26 @@ void main() {
         matching: find.byIcon(Icons.filter_list_rounded),
       ),
       findsOneWidget,
+    );
+    final filterLabel = find.descendant(
+      of: filterAction,
+      matching: find.text('Filter'),
+    );
+    final distanceLabel = find.descendant(
+      of: gpsAction,
+      matching: find.text('Distance'),
+    );
+    final mapLabel = find.descendant(
+      of: navigationMap,
+      matching: find.text('Map'),
+    );
+    expect(
+      tester.getCenter(distanceLabel).dy,
+      moreOrLessEquals(tester.getCenter(filterLabel).dy, epsilon: 0.1),
+    );
+    expect(
+      tester.getCenter(distanceLabel).dy,
+      moreOrLessEquals(tester.getCenter(mapLabel).dy, epsilon: 0.1),
     );
 
     final contactActions = contactsRow;
@@ -3221,6 +3296,18 @@ void main() {
     expect(find.text('App preferences'), findsNothing);
     expect(find.text('Language'), findsOneWidget);
     expect(find.text('Metric'), findsOneWidget);
+    final measurementCard = find.byKey(
+      const ValueKey('measurement-settings-card'),
+    );
+    final changesNote = find.byKey(const ValueKey('settings-changes-note'));
+    expect(
+      find.descendant(of: measurementCard, matching: changesNote),
+      findsNothing,
+    );
+    expect(
+      tester.getTopLeft(changesNote).dy,
+      greaterThan(tester.getBottomLeft(measurementCard).dy),
+    );
     expect(
       Theme.of(
         tester.element(find.byKey(const Key('language-setting'))),
@@ -3320,7 +3407,7 @@ void main() {
             find.byKey(const ValueKey('elevation-bottom-navigation-size')),
           )
           .height,
-      48,
+      58,
     );
     final backAction = find.byKey(const Key('elevation-back'));
     final zoomOutAction = find.byKey(const Key('elevation-zoom-out'));
@@ -3872,7 +3959,7 @@ class _EndpointStagesController extends StagesController {
       id: 'larnaka',
       sequence: 1,
       name: 'Larnaka Airport',
-      distanceFromPathKm: 0.5,
+      distanceFromPathKm: 0.56,
       accumulatedDistanceKm: 10,
       segmentLengthKm: 10,
       elevationUpM: 120,

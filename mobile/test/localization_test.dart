@@ -75,6 +75,9 @@ void main() {
     expect(italian.t('Accommodation'), 'Alloggi');
     expect(italian.t('Offline map'), 'Mappa offline');
     expect(italian.t('Find my stage'), 'Trova la mia tappa');
+    expect(italian.t('Reverse'), 'Inverti');
+    expect(italian.t('Back'), 'Indietro');
+    expect(italian.t('Reset'), 'Reimposta');
     expect(italian.t('From Start'), 'Dalla partenza');
     expect(italian.t('To Finish'), 'All’arrivo');
     expect(italian.t('Points of Interest'), 'Punti di interesse');
@@ -110,6 +113,9 @@ void main() {
     expect(french.t('Accommodation'), 'Hébergements');
     expect(french.t('Offline map'), 'Carte hors ligne');
     expect(french.t('Find my stage'), 'Trouver mon étape');
+    expect(french.t('Reverse'), 'Inverser');
+    expect(french.t('Back'), 'Retour');
+    expect(french.t('Reset'), 'Réinitialiser');
     expect(french.t('From Start'), 'Depuis le départ');
     expect(french.t('To Finish'), 'Jusqu’à l’arrivée');
     expect(french.t('Points of Interest'), 'Points d’intérêt');

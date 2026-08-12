@@ -630,7 +630,7 @@ class _AccommodationBottomNavigationBar extends StatelessWidget {
         top: false,
         child: Container(
           key: const ValueKey('accommodation-bottom-navigation-size'),
-          height: 48,
+          height: 58,
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: Colors.white12)),
           ),
@@ -641,12 +641,14 @@ class _AccommodationBottomNavigationBar extends StatelessWidget {
                 key: const ValueKey('accommodation-stages-shortcut'),
                 icon: Icons.hiking_rounded,
                 label: l10n.t('Back to stages'),
+                visibleLabel: l10n.t('Stages'),
                 onTap: onStages,
               ),
               _AccommodationBottomAction(
                 key: const ValueKey('accommodation-filter'),
                 icon: Icons.filter_list_rounded,
                 label: l10n.t('Filter'),
+                visibleLabel: l10n.t('Filter'),
                 isActive: activeFilterCount > 0,
                 badgeCount: activeFilterCount,
                 onTap: onFilter,
@@ -657,6 +659,7 @@ class _AccommodationBottomNavigationBar extends StatelessWidget {
                     ? Icons.gps_fixed_rounded
                     : Icons.gps_not_fixed_rounded,
                 label: l10n.t('Maximum distance from trail'),
+                visibleLabel: l10n.t('Distance'),
                 isActive: hasDistanceFilter,
                 isPrimary: true,
                 onTap: onDistanceFilter,
@@ -665,12 +668,14 @@ class _AccommodationBottomNavigationBar extends StatelessWidget {
                 key: const ValueKey('accommodation-map'),
                 icon: Icons.map_outlined,
                 label: l10n.t('Show on map'),
+                visibleLabel: l10n.t('Map'),
                 onTap: onMap,
               ),
               _AccommodationBottomAction(
                 key: const ValueKey('accommodation-elevation'),
                 icon: Icons.landscape_outlined,
                 label: l10n.t('Elevation'),
+                visibleLabel: l10n.t('Elevation'),
                 onTap: onElevation,
               ),
             ],
@@ -685,6 +690,7 @@ class _AccommodationBottomAction extends StatelessWidget {
   const _AccommodationBottomAction({
     required this.icon,
     required this.label,
+    required this.visibleLabel,
     required this.onTap,
     this.isActive = false,
     this.isPrimary = false,
@@ -694,6 +700,7 @@ class _AccommodationBottomAction extends StatelessWidget {
 
   final IconData icon;
   final String label;
+  final String visibleLabel;
   final VoidCallback? onTap;
   final bool isActive;
   final bool isPrimary;
@@ -709,46 +716,81 @@ class _AccommodationBottomAction extends StatelessWidget {
           button: true,
           selected: isActive,
           enabled: onTap != null,
+          excludeSemantics: true,
           label: label,
           child: InkWell(
             splashColor: Colors.white12,
             highlightColor: Colors.white10,
             onTap: onTap,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Center(
-                  child: Badge(
-                    isLabelVisible: badgeCount > 0,
-                    backgroundColor: _yellow,
-                    textColor: _ink,
-                    label: Text('$badgeCount'),
-                    child: isPrimary
-                        ? Container(
-                            key: const ValueKey(
-                              'accommodation-bottom-gps-surface',
-                            ),
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: isActive
-                                  ? EurotrexPalette.blue
-                                  : Colors.white.withValues(alpha: 0.055),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Icon(icon, color: foreground, size: 22),
-                            ),
-                          )
-                        : SizedBox.square(
-                            dimension: 24,
-                            child: Center(
-                              child: Icon(icon, color: foreground, size: 22),
-                            ),
-                          ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    height: 36,
+                    child: Center(
+                      child: Badge(
+                        isLabelVisible: badgeCount > 0,
+                        backgroundColor: _yellow,
+                        textColor: _ink,
+                        label: Text('$badgeCount'),
+                        child: isPrimary
+                            ? Container(
+                                key: const ValueKey(
+                                  'accommodation-bottom-gps-surface',
+                                ),
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: isActive
+                                      ? EurotrexPalette.blue
+                                      : Colors.white.withValues(alpha: 0.055),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    icon,
+                                    color: foreground,
+                                    size: 22,
+                                  ),
+                                ),
+                              )
+                            : SizedBox.square(
+                                dimension: 32,
+                                child: Center(
+                                  child: Icon(
+                                    icon,
+                                    color: foreground,
+                                    size: 22,
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 1),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 11,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      child: Text(
+                        visibleLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: foreground,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

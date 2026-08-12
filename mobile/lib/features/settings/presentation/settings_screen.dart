@@ -51,6 +51,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 14),
             _SettingsCard(
+              key: const ValueKey('measurement-settings-card'),
               icon: Icons.straighten_rounded,
               title: l10n.t('Measurements'),
               child: SegmentedButton<MeasurementSystem>(
@@ -73,6 +74,15 @@ class SettingsScreen extends ConsumerWidget {
                     .setMeasurementSystem(selection.single),
                 showSelectedIcon: false,
               ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.t('Changes apply throughout the app.'),
+              key: const ValueKey('settings-changes-note'),
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.black54),
             ),
             const SizedBox(height: 14),
             const _OfflineAccessSetting(),
@@ -179,14 +189,6 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
             ],
-            const SizedBox(height: 14),
-            Text(
-              l10n.t('Changes apply throughout the app.'),
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.black54),
-            ),
           ],
         ),
       ),
@@ -719,6 +721,7 @@ class _SettingsCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.child,
+    super.key,
   });
 
   final IconData icon;

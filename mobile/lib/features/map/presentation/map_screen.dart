@@ -82,6 +82,9 @@ double mapTrailTapToleranceM(double zoom) {
 Color mapLodgingMarkerOutlineColor({required bool isSelected}) =>
     isSelected ? EurotrexPalette.blue : Colors.white;
 
+const mapSelectedLodgingRingRadius = 12.5;
+const mapSelectedLodgingRingWidth = 2.5;
+
 double mapLodgingSelectionZoom(double currentZoom) {
   if (!currentZoom.isFinite) return 12;
   return math.min(15, currentZoom + 0.75);
@@ -640,6 +643,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   Cancelable? _stageTapListener;
   final Map<String, int> _stageIndexByAnnotation = {};
   final Map<String, String?> _stageStyleImages = {};
+  CircleAnnotationManager? _lodgingSelectionManager;
   PointAnnotationManager? _lodgingManager;
   Cancelable? _lodgingTapListener;
   final Map<String, int> _lodgingIndexByAnnotation = {};
@@ -1254,10 +1258,15 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     _lodgingTapListener?.cancel();
     _lodgingTapListener = null;
     final previousManager = _lodgingManager;
+    final previousSelectionManager = _lodgingSelectionManager;
     _lodgingManager = null;
+    _lodgingSelectionManager = null;
     _lodgingIndexByAnnotation.clear();
     if (previousManager != null) {
       await map.annotations.removeAnnotationManager(previousManager);
+    }
+    if (previousSelectionManager != null) {
+      await map.annotations.removeAnnotationManager(previousSelectionManager);
     }
   }
 
@@ -1274,6 +1283,35 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     final styleImages = <String, String?>{};
     for (final iconName in makiIconNames) {
       styleImages[iconName] = await _resolveLodgingStyleImage(map, iconName);
+    }
+
+    final selectedLodgingIndex = _selectedLodgingIndex;
+    if (selectedLodgingIndex != null &&
+        selectedLodgingIndex >= 0 &&
+        selectedLodgingIndex < _mappedLodgings.length) {
+      final selectedLocation = _mappedLodgings[selectedLodgingIndex].location;
+      if (selectedLocation != null) {
+        final selectionManager = await map.annotations
+            .createCircleAnnotationManager();
+        _lodgingSelectionManager = selectionManager;
+        await selectionManager.create(
+          CircleAnnotationOptions(
+            geometry: Point(
+              coordinates: Position(
+                selectedLocation.longitude,
+                selectedLocation.latitude,
+              ),
+            ),
+            circleRadius: mapSelectedLodgingRingRadius,
+            circleColor: Colors.transparent.toARGB32(),
+            circleOpacity: 0,
+            circleStrokeColor: EurotrexPalette.blue.toARGB32(),
+            circleStrokeWidth: mapSelectedLodgingRingWidth,
+            circleStrokeOpacity: 1,
+            circleSortKey: 0,
+          ),
+        );
+      }
     }
 
     final manager = await map.annotations.createPointAnnotationManager();
@@ -1303,24 +1341,24 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
           ),
           iconImage:
               styleImages[lodgingMakiIconName(_mappedLodgings[index].type)],
-          iconSize: index == _selectedLodgingIndex ? 1.65 : 1.4,
+          iconSize: index == _selectedLodgingIndex ? 1.55 : 1.4,
           iconColor: _accommodationBlue.toARGB32(),
           iconHaloColor: mapLodgingMarkerOutlineColor(
             isSelected: index == _selectedLodgingIndex,
           ).toARGB32(),
-          iconHaloWidth: index == _selectedLodgingIndex ? 4.25 : 2,
-          iconHaloBlur: 0.5,
+          iconHaloWidth: index == _selectedLodgingIndex ? 2.5 : 2,
+          iconHaloBlur: index == _selectedLodgingIndex ? 0 : 0.5,
           textField:
               styleImages[lodgingMakiIconName(_mappedLodgings[index].type)] ==
                   null
               ? '●'
               : null,
-          textSize: index == _selectedLodgingIndex ? 25 : 21,
+          textSize: index == _selectedLodgingIndex ? 23 : 21,
           textColor: _accommodationBlue.toARGB32(),
           textHaloColor: mapLodgingMarkerOutlineColor(
             isSelected: index == _selectedLodgingIndex,
           ).toARGB32(),
-          textHaloWidth: index == _selectedLodgingIndex ? 4.25 : 2,
+          textHaloWidth: index == _selectedLodgingIndex ? 2.5 : 2,
           symbolSortKey: index == _selectedLodgingIndex ? 2 : 1,
           customData: {
             'lodgingIndex': index,
