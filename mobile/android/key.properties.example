@@ -1,0 +1,6 @@
+# Copy this file to android/key.properties after creating the release keystore.
+# Never commit the real key.properties or keystore.
+storePassword=REPLACE_WITH_STORE_PASSWORD
+keyPassword=REPLACE_WITH_KEY_PASSWORD
+keyAlias=upload
+storeFile=../keystore/eurotrex-upload.jks
