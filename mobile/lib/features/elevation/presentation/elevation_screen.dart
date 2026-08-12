@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
@@ -1190,6 +1191,11 @@ class _ElevationBottomAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = onTap == null ? Colors.white30 : Colors.white;
+    void handleTap() {
+      unawaited(HapticFeedback.selectionClick());
+      onTap?.call();
+    }
+
     return Expanded(
       child: Tooltip(
         message: label,
@@ -1200,15 +1206,11 @@ class _ElevationBottomAction extends StatelessWidget {
           selected: isToggle ? null : isActive,
           toggled: isToggle ? isActive : null,
           label: label,
+          onTap: onTap == null ? null : handleTap,
           child: InkWell(
             splashColor: Colors.white12,
             highlightColor: Colors.white10,
-            onTap: onTap == null
-                ? null
-                : () {
-                    HapticFeedback.selectionClick();
-                    onTap!();
-                  },
+            onTap: onTap == null ? null : handleTap,
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,

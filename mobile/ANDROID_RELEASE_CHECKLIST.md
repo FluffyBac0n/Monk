@@ -51,12 +51,25 @@ Android development and is not an Android release blocker.
 - [x] Review the Android launcher and adaptive icons on the Pixel launcher.
 - [ ] Add and visually verify a branded Android launch screen, including the
       Android 12+ splash-screen path and dark mode.
-- [ ] Investigate the Mapbox optional-class `ClassNotFoundException` warnings
-      printed during Android startup. Map rendering works, but the dependency
-      versions should be checked before release.
-- [ ] Fix and retest the Stage Info map-preview initial camera on Android. A
-      preview displayed Mapbox's default Corsica location instead of Cyprus
-      during the first emulator smoke test; the full Trail Map camera worked.
+- [x] Investigate the Mapbox Common `ClassNotFoundException` messages printed
+      during debug startup. The referenced classes are packaged in the APK,
+      Mapbox Common installs its JNI class-loader fallback, initialization
+      completes, and the map renders. They are handled first-pass JNI lookup
+      messages exposed by Android's debug `-Xcheck:jni`, not an application
+      `NoClassDefFoundError`; no custom `Application` workaround is retained.
+- [ ] Confirm a cold-started release APK emits no `ClassNotFoundException` and
+      no fatal/`NoClassDefFoundError` before release sign-off. This explicit
+      production check remains required even though the debug messages are
+      handled internally by Mapbox.
+- [x] Fix the Stage Info map-preview initial camera on both Android and iOS.
+      The preview now starts on the selected stage and applies deterministic
+      bounds after the map loads instead of relying on a racy initial overview
+      viewport.
+- [x] Respect the selected measurement system in the full-map scale bar.
+- [x] Format large off-trail GPS distances in km/mi instead of unwieldy m/ft.
+- [x] Show a persistent localized download failure state with a retry action.
+- [x] Expose explicit accessibility tap actions for custom bottom navigation
+      buttons on Stages, Stage Info, Elevation, and Accommodation.
 
 ## Build verification completed
 
@@ -70,7 +83,7 @@ Android development and is not an Android release blocker.
       minimum API 24, target API 36, and required permissions.
 - [x] Verify the bundle contains ARM64, ARMv7, and x86-64 native libraries.
 - [x] Run `flutter analyze` with no issues.
-- [x] Run all 118 Flutter tests successfully.
+- [x] Run all 118 Flutter tests successfully after the Android fixes.
 
 ## Functional verification still required
 

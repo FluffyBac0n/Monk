@@ -8,6 +8,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 
 import '../../../core/links/external_url_launcher.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
 import '../../../core/theme/eurotrex_palette.dart';
@@ -721,6 +722,15 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
   Future<void> _onMapCreated(MapboxMap map) async {
     _map = map;
+    final usesMetricUnits = widget.formatter.system == MeasurementSystem.metric;
+    await map.scaleBar.updateSettings(
+      ScaleBarSettings(
+        isMetricUnits: usesMetricUnits,
+        distanceUnits: usesMetricUnits
+            ? DistanceUnits.METRIC
+            : DistanceUnits.IMPERIAL,
+      ),
+    );
     map.addInteraction(
       TapInteraction.onMap(_handleMapTap, stopPropagation: false),
       interactionID: _routeTapInteractionId,
@@ -2181,7 +2191,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         stageIndex < widget.stages.length) {
       final distance = distanceM == null
           ? null
-          : widget.formatter.altitude(distanceM);
+          : widget.formatter.proximityDistance(distanceM);
       if (distance != null) {
         return context.l10n.nearStageDistance(
           widget.stages[stageIndex].name,
@@ -2192,7 +2202,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     }
     if (distanceM != null) {
       return context.l10n.offTrailDistance(
-        widget.formatter.altitude(distanceM),
+        widget.formatter.proximityDistance(distanceM),
       );
     }
     return context.l10n.t('My location');

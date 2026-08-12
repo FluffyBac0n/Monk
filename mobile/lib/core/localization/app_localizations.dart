@@ -252,6 +252,8 @@ const _translations = <String, Map<String, String>>{
     'Show on map': 'Auf Karte anzeigen',
     'Back to stages': 'Zurück zu den Etappen',
     'Take the trail offline': 'Weg offline verfügbar machen',
+    'Could not download the trail':
+        'Der Weg konnte nicht heruntergeladen werden',
     'Download Cyprus E4 to browse its stages without a connection.':
         'Cyprus E4 herunterladen, um Etappen ohne Verbindung anzusehen.',
     'Download trail': 'Weg herunterladen',
@@ -639,6 +641,7 @@ const _translations = <String, Map<String, String>>{
     'Show on map': 'Mostrar en el mapa',
     'Back to stages': 'Volver a las etapas',
     'Take the trail offline': 'Guardar la ruta sin conexión',
+    'Could not download the trail': 'No se pudo descargar la ruta',
     'Download Cyprus E4 to browse its stages without a connection.':
         'Descarga Cyprus E4 para ver sus etapas sin conexión.',
     'Download trail': 'Descargar ruta',

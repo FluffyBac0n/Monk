@@ -662,8 +662,9 @@ void main() {
     );
     expect(find.byKey(const ValueKey('about-eu-logo')), findsNothing);
     expect(find.byKey(const ValueKey('about-cyprus-logo')), findsNothing);
-    expect(find.text('Take the trail offline'), findsOneWidget);
-    expect(find.text('Download trail'), findsWidgets);
+    expect(find.text('Could not download the trail'), findsOneWidget);
+    expect(find.text('Check your connection and try again.'), findsOneWidget);
+    expect(find.text('Try again'), findsWidgets);
   });
 
   testWidgets('funding partners and contact links live on About', (

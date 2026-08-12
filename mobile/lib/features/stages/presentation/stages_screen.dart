@@ -496,7 +496,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
       ref.read(appSettingsProvider).measurementSystem,
     );
     _showLocalizedMessage(
-      context.l10n.offTrailDistance(formatter.altitude(distanceM)),
+      context.l10n.offTrailDistance(formatter.proximityDistance(distanceM)),
     );
   }
 
@@ -758,7 +758,9 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
       if (!next.hasError || next.isLoading) return;
       final message = next.error is FirebaseNotConfiguredException
           ? 'Firebase is not configured for this build.'
-          : 'Could not update the trail. Your offline copy is unchanged.';
+          : previous?.value?.isNotEmpty == true
+          ? 'Could not update the trail. Your offline copy is unchanged.'
+          : 'Could not download the trail';
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.l10n.t(message))));
@@ -1080,7 +1082,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
               ),
               error: (_, _) => const SliverFillRemaining(
                 hasScrollBody: false,
-                child: _EmptyState(),
+                child: _EmptyState(downloadFailed: true),
               ),
             ),
           ],
@@ -1214,6 +1216,11 @@ class _StageBottomAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = onTap == null ? Colors.white30 : Colors.white;
+    void handleTap() {
+      unawaited(HapticFeedback.selectionClick());
+      onTap?.call();
+    }
+
     Widget buildIcon(double size) => showReverseTrailIcon
         ? _ReverseTrailIcon(color: foreground, size: size + 4)
         : Icon(icon, color: foreground, size: size);
@@ -1227,15 +1234,11 @@ class _StageBottomAction extends StatelessWidget {
           selected: isToggle ? null : isActive,
           toggled: isToggle ? isActive : null,
           label: label,
+          onTap: onTap == null ? null : handleTap,
           child: InkWell(
             splashColor: Colors.white12,
             highlightColor: Colors.white10,
-            onTap: onTap == null
-                ? null
-                : () {
-                    unawaited(HapticFeedback.selectionClick());
-                    onTap!();
-                  },
+            onTap: onTap == null ? null : handleTap,
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -3882,7 +3885,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
       ref.read(appSettingsProvider).measurementSystem,
     );
     _showLocalizedMessage(
-      context.l10n.offTrailDistance(formatter.altitude(distanceM)),
+      context.l10n.offTrailDistance(formatter.proximityDistance(distanceM)),
     );
   }
 
@@ -5639,47 +5642,84 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
   final Map<String, String?> _lodgingStyleImages = {};
   bool _loadFailed = false;
 
+  List<Position> get _viewportCoordinates => <Position>[
+    if (widget.showRoute)
+      for (final point in widget.routePoints) Position(point.lng, point.lat)
+    else
+      Position(widget.startPoint.lng, widget.startPoint.lat),
+    for (final lodging in widget.lodgings)
+      if (lodging.location case final location?)
+        Position(location.longitude, location.latitude),
+    for (final route in widget.excursions)
+      for (final point in route.points) Position(point.lng, point.lat),
+    for (final route in widget.detours)
+      for (final point in route.points) Position(point.lng, point.lat),
+    if (widget.userLocation case final DeviceLocation location)
+      Position(location.longitude, location.latitude),
+  ];
+
   @override
   void initState() {
     super.initState();
     final center = widget.showRoute
         ? widget.routePoints[widget.routePoints.length ~/ 2]
         : widget.startPoint;
+    // Use a deterministic initial camera on both native platforms. The final
+    // bounds are applied after the style has loaded, avoiding the Android
+    // Overview viewport race that could briefly settle on an unrelated region.
+    _initialViewport = CameraViewportState(
+      center: Point(coordinates: Position(center.lng, center.lat)),
+      zoom: 13.5,
+      bearing: 0,
+      pitch: 0,
+    );
+  }
+
+  Future<void> _fitPreviewCamera(MapboxMap map) async {
+    final coordinates = _viewportCoordinates;
+    if (coordinates.length == 1) {
+      await map.setCamera(
+        CameraOptions(
+          center: Point(coordinates: coordinates.single),
+          zoom: 13.5,
+          bearing: 0,
+          pitch: 0,
+        ),
+      );
+      return;
+    }
+
+    var minLat = coordinates.first.lat.toDouble();
+    var maxLat = minLat;
+    var minLng = coordinates.first.lng.toDouble();
+    var maxLng = minLng;
+    for (final coordinate in coordinates.skip(1)) {
+      final lat = coordinate.lat.toDouble();
+      final lng = coordinate.lng.toDouble();
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+    }
     final stageDistanceKm = widget.showRoute
         ? (widget.finishPoint.distanceKm - widget.startPoint.distanceKm).abs()
         : 0.0;
-    final viewportCoordinates = <Position>[
-      if (widget.showRoute)
-        for (final point in widget.routePoints) Position(point.lng, point.lat)
-      else
-        Position(widget.startPoint.lng, widget.startPoint.lat),
-      for (final lodging in widget.lodgings)
-        if (lodging.location case final location?)
-          Position(location.longitude, location.latitude),
-      for (final route in widget.excursions)
-        for (final point in route.points) Position(point.lng, point.lat),
-      for (final route in widget.detours)
-        for (final point in route.points) Position(point.lng, point.lat),
-      if (widget.userLocation case final DeviceLocation location)
-        Position(location.longitude, location.latitude),
-    ];
-    _initialViewport = viewportCoordinates.length == 1
-        ? CameraViewportState(
-            center: Point(coordinates: Position(center.lng, center.lat)),
-            zoom: 13.5,
-            bearing: 0,
-            pitch: 0,
-          )
-        : OverviewViewportState(
-            geometry: LineString(coordinates: viewportCoordinates),
-            geometryPadding: stageDistanceKm > 6
-                ? const EdgeInsets.fromLTRB(60, 50, 54, 64)
-                : const EdgeInsets.fromLTRB(54, 44, 48, 54),
-            bearing: 0,
-            pitch: 0,
-            maxZoom: 16,
-            animationDuration: Duration.zero,
-          );
+    final padding = stageDistanceKm > 6
+        ? MbxEdgeInsets(top: 50, left: 60, bottom: 64, right: 54)
+        : MbxEdgeInsets(top: 44, left: 54, bottom: 54, right: 48);
+    final camera = await map.cameraForCoordinateBounds(
+      CoordinateBounds(
+        southwest: Point(coordinates: Position(minLng, minLat)),
+        northeast: Point(coordinates: Position(maxLng, maxLat)),
+        infiniteBounds: false,
+      ),
+      padding,
+      0,
+      0,
+      16,
+      null,
+    );
+    await map.setCamera(camera);
   }
 
   Future<void> _onMapCreated(MapboxMap map) async {
@@ -5829,6 +5869,14 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
   Future<void> _onMapLoaded(MapLoadedEventData _) async {
     final map = _map;
     if (map == null) return;
+    // Camera fitting is visual polish; a native camera error must not prevent
+    // the route, accommodation, excursion, and detour layers from loading.
+    try {
+      await _fitPreviewCamera(map);
+    } catch (_) {
+      // The deterministic initial camera already points at this stage, so it
+      // remains a safe cross-platform fallback if fitting is unavailable.
+    }
     final mappedLodgings = widget.lodgings
         .where((lodging) => lodging.location != null)
         .toList(growable: false);
@@ -6363,7 +6411,9 @@ class _NoMatchingStages extends StatelessWidget {
 }
 
 class _EmptyState extends ConsumerWidget {
-  const _EmptyState();
+  const _EmptyState({this.downloadFailed = false});
+
+  final bool downloadFailed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -6377,13 +6427,19 @@ class _EmptyState extends ConsumerWidget {
             const Icon(Icons.hiking_rounded, size: 58, color: _green),
             const SizedBox(height: 16),
             Text(
-              l10n.t('Take the trail offline'),
+              l10n.t(
+                downloadFailed
+                    ? 'Could not download the trail'
+                    : 'Take the trail offline',
+              ),
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
               l10n.t(
-                'Download Cyprus E4 to browse its stages without a connection.',
+                downloadFailed
+                    ? 'Check your connection and try again.'
+                    : 'Download Cyprus E4 to browse its stages without a connection.',
               ),
               textAlign: TextAlign.center,
             ),
@@ -6391,7 +6447,9 @@ class _EmptyState extends ConsumerWidget {
             FilledButton.icon(
               onPressed: () => ref.read(stagesProvider.notifier).sync(),
               icon: const Icon(Icons.download_rounded),
-              label: Text(l10n.t('Download trail')),
+              label: Text(
+                l10n.t(downloadFailed ? 'Try again' : 'Download trail'),
+              ),
             ),
           ],
         ),

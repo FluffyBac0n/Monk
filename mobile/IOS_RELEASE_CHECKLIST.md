@@ -154,8 +154,12 @@ build is approximately 83.2 MB.
 ## Build and TestFlight
 
 - [ ] Set the final marketing version and increment the build number.
-- [ ] Run `flutter analyze`.
-- [ ] Run the complete `flutter test` suite.
+- [x] Run `flutter analyze` after the shared Android/iOS fixes.
+- [x] Run all 118 Flutter tests after the shared Android/iOS fixes.
+- [x] Keep Mapbox Flutter 2.26.0 aligned with the installed iOS MapboxMaps
+      11.26.0 pods; no Android-only dependency override is present.
+- [ ] Rebuild and launch the current changes on an iOS simulator. The local
+      source and pods are aligned, but this pass requires CoreSimulator access.
 - [ ] Build the signed archive with the production Mapbox configuration.
 - [ ] Validate the archive in Xcode Organizer.
 - [ ] Review the archive's privacy report and upload warnings.
@@ -188,4 +192,3 @@ build is approximately 83.2 MB.
 - [App Store version information](https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information)
 - [Screenshot specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/)
 - [Mapbox attribution requirements](https://docs.mapbox.com/help/ja/dive-deeper/attribution/)
-

@@ -176,6 +176,7 @@ const italianTranslations = <String, String>{
   'Show on map': 'Mostra sulla mappa',
   'Back to stages': 'Torna alle tappe',
   'Take the trail offline': 'Rendi il sentiero disponibile offline',
+  'Could not download the trail': 'Impossibile scaricare il sentiero',
   'Download Cyprus E4 to browse its stages without a connection.':
       'Scarica l’E4 di Cipro per consultare le tappe senza connessione.',
   'Download trail': 'Scarica sentiero',

@@ -709,6 +709,8 @@ class _AccommodationBottomAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = onTap == null ? Colors.white30 : Colors.white;
+    void handleTap() => onTap?.call();
+
     return Expanded(
       child: Tooltip(
         message: label,
@@ -718,10 +720,11 @@ class _AccommodationBottomAction extends StatelessWidget {
           enabled: onTap != null,
           excludeSemantics: true,
           label: label,
+          onTap: onTap == null ? null : handleTap,
           child: InkWell(
             splashColor: Colors.white12,
             highlightColor: Colors.white10,
-            onTap: onTap,
+            onTap: onTap == null ? null : handleTap,
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
