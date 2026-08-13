@@ -76,7 +76,7 @@ class TrailInformationScreen extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Color(0xD9303E4E), Color(0x802D5DD3)],
+                        colors: [Color(0x80000000), Color(0x52000000)],
                         stops: [0.05, 1],
                       ),
                     ),

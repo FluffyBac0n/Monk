@@ -2208,10 +2208,9 @@ class _DetourMainStageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeServices = stage.services.entries
-        .where((entry) => entry.value)
-        .take(7)
-        .toList(growable: false);
+    final activeServices = _activeStageServices(
+      stage.services,
+    ).take(7).toList(growable: false);
     final distanceFromStart = stage.accumulatedDistanceKm == null
         ? null
         : direction.distanceFromStart(
@@ -2553,9 +2552,7 @@ class _StageTimelineRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeServices = stage.services.entries
-        .where((entry) => entry.value)
-        .toList();
+    final activeServices = _activeStageServices(stage.services);
     final hasExcursions = excursions.isNotEmpty;
     final hasDetours = detours.isNotEmpty;
     final showDistance = !isTrailStart && distanceKm != null;
@@ -4134,9 +4131,7 @@ class StageInfoCards extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final services = stage.services.entries
-        .where((entry) => entry.value)
-        .toList(growable: false);
+    final services = _activeStageServices(stage.services);
     final accumulatedDistance = stage.accumulatedDistanceKm;
     final totalDistanceKm = _trailDistanceKm(stages);
     final distanceFromStart = accumulatedDistance == null
@@ -5636,11 +5631,14 @@ class _StageMapSnapshot extends StatefulWidget {
 class _StageMapSnapshotState extends State<_StageMapSnapshot> {
   static const _mapTapInteractionId = 'stage-preview-open-map';
 
+  late final CameraOptions _initialCamera;
   late final ViewportState _initialViewport;
   MapboxMap? _map;
   Cancelable? _lodgingTapListener;
   final Map<String, String?> _lodgingStyleImages = {};
   bool _loadFailed = false;
+
+  bool _isCurrentMap(MapboxMap map) => mounted && identical(_map, map);
 
   List<Position> get _viewportCoordinates => <Position>[
     if (widget.showRoute)
@@ -5664,11 +5662,19 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
     final center = widget.showRoute
         ? widget.routePoints[widget.routePoints.length ~/ 2]
         : widget.startPoint;
-    // Use a deterministic initial camera on both native platforms. The final
-    // bounds are applied after the style has loaded, avoiding the Android
-    // Overview viewport race that could briefly settle on an unrelated region.
+    final centerPoint = Point(coordinates: Position(center.lng, center.lat));
+    // Mapbox Flutter 2.26 applies `viewport` after Android creates the native
+    // map. Supplying the same deprecated camera options as well is intentional:
+    // those options are passed into MapInitOptions and prevent the native map's
+    // default country from appearing for a frame before the viewport arrives.
+    _initialCamera = CameraOptions(
+      center: centerPoint,
+      zoom: 13.5,
+      bearing: 0,
+      pitch: 0,
+    );
     _initialViewport = CameraViewportState(
-      center: Point(coordinates: Position(center.lng, center.lat)),
+      center: centerPoint,
       zoom: 13.5,
       bearing: 0,
       pitch: 0,
@@ -5724,29 +5730,31 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
 
   Future<void> _onMapCreated(MapboxMap map) async {
     _map = map;
-    map.addInteraction(
-      TapInteraction.onMap((_) {
-        if (mounted) widget.onTap();
-      }),
-      interactionID: _mapTapInteractionId,
-    );
-    await map.gestures.updateSettings(
-      GesturesSettings(
-        rotateEnabled: false,
-        pinchToZoomEnabled: false,
-        scrollEnabled: false,
-        simultaneousRotateAndPinchToZoomEnabled: false,
-        pitchEnabled: false,
-        doubleTapToZoomInEnabled: false,
-        doubleTouchToZoomOutEnabled: false,
-        quickZoomEnabled: false,
-        pinchPanEnabled: false,
-      ),
-    );
-    await map.compass.updateSettings(CompassSettings(enabled: false));
-    await map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
-    if (widget.showUserLocation) {
-      try {
+    try {
+      map.addInteraction(
+        TapInteraction.onMap((_) {
+          if (mounted) widget.onTap();
+        }),
+        interactionID: _mapTapInteractionId,
+      );
+      await map.gestures.updateSettings(
+        GesturesSettings(
+          rotateEnabled: false,
+          pinchToZoomEnabled: false,
+          scrollEnabled: false,
+          simultaneousRotateAndPinchToZoomEnabled: false,
+          pitchEnabled: false,
+          doubleTapToZoomInEnabled: false,
+          doubleTouchToZoomOutEnabled: false,
+          quickZoomEnabled: false,
+          pinchPanEnabled: false,
+        ),
+      );
+      if (!_isCurrentMap(map)) return;
+      await map.compass.updateSettings(CompassSettings(enabled: false));
+      await map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
+      if (!_isCurrentMap(map)) return;
+      if (widget.showUserLocation) {
         await map.location.updateSettings(
           LocationComponentSettings(
             enabled: true,
@@ -5755,120 +5763,146 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
             showAccuracyRing: true,
           ),
         );
-      } catch (_) {
-        // The stage preview remains useful if location rendering is unavailable.
+        if (!_isCurrentMap(map)) return;
       }
-    }
 
-    if (widget.showRoute && widget.routePoints.length > 1) {
-      final routeManager = await map.annotations
-          .createPolylineAnnotationManager();
-      await routeManager.create(
-        PolylineAnnotationOptions(
-          geometry: LineString(
-            coordinates: [
-              for (final point in widget.routePoints)
-                Position(point.lng, point.lat),
-            ],
-          ),
-          lineColor: _bookingBlue.toARGB32(),
-          lineWidth: 5,
-          lineBorderColor: Colors.white.toARGB32(),
-          lineBorderWidth: 1.5,
-          lineOpacity: 0.95,
-        ),
-      );
-    }
-
-    if (widget.excursions.isNotEmpty) {
-      final excursionManager = await map.annotations
-          .createPolylineAnnotationManager();
-      for (final route in widget.excursions) {
-        if (route.points.length < 2) continue;
-        await excursionManager.create(
+      if (widget.showRoute && widget.routePoints.length > 1) {
+        final routeManager = await map.annotations
+            .createPolylineAnnotationManager();
+        if (!_isCurrentMap(map)) return;
+        await routeManager.create(
           PolylineAnnotationOptions(
             geometry: LineString(
               coordinates: [
-                for (final point in route.points)
+                for (final point in widget.routePoints)
                   Position(point.lng, point.lat),
               ],
             ),
-            lineColor: _excursionMapLightBlue.toARGB32(),
+            lineColor: _bookingBlue.toARGB32(),
             lineWidth: 5,
             lineBorderColor: Colors.white.toARGB32(),
             lineBorderWidth: 1.5,
             lineOpacity: 0.95,
           ),
         );
+        if (!_isCurrentMap(map)) return;
       }
-    }
 
-    if (widget.detours.isNotEmpty) {
-      final detourManager = await map.annotations
-          .createPolylineAnnotationManager();
-      for (final route in widget.detours) {
-        if (route.points.length < 2) continue;
-        await detourManager.create(
-          PolylineAnnotationOptions(
-            geometry: LineString(
-              coordinates: [
-                for (final point in route.points)
-                  Position(point.lng, point.lat),
-              ],
+      if (widget.excursions.isNotEmpty) {
+        final excursionManager = await map.annotations
+            .createPolylineAnnotationManager();
+        if (!_isCurrentMap(map)) return;
+        for (final route in widget.excursions) {
+          if (route.points.length < 2) continue;
+          await excursionManager.create(
+            PolylineAnnotationOptions(
+              geometry: LineString(
+                coordinates: [
+                  for (final point in route.points)
+                    Position(point.lng, point.lat),
+                ],
+              ),
+              lineColor: _excursionMapLightBlue.toARGB32(),
+              lineWidth: 5,
+              lineBorderColor: Colors.white.toARGB32(),
+              lineBorderWidth: 1.5,
+              lineOpacity: 0.95,
             ),
-            lineColor: _detourPurple.toARGB32(),
-            lineWidth: 5,
-            lineBorderColor: Colors.white.toARGB32(),
-            lineBorderWidth: 1.5,
-            lineOpacity: 0.95,
-          ),
-        );
+          );
+          if (!_isCurrentMap(map)) return;
+        }
       }
-    }
 
-    final flags = await Future.wait([
-      mapFlagMarkerImage(_green),
-      mapFlagMarkerImage(_red),
-    ]);
-    final markerManager = await map.annotations.createPointAnnotationManager();
-    await markerManager.setIconAllowOverlap(true);
-    await markerManager.setIconIgnorePlacement(true);
-    await markerManager.createMulti([
-      PointAnnotationOptions(
-        geometry: Point(
-          coordinates: Position(widget.startPoint.lng, widget.startPoint.lat),
-        ),
-        image: flags[0],
-        iconAnchor: IconAnchor.BOTTOM,
-        iconSize: 1.75,
-        customData: {
-          'role': 'start',
-          'distanceKm': widget.startPoint.distanceKm,
-        },
-      ),
-      if (widget.showFinishFlag &&
-          widget.finishPoint.pointIndex != widget.startPoint.pointIndex)
+      if (widget.detours.isNotEmpty) {
+        final detourManager = await map.annotations
+            .createPolylineAnnotationManager();
+        if (!_isCurrentMap(map)) return;
+        for (final route in widget.detours) {
+          if (route.points.length < 2) continue;
+          await detourManager.create(
+            PolylineAnnotationOptions(
+              geometry: LineString(
+                coordinates: [
+                  for (final point in route.points)
+                    Position(point.lng, point.lat),
+                ],
+              ),
+              lineColor: _detourPurple.toARGB32(),
+              lineWidth: 5,
+              lineBorderColor: Colors.white.toARGB32(),
+              lineBorderWidth: 1.5,
+              lineOpacity: 0.95,
+            ),
+          );
+          if (!_isCurrentMap(map)) return;
+        }
+      }
+
+      final flags = await Future.wait([
+        mapFlagMarkerImage(_green),
+        mapFlagMarkerImage(_red),
+      ]);
+      if (!_isCurrentMap(map)) return;
+      final markerManager = await map.annotations
+          .createPointAnnotationManager();
+      if (!_isCurrentMap(map)) return;
+      await markerManager.setIconAllowOverlap(true);
+      await markerManager.setIconIgnorePlacement(true);
+      await markerManager.createMulti([
         PointAnnotationOptions(
           geometry: Point(
-            coordinates: Position(
-              widget.finishPoint.lng,
-              widget.finishPoint.lat,
-            ),
+            coordinates: Position(widget.startPoint.lng, widget.startPoint.lat),
           ),
-          image: flags[1],
+          image: flags[0],
           iconAnchor: IconAnchor.BOTTOM,
           iconSize: 1.75,
           customData: {
-            'role': 'finish',
-            'distanceKm': widget.finishPoint.distanceKm,
+            'role': 'start',
+            'distanceKm': widget.startPoint.distanceKm,
           },
         ),
-    ]);
+        if (widget.showFinishFlag &&
+            widget.finishPoint.pointIndex != widget.startPoint.pointIndex)
+          PointAnnotationOptions(
+            geometry: Point(
+              coordinates: Position(
+                widget.finishPoint.lng,
+                widget.finishPoint.lat,
+              ),
+            ),
+            image: flags[1],
+            iconAnchor: IconAnchor.BOTTOM,
+            iconSize: 1.75,
+            customData: {
+              'role': 'finish',
+              'distanceKm': widget.finishPoint.distanceKm,
+            },
+          ),
+      ]);
+    } on MissingPluginException {
+      // Android may finish an in-flight annotation call after this preview's
+      // platform view has been disposed. Navigation remains valid and a newly
+      // opened preview creates its own managers.
+      if (_isCurrentMap(map)) rethrow;
+    } on PlatformException {
+      // Native map teardown can race with the asynchronous preview setup.
+      if (_isCurrentMap(map)) rethrow;
+    }
   }
 
   Future<void> _onMapLoaded(MapLoadedEventData _) async {
     final map = _map;
-    if (map == null) return;
+    if (map == null || !_isCurrentMap(map)) return;
+    try {
+      await _loadMapContent(map);
+    } on MissingPluginException {
+      if (_isCurrentMap(map)) rethrow;
+    } on PlatformException {
+      if (_isCurrentMap(map)) rethrow;
+    }
+  }
+
+  Future<void> _loadMapContent(MapboxMap map) async {
     // Camera fitting is visual polish; a native camera error must not prevent
     // the route, accommodation, excursion, and detour layers from loading.
     try {
@@ -5877,6 +5911,7 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
       // The deterministic initial camera already points at this stage, so it
       // remains a safe cross-platform fallback if fitting is unavailable.
     }
+    if (!_isCurrentMap(map)) return;
     final mappedLodgings = widget.lodgings
         .where((lodging) => lodging.location != null)
         .toList(growable: false);
@@ -5888,8 +5923,10 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
     final styleImages = <String, String?>{};
     for (final iconName in iconNames) {
       styleImages[iconName] = await _resolveLodgingStyleImage(map, iconName);
+      if (!_isCurrentMap(map)) return;
     }
     final manager = await map.annotations.createPointAnnotationManager();
+    if (!_isCurrentMap(map)) return;
     await manager.setIconAllowOverlap(true);
     await manager.setIconIgnorePlacement(true);
     await manager.setTextAllowOverlap(true);
@@ -5967,6 +6004,7 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
   void dispose() {
     _lodgingTapListener?.cancel();
     _map?.removeInteraction(_mapTapInteractionId);
+    _map = null;
     super.dispose();
   }
 
@@ -5980,6 +6018,8 @@ class _StageMapSnapshotState extends State<_StageMapSnapshot> {
     return MapWidget(
       key: const ValueKey('stage-map-widget'),
       styleUri: MapboxStyles.OUTDOORS,
+      // ignore: deprecated_member_use
+      cameraOptions: _initialCamera,
       viewport: _initialViewport,
       onMapCreated: _onMapCreated,
       onMapLoadedListener: _onMapLoaded,
@@ -6473,6 +6513,35 @@ IconData _serviceIcon(String value) {
     'busStop' => Icons.directions_bus_rounded,
     _ => Icons.check_circle_outline_rounded,
   };
+}
+
+const _stageServiceDisplayOrder = <String>[
+  'lodging',
+  'drinkableWater',
+  'atm',
+  'tent',
+  'toilets',
+  'busStop',
+  'grocery',
+  'food',
+  'nonDrinkableWater',
+  'medical',
+  'pharmacy',
+];
+
+List<MapEntry<String, bool>> _activeStageServices(Map<String, bool> services) {
+  final rank = <String, int>{
+    for (var index = 0; index < _stageServiceDisplayOrder.length; index++)
+      _stageServiceDisplayOrder[index]: index,
+  };
+  final active = services.entries.where((entry) => entry.value).toList();
+  active.sort((left, right) {
+    final leftRank = rank[left.key] ?? _stageServiceDisplayOrder.length;
+    final rightRank = rank[right.key] ?? _stageServiceDisplayOrder.length;
+    final byRank = leftRank.compareTo(rightRank);
+    return byRank != 0 ? byRank : left.key.compareTo(right.key);
+  });
+  return active;
 }
 
 String _serviceLabel(String value, AppLocalizations l10n) {

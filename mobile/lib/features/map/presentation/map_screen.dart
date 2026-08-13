@@ -12,6 +12,7 @@ import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
 import '../../../core/theme/eurotrex_palette.dart';
+import '../../../core/theme/eurotrex_switch.dart';
 import '../../accommodation/domain/lodging.dart';
 import '../../accommodation/presentation/accommodation_controller.dart';
 import '../../accommodation/presentation/lodging_type_icon.dart';
@@ -2569,9 +2570,9 @@ class _MapLayerRow extends StatelessWidget {
                     ),
                   )
                 else
-                  Switch.adaptive(
+                  EurotrexSwitch(
                     value: selected,
-                    activeTrackColor: color,
+                    activeColor: color,
                     onChanged: (_) => onTap(),
                   ),
               ],

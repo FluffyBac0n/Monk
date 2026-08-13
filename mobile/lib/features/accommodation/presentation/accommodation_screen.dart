@@ -6,6 +6,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
 import '../../../core/theme/eurotrex_palette.dart';
+import '../../../core/theme/eurotrex_switch.dart';
 import '../../elevation/presentation/elevation_screen.dart';
 import '../../map/presentation/map_screen.dart';
 import '../../stages/domain/stage.dart';
@@ -306,7 +307,7 @@ class _AccommodationFilterSheetState extends State<_AccommodationFilterSheet> {
                 key: const ValueKey('accommodation-bookable-panel'),
                 icon: Icons.language_rounded,
                 title: l10n.t('Bookable online'),
-                trailing: Switch.adaptive(
+                trailing: EurotrexSwitch(
                   key: const ValueKey('accommodation-bookable-filter'),
                   value: bookableOnlineOnly,
                   onChanged: (value) =>

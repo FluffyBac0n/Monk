@@ -183,9 +183,16 @@ void main() {
           .assetName,
       'assets/branding/cyprus_e4_forest.jpg',
     );
+    final informationFade = find.byKey(
+      const ValueKey('trail-information-watermark-fade-cyprus-e4'),
+    );
+    expect(informationFade, findsOneWidget);
+    final informationFadeDecoration =
+        tester.widget<DecoratedBox>(informationFade).decoration
+            as BoxDecoration;
     expect(
-      find.byKey(const ValueKey('trail-information-watermark-fade-cyprus-e4')),
-      findsOneWidget,
+      (informationFadeDecoration.gradient! as LinearGradient).colors,
+      const [Color(0x80000000), Color(0x52000000)],
     );
     expect(
       find.descendant(
@@ -1701,11 +1708,29 @@ void main() {
           elevationProvider.overrideWith(_FakeElevationController.new),
           stagesProvider.overrideWith(_SingleStageController.new),
         ],
-        child: const MaterialApp(
-          home: StageDetailScreen(stages: [start, stage], initialIndex: 1),
+        child: MaterialApp(
+          home: Builder(
+            builder: (stagesContext) => Scaffold(
+              body: TextButton(
+                key: const Key('open-stage-elevation-test'),
+                onPressed: () => Navigator.of(stagesContext).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const StageDetailScreen(
+                      stages: [start, stage],
+                      initialIndex: 1,
+                    ),
+                  ),
+                ),
+                child: const Text('Stages screen'),
+              ),
+            ),
+          ),
         ),
       ),
     );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('open-stage-elevation-test')));
     await tester.pumpAndSettle();
 
     final preview = find.byKey(const Key('stage-elevation-preview'));
@@ -1730,8 +1755,15 @@ void main() {
     final chart = tester.widget<LineChart>(find.byType(LineChart));
     expect(chart.data.maxX, 5);
     expect(find.text('Stage length'), findsOneWidget);
-    final backAction = find.byKey(const Key('elevation-back'));
-    expect(backAction, findsOneWidget);
+    final stagesAction = find.byKey(const Key('elevation-stages-shortcut'));
+    expect(stagesAction, findsOneWidget);
+    expect(
+      find.descendant(
+        of: stagesAction,
+        matching: find.byIcon(Icons.hiking_rounded),
+      ),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('elevation-stage-toggle')), findsNothing);
     expect(find.text('Stage one'), findsOneWidget);
     expect(
@@ -1742,10 +1774,11 @@ void main() {
       findsNothing,
     );
 
-    await tester.tap(backAction);
+    await tester.tap(stagesAction);
     await tester.pumpAndSettle();
     expect(find.byType(ElevationScreen), findsNothing);
-    expect(find.byType(StageDetailScreen), findsOneWidget);
+    expect(find.byType(StageDetailScreen), findsNothing);
+    expect(find.text('Stages screen'), findsOneWidget);
   });
 
   testWidgets('stages can reverse the shared trail direction', (tester) async {
@@ -3410,13 +3443,13 @@ void main() {
           .height,
       58,
     );
-    final backAction = find.byKey(const Key('elevation-back'));
+    final stagesAction = find.byKey(const Key('elevation-stages-shortcut'));
     final zoomOutAction = find.byKey(const Key('elevation-zoom-out'));
     final gpsAction = find.byKey(const Key('elevation-location-toggle'));
     final zoomInAction = find.byKey(const Key('elevation-zoom-in'));
     final resetAction = find.byKey(const Key('elevation-reset-view'));
     expect(
-      tester.getCenter(backAction).dx,
+      tester.getCenter(stagesAction).dx,
       lessThan(tester.getCenter(zoomOutAction).dx),
     );
     expect(
@@ -3547,8 +3580,8 @@ void main() {
 
     expect(
       find.descendant(
-        of: backAction,
-        matching: find.byIcon(Icons.chevron_left_rounded),
+        of: stagesAction,
+        matching: find.byIcon(Icons.hiking_rounded),
       ),
       findsOneWidget,
     );

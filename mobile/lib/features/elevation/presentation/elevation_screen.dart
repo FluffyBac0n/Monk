@@ -28,6 +28,7 @@ const _contourFoothill = Color(0xFF61AF57);
 const _contourUpland = Color(0xFFD8AA35);
 const _contourPeak = Color(0xFFD66B35);
 const _minimumElevationChangeM = 1.5;
+const _stagesRouteName = '/trails/cyprus-e4/stages';
 
 enum _ElevationScope { fullTrail, stage }
 
@@ -159,6 +160,12 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
     ).showSnackBar(SnackBar(content: Text(context.l10n.t(message))));
   }
 
+  void _backToStages() {
+    Navigator.of(context).popUntil(
+      (route) => route.settings.name == _stagesRouteName || route.isFirst,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final elevation = ref.watch(elevationProvider);
@@ -213,9 +220,7 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
       bottomNavigationBar: _ElevationBottomNavigationBar(
         locationActive: currentLocation != null,
         isLocating: isLocating,
-        onBack: Navigator.of(context).canPop()
-            ? () => Navigator.of(context).pop()
-            : null,
+        onStages: _backToStages,
         onZoomOut: hasElevation ? () => _zoomElevation(1 / 1.5) : null,
         onLocationToggle: !hasElevation || isLocating
             ? null
@@ -1087,7 +1092,7 @@ class _ElevationBottomNavigationBar extends StatelessWidget {
   const _ElevationBottomNavigationBar({
     required this.locationActive,
     required this.isLocating,
-    required this.onBack,
+    required this.onStages,
     required this.onZoomOut,
     required this.onLocationToggle,
     required this.onZoomIn,
@@ -1096,7 +1101,7 @@ class _ElevationBottomNavigationBar extends StatelessWidget {
 
   final bool locationActive;
   final bool isLocating;
-  final VoidCallback? onBack;
+  final VoidCallback onStages;
   final VoidCallback? onZoomOut;
   final VoidCallback? onLocationToggle;
   final VoidCallback? onZoomIn;
@@ -1119,11 +1124,11 @@ class _ElevationBottomNavigationBar extends StatelessWidget {
           child: Row(
             children: [
               _ElevationBottomAction(
-                key: const Key('elevation-back'),
-                icon: Icons.chevron_left_rounded,
-                label: MaterialLocalizations.of(context).backButtonTooltip,
-                visibleLabel: l10n.t('Back'),
-                onTap: onBack,
+                key: const Key('elevation-stages-shortcut'),
+                icon: Icons.hiking_rounded,
+                label: l10n.t('Back to stages'),
+                visibleLabel: l10n.t('Stages'),
+                onTap: onStages,
               ),
               _ElevationBottomAction(
                 key: const Key('elevation-zoom-out'),
