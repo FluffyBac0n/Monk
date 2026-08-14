@@ -236,6 +236,9 @@ const italianTranslations = <String, String>{
   'No accommodation is listed for this stage.':
       'Nessun alloggio è indicato per questa tappa.',
   'Try another nearby stage.': 'Prova un’altra tappa nelle vicinanze.',
+  'Find more stays on Booking.com': 'Trova altri alloggi su Booking.com',
+  'Search around {stage} for tonight.':
+      'Cerca per questa notte nei dintorni di {stage}.',
   'Booking link unavailable': 'Link di prenotazione non disponibile',
   'Could not open this link.': 'Impossibile aprire questo link.',
   'Price': 'Prezzo',

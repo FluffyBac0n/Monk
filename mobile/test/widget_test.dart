@@ -3166,6 +3166,66 @@ void main() {
     expect(find.byType(AccommodationScreen), findsNothing);
   });
 
+  testWidgets('accommodation starts with a current-date Booking.com search', (
+    tester,
+  ) async {
+    const stage = TrailStage(
+      id: 'booking-search-stage',
+      sequence: 1,
+      name: 'Troodos Square',
+      services: {},
+    );
+    final launchedUris = <Uri>[];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          lodgingRepositoryProvider.overrideWithValue(
+            const _FakeLodgingRepository({}),
+          ),
+          externalUrlLauncherProvider.overrideWithValue((uri) async {
+            launchedUris.add(uri);
+            return true;
+          }),
+        ],
+        child: MaterialApp(
+          home: AccommodationScreen(
+            stage: stage,
+            bookingSearchDate: DateTime(2026, 8, 14, 22, 30),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final bookingSearch = find.byKey(
+      const ValueKey('booking-com-stage-search'),
+    );
+    expect(bookingSearch, findsOneWidget);
+    expect(find.text('Find more stays on Booking.com'), findsOneWidget);
+    expect(
+      find.text('Search around Troodos Square for tonight.'),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('accommodation-empty')), findsOneWidget);
+    expect(
+      tester.getTopLeft(bookingSearch).dy,
+      lessThan(
+        tester.getTopLeft(find.byKey(const ValueKey('accommodation-empty'))).dy,
+      ),
+    );
+
+    await tester.tap(bookingSearch);
+    await tester.pump();
+
+    expect(launchedUris, hasLength(1));
+    final uri = launchedUris.single;
+    expect(uri.host, 'www.booking.com');
+    expect(uri.path, '/searchresults.html');
+    expect(uri.queryParameters['ss'], 'Troodos Square');
+    expect(uri.queryParameters['checkin'], '2026-08-14');
+    expect(uri.queryParameters['checkout'], '2026-08-15');
+  });
+
   testWidgets('accommodation handles empty data and invalid booking links', (
     tester,
   ) async {

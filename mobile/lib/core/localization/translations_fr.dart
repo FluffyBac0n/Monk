@@ -237,6 +237,10 @@ const frenchTranslations = <String, String>{
   'No accommodation is listed for this stage.':
       'Aucun hébergement n’est répertorié pour cette étape.',
   'Try another nearby stage.': 'Essayez une autre étape à proximité.',
+  'Find more stays on Booking.com':
+      'Trouver d’autres hébergements sur Booking.com',
+  'Search around {stage} for tonight.':
+      'Rechercher pour ce soir autour de {stage}.',
   'Booking link unavailable': 'Lien de réservation indisponible',
   'Could not open this link.': 'Impossible d’ouvrir ce lien.',
   'Price': 'Prix',

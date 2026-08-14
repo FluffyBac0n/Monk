@@ -12,6 +12,7 @@ import '../../map/presentation/map_screen.dart';
 import '../../stages/domain/stage.dart';
 import '../../stages/presentation/stages_controller.dart';
 import '../../trail/presentation/trail_direction_controller.dart';
+import '../domain/booking_search.dart';
 import '../domain/lodging.dart';
 import 'accommodation_controller.dart';
 import 'lodging_type_icon.dart';
@@ -23,9 +24,14 @@ const _stagesRouteName = '/trails/cyprus-e4/stages';
 const _distanceFilterOptionsKm = <double>[0.5, 1, 2, 5];
 
 class AccommodationScreen extends ConsumerStatefulWidget {
-  const AccommodationScreen({required this.stage, super.key});
+  const AccommodationScreen({
+    required this.stage,
+    this.bookingSearchDate,
+    super.key,
+  });
 
   final TrailStage stage;
+  final DateTime? bookingSearchDate;
 
   @override
   ConsumerState<AccommodationScreen> createState() =>
@@ -34,6 +40,24 @@ class AccommodationScreen extends ConsumerStatefulWidget {
 
 class _AccommodationScreenState extends ConsumerState<AccommodationScreen> {
   _AccommodationFilters filters = const _AccommodationFilters();
+
+  Future<void> _openBookingSearch() async {
+    final uri = bookingComSearchUri(
+      stageName: widget.stage.name,
+      currentDate: widget.bookingSearchDate ?? DateTime.now(),
+    );
+    var launched = false;
+    try {
+      launched = await ref.read(externalUrlLauncherProvider)(uri);
+    } on Exception {
+      launched = false;
+    }
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.t('Could not open this link.'))),
+      );
+    }
+  }
 
   void _backToStages() {
     Navigator.of(context).popUntil(
@@ -148,63 +172,156 @@ class _AccommodationScreenState extends ConsumerState<AccommodationScreen> {
       ),
       body: Theme(
         data: EurotrexPalette.controlsTheme(Theme.of(context)),
-        child: lodgings.when(
-          loading: () => _AccommodationState(
-            key: const ValueKey('accommodation-loading'),
-            icon: Icons.hotel_rounded,
-            title: l10n.t('Finding accommodation…'),
-            progress: true,
-          ),
-          error: (_, _) => _AccommodationState(
-            key: const ValueKey('accommodation-error'),
-            icon: Icons.cloud_off_rounded,
-            title: l10n.t(
-              'Accommodation information is currently unavailable.',
-            ),
-            message: l10n.t('Please try again.'),
-            action: FilledButton.icon(
-              key: const ValueKey('accommodation-retry'),
-              onPressed: () =>
-                  ref.invalidate(lodgingsForStageProvider(stage.id)),
-              icon: const Icon(Icons.refresh_rounded),
-              label: Text(l10n.t('Try again')),
-            ),
-          ),
-          data: (items) {
-            if (items.isEmpty) {
-              return _AccommodationState(
-                key: const ValueKey('accommodation-empty'),
-                icon: Icons.hotel_outlined,
-                title: l10n.t('No accommodation is listed for this stage.'),
-                message: l10n.t('Try another nearby stage.'),
-              );
-            }
-            final filteredItems = items
-                .where(filters.matches)
-                .toList(growable: false);
-            if (filteredItems.isEmpty) {
-              return _AccommodationState(
-                key: const ValueKey('accommodation-filter-empty'),
-                icon: Icons.filter_alt_off_outlined,
-                title: l10n.t('No accommodation matches these filters.'),
-                action: OutlinedButton(
-                  key: const ValueKey('accommodation-clear-filters'),
-                  onPressed: () =>
-                      setState(() => filters = const _AccommodationFilters()),
-                  child: Text(l10n.t('Clear filters')),
-                ),
-              );
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 28),
-              itemCount: filteredItems.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (context, index) => _LodgingCard(
-                lodging: filteredItems[index],
-                formatter: formatter,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+              child: _BookingComSearchCard(
+                stageName: l10n.t(stage.name),
+                onTap: _openBookingSearch,
               ),
-            );
-          },
+            ),
+            Expanded(
+              child: lodgings.when(
+                loading: () => _AccommodationState(
+                  key: const ValueKey('accommodation-loading'),
+                  icon: Icons.hotel_rounded,
+                  title: l10n.t('Finding accommodation…'),
+                  progress: true,
+                ),
+                error: (_, _) => _AccommodationState(
+                  key: const ValueKey('accommodation-error'),
+                  icon: Icons.cloud_off_rounded,
+                  title: l10n.t(
+                    'Accommodation information is currently unavailable.',
+                  ),
+                  message: l10n.t('Please try again.'),
+                  action: FilledButton.icon(
+                    key: const ValueKey('accommodation-retry'),
+                    onPressed: () =>
+                        ref.invalidate(lodgingsForStageProvider(stage.id)),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: Text(l10n.t('Try again')),
+                  ),
+                ),
+                data: (items) {
+                  if (items.isEmpty) {
+                    return _AccommodationState(
+                      key: const ValueKey('accommodation-empty'),
+                      icon: Icons.hotel_outlined,
+                      title: l10n.t(
+                        'No accommodation is listed for this stage.',
+                      ),
+                      message: l10n.t('Try another nearby stage.'),
+                    );
+                  }
+                  final filteredItems = items
+                      .where(filters.matches)
+                      .toList(growable: false);
+                  if (filteredItems.isEmpty) {
+                    return _AccommodationState(
+                      key: const ValueKey('accommodation-filter-empty'),
+                      icon: Icons.filter_alt_off_outlined,
+                      title: l10n.t('No accommodation matches these filters.'),
+                      action: OutlinedButton(
+                        key: const ValueKey('accommodation-clear-filters'),
+                        onPressed: () => setState(
+                          () => filters = const _AccommodationFilters(),
+                        ),
+                        child: Text(l10n.t('Clear filters')),
+                      ),
+                    );
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 28),
+                    itemCount: filteredItems.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) => _LodgingCard(
+                      lodging: filteredItems[index],
+                      formatter: formatter,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingComSearchCard extends StatelessWidget {
+  const _BookingComSearchCard({required this.stageName, required this.onTap});
+
+  final String stageName;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Material(
+      key: const ValueKey('booking-com-stage-search'),
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: EurotrexPalette.blue),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: EurotrexPalette.paleBlue,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.travel_explore_rounded,
+                  color: EurotrexPalette.blue,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.t('Find more stays on Booking.com'),
+                      style: const TextStyle(
+                        color: EurotrexPalette.navy,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.bookingSearchAround(stageName),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: EurotrexPalette.navy.withValues(alpha: 0.66),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.open_in_new_rounded,
+                color: EurotrexPalette.blue,
+                size: 19,
+              ),
+            ],
+          ),
         ),
       ),
     );

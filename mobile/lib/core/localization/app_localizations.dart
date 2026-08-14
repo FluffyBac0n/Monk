@@ -41,6 +41,9 @@ class AppLocalizations {
     'Near {stage} · {distance} from the trail',
   ).replaceAll('{stage}', stage).replaceAll('{distance}', distance);
 
+  String bookingSearchAround(String stage) =>
+      t('Search around {stage} for tonight.').replaceAll('{stage}', stage);
+
   String get pafosAirport => t('Pafos Airport');
   String get larnakaAirport => t('Larnaka Airport');
 
@@ -315,6 +318,10 @@ const _translations = <String, Map<String, String>>{
     'No accommodation is listed for this stage.':
         'Für diese Etappe sind keine Unterkünfte aufgeführt.',
     'Try another nearby stage.': 'Versuche es bei einer nahegelegenen Etappe.',
+    'Find more stays on Booking.com':
+        'Weitere Unterkünfte auf Booking.com finden',
+    'Search around {stage} for tonight.':
+        'Für heute Nacht rund um {stage} suchen.',
     'Booking link unavailable': 'Buchungslink nicht verfügbar',
     'Could not open this link.': 'Dieser Link konnte nicht geöffnet werden.',
     'Price': 'Preis',
@@ -702,6 +709,9 @@ const _translations = <String, Map<String, String>>{
     'No accommodation is listed for this stage.':
         'No hay alojamientos registrados para esta etapa.',
     'Try another nearby stage.': 'Prueba con otra etapa cercana.',
+    'Find more stays on Booking.com': 'Buscar más alojamientos en Booking.com',
+    'Search around {stage} for tonight.':
+        'Busca para esta noche cerca de {stage}.',
     'Booking link unavailable': 'Enlace de reserva no disponible',
     'Could not open this link.': 'No se pudo abrir este enlace.',
     'Price': 'Precio',
