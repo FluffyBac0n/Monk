@@ -23,5 +23,14 @@ void main() {
       () => estimateNaismithWalkingTime(distanceKm: double.nan, ascentM: 0),
       throwsArgumentError,
     );
+    expect(
+      () => estimateNaismithWalkingTime(distanceKm: 1, ascentM: -1),
+      throwsArgumentError,
+    );
+    expect(
+      () =>
+          estimateNaismithWalkingTime(distanceKm: 1, ascentM: double.infinity),
+      throwsArgumentError,
+    );
   });
 }

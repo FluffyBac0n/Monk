@@ -22,6 +22,21 @@ void main() {
     ]);
   });
 
+  test('localized dynamic labels replace every placeholder', () {
+    const german = AppLocalizations(Locale('de'));
+
+    expect(german.from('Pafos'), 'Ab Pafos');
+    expect(german.routeDirection('Pafos', 'Larnaka'), 'Pafos  →  Larnaka');
+    expect(
+      german.nearStageDistance('Troodos', '200 m'),
+      'Nahe Troodos · 200 m vom Weg',
+    );
+    expect(
+      german.bookingSearchAround('Troodos'),
+      'Für heute Nacht rund um Troodos suchen.',
+    );
+  });
+
   test('every translated locale covers the complete UI catalog', () {
     final referenceKeys = AppLocalizations.translationKeys(const Locale('de'));
 

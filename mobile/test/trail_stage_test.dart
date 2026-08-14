@@ -32,4 +32,20 @@ void main() {
     expect(stage.elevationUpM, isNull);
     expect(stage.elevationDownM, isNull);
   });
+
+  test('classifies stage trail distance at the shared threshold', () {
+    TrailStage stage(double? distance) => TrailStage(
+      id: 'stage',
+      sequence: 1,
+      name: 'Stage',
+      distanceFromPathKm: distance,
+      services: const {},
+    );
+
+    expect(stageIsOnTrail(stage(null)), isNull);
+    expect(stageIsOnTrail(stage(double.nan)), isNull);
+    expect(stageIsOnTrail(stage(-0.1)), isNull);
+    expect(stageIsOnTrail(stage(0.49)), isTrue);
+    expect(stageIsOnTrail(stage(0.5)), isFalse);
+  });
 }

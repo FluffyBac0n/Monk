@@ -215,8 +215,33 @@ void main() {
     expect(mapLodgingMarkerOutlineColor(isSelected: false), Colors.white);
     expect(mapLodgingSelectionZoom(11), 11.75);
     expect(mapLodgingSelectionZoom(14.75), 15);
+    expect(mapLodgingSelectionZoom(double.nan), 12);
     expect(mapSelectedLodgingRingRadius, 12.5);
     expect(mapSelectedLodgingRingWidth, 2.5);
+  });
+
+  test('map helpers handle incomplete route and stage data safely', () {
+    expect(
+      mapStageEndpointIndexes(const [
+        TrailStage(id: 'unknown', sequence: 1, name: 'Unknown', services: {}),
+      ], TrailDirection.pafosToLarnaka),
+      (startIndex: -1, finishIndex: -1),
+    );
+    expect(
+      mapRouteDirectionMarkers(const [
+        west,
+        east,
+      ], TrailDirection.pafosToLarnaka),
+      isEmpty,
+    );
+    expect(
+      mapRouteDirectionMarkers(
+        const [west, west, east],
+        TrailDirection.pafosToLarnaka,
+        spacingKm: 0,
+      ),
+      isEmpty,
+    );
   });
 
   test('stage snapshot keeps start and finish ordered in reverse', () {

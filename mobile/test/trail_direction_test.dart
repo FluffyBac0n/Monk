@@ -16,6 +16,8 @@ void main() {
   });
 
   test('reverse direction swaps route endpoints', () {
+    expect(TrailDirection.pafosToLarnaka.compactLabel, 'PAFOS TO LARNAKA');
+    expect(TrailDirection.larnakaToPafos.compactLabel, 'LARNAKA TO PAFOS');
     expect(
       TrailDirection.larnakaToPafos.routeLabel,
       'Larnaka Airport  →  Pafos Airport',

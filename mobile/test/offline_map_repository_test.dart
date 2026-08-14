@@ -47,10 +47,43 @@ void main() {
     expect(lastCoordinate.last, greaterThan(points.last.lat));
   });
 
+  test('keeps the route endpoint when corridor sampling skips it', () {
+    const points = [
+      RoutePoint(
+        pointIndex: 0,
+        lat: 34.7,
+        lng: 32.4,
+        altitudeM: 10,
+        distanceKm: 0,
+        reverseDistanceKm: 0.5,
+      ),
+      RoutePoint(
+        pointIndex: 1,
+        lat: 34.71,
+        lng: 32.41,
+        altitudeM: 20,
+        distanceKm: 0.5,
+        reverseDistanceKm: 0,
+      ),
+    ];
+
+    final polygons =
+        buildOfflineCorridorGeometry(points)['coordinates']! as List<Object?>;
+    expect(polygons, hasLength(2));
+  });
+
+  test('rejects an offline download without route geometry', () async {
+    await expectLater(
+      OfflineMapRepository().download(const [], onProgress: (_, _) {}),
+      throwsA(isA<StateError>()),
+    );
+  });
+
   test('formats downloaded offline map sizes', () {
     expect(formatOfflineBytes(0), '0 B');
     expect(formatOfflineBytes(1536), '1.5 KB');
     expect(formatOfflineBytes(5 * 1024 * 1024), '5.0 MB');
+    expect(formatOfflineBytes(2 * 1024 * 1024 * 1024), '2.00 GB');
   });
 
   test('reads the offline map download timestamp from metadata', () {
@@ -65,6 +98,7 @@ void main() {
       DateTime.utc(2026, 7, 24, 9, 30),
     );
     expect(parseOfflineMapDownloadedAt('not-a-date'), isNull);
+    expect(parseOfflineMapDownloadedAt(Object()), isNull);
   });
 
   test('failed state retains interrupted download details', () {
