@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from monk_importer.firestore_writer import (
+from eurotrex_importer.firestore_writer import (
     prune_collection,
     prune_detour_collections,
     prune_excursion_collections,
@@ -10,7 +10,7 @@ from monk_importer.firestore_writer import (
     write_detour_route_chunks,
     write_excursion_route_chunks,
 )
-from monk_importer.models import RouteChunk
+from eurotrex_importer.models import RouteChunk
 
 
 class FakeDocumentReference:

@@ -1,4 +1,4 @@
-package com.monktrail.monk_mobile
+package com.eurotrex.e4
 
 import io.flutter.embedding.android.FlutterActivity
 

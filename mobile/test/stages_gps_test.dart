@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/core/localization/app_localizations.dart';
-import 'package:monk_mobile/core/location/device_location.dart';
-import 'package:monk_mobile/features/elevation/domain/route_point.dart';
-import 'package:monk_mobile/features/elevation/presentation/elevation_controller.dart';
-import 'package:monk_mobile/features/map/domain/offline_map_state.dart';
-import 'package:monk_mobile/features/map/presentation/map_screen.dart';
-import 'package:monk_mobile/features/map/presentation/offline_map_controller.dart';
-import 'package:monk_mobile/features/stages/domain/stage.dart';
-import 'package:monk_mobile/features/stages/presentation/stages_controller.dart';
-import 'package:monk_mobile/features/stages/presentation/stages_screen.dart';
+import 'package:eurotrex/core/localization/app_localizations.dart';
+import 'package:eurotrex/core/location/device_location.dart';
+import 'package:eurotrex/features/elevation/domain/route_point.dart';
+import 'package:eurotrex/features/elevation/presentation/elevation_controller.dart';
+import 'package:eurotrex/features/map/domain/offline_map_state.dart';
+import 'package:eurotrex/features/map/presentation/map_screen.dart';
+import 'package:eurotrex/features/map/presentation/offline_map_controller.dart';
+import 'package:eurotrex/features/stages/domain/stage.dart';
+import 'package:eurotrex/features/stages/presentation/stages_controller.dart';
+import 'package:eurotrex/features/stages/presentation/stages_screen.dart';
 
 void main() {
   testWidgets(

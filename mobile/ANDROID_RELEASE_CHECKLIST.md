@@ -1,6 +1,6 @@
 # Android Release Checklist
 
-Status checked: 12 August 2026
+Status checked: 14 August 2026
 
 Android development is now active. The local toolchain and a representative
 Android emulator are ready, and the current app has completed its first Android
@@ -9,7 +9,7 @@ debug and unsigned release builds.
 ## Current state
 
 - The Flutter application contains a working Android project.
-- The existing application ID remains `com.monktrail.monk_mobile`.
+- The canonical application ID is `com.eurotrex.e4`.
 - Firebase is configured through `android/app/google-services.json`, and its
   Android package matches the application ID.
 - Mapbox is supplied through `--dart-define-from-file=env.local.json`.
@@ -40,7 +40,10 @@ Android development and is not an Android release blocker.
 - [x] Add `android.permission.INTERNET` to the main Android manifest so release
       builds can use Mapbox, Firebase, booking links, and email links.
 - [x] Confirm the Android-facing application label is `EuroTrex`.
-- [x] Keep the current application ID and source/package names unchanged.
+- [x] Migrate the application ID, namespace, and Kotlin package to
+      `com.eurotrex.e4`.
+- [x] Register a fresh Firebase Android app for `com.eurotrex.e4` and replace
+      the previous local Firebase configuration.
 - [x] Review Flutter's effective SDK versions: minimum 24, target 36, compile
       36.
 - [x] Configure Flutter and `android/local.properties` to use the standard

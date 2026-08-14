@@ -1,8 +1,8 @@
 {
-  "name": "monk-emulator-tools",
+  "name": "eurotrex-emulator-tools",
   "private": true,
   "version": "0.1.0",
-  "description": "Local Firebase Emulator tooling for the Monk importer.",
+  "description": "Local Firebase Emulator tooling for the EuroTrex importer.",
   "scripts": {
     "firebase": "XDG_CONFIG_HOME=.firebase-config firebase",
     "emulators": "XDG_CONFIG_HOME=.firebase-config firebase emulators:start --only firestore",

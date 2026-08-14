@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/features/stages/domain/stage.dart';
+import 'package:eurotrex/features/stages/domain/stage.dart';
 
 void main() {
   test('parses authoritative stage path distance and elevation fields', () {

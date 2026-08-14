@@ -9,8 +9,8 @@ import 'features/trails/presentation/trails_screen.dart';
 
 final firebaseReadyProvider = Provider<bool>((ref) => false);
 
-class MonkApp extends ConsumerWidget {
-  const MonkApp({super.key});
+class EuroTrexApp extends ConsumerWidget {
+  const EuroTrexApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

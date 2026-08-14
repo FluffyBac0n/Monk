@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/features/detours/domain/trail_detour.dart';
-import 'package:monk_mobile/features/detours/presentation/detour_controller.dart';
-import 'package:monk_mobile/features/elevation/domain/route_point.dart';
-import 'package:monk_mobile/features/elevation/presentation/elevation_controller.dart';
-import 'package:monk_mobile/features/excursions/presentation/excursion_controller.dart';
-import 'package:monk_mobile/features/map/presentation/map_screen.dart';
-import 'package:monk_mobile/features/stages/domain/stage.dart';
-import 'package:monk_mobile/features/stages/presentation/stages_controller.dart';
-import 'package:monk_mobile/features/stages/presentation/stages_screen.dart';
+import 'package:eurotrex/features/detours/domain/trail_detour.dart';
+import 'package:eurotrex/features/detours/presentation/detour_controller.dart';
+import 'package:eurotrex/features/elevation/domain/route_point.dart';
+import 'package:eurotrex/features/elevation/presentation/elevation_controller.dart';
+import 'package:eurotrex/features/excursions/presentation/excursion_controller.dart';
+import 'package:eurotrex/features/map/presentation/map_screen.dart';
+import 'package:eurotrex/features/stages/domain/stage.dart';
+import 'package:eurotrex/features/stages/presentation/stages_controller.dart';
+import 'package:eurotrex/features/stages/presentation/stages_screen.dart';
 
 void main() {
   testWidgets('affected stages show the detour marker and comparison card', (

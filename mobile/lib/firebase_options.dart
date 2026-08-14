@@ -51,18 +51,17 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDcPR_gnqKRiv3ie6BcFbYQqFj5Nv7IwBA',
-    appId: '1:893185124081:android:63a1fa48ed3c37c16a6b50',
+    appId: '1:893185124081:android:9c9f4b75c598db5b6a6b50',
     messagingSenderId: '893185124081',
     projectId: 'eurotrex',
     storageBucket: 'eurotrex.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCyF4HZNVQUwinssk865IQqKpLcV8ck1lY',
-    appId: '1:893185124081:ios:e73f19352140c3276a6b50',
+    appId: '1:893185124081:ios:1ac928d35fabb5566a6b50',
     messagingSenderId: '893185124081',
     projectId: 'eurotrex',
     storageBucket: 'eurotrex.firebasestorage.app',
-    iosBundleId: 'com.monktrail.monkMobile',
+    iosBundleId: 'com.eurotrex.e4',
   );
 }

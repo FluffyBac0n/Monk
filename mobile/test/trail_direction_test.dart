@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/features/trail/domain/trail_direction.dart';
+import 'package:eurotrex/features/trail/domain/trail_direction.dart';
 
 void main() {
   test('reverse direction recalculates distance from the new start', () {

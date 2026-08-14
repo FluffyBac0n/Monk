@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/features/elevation/domain/route_point.dart';
-import 'package:monk_mobile/features/stages/domain/stage.dart';
-import 'package:monk_mobile/features/stages/domain/trail_location_matcher.dart';
-import 'package:monk_mobile/features/trail/domain/trail_direction.dart';
+import 'package:eurotrex/features/elevation/domain/route_point.dart';
+import 'package:eurotrex/features/stages/domain/stage.dart';
+import 'package:eurotrex/features/stages/domain/trail_location_matcher.dart';
+import 'package:eurotrex/features/trail/domain/trail_direction.dart';
 
 void main() {
   test(

@@ -1,6 +1,6 @@
 # Firestore Schema Reference
 
-This file documents the Firestore collections written by the Monk importer.
+This file documents the Firestore collections written by the EuroTrex importer.
 
 All trail data is stored under one top-level trail document:
 

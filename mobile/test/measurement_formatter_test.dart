@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/core/settings/app_settings.dart';
-import 'package:monk_mobile/core/settings/measurement_formatter.dart';
+import 'package:eurotrex/core/settings/app_settings.dart';
+import 'package:eurotrex/core/settings/measurement_formatter.dart';
 
 void main() {
   test('formats metric distances and altitudes', () {

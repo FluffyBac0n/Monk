@@ -1,4 +1,4 @@
-# Monk Firestore Importer
+# EuroTrex Firestore Importer
 
 Python project for reading the Cyprus E4 workbook, normalizing trail data, and writing it to Firestore with deterministic document IDs.
 
@@ -45,7 +45,7 @@ pip install -e ".[dev,functions]"
 This reads the workbook and writes a JSON import preview without connecting to Firestore.
 
 ```bash
-monk-import
+eurotrex-import
 ```
 
 The default workbook path is:
@@ -60,7 +60,7 @@ Create a Firebase service account JSON file and point the importer to it:
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/service-account.json
-monk-import --commit
+eurotrex-import --commit
 ```
 
 Or use `.env`:
@@ -73,7 +73,7 @@ FIREBASE_PROJECT_ID=your-project-id
 Then:
 
 ```bash
-monk-import --commit
+eurotrex-import --commit
 ```
 
 By default, the importer uses `set()` with stable document IDs, so rerunning it updates the same Firestore documents rather than creating duplicates.
@@ -82,7 +82,7 @@ If rows were removed or their IDs changed, use `--prune` to remove stale generat
 documents after the new data has been written successfully:
 
 ```bash
-monk-import --workbook /absolute/path/new-workbook.xlsx --commit --prune
+eurotrex-import --workbook /absolute/path/new-workbook.xlsx --commit --prune
 ```
 
 Pruning automatically validates the workbook and refuses to run when validation
@@ -97,7 +97,7 @@ against production.
 Generate a human-readable report and a JSON report before writing to any database:
 
 ```bash
-monk-import --validate
+eurotrex-import --validate
 ```
 
 Outputs:
@@ -130,7 +130,7 @@ pnpm run emulators
 In another terminal, write the transformed workbook data into the emulator:
 
 ```bash
-monk-import --commit --emulator --validate
+eurotrex-import --commit --emulator --validate
 ```
 
 Then open the Emulator UI:
@@ -146,13 +146,13 @@ This uses the same Firestore write code as production, but targets `127.0.0.1:80
 The callable import logic lives in:
 
 ```text
-src/monk_importer/importer.py
+src/eurotrex_importer/importer.py
 ```
 
 The optional HTTP-style function wrapper lives in:
 
 ```text
-src/monk_importer/function_entry.py
+src/eurotrex_importer/function_entry.py
 ```
 
 For production automation, prefer uploading the workbook to Cloud Storage and triggering a Cloud Function or Cloud Run job with the file path.

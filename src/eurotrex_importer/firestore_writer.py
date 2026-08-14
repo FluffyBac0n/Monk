@@ -23,7 +23,7 @@ def get_firestore_client(
     if emulator_host:
         os.environ["FIRESTORE_EMULATOR_HOST"] = emulator_host
         return google_firestore.Client(
-            project=project_id or "monk-local",
+            project=project_id or "eurotrex-local",
             credentials=AnonymousCredentials(),
         )
 

@@ -19,7 +19,7 @@ val hasReleaseSigning = keystorePropertiesFile.exists().also { exists ->
 }
 
 android {
-    namespace = "com.monktrail.monk_mobile"
+    namespace = "com.eurotrex.e4"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -34,7 +34,7 @@ android {
 
     defaultConfig {
         // Keep the existing identifier unless a separate package-renaming decision is made.
-        applicationId = "com.monktrail.monk_mobile"
+        applicationId = "com.eurotrex.e4"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

@@ -1,4 +1,4 @@
-# Monk Mobile
+# EuroTrex
 
 Cross-platform Flutter MVP for the Cyprus E4 trail.
 

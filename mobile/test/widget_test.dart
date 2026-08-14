@@ -4,33 +4,33 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/app.dart';
-import 'package:monk_mobile/core/app_info/app_version_provider.dart';
-import 'package:monk_mobile/core/database/app_database.dart';
-import 'package:monk_mobile/core/database/database_provider.dart';
-import 'package:monk_mobile/core/links/external_url_launcher.dart';
-import 'package:monk_mobile/core/settings/app_settings.dart';
-import 'package:monk_mobile/core/settings/app_settings_controller.dart';
-import 'package:monk_mobile/core/theme/eurotrex_palette.dart';
-import 'package:monk_mobile/features/about/presentation/about_screen.dart';
-import 'package:monk_mobile/features/accommodation/data/lodging_repository.dart';
-import 'package:monk_mobile/features/accommodation/domain/lodging.dart';
-import 'package:monk_mobile/features/accommodation/presentation/accommodation_controller.dart';
-import 'package:monk_mobile/features/accommodation/presentation/accommodation_screen.dart';
-import 'package:monk_mobile/features/elevation/domain/route_point.dart';
-import 'package:monk_mobile/features/elevation/presentation/elevation_controller.dart';
-import 'package:monk_mobile/features/elevation/presentation/elevation_screen.dart';
-import 'package:monk_mobile/features/excursions/domain/trail_excursion.dart';
-import 'package:monk_mobile/features/excursions/presentation/excursion_controller.dart';
-import 'package:monk_mobile/features/map/presentation/map_screen.dart';
-import 'package:monk_mobile/features/map/domain/offline_map_state.dart';
-import 'package:monk_mobile/features/map/presentation/offline_map_controller.dart';
-import 'package:monk_mobile/features/stages/domain/stage.dart';
-import 'package:monk_mobile/features/stages/presentation/stages_controller.dart';
-import 'package:monk_mobile/features/stages/presentation/stages_screen.dart';
-import 'package:monk_mobile/features/trail/domain/trail_direction.dart';
-import 'package:monk_mobile/features/trail/domain/trail_preferences.dart';
-import 'package:monk_mobile/features/trail/presentation/trail_information_screen.dart';
+import 'package:eurotrex/app.dart';
+import 'package:eurotrex/core/app_info/app_version_provider.dart';
+import 'package:eurotrex/core/database/app_database.dart';
+import 'package:eurotrex/core/database/database_provider.dart';
+import 'package:eurotrex/core/links/external_url_launcher.dart';
+import 'package:eurotrex/core/settings/app_settings.dart';
+import 'package:eurotrex/core/settings/app_settings_controller.dart';
+import 'package:eurotrex/core/theme/eurotrex_palette.dart';
+import 'package:eurotrex/features/about/presentation/about_screen.dart';
+import 'package:eurotrex/features/accommodation/data/lodging_repository.dart';
+import 'package:eurotrex/features/accommodation/domain/lodging.dart';
+import 'package:eurotrex/features/accommodation/presentation/accommodation_controller.dart';
+import 'package:eurotrex/features/accommodation/presentation/accommodation_screen.dart';
+import 'package:eurotrex/features/elevation/domain/route_point.dart';
+import 'package:eurotrex/features/elevation/presentation/elevation_controller.dart';
+import 'package:eurotrex/features/elevation/presentation/elevation_screen.dart';
+import 'package:eurotrex/features/excursions/domain/trail_excursion.dart';
+import 'package:eurotrex/features/excursions/presentation/excursion_controller.dart';
+import 'package:eurotrex/features/map/presentation/map_screen.dart';
+import 'package:eurotrex/features/map/domain/offline_map_state.dart';
+import 'package:eurotrex/features/map/presentation/offline_map_controller.dart';
+import 'package:eurotrex/features/stages/domain/stage.dart';
+import 'package:eurotrex/features/stages/presentation/stages_controller.dart';
+import 'package:eurotrex/features/stages/presentation/stages_screen.dart';
+import 'package:eurotrex/features/trail/domain/trail_direction.dart';
+import 'package:eurotrex/features/trail/domain/trail_preferences.dart';
+import 'package:eurotrex/features/trail/presentation/trail_information_screen.dart';
 
 void main() {
   testWidgets('E4 waymark opens trail information and stops pulsing', (
@@ -509,7 +509,7 @@ void main() {
         overrides: [
           lodgingRepositoryProvider.overrideWithValue(lodgingRepository),
         ],
-        child: const MonkApp(),
+        child: const EuroTrexApp(),
       ),
     );
     await tester.pumpAndSettle();
@@ -535,7 +535,6 @@ void main() {
       findsNothing,
     );
     expect(find.text('EUROTREX'), findsNothing);
-    expect(find.text('MONK'), findsNothing);
     expect(find.text('TRAIL LIBRARY'), findsNothing);
     expect(find.text('Trails'), findsNothing);
     expect(find.text('Explore trails'), findsNothing);
@@ -687,7 +686,7 @@ void main() {
             return true;
           }),
         ],
-        child: const MonkApp(),
+        child: const EuroTrexApp(),
       ),
     );
     await tester.pumpAndSettle();
@@ -800,7 +799,7 @@ void main() {
   testWidgets('upcoming E4 trails are noninteractive coming-soon rows', (
     tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(child: MonkApp()));
+    await tester.pumpWidget(const ProviderScope(child: EuroTrexApp()));
     await tester.pumpAndSettle();
 
     const upcomingTrails = {
@@ -3320,7 +3319,7 @@ void main() {
           appSettingsProvider.overrideWith(_FakeAppSettingsController.new),
           offlineMapProvider.overrideWith(_FakeOfflineMapController.new),
         ],
-        child: const MonkApp(),
+        child: const EuroTrexApp(),
       ),
     );
     await tester.pumpAndSettle();

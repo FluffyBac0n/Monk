@@ -1,6 +1,6 @@
 # iOS Release Checklist
 
-Status checked: 29 July 2026
+Status checked: 14 August 2026
 
 The app successfully builds in unsigned iOS release mode. The current release
 build is approximately 83.2 MB.
@@ -11,7 +11,8 @@ build is approximately 83.2 MB.
 - [x] Xcode 26.6 and the iOS 26.5 SDK satisfy Apple's current upload
       requirement.
 - [x] The minimum supported version is iOS 15.
-- [x] The Firebase bundle ID matches `com.monktrail.monkMobile`.
+- [x] The bundle identifier and fresh Firebase iOS app both use
+      `com.eurotrex.e4`.
 - [x] The Mapbox access token is a public client token.
 - [x] Required third-party SDK privacy manifests are packaged in the release
       build.
@@ -20,8 +21,7 @@ build is approximately 83.2 MB.
 
 ## Branding
 
-- [ ] Change the installed iOS application name from `Monk Mobile` to
-      `EUROTREX`.
+- [x] Confirm the installed iOS application name is `EuroTrex`.
 - [ ] Replace the default Flutter launcher icon with the final EUROTREX app
       icon.
 - [ ] Generate every required iPhone and iPad icon size from the final artwork.
@@ -37,7 +37,7 @@ build is approximately 83.2 MB.
 - [ ] Decide whether the seller will be an individual or an organization.
 - [ ] If publishing as an organization, confirm its legal-entity information
       and D-U-N-S number.
-- [ ] Register `com.monktrail.monkMobile` in the Apple Developer account.
+- [ ] Register `com.eurotrex.e4` in the Apple Developer account.
 - [ ] Configure the Apple development team in the Xcode project.
 - [ ] Create or confirm the Apple Distribution certificate.
 - [ ] Create or confirm the App Store provisioning profile.
@@ -105,7 +105,7 @@ build is approximately 83.2 MB.
 ## App Store Connect
 
 - [ ] Create the EUROTREX App Store Connect record before uploading a build.
-- [ ] Select the registered bundle ID `com.monktrail.monkMobile`.
+- [ ] Select the registered bundle ID `com.eurotrex.e4`.
 - [ ] Choose a permanent internal SKU.
 - [ ] Confirm the primary language.
 - [ ] Set the App Store name and subtitle.

@@ -25,4 +25,3 @@ def import_trail_http(request: Any) -> tuple[dict[str, Any], int]:
         prune=bool(body.get("prune", False)),
     )
     return summary, 200
-

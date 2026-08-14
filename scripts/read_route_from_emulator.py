@@ -42,7 +42,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Read routeMetadata and routeChunks from the local Firestore emulator."
     )
-    parser.add_argument("--project-id", default="monk-local")
+    parser.add_argument("--project-id", default="eurotrex-local")
     parser.add_argument("--trail-id", default="cyprus-e4")
     parser.add_argument("--emulator-host", default="127.0.0.1:8080")
     parser.add_argument("--sample-size", type=int, default=3)
@@ -140,11 +140,7 @@ def load_route(
     if stride != 5:
         raise RuntimeError(f"This reader expects pointStride=5, got {stride}")
 
-    chunks = (
-        trail_ref.collection("routeChunks")
-        .order_by("chunkIndex")
-        .stream()
-    )
+    chunks = trail_ref.collection("routeChunks").order_by("chunkIndex").stream()
 
     points: list[RoutePoint] = []
     for chunk_snapshot in chunks:
@@ -189,11 +185,7 @@ def load_route(
 
 def load_route_markers(trail_ref: firestore.DocumentReference) -> list[RouteMarker]:
     markers: list[RouteMarker] = []
-    marker_snapshots = (
-        trail_ref.collection("routeMarkers")
-        .order_by("pointIndex")
-        .stream()
-    )
+    marker_snapshots = trail_ref.collection("routeMarkers").order_by("pointIndex").stream()
 
     for marker_snapshot in marker_snapshots:
         marker = marker_snapshot.to_dict() or {}

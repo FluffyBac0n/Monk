@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/features/elevation/domain/elevation_totals.dart';
-import 'package:monk_mobile/features/elevation/domain/route_point.dart';
+import 'package:eurotrex/features/elevation/domain/elevation_totals.dart';
+import 'package:eurotrex/features/elevation/domain/route_point.dart';
 
 void main() {
   test(

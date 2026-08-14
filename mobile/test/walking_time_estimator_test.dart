@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/features/stages/domain/walking_time_estimator.dart';
+import 'package:eurotrex/features/stages/domain/walking_time_estimator.dart';
 
 void main() {
   test('uses Naismith distance and ascent allowances', () {

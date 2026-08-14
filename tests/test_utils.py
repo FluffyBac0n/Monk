@@ -1,4 +1,4 @@
-from monk_importer.utils import parse_coordinates, parse_price, slugify, stage_id, to_bool_yn
+from eurotrex_importer.utils import parse_coordinates, parse_price, slugify, stage_id, to_bool_yn
 
 
 def test_stage_id_is_deterministic() -> None:
@@ -22,4 +22,3 @@ def test_parse_price_range() -> None:
 def test_yn_boolean() -> None:
     assert to_bool_yn("Y") is True
     assert to_bool_yn("N") is False
-

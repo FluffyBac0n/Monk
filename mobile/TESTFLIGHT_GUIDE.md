@@ -1,31 +1,29 @@
-# EUROTREX TestFlight Guide
+# EuroTrex TestFlight Guide
 
 Last updated: 10 August 2026
 
-This guide explains how to install and test EUROTREX on a physical iPhone
+This guide explains how to install and test EuroTrex on a physical iPhone
 through Apple's TestFlight service.
 
 ## Current project configuration
 
-- Flutter project: `/Users/amich/Documents/Monk 2/mobile`
-- iOS bundle identifier: `com.monktrail.monkMobile`
+- Flutter project: the repository's `mobile` directory
+- iOS bundle identifier: `com.eurotrex.e4`
 - Current Flutter version: `1.0.0+1`
 - Signing style: Automatic
 - Development Team: Not yet configured in the Xcode project
-- Installed iOS display name: `Monk Mobile`
+- Installed iOS display name: `EuroTrex`
 - Mapbox configuration file: `env.local.json`
 
-The installed display name should be changed to `EUROTREX` before distributing
-the beta if the TestFlight build should use the final product name. This does
-not require changing the source package name or bundle identifier.
+The installed display name already uses the final product name, `EuroTrex`.
 
 ## Requirements
 
 - An active Apple Developer Program membership.
 - Access to App Store Connect.
-- The bundle ID `com.monktrail.monkMobile` registered in the intended Apple
+- The bundle ID `com.eurotrex.e4` registered in the intended Apple
   Developer account.
-- An App Store Connect app record for EUROTREX.
+- An App Store Connect app record for EuroTrex.
 - An Apple Account added as an App Store Connect user for internal testing.
 - The TestFlight app installed on the target iPhone.
 
@@ -34,7 +32,7 @@ not require changing the source package name or bundle identifier.
 Open the iOS workspace:
 
 ```bash
-cd "/Users/amich/Documents/Monk 2/mobile"
+cd /path/to/eurotrex/mobile
 open ios/Runner.xcworkspace
 ```
 
@@ -44,7 +42,7 @@ In Xcode:
 2. Open **Signing & Capabilities**.
 3. Enable **Automatically manage signing**.
 4. Select the intended Apple Developer Team.
-5. Confirm that the bundle identifier is `com.monktrail.monkMobile`.
+5. Confirm that the bundle identifier is `com.eurotrex.e4`.
 
 ## 2. Create the App Store Connect record
 
@@ -52,8 +50,8 @@ In Xcode:
 2. Open **Apps**.
 3. Select **+**, then **New App**.
 4. Select iOS as the platform.
-5. Enter `EUROTREX` as the app name.
-6. Select `com.monktrail.monkMobile` as the bundle ID.
+5. Enter `EuroTrex` as the app name.
+6. Select `com.eurotrex.e4` as the bundle ID.
 7. Choose a permanent internal SKU, such as `eurotrex-ios-001`.
 8. Confirm the primary language and create the app record.
 
@@ -64,7 +62,7 @@ The App Store Connect record must exist before uploading the first build.
 Before creating a TestFlight build:
 
 ```bash
-cd "/Users/amich/Documents/Monk 2/mobile"
+cd /path/to/eurotrex/mobile
 ~/flutter/bin/flutter analyze
 ~/flutter/bin/flutter test
 ```
@@ -75,7 +73,7 @@ uses build number `1`, so the next upload can use build number `2`.
 Build the signed archive and IPA with the production Mapbox configuration:
 
 ```bash
-cd "/Users/amich/Documents/Monk 2/mobile"
+cd /path/to/eurotrex/mobile
 
 ~/flutter/bin/flutter build ipa \
   --release \
@@ -188,8 +186,7 @@ changes.
 
 ## Project-specific items to confirm before the first beta
 
-- Change the installed display name from `Monk Mobile` to `EUROTREX`.
-- Confirm the final EUROTREX launcher icon and launch screen.
+- Confirm the final EuroTrex launcher icon and launch screen.
 - Select and store the correct Apple Development Team.
 - Confirm whether the first beta supports both iPhone and iPad.
 - Verify the location-permission explanation in every supported language.

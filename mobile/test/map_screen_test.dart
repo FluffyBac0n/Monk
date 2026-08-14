@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/core/localization/app_localizations.dart';
-import 'package:monk_mobile/core/settings/app_settings.dart';
-import 'package:monk_mobile/core/settings/measurement_formatter.dart';
-import 'package:monk_mobile/core/theme/eurotrex_palette.dart';
-import 'package:monk_mobile/features/accommodation/domain/lodging.dart';
-import 'package:monk_mobile/features/accommodation/presentation/lodging_type_icon.dart';
-import 'package:monk_mobile/features/elevation/domain/route_point.dart';
-import 'package:monk_mobile/features/map/presentation/map_screen.dart';
-import 'package:monk_mobile/features/stages/domain/stage.dart';
-import 'package:monk_mobile/features/stages/presentation/stages_screen.dart';
-import 'package:monk_mobile/features/trail/domain/trail_direction.dart';
+import 'package:eurotrex/core/localization/app_localizations.dart';
+import 'package:eurotrex/core/settings/app_settings.dart';
+import 'package:eurotrex/core/settings/measurement_formatter.dart';
+import 'package:eurotrex/core/theme/eurotrex_palette.dart';
+import 'package:eurotrex/features/accommodation/domain/lodging.dart';
+import 'package:eurotrex/features/accommodation/presentation/lodging_type_icon.dart';
+import 'package:eurotrex/features/elevation/domain/route_point.dart';
+import 'package:eurotrex/features/map/presentation/map_screen.dart';
+import 'package:eurotrex/features/stages/domain/stage.dart';
+import 'package:eurotrex/features/stages/presentation/stages_screen.dart';
+import 'package:eurotrex/features/trail/domain/trail_direction.dart';
 
 void main() {
   const west = RoutePoint(

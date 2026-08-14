@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/features/elevation/data/elevation_repository.dart';
+import 'package:eurotrex/features/elevation/data/elevation_repository.dart';
 
 void main() {
   test('expands flat Firestore route chunks in order', () {

@@ -12,7 +12,7 @@ class AppDatabase {
 
   Future<Database> get database async {
     return _database ??= await openDatabase(
-      p.join(await getDatabasesPath(), 'monk.db'),
+      p.join(await getDatabasesPath(), 'eurotrex.db'),
       version: schemaVersion,
       onCreate: (db, version) async {
         await db.execute('''

@@ -3,9 +3,9 @@ from math import isclose
 import pytest
 from openpyxl import Workbook
 
-from monk_importer.geometry import closest_polyline_match, cumulative_distances_km
-from monk_importer.models import Stage, StageServices
-from monk_importer.workbook import parse_excursions
+from eurotrex_importer.geometry import closest_polyline_match, cumulative_distances_km
+from eurotrex_importer.models import Stage, StageServices
+from eurotrex_importer.workbook import parse_excursions
 
 
 def test_closest_polyline_match_detects_crossing_segments() -> None:

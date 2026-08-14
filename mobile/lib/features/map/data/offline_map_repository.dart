@@ -59,7 +59,7 @@ class OfflineMapRepository {
           metadata[_downloadedAtMetadataKey],
         );
       } catch (_) {
-        // Older downloads may not include MONK metadata.
+        // Older downloads may not include EuroTrex metadata.
       }
       return OfflineMapState.ready(
         completedBytes: completedBytes,

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/features/detours/domain/trail_detour.dart';
+import 'package:eurotrex/features/detours/domain/trail_detour.dart';
 
 void main() {
   test('parses the imported detour summary and affected stages', () {

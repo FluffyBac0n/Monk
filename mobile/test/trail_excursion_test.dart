@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/features/excursions/domain/trail_excursion.dart';
+import 'package:eurotrex/features/excursions/domain/trail_excursion.dart';
 
 void main() {
   test('parses an imported stage excursion summary', () {

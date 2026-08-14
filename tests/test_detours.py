@@ -3,9 +3,9 @@ from __future__ import annotations
 import pytest
 from openpyxl import Workbook
 
-from monk_importer.geometry import cumulative_distances_km
-from monk_importer.models import Stage, StageServices
-from monk_importer.workbook import parse_detours
+from eurotrex_importer.geometry import cumulative_distances_km
+from eurotrex_importer.models import Stage, StageServices
+from eurotrex_importer.workbook import parse_detours
 
 
 def test_parse_detour_calculates_connections_replaced_route_and_differences() -> None:

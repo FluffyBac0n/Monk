@@ -13,12 +13,12 @@ def main() -> None:
     parser.add_argument(
         "--workbook",
         type=Path,
-        default=Path(os.getenv("MONK_WORKBOOK_PATH", DEFAULT_WORKBOOK_PATH)),
+        default=Path(os.getenv("EUROTREX_WORKBOOK_PATH", DEFAULT_WORKBOOK_PATH)),
         help="Path to the source Excel workbook.",
     )
     parser.add_argument(
         "--trail-id",
-        default=os.getenv("MONK_TRAIL_ID", "cyprus-e4"),
+        default=os.getenv("EUROTREX_TRAIL_ID", "cyprus-e4"),
         help="Firestore trail document ID.",
     )
     parser.add_argument("--chunk-size", type=int, default=500, help="Route points per chunk.")

@@ -1,5 +1,5 @@
 [project]
-name = "monk"
+name = "eurotrex-importer"
 version = "0.1.0"
 description = "Importer for Cyprus E4 trail workbook data into Firestore."
 readme = "README.md"
@@ -21,7 +21,7 @@ functions = [
 ]
 
 [project.scripts]
-monk-import = "monk_importer.cli:main"
+eurotrex-import = "eurotrex_importer.cli:main"
 
 [build-system]
 requires = ["setuptools>=69.0.0", "wheel"]
@@ -33,4 +33,3 @@ where = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-

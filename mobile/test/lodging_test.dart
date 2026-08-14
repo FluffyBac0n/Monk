@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:monk_mobile/features/accommodation/data/lodging_repository.dart';
-import 'package:monk_mobile/features/accommodation/domain/lodging.dart';
-import 'package:monk_mobile/features/accommodation/presentation/accommodation_controller.dart';
+import 'package:eurotrex/features/accommodation/data/lodging_repository.dart';
+import 'package:eurotrex/features/accommodation/domain/lodging.dart';
+import 'package:eurotrex/features/accommodation/presentation/accommodation_controller.dart';
 
 void main() {
   group('Lodging.fromFirestore', () {

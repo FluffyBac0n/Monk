@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:monk_mobile/features/elevation/domain/route_point.dart';
-import 'package:monk_mobile/features/map/data/offline_map_repository.dart';
-import 'package:monk_mobile/features/map/domain/offline_map_state.dart';
+import 'package:eurotrex/features/elevation/domain/route_point.dart';
+import 'package:eurotrex/features/map/data/offline_map_repository.dart';
+import 'package:eurotrex/features/map/domain/offline_map_state.dart';
 
 void main() {
   test('builds a closed offline corridor covering the full route', () {
