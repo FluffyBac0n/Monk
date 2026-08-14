@@ -3,7 +3,7 @@
 Status checked: 14 August 2026
 
 The app successfully builds in unsigned iOS release mode. The current release
-build is approximately 83.2 MB.
+build is approximately 87.0 MB.
 
 ## Current technical state
 

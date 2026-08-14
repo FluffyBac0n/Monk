@@ -33,7 +33,7 @@ android {
     }
 
     defaultConfig {
-        // Keep the existing identifier unless a separate package-renaming decision is made.
+        // Canonical Android package for the production EuroTrex app.
         applicationId = "com.eurotrex.e4"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
