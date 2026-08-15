@@ -18,6 +18,7 @@ import 'package:eurotrex/features/map/presentation/offline_map_controller.dart';
 import 'package:eurotrex/features/stages/data/stage_repository.dart';
 import 'package:eurotrex/features/stages/domain/stage.dart';
 import 'package:eurotrex/features/stages/presentation/stages_controller.dart';
+import 'package:eurotrex/features/stages/presentation/trail_data_metadata_controller.dart';
 
 void main() {
   group('StagesController', () {
@@ -294,6 +295,46 @@ void main() {
       expect(restored.accepted, isTrue);
       expect(restored.acceptedVersion, currentLegalTermsVersion);
     });
+  });
+
+  group('TrailDataMetadataController', () {
+    test(
+      'restores, updates, and clears the trail download timestamp',
+      () async {
+        final database = _SettingsDatabase({
+          cyprusE4TrailDataUpdatedAtSetting: '2026-08-14T10:30:00.000Z',
+        });
+        final container = ProviderContainer(
+          overrides: [appDatabaseProvider.overrideWithValue(database)],
+        );
+        addTearDown(container.dispose);
+
+        expect(
+          await container.read(trailDataLastUpdatedProvider.future),
+          DateTime.utc(2026, 8, 14, 10, 30),
+        );
+
+        final controller = container.read(
+          trailDataLastUpdatedProvider.notifier,
+        );
+        await controller.markUpdated();
+        final updated = container
+            .read(trailDataLastUpdatedProvider)
+            .requireValue;
+        expect(updated, isNotNull);
+        expect(
+          database.writes[cyprusE4TrailDataUpdatedAtSetting],
+          updated!.toIso8601String(),
+        );
+
+        await controller.clear();
+        expect(
+          container.read(trailDataLastUpdatedProvider).requireValue,
+          isNull,
+        );
+        expect(database.writes[cyprusE4TrailDataUpdatedAtSetting], '');
+      },
+    );
   });
 
   group('OfflineMapController', () {

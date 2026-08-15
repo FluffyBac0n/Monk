@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,9 +10,12 @@ import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 import '../../elevation/presentation/elevation_controller.dart';
+import '../../elevation/domain/route_point.dart';
 import '../../map/domain/offline_map_state.dart';
 import '../../map/presentation/offline_map_controller.dart';
+import '../../stages/domain/stage.dart';
 import '../../stages/presentation/stages_controller.dart';
+import '../../stages/presentation/trail_data_metadata_controller.dart';
 import '../../trail/domain/trail_preferences.dart';
 
 const _green = Color(0xFF277653);
@@ -316,6 +321,8 @@ class _OfflineAccessSetting extends ConsumerWidget {
     final offlineMap = ref.watch(offlineMapProvider);
     final stages = ref.watch(stagesProvider);
     final route = ref.watch(elevationProvider);
+    final trailDataLastUpdated = ref.watch(trailDataLastUpdatedProvider);
+    final trailStages = stages.value ?? const <TrailStage>[];
     final routePoints = route.value ?? const [];
     final trailDataChecking = stages.isLoading || route.isLoading;
     final trailDataFailed = stages.hasError || route.hasError;
@@ -349,6 +356,11 @@ class _OfflineAccessSetting extends ConsumerWidget {
             checking: trailDataChecking,
             failed: trailDataFailed,
             ready: trailDataReady,
+            stageCount: trailStages.length,
+            routePointCount: routePoints.length,
+            estimatedBytes: estimateTrailDataBytes(trailStages, routePoints),
+            lastUpdated: trailDataLastUpdated.value,
+            onDelete: () => _confirmDeleteTrailData(context, ref),
           ),
           const SizedBox(height: 10),
           _OfflineMapStatus(
@@ -370,11 +382,21 @@ class _TrailDataStatus extends StatelessWidget {
     required this.checking,
     required this.failed,
     required this.ready,
+    required this.stageCount,
+    required this.routePointCount,
+    required this.estimatedBytes,
+    required this.lastUpdated,
+    required this.onDelete,
   });
 
   final bool checking;
   final bool failed;
   final bool ready;
+  final int stageCount;
+  final int routePointCount;
+  final int estimatedBytes;
+  final DateTime? lastUpdated;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -393,6 +415,7 @@ class _TrailDataStatus extends StatelessWidget {
         : l10n.t('Trail data not downloaded');
 
     return _OfflineStatusPanel(
+      key: const ValueKey('settings-trail-data-card'),
       icon: ready ? Icons.check_circle_rounded : Icons.route_rounded,
       color: color,
       title: l10n.t('Trail data'),
@@ -402,6 +425,33 @@ class _TrailDataStatus extends StatelessWidget {
           ? const SizedBox.square(
               dimension: 20,
               child: CircularProgressIndicator(strokeWidth: 2.5),
+            )
+          : ready
+          ? _CompactDeleteButton(
+              key: const Key('settings-delete-trail-data'),
+              tooltip: l10n.t('Remove trail data'),
+              onPressed: onDelete,
+            )
+          : null,
+      body: ready
+          ? Column(
+              children: [
+                _OfflineFact(label: l10n.t('Stages'), value: '$stageCount'),
+                _OfflineFact(
+                  label: l10n.t('Route points'),
+                  value: '$routePointCount',
+                ),
+                _OfflineFact(
+                  label: l10n.t('Size'),
+                  value: '~${formatOfflineBytes(estimatedBytes)}',
+                ),
+                _OfflineFact(
+                  label: l10n.t('Last updated'),
+                  value: lastUpdated == null
+                      ? l10n.t('Not available')
+                      : _formatOfflineMapDate(context, lastUpdated!),
+                ),
+              ],
             )
           : null,
     );
@@ -480,11 +530,19 @@ class _OfflineMapStatus extends StatelessWidget {
         : l10n.t('Offline map not downloaded');
 
     return _OfflineStatusPanel(
+      key: const ValueKey('settings-offline-map-card'),
       icon: icon,
       color: color,
       title: l10n.t('Offline map'),
       status: status,
       description: l10n.t('Detailed map along the trail'),
+      trailing: ready
+          ? _CompactDeleteButton(
+              key: const Key('settings-delete-offline-maps'),
+              tooltip: l10n.t('Remove offline map'),
+              onPressed: onDelete,
+            )
+          : null,
       body: Column(
         children: [
           if (downloading) ...[
@@ -514,18 +572,7 @@ class _OfflineMapStatus extends StatelessWidget {
           ],
         ],
       ),
-      footer: ready
-          ? FilledButton.icon(
-              key: const Key('settings-delete-offline-maps'),
-              style: FilledButton.styleFrom(
-                backgroundColor: _red,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: onDelete,
-              icon: const Icon(Icons.delete_outline_rounded),
-              label: Text(l10n.t('Remove offline map')),
-            )
-          : downloading
+      footer: ready || downloading
           ? null
           : FilledButton.icon(
               key: const Key('settings-download-offline-map'),
@@ -551,6 +598,37 @@ class _OfflineMapStatus extends StatelessWidget {
   }
 }
 
+class _CompactDeleteButton extends StatelessWidget {
+  const _CompactDeleteButton({
+    required this.tooltip,
+    required this.onPressed,
+    super.key,
+  });
+
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 36,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        style: IconButton.styleFrom(
+          backgroundColor: _red,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        icon: const Icon(Icons.delete_rounded, size: 20),
+      ),
+    );
+  }
+}
+
 class _OfflineStatusPanel extends StatelessWidget {
   const _OfflineStatusPanel({
     required this.icon,
@@ -561,6 +639,7 @@ class _OfflineStatusPanel extends StatelessWidget {
     this.trailing,
     this.body,
     this.footer,
+    super.key,
   });
 
   final IconData icon;
@@ -680,6 +759,72 @@ String _formatOfflineMapDate(BuildContext context, DateTime downloadedAt) {
   return '$date · $time';
 }
 
+int estimateTrailDataBytes(
+  List<TrailStage> stages,
+  List<RoutePoint> routePoints,
+) {
+  var bytes = routePoints.length * 96;
+  for (final stage in stages) {
+    bytes += 96;
+    bytes += utf8.encode(stage.id).length;
+    bytes += utf8.encode(stage.name).length;
+    bytes += utf8.encode(jsonEncode(stage.services)).length;
+  }
+  return bytes;
+}
+
+Future<void> _confirmDeleteTrailData(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final l10n = context.l10n;
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(l10n.t('Remove trail data?')),
+      content: Text(
+        l10n.t(
+          'The route, stages and elevation will be removed. The offline map will remain on this device.',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(l10n.t('Cancel')),
+        ),
+        FilledButton(
+          key: const Key('confirm-delete-trail-data'),
+          style: FilledButton.styleFrom(
+            backgroundColor: _red,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: Text(l10n.t('Remove')),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+
+  final database = ref.read(appDatabaseProvider);
+  final stagesController = ref.read(stagesProvider.notifier);
+  final elevationController = ref.read(elevationProvider.notifier);
+  final metadataController = ref.read(trailDataLastUpdatedProvider.notifier);
+
+  try {
+    await database.deleteTrailData(cyprusE4TrailId);
+    stagesController.clearOfflineState();
+    elevationController.clearOfflineState();
+    await metadataController.clear();
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.t('The trail data could not be removed.'))),
+      );
+    }
+  }
+}
+
 Future<void> _confirmDeleteOfflineMap(
   BuildContext context,
   WidgetRef ref,
@@ -711,9 +856,9 @@ Future<void> _confirmDeleteOfflineMap(
       ],
     ),
   );
-  if (confirmed == true) {
-    await ref.read(offlineMapProvider.notifier).delete();
-  }
+  if (confirmed != true || !context.mounted) return;
+  final controller = ref.read(offlineMapProvider.notifier);
+  await controller.delete();
 }
 
 class _SettingsCard extends StatelessWidget {

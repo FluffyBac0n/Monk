@@ -38,6 +38,7 @@ import '../domain/stage.dart';
 import '../domain/trail_location_matcher.dart';
 import '../domain/walking_time_estimator.dart';
 import 'stages_controller.dart';
+import 'trail_data_metadata_controller.dart';
 
 const _ink = Color(0xFF17201B);
 const _green = Color(0xFF277653);
@@ -58,6 +59,21 @@ const _timelineLineColor = Color(0xFFB9BDB8);
 const _timelineLeftInset = 12.0;
 const _timelineGutterWidth = 108.0;
 const _trailHeaderExpandedHeight = 128.0;
+
+Future<void> _syncOfflineTrailData(
+  WidgetRef ref, {
+  required bool isInitialDownload,
+}) async {
+  final metadataReady = ref.read(trailDataLastUpdatedProvider.future);
+  final controller = ref.read(trailDataLastUpdatedProvider.notifier);
+  await metadataReady;
+  if (isInitialDownload) {
+    await controller.downloadTrailData();
+  } else {
+    await controller.refreshTrailData();
+  }
+}
+
 const _trailHeaderCollapseThreshold = 82.0;
 const _timelineLineColumnWidth = 28.0;
 const _beachPointFilterKey = 'trailBeach';
@@ -797,7 +813,8 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
       body: RefreshIndicator(
         key: const ValueKey('stage-pull-to-refresh'),
         onRefresh: () async {
-          await ref.read(stagesProvider.notifier).sync();
+          await _syncOfflineTrailData(ref, isInitialDownload: false);
+          if (!context.mounted) return;
           ref.invalidate(excursionRoutesForTrailProvider);
           try {
             await ref
@@ -806,6 +823,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
           } catch (_) {
             // Stage data remains usable when online excursion data is absent.
           }
+          if (!context.mounted) return;
           try {
             await ref
                 .refresh(detoursForTrailProvider.future)
@@ -6551,7 +6569,8 @@ class _EmptyState extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
-              onPressed: () => ref.read(stagesProvider.notifier).sync(),
+              onPressed: () =>
+                  _syncOfflineTrailData(ref, isInitialDownload: true),
               icon: const Icon(Icons.download_rounded),
               label: Text(
                 l10n.t(downloadFailed ? 'Try again' : 'Download trail'),

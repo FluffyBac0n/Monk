@@ -46,4 +46,8 @@ class StagesController extends AsyncNotifier<List<TrailStage>> {
       () => ref.read(stageRepositoryProvider).sync(cyprusE4TrailId),
     );
   }
+
+  void clearOfflineState() {
+    state = const AsyncData<List<TrailStage>>([]);
+  }
 }

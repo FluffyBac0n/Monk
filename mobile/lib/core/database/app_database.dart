@@ -177,5 +177,17 @@ class AppDatabase {
     });
   }
 
+  Future<void> deleteTrailData(String trailId) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('stages', where: 'trail_id = ?', whereArgs: [trailId]);
+      await txn.delete(
+        'route_points',
+        where: 'trail_id = ?',
+        whereArgs: [trailId],
+      );
+    });
+  }
+
   TrailStage _fromRow(Map<String, Object?> row) => decodeTrailStageRow(row);
 }

@@ -31,6 +31,8 @@ import 'package:eurotrex/features/legal/presentation/legal_disclaimer_screen.dar
 import 'package:eurotrex/features/stages/domain/stage.dart';
 import 'package:eurotrex/features/stages/presentation/stages_controller.dart';
 import 'package:eurotrex/features/stages/presentation/stages_screen.dart';
+import 'package:eurotrex/features/stages/presentation/trail_data_metadata_controller.dart';
+import 'package:eurotrex/features/settings/presentation/settings_screen.dart';
 import 'package:eurotrex/features/trail/domain/trail_direction.dart';
 import 'package:eurotrex/features/trail/domain/trail_preferences.dart';
 import 'package:eurotrex/features/trail/presentation/trail_information_screen.dart';
@@ -420,6 +422,9 @@ void main() {
         overrides: [
           appDatabaseProvider.overrideWithValue(database),
           stagesProvider.overrideWith(_RefreshTrackingStagesController.new),
+          elevationProvider.overrideWith(
+            _RefreshTrackingElevationController.new,
+          ),
         ],
         child: const MaterialApp(home: StagesScreen()),
       ),
@@ -432,7 +437,11 @@ void main() {
     final controller =
         container.read(stagesProvider.notifier)
             as _RefreshTrackingStagesController;
+    final elevationController =
+        container.read(elevationProvider.notifier)
+            as _RefreshTrackingElevationController;
     expect(controller.syncCalls, 0);
+    expect(elevationController.refreshCalls, 0);
     expect(find.byKey(const ValueKey('stage-pull-to-refresh')), findsOneWidget);
     expect(find.byKey(const ValueKey('refresh-offline-trail')), findsNothing);
 
@@ -440,6 +449,52 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(controller.syncCalls, 1);
+    expect(elevationController.refreshCalls, 1);
+    expect(
+      DateTime.tryParse(
+        database.settings[cyprusE4TrailDataUpdatedAtSetting] ?? '',
+      ),
+      isNotNull,
+    );
+  });
+
+  testWidgets('initial trail download records the last-updated timestamp', (
+    tester,
+  ) async {
+    final database = _FakeAppDatabase()
+      ..settings[cyprusE4TrailInformationSeenSetting] = 'true';
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          stagesProvider.overrideWith(_InitialDownloadStagesController.new),
+          elevationProvider.overrideWith(
+            _InitialDownloadElevationController.new,
+          ),
+          offlineMapProvider.overrideWith(_FakeOfflineMapController.new),
+        ],
+        child: const MaterialApp(home: StagesScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(StagesScreen)),
+    );
+
+    expect(find.text('Download trail'), findsOneWidget);
+    await tester.tap(find.text('Download trail'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Download trail'), findsNothing);
+    expect(container.read(stagesProvider).requireValue, isNotEmpty);
+    expect(container.read(elevationProvider).requireValue, isNotEmpty);
+    expect(container.read(trailDataLastUpdatedProvider).value, isNotNull);
+    expect(
+      DateTime.tryParse(
+        database.settings[cyprusE4TrailDataUpdatedAtSetting] ?? '',
+      ),
+      isNotNull,
+    );
   });
 
   testWidgets('debug settings can restart both guidance hints', (tester) async {
@@ -3520,6 +3575,96 @@ void main() {
     expect(find.text('Could not open this link.'), findsOneWidget);
   });
 
+  testWidgets('offline settings show compact delete actions and trail stats', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final database = _FakeAppDatabase()
+      ..settings[cyprusE4TrailDataUpdatedAtSetting] =
+          '2026-08-15T08:30:00.000Z';
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          stagesProvider.overrideWith(_FakeStagesController.new),
+          elevationProvider.overrideWith(_FakeElevationController.new),
+          offlineMapProvider.overrideWith(_FakeOfflineMapController.new),
+        ],
+        child: const MaterialApp(home: SettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final trailCard = find.byKey(const ValueKey('settings-trail-data-card'));
+    expect(trailCard, findsOneWidget);
+    expect(
+      find.descendant(of: trailCard, matching: find.text('1')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: trailCard, matching: find.text('2')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: trailCard, matching: find.textContaining('~')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: trailCard, matching: find.text('Not available')),
+      findsNothing,
+    );
+
+    final trailDelete = find.byKey(const Key('settings-delete-trail-data'));
+    final mapDelete = find.byKey(const Key('settings-delete-offline-maps'));
+    final trailDeleteButton = find.descendant(
+      of: trailDelete,
+      matching: find.byType(IconButton),
+    );
+    final mapDeleteButton = find.descendant(
+      of: mapDelete,
+      matching: find.byType(IconButton),
+    );
+    expect(
+      tester.widget<IconButton>(trailDeleteButton).tooltip,
+      'Remove trail data',
+    );
+    expect(
+      tester.widget<IconButton>(mapDeleteButton).tooltip,
+      'Remove offline map',
+    );
+    expect(
+      find.descendant(
+        of: trailDelete,
+        matching: find.byIcon(Icons.delete_rounded),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: mapDelete,
+        matching: find.byIcon(Icons.delete_rounded),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(trailDelete);
+    await tester.tap(trailDeleteButton);
+    await tester.pumpAndSettle();
+    expect(find.text('Remove trail data?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('confirm-delete-trail-data')));
+    await tester.pumpAndSettle();
+
+    expect(database.trailDataDeleted, isTrue);
+    expect(database.settings[cyprusE4TrailDataUpdatedAtSetting], isEmpty);
+    expect(find.text('Trail data not downloaded'), findsOneWidget);
+    expect(find.byKey(const Key('settings-delete-trail-data')), findsNothing);
+    expect(
+      find.byKey(const Key('settings-delete-offline-maps')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('settings change language and measurement system app-wide', (
     tester,
   ) async {
@@ -4189,6 +4334,76 @@ class _RefreshTrackingStagesController extends StagesController {
   }
 }
 
+class _RefreshTrackingElevationController extends ElevationController {
+  int refreshCalls = 0;
+
+  static const points = [
+    RoutePoint(
+      pointIndex: 0,
+      lat: 34.7,
+      lng: 32.4,
+      altitudeM: 2,
+      distanceKm: 0,
+      reverseDistanceKm: 1,
+    ),
+    RoutePoint(
+      pointIndex: 1,
+      lat: 34.71,
+      lng: 32.41,
+      altitudeM: 10,
+      distanceKm: 1,
+      reverseDistanceKm: 0,
+    ),
+  ];
+
+  @override
+  Future<List<RoutePoint>> build() async => points;
+
+  @override
+  Future<void> refresh() async {
+    refreshCalls++;
+    state = const AsyncData(points);
+  }
+}
+
+class _InitialDownloadStagesController extends StagesController {
+  @override
+  Future<List<TrailStage>> build() async => const [];
+
+  @override
+  Future<void> sync() async {
+    state = const AsyncData([
+      TrailStage(
+        id: 'downloaded-stage',
+        sequence: 1,
+        name: 'Downloaded stage',
+        accumulatedDistanceKm: 0,
+        altitudeM: 2,
+        services: {},
+      ),
+    ]);
+  }
+}
+
+class _InitialDownloadElevationController extends ElevationController {
+  @override
+  Future<List<RoutePoint>> build() async => const [];
+
+  @override
+  Future<void> refresh() async {
+    state = const AsyncData([
+      RoutePoint(
+        pointIndex: 0,
+        lat: 34.7,
+        lng: 32.4,
+        altitudeM: 2,
+        distanceKm: 0,
+        reverseDistanceKm: 0,
+      ),
+    ]);
+  }
+}
+
 class _EndpointStagesController extends StagesController {
   @override
   Future<List<TrailStage>> build() async => const [
@@ -4363,6 +4578,7 @@ class _AcceptedLegalConsentController extends LegalConsentController {
 
 class _FakeAppDatabase extends AppDatabase {
   final Map<String, String> settings = {};
+  bool trailDataDeleted = false;
 
   @override
   Future<Map<String, String>> readSettings() async => Map.of(settings);
@@ -4370,6 +4586,11 @@ class _FakeAppDatabase extends AppDatabase {
   @override
   Future<void> writeSetting(String key, String value) async {
     settings[key] = value;
+  }
+
+  @override
+  Future<void> deleteTrailData(String trailId) async {
+    trailDataDeleted = true;
   }
 }
 

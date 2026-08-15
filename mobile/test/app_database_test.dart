@@ -122,6 +122,13 @@ void main() {
       await appDatabase.replaceRoutePoints('cyprus-e4', [points.first]);
       expect(await appDatabase.readRoutePoints('cyprus-e4'), hasLength(1));
       expect(await appDatabase.readRoutePoints('crete-e4'), hasLength(1));
+
+      await appDatabase.deleteTrailData('cyprus-e4');
+      expect(await appDatabase.readStages('cyprus-e4'), isEmpty);
+      expect(await appDatabase.readRoutePoints('cyprus-e4'), isEmpty);
+      expect((await appDatabase.readStages('crete-e4')).single.id, 'crete');
+      expect(await appDatabase.readRoutePoints('crete-e4'), hasLength(1));
+      expect((await appDatabase.readSettings())['languageCode'], 'fr');
       expect(await database.getVersion(), AppDatabase.schemaVersion);
     },
   );

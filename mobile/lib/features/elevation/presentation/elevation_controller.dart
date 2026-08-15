@@ -35,4 +35,8 @@ class ElevationController extends AsyncNotifier<List<RoutePoint>> {
       () => ref.read(elevationRepositoryProvider).sync(cyprusE4TrailId),
     );
   }
+
+  void clearOfflineState() {
+    state = const AsyncData<List<RoutePoint>>([]);
+  }
 }
