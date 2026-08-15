@@ -9,6 +9,8 @@ import 'package:eurotrex/core/app_info/app_version_provider.dart';
 import 'package:eurotrex/core/database/app_database.dart';
 import 'package:eurotrex/core/database/database_provider.dart';
 import 'package:eurotrex/core/links/external_url_launcher.dart';
+import 'package:eurotrex/core/legal/legal_consent.dart';
+import 'package:eurotrex/core/legal/legal_consent_controller.dart';
 import 'package:eurotrex/core/settings/app_settings.dart';
 import 'package:eurotrex/core/settings/app_settings_controller.dart';
 import 'package:eurotrex/core/theme/eurotrex_palette.dart';
@@ -25,12 +27,14 @@ import 'package:eurotrex/features/excursions/presentation/excursion_controller.d
 import 'package:eurotrex/features/map/presentation/map_screen.dart';
 import 'package:eurotrex/features/map/domain/offline_map_state.dart';
 import 'package:eurotrex/features/map/presentation/offline_map_controller.dart';
+import 'package:eurotrex/features/legal/presentation/legal_disclaimer_screen.dart';
 import 'package:eurotrex/features/stages/domain/stage.dart';
 import 'package:eurotrex/features/stages/presentation/stages_controller.dart';
 import 'package:eurotrex/features/stages/presentation/stages_screen.dart';
 import 'package:eurotrex/features/trail/domain/trail_direction.dart';
 import 'package:eurotrex/features/trail/domain/trail_preferences.dart';
 import 'package:eurotrex/features/trail/presentation/trail_information_screen.dart';
+import 'package:eurotrex/features/trails/presentation/trails_screen.dart';
 
 void main() {
   testWidgets('E4 waymark opens trail information and stops pulsing', (
@@ -502,11 +506,110 @@ void main() {
     expect(find.byKey(const ValueKey('stage-details-helper')), findsOneWidget);
   });
 
+  testWidgets(
+    'first launch allows decline, disables trails, and accepts once later',
+    (tester) async {
+      final database = _FakeAppDatabase();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(database),
+            stagesProvider.overrideWith(_FakeStagesController.new),
+            elevationProvider.overrideWith(_ScopeElevationController.new),
+            offlineMapProvider.overrideWith(_FakeOfflineMapController.new),
+          ],
+          child: const EuroTrexApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LegalDisclaimerScreen), findsOneWidget);
+      expect(find.byType(TrailsScreen), findsNothing);
+      expect(find.text('Terms and Safety Disclaimer'), findsOneWidget);
+      expect(find.byKey(const ValueKey('accept-legal-terms')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('continue-without-accepting')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('continue-without-accepting')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TrailsScreen), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('legal-acceptance-required')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'You must accept the Terms and Conditions before you can explore a trail.',
+        ),
+        findsOneWidget,
+      );
+      final exploreButton = find.byKey(
+        const ValueKey('explore-trail-button-cyprus-e4'),
+      );
+      expect(tester.widget<FilledButton>(exploreButton).onPressed, isNull);
+      expect(
+        tester
+            .widget<InkWell>(find.byKey(const ValueKey('explore-cyprus-e4')))
+            .onTap,
+        isNull,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('review-legal-terms')));
+      await tester.pumpAndSettle();
+      expect(find.byType(LegalDisclaimerScreen), findsOneWidget);
+      expect(find.byKey(const ValueKey('accept-legal-terms')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('continue-without-accepting')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('accept-legal-terms')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LegalDisclaimerScreen), findsNothing);
+      expect(
+        find.byKey(const ValueKey('legal-acceptance-required')),
+        findsNothing,
+      );
+      expect(tester.widget<FilledButton>(exploreButton).onPressed, isNotNull);
+      expect(database.settings[legalTermsAcceptedSetting], 'true');
+      expect(
+        database.settings[legalTermsAcceptedVersionSetting],
+        currentLegalTermsVersion,
+      );
+      expect(database.settings[legalTermsAcceptedAtSetting], isNotEmpty);
+
+      await tester.tap(find.byKey(const ValueKey('landing-terms')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('legal-accepted-status')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('accept-legal-terms')), findsNothing);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(LegalDisclaimerScreen)),
+      );
+      await container
+          .read(legalConsentProvider.notifier)
+          .continueWithoutAccepting();
+      expect(container.read(legalConsentProvider).accepted, isTrue);
+    },
+  );
+
   testWidgets('shows landing trail cards and opens Cyprus E4', (tester) async {
     final lodgingRepository = _TrailPreloadLodgingRepository();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          legalConsentProvider.overrideWith(
+            _AcceptedLegalConsentController.new,
+          ),
           lodgingRepositoryProvider.overrideWithValue(lodgingRepository),
         ],
         child: const EuroTrexApp(),
@@ -680,6 +783,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          legalConsentProvider.overrideWith(
+            _AcceptedLegalConsentController.new,
+          ),
           appVersionProvider.overrideWith((ref) async => '1.0.0 (1)'),
           externalUrlLauncherProvider.overrideWithValue((uri) async {
             launchedUris.add(uri);
@@ -799,7 +905,16 @@ void main() {
   testWidgets('upcoming E4 trails are noninteractive coming-soon rows', (
     tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(child: EuroTrexApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          legalConsentProvider.overrideWith(
+            _AcceptedLegalConsentController.new,
+          ),
+        ],
+        child: const EuroTrexApp(),
+      ),
+    );
     await tester.pumpAndSettle();
 
     const upcomingTrails = {
@@ -1833,6 +1948,14 @@ void main() {
     expect(find.text('Pafos Airport  →  Larnaka Airport'), findsNothing);
     expect(pafosDistance, findsNothing);
     expect(pafosAltitude, findsOneWidget);
+    final pafosCardShape =
+        tester.widget<Material>(pafosCard).shape! as RoundedRectangleBorder;
+    expect(pafosCardShape.side.color, const Color(0xFFD8DDDA));
+    expect(pafosCardShape.side.width, 1);
+    expect(
+      tester.getCenter(pafosAltitude).dx,
+      greaterThan(tester.getCenter(pafosCard).dx),
+    );
     expect(larnakaDistance, findsOneWidget);
     expect(
       find.descendant(of: larnakaDistance, matching: find.text('10.0 km')),
@@ -1841,9 +1964,16 @@ void main() {
     expect(
       find.descendant(
         of: larnakaDistance,
-        matching: find.byIcon(Icons.hiking_rounded),
+        matching: find.byKey(const ValueKey('stage-progress-track')),
       ),
       findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: larnakaDistance,
+        matching: find.byIcon(Icons.hiking_rounded),
+      ),
+      findsNothing,
     );
     expect(
       find.descendant(of: larnakaDistance, matching: find.text('From Start')),
@@ -1942,6 +2072,10 @@ void main() {
     );
     expect(find.text('Larnaka Airport  →  Pafos Airport'), findsNothing);
     expect(larnakaDistance, findsNothing);
+    expect(
+      tester.getCenter(larnakaAltitude).dx,
+      greaterThan(tester.getCenter(larnakaCard).dx),
+    );
     expect(pafosDistance, findsOneWidget);
     expect(
       find.descendant(of: pafosDistance, matching: find.text('10.0 km')),
@@ -2018,7 +2152,24 @@ void main() {
     final troodosNumber = find.byKey(const ValueKey('stage-number-troodos'));
     expect(troodosNumber, findsOneWidget);
     expect(tester.widget<Text>(troodosNumber).data, '2');
-    expect(tester.widget<Text>(troodosNumber).style?.fontSize, 12);
+    expect(tester.widget<Text>(troodosNumber).style?.fontSize, 11);
+    final troodosProgress = find.descendant(
+      of: find.byKey(const ValueKey('stage-card-distance-troodos')),
+      matching: find.byKey(const ValueKey('stage-progress-fill')),
+    );
+    expect(troodosProgress, findsOneWidget);
+    expect(
+      tester.widget<FractionallySizedBox>(troodosProgress).widthFactor,
+      closeTo(0.5, 0.001),
+    );
+    final troodosTrack = find.descendant(
+      of: find.byKey(const ValueKey('stage-card-distance-troodos')),
+      matching: find.byKey(const ValueKey('stage-progress-track')),
+    );
+    final trackSize = tester.getSize(troodosTrack);
+    final fillSize = tester.getSize(troodosProgress);
+    expect(fillSize.height, trackSize.height);
+    expect(fillSize.width, closeTo(trackSize.width * 0.5, 0.1));
     await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
     await tester.pumpAndSettle();
     final draggableFilter = find.byKey(
@@ -3375,6 +3526,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          legalConsentProvider.overrideWith(
+            _AcceptedLegalConsentController.new,
+          ),
           stagesProvider.overrideWith(_FakeStagesController.new),
           appSettingsProvider.overrideWith(_FakeAppSettingsController.new),
           offlineMapProvider.overrideWith(_FakeOfflineMapController.new),
@@ -4195,6 +4349,16 @@ class _FakeAppSettingsController extends AppSettingsController {
   void setMeasurementSystem(MeasurementSystem measurementSystem) {
     state = state.copyWith(measurementSystem: measurementSystem);
   }
+}
+
+class _AcceptedLegalConsentController extends LegalConsentController {
+  @override
+  LegalConsentState build() => const LegalConsentState.resolved(
+    promptSeen: true,
+    accepted: true,
+    acceptedAtUtc: '2026-08-15T07:00:00.000Z',
+    acceptedVersion: currentLegalTermsVersion,
+  );
 }
 
 class _FakeAppDatabase extends AppDatabase {

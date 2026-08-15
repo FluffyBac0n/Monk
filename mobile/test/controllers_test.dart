@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eurotrex/core/database/app_database.dart';
 import 'package:eurotrex/core/database/database_provider.dart';
+import 'package:eurotrex/core/legal/legal_consent.dart';
+import 'package:eurotrex/core/legal/legal_consent_controller.dart';
 import 'package:eurotrex/core/settings/app_settings.dart';
 import 'package:eurotrex/core/settings/app_settings_controller.dart';
 import 'package:eurotrex/features/elevation/data/elevation_repository.dart';
@@ -229,6 +231,68 @@ void main() {
       await _flushAsyncWork();
 
       expect(container.read(appSettingsProvider), const AppSettings());
+    });
+  });
+
+  group('LegalConsentController', () {
+    test('persists decline and later one-time acceptance', () async {
+      final database = _SettingsDatabase(const {});
+      final container = ProviderContainer(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(legalConsentProvider).isLoading, isTrue);
+      await _flushAsyncWork();
+      expect(
+        container.read(legalConsentProvider).requiresInitialPrompt,
+        isTrue,
+      );
+
+      final controller = container.read(legalConsentProvider.notifier);
+      await controller.continueWithoutAccepting();
+      expect(container.read(legalConsentProvider).promptSeen, isTrue);
+      expect(container.read(legalConsentProvider).accepted, isFalse);
+      expect(database.writes[legalTermsPromptSeenSetting], 'true');
+
+      await controller.acceptTerms();
+      final accepted = container.read(legalConsentProvider);
+      expect(accepted.accepted, isTrue);
+      expect(accepted.acceptedVersion, currentLegalTermsVersion);
+      expect(accepted.acceptedAtUtc, isNotEmpty);
+      expect(database.writes[legalTermsAcceptedSetting], 'true');
+      expect(
+        database.writes[legalTermsAcceptedVersionSetting],
+        currentLegalTermsVersion,
+      );
+
+      final acceptedAt = accepted.acceptedAtUtc;
+      await controller.continueWithoutAccepting();
+      await controller.acceptTerms();
+      expect(container.read(legalConsentProvider).accepted, isTrue);
+      expect(container.read(legalConsentProvider).acceptedAtUtc, acceptedAt);
+    });
+
+    test('restores a previously accepted decision', () async {
+      final database = _SettingsDatabase({
+        legalTermsPromptSeenSetting: 'true',
+        legalTermsAcceptedSetting: 'true',
+        legalTermsAcceptedAtSetting: '2026-08-15T07:00:00.000Z',
+        legalTermsAcceptedVersionSetting: currentLegalTermsVersion,
+      });
+      final container = ProviderContainer(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+      );
+      addTearDown(container.dispose);
+
+      container.read(legalConsentProvider);
+      await _flushAsyncWork();
+
+      final restored = container.read(legalConsentProvider);
+      expect(restored.isLoading, isFalse);
+      expect(restored.promptSeen, isTrue);
+      expect(restored.accepted, isTrue);
+      expect(restored.acceptedVersion, currentLegalTermsVersion);
     });
   });
 

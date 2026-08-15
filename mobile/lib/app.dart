@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/localization/app_localizations.dart';
+import 'core/legal/legal_consent_controller.dart';
 import 'core/settings/app_settings_controller.dart';
 import 'core/theme/eurotrex_palette.dart';
+import 'features/legal/presentation/legal_disclaimer_screen.dart';
 import 'features/trails/presentation/trails_screen.dart';
 
 final firebaseReadyProvider = Provider<bool>((ref) => false);
@@ -15,6 +17,7 @@ class EuroTrexApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(appSettingsProvider);
+    final legalConsent = ref.watch(legalConsentProvider);
     return MaterialApp(
       onGenerateTitle: (context) => context.l10n.t('EUROTREX'),
       debugShowCheckedModeBanner: false,
@@ -56,7 +59,11 @@ class EuroTrexApp extends ConsumerWidget {
         ),
         useMaterial3: true,
       ),
-      home: const TrailsScreen(),
+      home: legalConsent.isLoading
+          ? const LegalLoadingScreen()
+          : legalConsent.requiresInitialPrompt
+          ? const LegalDisclaimerScreen(isInitialPrompt: true)
+          : const TrailsScreen(),
     );
   }
 }

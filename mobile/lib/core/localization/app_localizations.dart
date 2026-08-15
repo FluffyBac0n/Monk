@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'translations_fr.dart';
 import 'translations_it.dart';
+import 'translations_legal.dart';
 
 class AppLocalizations {
   const AppLocalizations(this.locale);
@@ -75,9 +76,10 @@ class _AppLocalizationsDelegate
 }
 
 const _translations = <String, Map<String, String>>{
-  'it': italianTranslations,
-  'fr': frenchTranslations,
+  'it': {...italianTranslations, ...italianLegalTranslations},
+  'fr': {...frenchTranslations, ...frenchLegalTranslations},
   'de': {
+    ...germanLegalTranslations,
     'EUROTREX': 'EUROTREX',
     'Co-funded by the European Union':
         'Kofinanziert von der Europäischen Union',
@@ -473,6 +475,7 @@ const _translations = <String, Map<String, String>>{
     'Download route': 'Route herunterladen',
   },
   'es': {
+    ...spanishLegalTranslations,
     'EUROTREX': 'EUROTREX',
     'Co-funded by the European Union': 'Cofinanciado por la Unión Europea',
     'Republic of Cyprus': 'República de Chipre',

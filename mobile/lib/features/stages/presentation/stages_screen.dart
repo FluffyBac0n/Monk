@@ -47,6 +47,8 @@ const _sand = Color(0xFFF4F2EC);
 const _yellow = Color(0xFFF2C94C);
 const _trailPulseBlue = Color(0xFF73BCE8);
 const _bookingBlue = Color(0xFF1565C0);
+const _selectedStageCardBackground = Color(0xFFDDEBFA);
+const _stageCardOutline = Color(0xFFD8DDDA);
 const _accommodationBlue = Color(0xFF0288D1);
 const _excursionCardBackground = Color(0xFFE9F5FB);
 const _excursionMapLightBlue = Color(0xFF76C7E5);
@@ -708,6 +710,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
               stage.accumulatedDistanceKm!,
               totalDistanceKm,
             ),
+      totalDistanceKm: totalDistanceKm,
       connectsToPrevious:
           orderedIndex == 0 ||
           (filteredIndex == 0 && connectsFirstFilteredStageToWaymark) ||
@@ -2223,19 +2226,19 @@ class _DetourMainStageCard extends StatelessWidget {
       button: true,
       child: Material(
         key: ValueKey('stage-card-${stage.id}'),
-        color: isSelected ? const Color(0xFFE8F1FC) : Colors.white,
+        color: isSelected ? _selectedStageCardBackground : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: isSelected ? _bookingBlue : Colors.transparent,
-            width: isSelected ? 2 : 0,
+            color: isSelected ? _bookingBlue : _stageCardOutline,
+            width: isSelected ? 2 : 1,
           ),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(11),
+            padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -2266,14 +2269,14 @@ class _DetourMainStageCard extends StatelessWidget {
                       '${stage.sequence}',
                       key: ValueKey('stage-number-${stage.id}'),
                       style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
+                        color: Colors.black38,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 7),
                 Text(
                   stage.name,
                   maxLines: 2,
@@ -2285,7 +2288,7 @@ class _DetourMainStageCard extends StatelessWidget {
                   ),
                 ),
                 if (activeServices.isNotEmpty || excursions.isNotEmpty) ...[
-                  const SizedBox(height: 7),
+                  const SizedBox(height: 6),
                   Wrap(
                     key: ValueKey('stage-card-services-${stage.id}'),
                     spacing: 8,
@@ -2310,31 +2313,33 @@ class _DetourMainStageCard extends StatelessWidget {
                   ),
                 ],
                 const Spacer(),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Row(
-                      key: ValueKey('stage-card-metrics-${stage.id}'),
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (distanceFromStart != null)
-                          _StageCumulativeDistance(
+                Container(
+                  key: ValueKey('stage-card-footer-${stage.id}'),
+                  padding: const EdgeInsets.only(top: 6),
+                  decoration: const BoxDecoration(
+                    border: Border(top: BorderSide(color: Color(0x1A17201B))),
+                  ),
+                  child: Row(
+                    key: ValueKey('stage-card-metrics-${stage.id}'),
+                    children: [
+                      if (distanceFromStart != null)
+                        Expanded(
+                          child: _StageCumulativeDistance(
                             key: ValueKey('stage-card-distance-${stage.id}'),
-                            distance: formatter.distance(distanceFromStart),
+                            distanceKm: distanceFromStart,
+                            totalDistanceKm: totalDistanceKm,
+                            formatter: formatter,
                           ),
-                        if (distanceFromStart != null &&
-                            stage.altitudeM != null)
-                          const SizedBox(width: 8),
-                        if (stage.altitudeM case final altitude?)
-                          _MiniLabel(
-                            key: ValueKey('stage-card-altitude-${stage.id}'),
-                            icon: Icons.landscape_outlined,
-                            label: formatter.altitude(altitude),
-                          ),
-                      ],
-                    ),
+                        ),
+                      if (distanceFromStart != null && stage.altitudeM != null)
+                        const SizedBox(width: 8),
+                      if (stage.altitudeM case final altitude?)
+                        _MiniLabel(
+                          key: ValueKey('stage-card-altitude-${stage.id}'),
+                          icon: Icons.landscape_outlined,
+                          label: formatter.altitude(altitude),
+                        ),
+                    ],
                   ),
                 ),
               ],
@@ -2516,6 +2521,7 @@ class _StageTimelineRow extends StatelessWidget {
     required this.descentM,
     required this.segmentLengthKm,
     required this.distanceKm,
+    required this.totalDistanceKm,
     required this.connectsToPrevious,
     required this.connectsToNext,
     required this.isTrailStart,
@@ -2537,6 +2543,7 @@ class _StageTimelineRow extends StatelessWidget {
   final double? descentM;
   final double? segmentLengthKm;
   final double? distanceKm;
+  final double totalDistanceKm;
   final bool connectsToPrevious;
   final bool connectsToNext;
   final bool isTrailStart;
@@ -2728,7 +2735,7 @@ class _StageTimelineRow extends StatelessWidget {
           ),
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(top: hasDetours ? 11 : 0, bottom: 10),
+              padding: EdgeInsets.only(top: hasDetours ? 11 : 0, bottom: 7),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   minHeight: isTrailEnd
@@ -2747,7 +2754,7 @@ class _StageTimelineRow extends StatelessWidget {
                       child: Material(
                         key: ValueKey('stage-card-${stage.id}'),
                         color: isSelected
-                            ? const Color(0xFFE8F1FC)
+                            ? _selectedStageCardBackground
                             : hasExcursions
                             ? _excursionCardBackground
                             : Colors.white,
@@ -2760,20 +2767,20 @@ class _StageTimelineRow extends StatelessWidget {
                                 ? _trailPulseBlue
                                 : hasExcursions
                                 ? _filterBlueTeal
-                                : Colors.transparent,
+                                : _stageCardOutline,
                             width:
                                 isSelected || showDetailsHint || showMetricsHint
                                 ? 2
                                 : hasExcursions
                                 ? 1.6
-                                : 0,
+                                : 1,
                           ),
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(
                           onTap: onTap,
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
+                            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
                             child: Row(
                               children: [
                                 Expanded(
@@ -2888,17 +2895,17 @@ class _StageTimelineRow extends StatelessWidget {
                                                 'stage-number-${stage.id}',
                                               ),
                                               style: const TextStyle(
-                                                color: Colors.black54,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w800,
-                                                letterSpacing: 0.2,
+                                                color: Colors.black38,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: 0.1,
                                               ),
                                             ),
                                           ),
                                         ],
                                       ),
                                       if (activeServices.isNotEmpty) ...[
-                                        const SizedBox(height: 8),
+                                        const SizedBox(height: 6),
                                         Wrap(
                                           key: ValueKey(
                                             'stage-card-services-${stage.id}',
@@ -2926,22 +2933,39 @@ class _StageTimelineRow extends StatelessWidget {
                                       ],
                                       if (showDistance ||
                                           stage.altitudeM != null) ...[
-                                        const SizedBox(height: 8),
-                                        Align(
-                                          alignment: Alignment.centerRight,
+                                        const SizedBox(height: 6),
+                                        Container(
+                                          key: ValueKey(
+                                            'stage-card-footer-${stage.id}',
+                                          ),
+                                          padding: const EdgeInsets.only(
+                                            top: 6,
+                                          ),
+                                          decoration: const BoxDecoration(
+                                            border: Border(
+                                              top: BorderSide(
+                                                color: Color(0x1A17201B),
+                                              ),
+                                            ),
+                                          ),
                                           child: Row(
                                             key: ValueKey(
                                               'stage-card-metrics-${stage.id}',
                                             ),
-                                            mainAxisSize: MainAxisSize.min,
+                                            mainAxisAlignment: showDistance
+                                                ? MainAxisAlignment.start
+                                                : MainAxisAlignment.end,
                                             children: [
                                               if (showDistance)
-                                                _StageCumulativeDistance(
-                                                  key: ValueKey(
-                                                    'stage-card-distance-${stage.id}',
-                                                  ),
-                                                  distance: formatter.distance(
-                                                    distanceKm!,
+                                                Expanded(
+                                                  child: _StageCumulativeDistance(
+                                                    key: ValueKey(
+                                                      'stage-card-distance-${stage.id}',
+                                                    ),
+                                                    distanceKm: distanceKm!,
+                                                    totalDistanceKm:
+                                                        totalDistanceKm,
+                                                    formatter: formatter,
                                                   ),
                                                 ),
                                               if (showDistance &&
@@ -3197,29 +3221,71 @@ class _StageTrailDistanceLabel extends StatelessWidget {
 }
 
 class _StageCumulativeDistance extends StatelessWidget {
-  const _StageCumulativeDistance({required this.distance, super.key});
+  const _StageCumulativeDistance({
+    required this.distanceKm,
+    required this.totalDistanceKm,
+    required this.formatter,
+    super.key,
+  });
 
-  final String distance;
+  final double distanceKm;
+  final double totalDistanceKm;
+  final MeasurementFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final label = context.l10n.t('From Start');
+    final distance = formatter.distance(distanceKm);
+    final totalDistance = formatter.distance(totalDistanceKm);
+    final progress = totalDistanceKm.isFinite && totalDistanceKm > 0
+        ? (distanceKm / totalDistanceKm).clamp(0.0, 1.0)
+        : 0.0;
+    final progressTrack = ClipRRect(
+      key: const ValueKey('stage-progress-track'),
+      borderRadius: BorderRadius.circular(999),
+      child: SizedBox(
+        height: 3,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const ColoredBox(color: Color(0xFFE0E4E1)),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                key: const ValueKey('stage-progress-fill'),
+                widthFactor: progress,
+                heightFactor: 1,
+                child: const ColoredBox(color: _green),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    final distanceLabel = Text(
+      distance,
+      style: const TextStyle(
+        color: _green,
+        fontWeight: FontWeight.w800,
+        fontSize: 10,
+        fontFeatures: [FontFeature.tabularFigures()],
+      ),
+    );
     return Tooltip(
       message: label,
       child: Semantics(
-        label: '$label: $distance',
+        label: '$label: $distance / $totalDistance',
         excludeSemantics: true,
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.hiking_rounded, color: _green, size: 13),
-            const SizedBox(width: 3),
-            Text(
-              distance,
-              style: const TextStyle(
-                color: _green,
-                fontWeight: FontWeight.w800,
-                fontSize: 10.5,
+            Expanded(flex: 4, child: progressTrack),
+            const SizedBox(width: 4),
+            Flexible(
+              flex: 2,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: distanceLabel,
               ),
             ),
           ],

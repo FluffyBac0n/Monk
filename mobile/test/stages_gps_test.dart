@@ -64,7 +64,7 @@ void main() {
       expect(tester.getBottomLeft(selectedCard).dy, lessThanOrEqualTo(900));
       expect(
         tester.widget<Material>(selectedCard).color,
-        const Color(0xFFE8F1FC),
+        const Color(0xFFDDEBFA),
       );
       final selectedMarker = tester.widget<Container>(
         find.byKey(const ValueKey('stage-marker-gps-stage-24')),
@@ -321,7 +321,7 @@ void main() {
     expect(tester.getBottomLeft(selectedCard).dy, lessThanOrEqualTo(900));
     expect(
       tester.widget<Material>(selectedCard).color,
-      const Color(0xFFE8F1FC),
+      const Color(0xFFDDEBFA),
     );
     expect(tester.widget<Material>(adjacentCard).color, Colors.white);
     expect(

@@ -15,6 +15,8 @@ void main() {
   testWidgets('affected stages show the detour marker and comparison card', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     const detour = TrailDetour(
       id: 'teishia-tis-madaris',
       name: 'Teishia tis Madaris',
@@ -158,7 +160,7 @@ void main() {
     expect(
       find.descendant(
         of: stageDistance,
-        matching: find.byIcon(Icons.hiking_rounded),
+        matching: find.byKey(const ValueKey('stage-progress-track')),
       ),
       findsOneWidget,
     );
