@@ -5,6 +5,7 @@ import '../../../core/links/external_url_launcher.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../../core/theme/eurotrex_chrome_theme.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 import '../../../core/theme/eurotrex_switch.dart';
 import '../../elevation/presentation/elevation_screen.dart';
@@ -147,9 +148,7 @@ class _AccommodationScreenState extends ConsumerState<AccommodationScreen> {
         onMap: () => _openMap(stageIndex, allLodgings),
         onElevation: () => _openElevation(stageIndex),
       ),
-      appBar: AppBar(
-        backgroundColor: EurotrexPalette.navy,
-        foregroundColor: Colors.white,
+      appBar: EurotrexChromeTheme.appBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -741,64 +740,54 @@ class _AccommodationBottomNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Material(
-      key: const ValueKey('accommodation-bottom-navigation'),
-      color: EurotrexPalette.navy,
-      child: SafeArea(
-        top: false,
-        child: Container(
-          key: const ValueKey('accommodation-bottom-navigation-size'),
-          height: 58,
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: Colors.white12)),
+    return EurotrexChromeTheme.navigationBar(
+      surfaceKey: const ValueKey('accommodation-bottom-navigation'),
+      contentKey: const ValueKey('accommodation-bottom-navigation-size'),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _AccommodationBottomAction(
+            key: const ValueKey('accommodation-stages-shortcut'),
+            icon: Icons.hiking_rounded,
+            label: l10n.t('Back to stages'),
+            visibleLabel: l10n.t('Stages'),
+            onTap: onStages,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _AccommodationBottomAction(
-                key: const ValueKey('accommodation-stages-shortcut'),
-                icon: Icons.hiking_rounded,
-                label: l10n.t('Back to stages'),
-                visibleLabel: l10n.t('Stages'),
-                onTap: onStages,
-              ),
-              _AccommodationBottomAction(
-                key: const ValueKey('accommodation-filter'),
-                icon: Icons.filter_list_rounded,
-                label: l10n.t('Filter'),
-                visibleLabel: l10n.t('Filter'),
-                isActive: activeFilterCount > 0,
-                badgeCount: activeFilterCount,
-                onTap: onFilter,
-              ),
-              _AccommodationBottomAction(
-                key: const ValueKey('accommodation-gps'),
-                icon: hasDistanceFilter
-                    ? Icons.gps_fixed_rounded
-                    : Icons.gps_not_fixed_rounded,
-                label: l10n.t('Maximum distance from trail'),
-                visibleLabel: l10n.t('Distance'),
-                isActive: hasDistanceFilter,
-                isPrimary: true,
-                onTap: onDistanceFilter,
-              ),
-              _AccommodationBottomAction(
-                key: const ValueKey('accommodation-map'),
-                icon: Icons.map_outlined,
-                label: l10n.t('Show on map'),
-                visibleLabel: l10n.t('Map'),
-                onTap: onMap,
-              ),
-              _AccommodationBottomAction(
-                key: const ValueKey('accommodation-elevation'),
-                icon: Icons.landscape_outlined,
-                label: l10n.t('Elevation'),
-                visibleLabel: l10n.t('Elevation'),
-                onTap: onElevation,
-              ),
-            ],
+          _AccommodationBottomAction(
+            key: const ValueKey('accommodation-filter'),
+            icon: Icons.filter_list_rounded,
+            label: l10n.t('Filter'),
+            visibleLabel: l10n.t('Filter'),
+            isActive: activeFilterCount > 0,
+            badgeCount: activeFilterCount,
+            onTap: onFilter,
           ),
-        ),
+          _AccommodationBottomAction(
+            key: const ValueKey('accommodation-gps'),
+            icon: hasDistanceFilter
+                ? Icons.gps_fixed_rounded
+                : Icons.gps_not_fixed_rounded,
+            label: l10n.t('Maximum distance from trail'),
+            visibleLabel: l10n.t('Distance'),
+            isActive: hasDistanceFilter,
+            isPrimary: true,
+            onTap: onDistanceFilter,
+          ),
+          _AccommodationBottomAction(
+            key: const ValueKey('accommodation-map'),
+            icon: Icons.map_outlined,
+            label: l10n.t('Show on map'),
+            visibleLabel: l10n.t('Map'),
+            onTap: onMap,
+          ),
+          _AccommodationBottomAction(
+            key: const ValueKey('accommodation-elevation'),
+            icon: Icons.landscape_outlined,
+            label: l10n.t('Elevation'),
+            visibleLabel: l10n.t('Elevation'),
+            onTap: onElevation,
+          ),
+        ],
       ),
     );
   }

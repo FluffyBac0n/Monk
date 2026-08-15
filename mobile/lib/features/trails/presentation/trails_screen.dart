@@ -5,6 +5,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/legal/legal_consent_controller.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../../core/theme/eurotrex_chrome_theme.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 import '../../about/presentation/about_screen.dart';
 import '../../accommodation/presentation/accommodation_controller.dart';
@@ -101,11 +102,7 @@ class TrailsScreen extends ConsumerWidget {
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [EurotrexPalette.navy, EurotrexPalette.blue],
-                  ),
+                  gradient: EurotrexChromeTheme.headerGradient,
                 ),
               ),
             ),

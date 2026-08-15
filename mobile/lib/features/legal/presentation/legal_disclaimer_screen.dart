@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/legal/legal_consent_controller.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/theme/eurotrex_chrome_theme.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 
 const _sand = Color(0xFFF4F2EC);
@@ -96,7 +97,7 @@ class LegalDisclaimerScreen extends ConsumerWidget {
       child: Scaffold(
         key: const ValueKey('legal-disclaimer-screen'),
         backgroundColor: _sand,
-        appBar: AppBar(
+        appBar: EurotrexChromeTheme.appBar(
           automaticallyImplyLeading: !isInitialPrompt,
           title: Text(
             l10n.t('Terms & Conditions'),

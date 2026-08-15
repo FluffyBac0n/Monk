@@ -12,6 +12,7 @@ import '../../../core/location/device_location.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../../core/theme/eurotrex_chrome_theme.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 import '../../accommodation/domain/lodging.dart';
 import '../../accommodation/presentation/accommodation_controller.dart';
@@ -1139,72 +1140,62 @@ class _StageBottomNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Material(
-      key: const ValueKey('stage-bottom-navigation'),
-      color: EurotrexPalette.navy,
-      child: SafeArea(
-        top: false,
-        child: Container(
-          key: const ValueKey('stage-bottom-navigation-size'),
-          height: 58,
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: Colors.white12)),
+    return EurotrexChromeTheme.navigationBar(
+      surfaceKey: const ValueKey('stage-bottom-navigation'),
+      contentKey: const ValueKey('stage-bottom-navigation-size'),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _StageBottomAction(
+            key: const ValueKey('reverse-trail-direction'),
+            icon: Icons.swap_horiz_rounded,
+            showReverseTrailIcon: true,
+            label: l10n.t(
+              isReversed
+                  ? 'Walk from Pafos to Larnaka'
+                  : 'Walk from Larnaka to Pafos',
+            ),
+            visibleLabel: l10n.t('Reverse'),
+            onTap: onReverse,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _StageBottomAction(
-                key: const ValueKey('reverse-trail-direction'),
-                icon: Icons.swap_horiz_rounded,
-                showReverseTrailIcon: true,
-                label: l10n.t(
-                  isReversed
-                      ? 'Walk from Pafos to Larnaka'
-                      : 'Walk from Larnaka to Pafos',
-                ),
-                visibleLabel: l10n.t('Reverse'),
-                onTap: onReverse,
-              ),
-              _StageBottomAction(
-                key: const ValueKey('stage-bottom-filter'),
-                icon: Icons.filter_list_rounded,
-                label: l10n.t('Filter'),
-                visibleLabel: l10n.t('Filter'),
-                isActive: selectedServiceCount > 0,
-                badgeCount: selectedServiceCount,
-                onTap: onFilter,
-              ),
-              _StageBottomAction(
-                key: const ValueKey('stage-bottom-gps'),
-                icon: isLocating
-                    ? Icons.hourglass_top_rounded
-                    : hasGpsSelection
-                    ? Icons.gps_fixed_rounded
-                    : Icons.gps_not_fixed_rounded,
-                label: l10n.t('Find my stage'),
-                visibleLabel: l10n.t('GPS'),
-                isActive: hasGpsSelection,
-                isToggle: true,
-                isPrimary: true,
-                onTap: isLocating ? null : onGps,
-              ),
-              _StageBottomAction(
-                key: const ValueKey('stage-bottom-map'),
-                icon: Icons.map_outlined,
-                label: l10n.t('Map'),
-                visibleLabel: l10n.t('Map'),
-                onTap: onMap,
-              ),
-              _StageBottomAction(
-                key: const ValueKey('stage-bottom-elevation'),
-                icon: Icons.landscape_outlined,
-                label: l10n.t('Elevation'),
-                visibleLabel: l10n.t('Elevation'),
-                onTap: onElevation,
-              ),
-            ],
+          _StageBottomAction(
+            key: const ValueKey('stage-bottom-filter'),
+            icon: Icons.filter_list_rounded,
+            label: l10n.t('Filter'),
+            visibleLabel: l10n.t('Filter'),
+            isActive: selectedServiceCount > 0,
+            badgeCount: selectedServiceCount,
+            onTap: onFilter,
           ),
-        ),
+          _StageBottomAction(
+            key: const ValueKey('stage-bottom-gps'),
+            icon: isLocating
+                ? Icons.hourglass_top_rounded
+                : hasGpsSelection
+                ? Icons.gps_fixed_rounded
+                : Icons.gps_not_fixed_rounded,
+            label: l10n.t('Find my stage'),
+            visibleLabel: l10n.t('GPS'),
+            isActive: hasGpsSelection,
+            isToggle: true,
+            isPrimary: true,
+            onTap: isLocating ? null : onGps,
+          ),
+          _StageBottomAction(
+            key: const ValueKey('stage-bottom-map'),
+            icon: Icons.map_outlined,
+            label: l10n.t('Map'),
+            visibleLabel: l10n.t('Map'),
+            onTap: onMap,
+          ),
+          _StageBottomAction(
+            key: const ValueKey('stage-bottom-elevation'),
+            icon: Icons.landscape_outlined,
+            label: l10n.t('Elevation'),
+            visibleLabel: l10n.t('Elevation'),
+            onTap: onElevation,
+          ),
+        ],
       ),
     );
   }
@@ -1385,10 +1376,13 @@ class _TrailAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final hasBackButton = Navigator.of(context).canPop();
+    final headerContentLeft = hasBackButton ? kToolbarHeight : 20.0;
     return SliverAppBar(
       expandedHeight: _trailHeaderExpandedHeight,
       pinned: true,
       backgroundColor: EurotrexPalette.navy,
+      surfaceTintColor: Colors.transparent,
       foregroundColor: Colors.white,
       titleSpacing: 0,
       title: Row(
@@ -1396,36 +1390,39 @@ class _TrailAppBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Expanded(
-            child: Stack(
-              alignment: Alignment.centerLeft,
-              children: [
-                IgnorePointer(
-                  child: AnimatedOpacity(
-                    key: const ValueKey('trail-compact-title-opacity'),
-                    opacity: isCollapsed ? 1 : 0,
-                    duration: const Duration(milliseconds: 180),
-                    child: Text(
-                      l10n.t('Cyprus E4'),
-                      key: const ValueKey('trail-compact-title'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
+            child: Padding(
+              padding: EdgeInsets.only(left: hasBackButton ? 0 : 20),
+              child: Stack(
+                alignment: Alignment.centerLeft,
+                children: [
+                  IgnorePointer(
+                    child: AnimatedOpacity(
+                      key: const ValueKey('trail-compact-title-opacity'),
+                      opacity: isCollapsed ? 1 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      child: Text(
+                        l10n.t('Cyprus E4'),
+                        key: const ValueKey('trail-compact-title'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                IgnorePointer(
-                  child: AnimatedOpacity(
-                    key: const ValueKey('trail-expanded-badges-opacity'),
-                    opacity: isCollapsed ? 0 : 1,
-                    duration: const Duration(milliseconds: 180),
-                    child: const _TrailHeaderBadges(),
+                  IgnorePointer(
+                    child: AnimatedOpacity(
+                      key: const ValueKey('trail-expanded-badges-opacity'),
+                      opacity: isCollapsed ? 0 : 1,
+                      duration: const Duration(milliseconds: 180),
+                      child: const _TrailHeaderBadges(),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           IconButton(
@@ -1450,61 +1447,64 @@ class _TrailAppBar extends StatelessWidget {
           const SizedBox(width: 8),
         ],
       ),
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [EurotrexPalette.navy, EurotrexPalette.blue],
+      flexibleSpace: Stack(
+        fit: StackFit.expand,
+        children: [
+          const DecoratedBox(
+            key: ValueKey('stages-compact-header-gradient'),
+            decoration: BoxDecoration(
+              gradient: EurotrexChromeTheme.navigationGradient,
+            ),
+          ),
+          FlexibleSpaceBar(
+            background: Stack(
+              fit: StackFit.expand,
+              children: [
+                ExcludeSemantics(
+                  child: Image.asset(
+                    'assets/branding/cyprus_e4_forest.jpg',
+                    key: const ValueKey('stages-header-watermark-cyprus-e4'),
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,
+                    filterQuality: FilterQuality.medium,
+                  ),
                 ),
-              ),
-            ),
-            ExcludeSemantics(
-              child: Image.asset(
-                'assets/branding/cyprus_e4_forest.jpg',
-                key: const ValueKey('stages-header-watermark-cyprus-e4'),
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
-                filterQuality: FilterQuality.medium,
-              ),
-            ),
-            const DecoratedBox(
-              key: ValueKey('stages-header-watermark-fade-cyprus-e4'),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0x80000000), Color(0x52000000)],
-                  stops: [0.05, 1],
-                ),
-              ),
-            ),
-            SafeArea(
-              child: Padding(
-                key: const ValueKey('stages-header-content-padding'),
-                padding: const EdgeInsets.fromLTRB(20, 52, 20, 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      l10n.t('Cyprus E4'),
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                          ),
+                const DecoratedBox(
+                  key: ValueKey('stages-header-watermark-fade-cyprus-e4'),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0x80000000), Color(0x52000000)],
+                      stops: [0.05, 1],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                SafeArea(
+                  child: Padding(
+                    key: const ValueKey('stages-header-content-padding'),
+                    padding: EdgeInsets.fromLTRB(headerContentLeft, 52, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          l10n.t('Cyprus E4'),
+                          key: const ValueKey('stages-expanded-title'),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -3546,9 +3546,7 @@ class DetourDetailScreen extends ConsumerWidget {
     return Scaffold(
       key: ValueKey('detour-detail-${detour.id}'),
       backgroundColor: _sand,
-      appBar: AppBar(
-        backgroundColor: EurotrexPalette.navy,
-        foregroundColor: Colors.white,
+      appBar: EurotrexChromeTheme.appBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -4079,9 +4077,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
         ),
         onElevation: _openElevation,
       ),
-      appBar: AppBar(
-        backgroundColor: EurotrexPalette.navy,
-        foregroundColor: Colors.white,
+      appBar: EurotrexChromeTheme.appBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -4504,72 +4500,62 @@ class _StageDetailBottomNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Material(
-      key: const ValueKey('stage-detail-bottom-navigation'),
-      color: EurotrexPalette.navy,
-      child: SafeArea(
-        top: false,
-        child: Container(
-          key: const ValueKey('stage-detail-bottom-navigation-size'),
-          height: 58,
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: Colors.white12)),
+    return EurotrexChromeTheme.navigationBar(
+      surfaceKey: const ValueKey('stage-detail-bottom-navigation'),
+      contentKey: const ValueKey('stage-detail-bottom-navigation-size'),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _StageBottomAction(
+            key: const Key('stage-detail-stages-shortcut'),
+            icon: Icons.hiking_rounded,
+            label: l10n.t('Back to stages'),
+            visibleLabel: l10n.t('Stages'),
+            onTap: onStages,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _StageBottomAction(
-                key: const Key('stage-detail-stages-shortcut'),
-                icon: Icons.hiking_rounded,
-                label: l10n.t('Back to stages'),
-                visibleLabel: l10n.t('Stages'),
-                onTap: onStages,
-              ),
-              _StageBottomAction(
-                key: const ValueKey('stage-detail-accommodation'),
-                icon: isLoadingAccommodation
-                    ? Icons.hourglass_top_rounded
-                    : Icons.hotel_outlined,
-                label: l10n.t(
-                  !isLoadingAccommodation && accommodationCount == 0
-                      ? 'No accommodation is listed for this stage.'
-                      : 'Accommodation',
-                ),
-                visibleLabel: l10n.t('Lodging'),
-                badgeCount: accommodationCount,
-                onTap: isLoadingAccommodation ? null : onAccommodation,
-              ),
-              _StageBottomAction(
-                key: const ValueKey('stage-detail-gps'),
-                icon: isLocating
-                    ? Icons.hourglass_top_rounded
-                    : hasGpsLocation
-                    ? Icons.gps_fixed_rounded
-                    : Icons.gps_not_fixed_rounded,
-                label: l10n.t('Find my stage'),
-                visibleLabel: l10n.t('GPS'),
-                isActive: hasGpsLocation,
-                isToggle: true,
-                isPrimary: true,
-                onTap: isLocating ? null : onGps,
-              ),
-              _StageBottomAction(
-                key: const ValueKey('stage-detail-map'),
-                icon: Icons.map_outlined,
-                label: l10n.t('Show on map'),
-                visibleLabel: l10n.t('Map'),
-                onTap: onMap,
-              ),
-              _StageBottomAction(
-                key: const ValueKey('stage-detail-elevation'),
-                icon: Icons.landscape_outlined,
-                label: l10n.t('Elevation'),
-                visibleLabel: l10n.t('Elevation'),
-                onTap: onElevation,
-              ),
-            ],
+          _StageBottomAction(
+            key: const ValueKey('stage-detail-accommodation'),
+            icon: isLoadingAccommodation
+                ? Icons.hourglass_top_rounded
+                : Icons.hotel_outlined,
+            label: l10n.t(
+              !isLoadingAccommodation && accommodationCount == 0
+                  ? 'No accommodation is listed for this stage.'
+                  : 'Accommodation',
+            ),
+            visibleLabel: l10n.t('Lodging'),
+            badgeCount: accommodationCount,
+            onTap: isLoadingAccommodation ? null : onAccommodation,
           ),
-        ),
+          _StageBottomAction(
+            key: const ValueKey('stage-detail-gps'),
+            icon: isLocating
+                ? Icons.hourglass_top_rounded
+                : hasGpsLocation
+                ? Icons.gps_fixed_rounded
+                : Icons.gps_not_fixed_rounded,
+            label: l10n.t('Find my stage'),
+            visibleLabel: l10n.t('GPS'),
+            isActive: hasGpsLocation,
+            isToggle: true,
+            isPrimary: true,
+            onTap: isLocating ? null : onGps,
+          ),
+          _StageBottomAction(
+            key: const ValueKey('stage-detail-map'),
+            icon: Icons.map_outlined,
+            label: l10n.t('Show on map'),
+            visibleLabel: l10n.t('Map'),
+            onTap: onMap,
+          ),
+          _StageBottomAction(
+            key: const ValueKey('stage-detail-elevation'),
+            icon: Icons.landscape_outlined,
+            label: l10n.t('Elevation'),
+            visibleLabel: l10n.t('Elevation'),
+            onTap: onElevation,
+          ),
+        ],
       ),
     );
   }
@@ -5358,8 +5344,8 @@ class _StageElevationChart extends StatelessWidget {
           LineChartBarData(
             spots: chartPoints,
             isCurved: false,
-            color: EurotrexPalette.blue,
-            barWidth: 2,
+            color: EurotrexPalette.navy,
+            barWidth: 1.5,
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,

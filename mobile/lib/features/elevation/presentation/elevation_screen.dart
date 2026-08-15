@@ -10,6 +10,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/location/device_location.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../../core/theme/eurotrex_chrome_theme.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 import '../../stages/domain/stage.dart';
 import '../../stages/domain/trail_location_matcher.dart';
@@ -196,9 +197,7 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
           );
     return Scaffold(
       backgroundColor: _sand,
-      appBar: AppBar(
-        backgroundColor: EurotrexPalette.navy,
-        foregroundColor: Colors.white,
+      appBar: EurotrexChromeTheme.appBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -622,8 +621,8 @@ class _ElevationContent extends StatelessWidget {
                                   ),
                               ],
                               isCurved: false,
-                              color: EurotrexPalette.blue,
-                              barWidth: 2.2,
+                              color: EurotrexPalette.navy,
+                              barWidth: 1.5,
                               dotData: const FlDotData(show: false),
                               belowBarData: BarAreaData(
                                 show: true,
@@ -1110,64 +1109,54 @@ class _ElevationBottomNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Material(
-      key: const ValueKey('elevation-bottom-navigation'),
-      color: EurotrexPalette.navy,
-      child: SafeArea(
-        top: false,
-        child: Container(
-          key: const ValueKey('elevation-bottom-navigation-size'),
-          height: 58,
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: Colors.white12)),
+    return EurotrexChromeTheme.navigationBar(
+      surfaceKey: const ValueKey('elevation-bottom-navigation'),
+      contentKey: const ValueKey('elevation-bottom-navigation-size'),
+      child: Row(
+        children: [
+          _ElevationBottomAction(
+            key: const Key('elevation-stages-shortcut'),
+            icon: Icons.hiking_rounded,
+            label: l10n.t('Back to stages'),
+            visibleLabel: l10n.t('Stages'),
+            onTap: onStages,
           ),
-          child: Row(
-            children: [
-              _ElevationBottomAction(
-                key: const Key('elevation-stages-shortcut'),
-                icon: Icons.hiking_rounded,
-                label: l10n.t('Back to stages'),
-                visibleLabel: l10n.t('Stages'),
-                onTap: onStages,
-              ),
-              _ElevationBottomAction(
-                key: const Key('elevation-zoom-out'),
-                icon: Icons.remove_rounded,
-                label: l10n.t('Zoom out'),
-                visibleLabel: l10n.t('Zoom out'),
-                onTap: onZoomOut,
-              ),
-              _ElevationBottomAction(
-                key: const Key('elevation-location-toggle'),
-                icon: isLocating
-                    ? Icons.hourglass_top_rounded
-                    : locationActive
-                    ? Icons.gps_fixed_rounded
-                    : Icons.gps_not_fixed_rounded,
-                label: l10n.t('My location'),
-                visibleLabel: l10n.t('GPS'),
-                isActive: locationActive,
-                isToggle: true,
-                isPrimary: true,
-                onTap: onLocationToggle,
-              ),
-              _ElevationBottomAction(
-                key: const Key('elevation-zoom-in'),
-                icon: Icons.add_rounded,
-                label: l10n.t('Zoom in'),
-                visibleLabel: l10n.t('Zoom in'),
-                onTap: onZoomIn,
-              ),
-              _ElevationBottomAction(
-                key: const Key('elevation-reset-view'),
-                icon: Icons.fit_screen_rounded,
-                label: l10n.t('Reset elevation view'),
-                visibleLabel: l10n.t('Reset'),
-                onTap: onResetView,
-              ),
-            ],
+          _ElevationBottomAction(
+            key: const Key('elevation-zoom-out'),
+            icon: Icons.remove_rounded,
+            label: l10n.t('Zoom out'),
+            visibleLabel: l10n.t('Zoom out'),
+            onTap: onZoomOut,
           ),
-        ),
+          _ElevationBottomAction(
+            key: const Key('elevation-location-toggle'),
+            icon: isLocating
+                ? Icons.hourglass_top_rounded
+                : locationActive
+                ? Icons.gps_fixed_rounded
+                : Icons.gps_not_fixed_rounded,
+            label: l10n.t('My location'),
+            visibleLabel: l10n.t('GPS'),
+            isActive: locationActive,
+            isToggle: true,
+            isPrimary: true,
+            onTap: onLocationToggle,
+          ),
+          _ElevationBottomAction(
+            key: const Key('elevation-zoom-in'),
+            icon: Icons.add_rounded,
+            label: l10n.t('Zoom in'),
+            visibleLabel: l10n.t('Zoom in'),
+            onTap: onZoomIn,
+          ),
+          _ElevationBottomAction(
+            key: const Key('elevation-reset-view'),
+            icon: Icons.fit_screen_rounded,
+            label: l10n.t('Reset elevation view'),
+            visibleLabel: l10n.t('Reset'),
+            onTap: onResetView,
+          ),
+        ],
       ),
     );
   }

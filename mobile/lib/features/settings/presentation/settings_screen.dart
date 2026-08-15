@@ -8,6 +8,7 @@ import '../../../core/database/database_provider.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/app_settings_controller.dart';
+import '../../../core/theme/eurotrex_chrome_theme.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 import '../../elevation/presentation/elevation_controller.dart';
 import '../../elevation/domain/route_point.dart';
@@ -33,9 +34,7 @@ class SettingsScreen extends ConsumerWidget {
     final l10n = context.l10n;
     return Scaffold(
       backgroundColor: _sand,
-      appBar: AppBar(
-        backgroundColor: EurotrexPalette.navy,
-        foregroundColor: Colors.white,
+      appBar: EurotrexChromeTheme.appBar(
         title: Text(
           l10n.t('Settings'),
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),

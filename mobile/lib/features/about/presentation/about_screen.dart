@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/app_info/app_version_provider.dart';
 import '../../../core/links/external_url_launcher.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/theme/eurotrex_chrome_theme.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 
 const eurotrexWebsiteUrl = 'https://eurotrex.eu';
@@ -85,9 +86,7 @@ class AboutScreen extends ConsumerWidget {
     return Scaffold(
       key: const ValueKey('about-screen'),
       backgroundColor: _sand,
-      appBar: AppBar(
-        backgroundColor: EurotrexPalette.navy,
-        foregroundColor: Colors.white,
+      appBar: EurotrexChromeTheme.appBar(
         title: Text(
           l10n.t('About us'),
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),

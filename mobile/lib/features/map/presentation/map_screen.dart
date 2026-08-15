@@ -11,6 +11,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/app_settings_controller.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../../core/theme/eurotrex_chrome_theme.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 import '../../../core/theme/eurotrex_switch.dart';
 import '../../accommodation/domain/lodging.dart';
@@ -248,9 +249,7 @@ class MapScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: _sand,
-      appBar: AppBar(
-        backgroundColor: EurotrexPalette.navy,
-        foregroundColor: Colors.white,
+      appBar: EurotrexChromeTheme.appBar(
         toolbarHeight: 76,
         title: Column(
           mainAxisSize: MainAxisSize.min,

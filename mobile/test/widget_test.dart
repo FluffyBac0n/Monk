@@ -77,7 +77,11 @@ void main() {
             find.byKey(const ValueKey('stages-header-content-padding')),
           )
           .padding,
-      const EdgeInsets.fromLTRB(20, 52, 20, 18),
+      const EdgeInsets.fromLTRB(20, 52, 20, 24),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const ValueKey('stages-expanded-title'))).dx,
+      moreOrLessEquals(tester.getTopLeft(longDistance).dx, epsilon: 0.1),
     );
     expect(
       tester.widget<Image>(stageHeaderWatermark).image,
@@ -1916,6 +1920,11 @@ void main() {
     expect(previewData.titlesData.bottomTitles.sideTitles.showTitles, isTrue);
     expect(previewData.titlesData.topTitles.sideTitles.showTitles, isFalse);
     expect(previewData.titlesData.rightTitles.sideTitles.showTitles, isFalse);
+    expect(
+      previewData.lineBarsData.first.color,
+      EurotrexPalette.navy,
+    );
+    expect(previewData.lineBarsData.first.barWidth, 1.5);
 
     await tester.tap(find.byKey(const Key('stage-elevation-open')));
     await tester.pumpAndSettle();
@@ -3898,8 +3907,8 @@ void main() {
     final chart = tester.widget<LineChart>(find.byType(LineChart));
     expect(chart.transformationConfig.scaleAxis, FlScaleAxis.horizontal);
     expect(chart.transformationConfig.maxScale, 15);
-    expect(chart.data.lineBarsData.first.color, EurotrexPalette.blue);
-    expect(chart.data.lineBarsData.first.barWidth, 2.2);
+    expect(chart.data.lineBarsData.first.color, EurotrexPalette.navy);
+    expect(chart.data.lineBarsData.first.barWidth, 1.5);
     expect(chart.duration, Duration.zero);
     expect(find.byKey(const Key('elevation-stage-toggle')), findsNothing);
     final transformationController =

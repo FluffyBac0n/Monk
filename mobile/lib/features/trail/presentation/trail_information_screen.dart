@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/theme/eurotrex_chrome_theme.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 
 const _ink = Color(0xFF17201B);
@@ -18,9 +19,7 @@ class TrailInformationScreen extends StatelessWidget {
     final l10n = context.l10n;
     return Scaffold(
       backgroundColor: _sand,
-      appBar: AppBar(
-        backgroundColor: EurotrexPalette.navy,
-        foregroundColor: Colors.white,
+      appBar: EurotrexChromeTheme.appBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
