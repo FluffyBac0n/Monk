@@ -1,10 +1,10 @@
 # Android Release Checklist
 
-Status checked: 14 August 2026
+Status checked: 21 August 2026
 
 Android development is now active. The local toolchain and a representative
-Android emulator are ready, and the current app has completed its first Android
-debug and unsigned release builds.
+Android emulator are ready, and the current app has completed Android debug,
+unsigned release, and signed release App Bundle builds.
 
 ## Current state
 
@@ -15,8 +15,9 @@ debug and unsigned release builds.
 - Mapbox is supplied through `--dart-define-from-file=env.local.json`.
 - Coarse location, precise location, and internet permissions are declared.
 - The Android-facing application label is `EuroTrex`.
-- Release builds no longer fall back to the debug signing key. Until an upload
-  keystore is configured, release bundles are intentionally unsigned.
+- Release builds no longer fall back to the debug signing key. A dedicated
+  upload keystore and ignored `android/key.properties` configuration are now
+  present locally, and release bundles are signed with the upload key.
 
 ## Development environment
 
@@ -86,13 +87,16 @@ Android development and is not an Android release blocker.
 - [x] Render the Cyprus trail and basemap in the full Mapbox Trail Map.
 - [x] Build an unsigned release App Bundle at
       `build/app/outputs/bundle/release/app-release.aab` (79.1 MB).
+- [x] Build and verify the signed `1.0.0+2` release App Bundle at
+      `build/app/outputs/bundle/release/app-release.aab` (81.0 MB) using
+      `env.local.json` and the dedicated upload key.
 - [x] Cold-start a temporarily debug-signed copy of the release APK on the
       Android emulator and load all 123 stages from the fresh Firebase app.
 - [x] Verify the generated package metadata: application ID, `EuroTrex` label,
       minimum API 24, target API 36, and required permissions.
 - [x] Verify the bundle contains ARM64, ARMv7, and x86-64 native libraries.
 - [x] Run `flutter analyze` with no issues.
-- [x] Run all 118 Flutter tests successfully after the Android fixes.
+- [x] Run all 166 Flutter tests successfully for the `1.0.0+2` release build.
 
 ## Functional verification still required
 
@@ -117,26 +121,30 @@ Android development and is not an Android release blocker.
 
 ## Release signing and artifact preparation
 
-- [ ] Create a dedicated Android upload keystore with user-chosen secure
-      passwords; store it securely outside source control and back it up.
+- [x] Create a dedicated Android upload keystore with user-chosen secure
+      passwords.
+- [ ] Store the upload keystore and passwords securely outside source control
+      and confirm that the backup can be recovered.
 - [x] Configure Gradle to load release signing from ignored
       `android/key.properties` only when it exists.
 - [x] Add the safe template `android/key.properties.example`.
-- [ ] Copy the template to `android/key.properties` and add the real upload-key
+- [x] Copy the template to `android/key.properties` and add the real upload-key
       details.
 - [ ] Enrol in Play App Signing and securely retain the upload certificate and
       fingerprints.
-- [ ] Build and verify a **signed** Android App Bundle:
+- [x] Build and verify a **signed** Android App Bundle:
       `flutter build appbundle --release
       --dart-define-from-file=env.local.json`.
-- [ ] Increment `version`/`versionCode` from the current `1.0.0+1` before each
-      Play Console upload.
+- [x] Increment the shared Flutter version and Android `versionCode` to
+      `1.0.0+2` for the current testing release.
+- [ ] Increment the build number again before every subsequent Play Console
+      upload.
 - [ ] Decide whether to enable R8 resource/code shrinking and verify the release
       build if enabled.
 - [ ] Verify 16 KB page-size compatibility for native Flutter and Mapbox
       libraries using Play Console checks or an Android 15+ test device.
 - [ ] Review Play Console's generated download size and asset-delivery limits;
-      the local universal AAB is currently 79.7 MB before device splits.
+      the signed local universal AAB is currently 81.0 MB before device splits.
 - [ ] Retain mapping/native debug-symbol artifacts for each release if
       obfuscation or symbol splitting is enabled.
 

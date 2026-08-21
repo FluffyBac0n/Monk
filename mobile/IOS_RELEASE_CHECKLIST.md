@@ -1,6 +1,6 @@
 # iOS Release Checklist
 
-Status checked: 14 August 2026
+Status checked: 21 August 2026
 
 The app successfully builds in unsigned iOS release mode. The current release
 build is approximately 87.0 MB.
@@ -153,9 +153,12 @@ build is approximately 87.0 MB.
 
 ## Build and TestFlight
 
-- [ ] Set the final marketing version and increment the build number.
+- [x] Set the current shared Flutter marketing version and build number to
+      `1.0.0+2` for testing.
+- [ ] Confirm the final App Store marketing version and increment the build
+      number again before each subsequent upload.
 - [x] Run `flutter analyze` after the shared Android/iOS fixes.
-- [x] Run all 118 Flutter tests after the shared Android/iOS fixes.
+- [x] Run all 166 Flutter tests for the shared `1.0.0+2` codebase.
 - [x] Keep Mapbox Flutter 2.26.0 aligned with the installed iOS MapboxMaps
       11.26.0 pods; no Android-only dependency override is present.
 - [ ] Rebuild and launch the current changes on an iOS simulator. The local
