@@ -52,6 +52,7 @@ class EuroTrexApp extends ConsumerWidget {
           ),
         ),
       ),
+      themeMode: ThemeMode.light,
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF8CC7A1),
