@@ -28,8 +28,10 @@ import '../../excursions/domain/trail_excursion.dart';
 import '../../excursions/presentation/excursion_controller.dart';
 import '../../map/presentation/map_flag_marker.dart';
 import '../../map/presentation/map_screen.dart';
-import '../../map/presentation/offline_map_controller.dart';
-import '../../settings/presentation/settings_screen.dart';
+import '../../route_planner/domain/route_plan.dart';
+import '../../route_planner/presentation/route_planner_screen.dart';
+import '../../route_planner/domain/saved_route.dart';
+import '../../route_planner/presentation/saved_routes_controller.dart';
 import '../../trail/domain/trail_preferences.dart';
 import '../../trail/domain/trail_direction.dart';
 import '../../trail/presentation/trail_direction_controller.dart';
@@ -59,7 +61,7 @@ const _filterBlueTeal = Color(0xFF356F7A);
 const _timelineLineColor = Color(0xFFB9BDB8);
 const _timelineLeftInset = 12.0;
 const _timelineGutterWidth = 108.0;
-const _trailHeaderExpandedHeight = 128.0;
+const _trailHeaderExpandedHeight = 72.0;
 
 Future<void> _syncOfflineTrailData(
   WidgetRef ref, {
@@ -75,7 +77,6 @@ Future<void> _syncOfflineTrailData(
   }
 }
 
-const _trailHeaderCollapseThreshold = 82.0;
 const _timelineLineColumnWidth = 28.0;
 const _beachPointFilterKey = 'trailBeach';
 const _viewpointPointFilterKey = 'trailViewpoint';
@@ -83,6 +84,7 @@ const _religiousSitePointFilterKey = 'trailReligiousSite';
 const _naturalLandmarkPointFilterKey = 'trailNaturalLandmark';
 const _forestParkPointFilterKey = 'trailForestPark';
 const _stageNameFilterPrefix = 'stage:';
+const _savedRouteFilterPrefix = 'saved-route:';
 const _filterServiceKeys = [
   'lodging',
   'tent',
@@ -123,6 +125,7 @@ bool _stageNameHasForestOrPark(String stageName) => RegExp(
 bool _stageMatchesFilters({
   required TrailStage stage,
   required Set<String> filters,
+  required Map<String, Set<String>> savedRouteStageIds,
 }) {
   final filtersBeach = filters.contains(_beachPointFilterKey);
   final filtersViewpoint = filters.contains(_viewpointPointFilterKey);
@@ -136,6 +139,16 @@ bool _stageMatchesFilters({
       .map((filter) => filter.substring(_stageNameFilterPrefix.length))
       .toSet();
   if (selectedStageIds.isNotEmpty && !selectedStageIds.contains(stage.id)) {
+    return false;
+  }
+  final selectedRouteIds = filters
+      .where((filter) => filter.startsWith(_savedRouteFilterPrefix))
+      .map((filter) => filter.substring(_savedRouteFilterPrefix.length))
+      .toSet();
+  if (selectedRouteIds.isNotEmpty &&
+      !selectedRouteIds.any(
+        (routeId) => savedRouteStageIds[routeId]?.contains(stage.id) == true,
+      )) {
     return false;
   }
   final hasPointFilter =
@@ -336,10 +349,10 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
   final ScrollController scrollController = ScrollController();
   final Map<String, GlobalKey> _stageRowKeys = {};
   Set<String> selectedServices = {};
+  Map<String, Set<String>> savedRouteStageIds = const {};
   String? _gpsSelectedStageId;
   DeviceLocation? _gpsLocation;
   bool _isLocatingStage = false;
-  bool _isHeaderCollapsed = false;
   bool? _hasSeenTrailInformation;
   bool? _hasSeenStageDetailsHint;
   bool? _hasSeenStageMetricsHint;
@@ -347,23 +360,13 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
   @override
   void initState() {
     super.initState();
-    scrollController.addListener(_updateHeaderCollapseState);
     unawaited(_restoreGuidanceSeen());
   }
 
   @override
   void dispose() {
-    scrollController.removeListener(_updateHeaderCollapseState);
     scrollController.dispose();
     super.dispose();
-  }
-
-  void _updateHeaderCollapseState() {
-    final isCollapsed =
-        scrollController.hasClients &&
-        scrollController.offset >= _trailHeaderCollapseThreshold;
-    if (isCollapsed == _isHeaderCollapsed || !mounted) return;
-    setState(() => _isHeaderCollapsed = isCollapsed);
   }
 
   Future<void> _openServiceFilters() async {
@@ -374,6 +377,26 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
       sourceStages = const <TrailStage>[];
     }
     if (!mounted) return;
+    List<SavedRoute> savedRoutes;
+    try {
+      savedRoutes = await ref.read(savedRoutesProvider.future);
+    } catch (_) {
+      savedRoutes = const [];
+    }
+    if (!mounted) return;
+    final availableRouteIds = savedRoutes.map((route) => route.id).toSet();
+    final cleanedSelection = selectedServices.where((filter) {
+      if (!filter.startsWith(_savedRouteFilterPrefix)) return true;
+      return availableRouteIds.contains(
+        filter.substring(_savedRouteFilterPrefix.length),
+      );
+    }).toSet();
+    setState(() {
+      selectedServices = cleanedSelection;
+      savedRouteStageIds = {
+        for (final route in savedRoutes) route.id: route.stageIds,
+      };
+    });
     final direction = ref.read(trailDirectionProvider);
     final orderedStages = direction.isReversed
         ? sourceStages.reversed.toList(growable: false)
@@ -391,8 +414,9 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
         maxChildSize: 0.96,
         shouldCloseOnMinExtent: true,
         builder: (context, scrollController) => _ServiceFilterSheet(
-          selected: selectedServices,
+          selected: cleanedSelection,
           stages: orderedStages,
+          savedRoutes: savedRoutes,
           scrollController: scrollController,
         ),
       ),
@@ -795,6 +819,9 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
         isLocating: _isLocatingStage,
         onFilter: _openServiceFilters,
         onReverse: () => ref.read(trailDirectionProvider.notifier).toggle(),
+        onPlanner: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const RoutePlannerScreen()),
+        ),
         onGps: _toggleGpsStage,
         onMap: () => Navigator.of(
           context,
@@ -837,15 +864,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
           controller: scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            _TrailAppBar(
-              isCollapsed: _isHeaderCollapsed,
-              onTrailInformationHintReset: () =>
-                  setState(() => _hasSeenTrailInformation = false),
-              onStageDetailsHintReset: () =>
-                  setState(() => _hasSeenStageDetailsHint = false),
-              onStageMetricsHintReset: () =>
-                  setState(() => _hasSeenStageMetricsHint = false),
-            ),
+            const _TrailAppBar(),
             const SliverToBoxAdapter(child: SizedBox(height: 12)),
             stages.when(
               skipLoadingOnRefresh: true,
@@ -880,6 +899,7 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                           if (_stageMatchesFilters(
                             stage: orderedItems[stageIndex],
                             filters: selectedServices,
+                            savedRouteStageIds: savedRouteStageIds,
                           ))
                             orderedItems[stageIndex],
                       ];
@@ -1122,6 +1142,7 @@ class _StageBottomNavigationBar extends StatelessWidget {
     required this.isLocating,
     required this.onFilter,
     required this.onReverse,
+    required this.onPlanner,
     required this.onGps,
     required this.onMap,
     required this.onElevation,
@@ -1133,6 +1154,7 @@ class _StageBottomNavigationBar extends StatelessWidget {
   final bool isLocating;
   final VoidCallback onFilter;
   final VoidCallback onReverse;
+  final VoidCallback onPlanner;
   final VoidCallback onGps;
   final VoidCallback onMap;
   final VoidCallback onElevation;
@@ -1157,6 +1179,13 @@ class _StageBottomNavigationBar extends StatelessWidget {
             ),
             visibleLabel: l10n.t('Reverse'),
             onTap: onReverse,
+          ),
+          _StageBottomAction(
+            key: const ValueKey('stage-bottom-planner'),
+            icon: Icons.route_rounded,
+            label: l10n.t('Route planner'),
+            visibleLabel: l10n.t('Planner'),
+            onTap: onPlanner,
           ),
           _StageBottomAction(
             key: const ValueKey('stage-bottom-filter'),
@@ -1361,90 +1390,36 @@ class _ReverseTrailIcon extends StatelessWidget {
 }
 
 class _TrailAppBar extends StatelessWidget {
-  const _TrailAppBar({
-    required this.isCollapsed,
-    required this.onTrailInformationHintReset,
-    required this.onStageDetailsHintReset,
-    required this.onStageMetricsHintReset,
-  });
-
-  final bool isCollapsed;
-  final VoidCallback onTrailInformationHintReset;
-  final VoidCallback onStageDetailsHintReset;
-  final VoidCallback onStageMetricsHintReset;
+  const _TrailAppBar();
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final hasBackButton = Navigator.of(context).canPop();
-    final headerContentLeft = hasBackButton ? kToolbarHeight : 20.0;
     return SliverAppBar(
       expandedHeight: _trailHeaderExpandedHeight,
       pinned: true,
       backgroundColor: EurotrexPalette.navy,
       surfaceTintColor: Colors.transparent,
       foregroundColor: Colors.white,
-      titleSpacing: 0,
+      titleSpacing: hasBackButton ? 0 : 20,
       title: Row(
         key: const ValueKey('trail-toolbar-actions'),
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(left: hasBackButton ? 0 : 20),
-              child: Stack(
-                alignment: Alignment.centerLeft,
-                children: [
-                  IgnorePointer(
-                    child: AnimatedOpacity(
-                      key: const ValueKey('trail-compact-title-opacity'),
-                      opacity: isCollapsed ? 1 : 0,
-                      duration: const Duration(milliseconds: 180),
-                      child: Text(
-                        l10n.t('Cyprus E4'),
-                        key: const ValueKey('trail-compact-title'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ),
-                  IgnorePointer(
-                    child: AnimatedOpacity(
-                      key: const ValueKey('trail-expanded-badges-opacity'),
-                      opacity: isCollapsed ? 0 : 1,
-                      duration: const Duration(milliseconds: 180),
-                      child: const _TrailHeaderBadges(),
-                    ),
-                  ),
-                ],
+          Flexible(
+            child: Text(
+              l10n.t('Cyprus E4'),
+              key: const ValueKey('trail-compact-title'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
-          IconButton(
-            key: const ValueKey('trail-settings'),
-            tooltip: l10n.t('Settings'),
-            onPressed: () async {
-              final reset = await Navigator.of(context).push<DebugHintReset>(
-                MaterialPageRoute<DebugHintReset>(
-                  builder: (_) => const SettingsScreen(),
-                ),
-              );
-              if (reset == DebugHintReset.e4Information) {
-                onTrailInformationHintReset();
-              } else if (reset == DebugHintReset.stageDetails) {
-                onStageDetailsHintReset();
-              } else if (reset == DebugHintReset.stageMetrics) {
-                onStageMetricsHintReset();
-              }
-            },
-            icon: const Icon(Icons.settings_outlined),
-          ),
-          const SizedBox(width: 8),
         ],
       ),
       flexibleSpace: Stack(
@@ -1480,141 +1455,10 @@ class _TrailAppBar extends StatelessWidget {
                     ),
                   ),
                 ),
-                SafeArea(
-                  child: Padding(
-                    key: const ValueKey('stages-header-content-padding'),
-                    padding: EdgeInsets.fromLTRB(headerContentLeft, 52, 20, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          l10n.t('Cyprus E4'),
-                          key: const ValueKey('stages-expanded-title'),
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _TrailHeaderBadges extends StatelessWidget {
-  const _TrailHeaderBadges();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      key: const ValueKey('stage-header-badges'),
-      children: [
-        Container(
-          key: const ValueKey('stage-long-distance-badge'),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: _yellow,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            context.l10n.t('LONG DISTANCE'),
-            style: const TextStyle(
-              color: _ink,
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        const Flexible(child: _OfflineMapStatusBadge()),
-      ],
-    );
-  }
-}
-
-class _OfflineMapStatusBadge extends ConsumerWidget {
-  const _OfflineMapStatusBadge();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final offlineMap = ref.watch(offlineMapProvider);
-    final isReady = offlineMap.value?.isReady == true;
-    final isDownloading = offlineMap.value?.isDownloading == true;
-    final isFailed = offlineMap.hasError || offlineMap.value?.isFailed == true;
-    final isChecking = offlineMap.isLoading;
-    final label = context.l10n.t(
-      isReady
-          ? 'OFFLINE TRAIL'
-          : isChecking
-          ? 'Checking offline map…'
-          : isDownloading
-          ? 'Downloading offline map'
-          : isFailed
-          ? 'Offline map download failed'
-          : 'Offline map not downloaded',
-    );
-    final foreground = isReady
-        ? _green
-        : isFailed
-        ? _red
-        : Colors.white70;
-    final background = isReady
-        ? _mint
-        : isFailed
-        ? const Color(0xFF5A2928)
-        : Colors.white.withValues(alpha: 0.12);
-
-    return Tooltip(
-      message: label,
-      child: Container(
-        key: const ValueKey('offline-map-status-badge'),
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isReady
-                  ? Icons.check_circle_rounded
-                  : isChecking
-                  ? Icons.hourglass_top_rounded
-                  : isDownloading
-                  ? Icons.download_rounded
-                  : isFailed
-                  ? Icons.error_outline_rounded
-                  : Icons.info_outline_rounded,
-              color: foreground,
-              size: 14,
-            ),
-            const SizedBox(width: 5),
-            Flexible(
-              child: Text(
-                label.toUpperCase(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: foreground,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.8,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -6104,11 +5948,13 @@ class _ServiceFilterSheet extends StatefulWidget {
   const _ServiceFilterSheet({
     required this.selected,
     required this.stages,
+    required this.savedRoutes,
     required this.scrollController,
   });
 
   final Set<String> selected;
   final List<TrailStage> stages;
+  final List<SavedRoute> savedRoutes;
   final ScrollController scrollController;
 
   @override
@@ -6122,6 +5968,9 @@ class _ServiceFilterSheetState extends State<_ServiceFilterSheet> {
 
   String _stageFilterKey(TrailStage stage) =>
       '$_stageNameFilterPrefix${stage.id}';
+
+  String _savedRouteFilterKey(SavedRoute route) =>
+      '$_savedRouteFilterPrefix${route.id}';
 
   void _selectStage(TrailStage stage) {
     setState(() {
@@ -6177,6 +6026,46 @@ class _ServiceFilterSheetState extends State<_ServiceFilterSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (widget.savedRoutes.isNotEmpty) ...[
+                _StageFilterPanel(
+                  key: const ValueKey('stage-filter-saved-routes-panel'),
+                  icon: Icons.route_rounded,
+                  title: l10n.t('My routes'),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final route in widget.savedRoutes)
+                        FilterChip(
+                          key: ValueKey('saved-route-filter-${route.id}'),
+                          selected: selected.contains(
+                            _savedRouteFilterKey(route),
+                          ),
+                          avatar: const Icon(
+                            Icons.alt_route_rounded,
+                            size: 18,
+                            color: _filterBlueTeal,
+                          ),
+                          label: Text(
+                            '${l10n.t(route.startStageName)} → ${l10n.t(route.finishStageName)} · ${l10n.t(switch (route.style) {
+                              RoutePlanStyle.budget => 'Budget',
+                              RoutePlanStyle.balanced => 'Balanced',
+                              RoutePlanStyle.comfort => 'Comfort',
+                            })}',
+                          ),
+                          onSelected: (isSelected) => setState(() {
+                            if (isSelected) {
+                              selected.add(_savedRouteFilterKey(route));
+                            } else {
+                              selected.remove(_savedRouteFilterKey(route));
+                            }
+                          }),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               _StageFilterPanel(
                 key: const ValueKey('stage-filter-name-panel'),
                 icon: Icons.search_rounded,

@@ -27,6 +27,7 @@ import 'package:eurotrex/features/excursions/presentation/excursion_controller.d
 import 'package:eurotrex/features/map/presentation/map_screen.dart';
 import 'package:eurotrex/features/map/domain/offline_map_state.dart';
 import 'package:eurotrex/features/map/presentation/offline_map_controller.dart';
+import 'package:eurotrex/features/route_planner/presentation/route_planner_screen.dart';
 import 'package:eurotrex/features/legal/presentation/legal_disclaimer_screen.dart';
 import 'package:eurotrex/features/stages/domain/stage.dart';
 import 'package:eurotrex/features/stages/presentation/stages_controller.dart';
@@ -39,7 +40,7 @@ import 'package:eurotrex/features/trail/presentation/trail_information_screen.da
 import 'package:eurotrex/features/trails/presentation/trails_screen.dart';
 
 void main() {
-  testWidgets('E4 waymark opens trail information and stops pulsing', (
+  testWidgets('compact E4 header opens trail information and stops pulsing', (
     tester,
   ) async {
     final database = _FakeAppDatabase();
@@ -55,34 +56,29 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final longDistance = find.byKey(
-      const ValueKey('stage-long-distance-badge'),
+    expect(
+      find.byKey(const ValueKey('stage-long-distance-badge')),
+      findsNothing,
     );
-    final offlineStatus = find.byKey(
-      const ValueKey('offline-map-status-badge'),
+    expect(
+      find.byKey(const ValueKey('offline-map-status-badge')),
+      findsNothing,
     );
-    expect(longDistance, findsOneWidget);
-    expect(offlineStatus, findsOneWidget);
+    expect(find.byKey(const ValueKey('trail-settings')), findsNothing);
     final stageHeaderWatermark = find.byKey(
       const ValueKey('stages-header-watermark-cyprus-e4'),
     );
     expect(stageHeaderWatermark, findsOneWidget);
     expect(
       tester.widget<SliverAppBar>(find.byType(SliverAppBar)).expandedHeight,
-      128,
+      72,
     );
     expect(
-      tester
-          .widget<Padding>(
-            find.byKey(const ValueKey('stages-header-content-padding')),
-          )
-          .padding,
-      const EdgeInsets.fromLTRB(20, 52, 20, 24),
+      find.byKey(const ValueKey('stages-header-content-padding')),
+      findsNothing,
     );
-    expect(
-      tester.getTopLeft(find.byKey(const ValueKey('stages-expanded-title'))).dx,
-      moreOrLessEquals(tester.getTopLeft(longDistance).dx, epsilon: 0.1),
-    );
+    expect(find.byKey(const ValueKey('stages-expanded-title')), findsNothing);
+    expect(find.byKey(const ValueKey('trail-compact-title')), findsOneWidget);
     expect(
       tester.widget<Image>(stageHeaderWatermark).image,
       const AssetImage('assets/branding/cyprus_e4_forest.jpg'),
@@ -105,23 +101,9 @@ void main() {
       findsNothing,
     );
     expect(
-      tester.getCenter(longDistance).dx,
-      lessThan(tester.getCenter(offlineStatus).dx),
-    );
-    expect(
       find.byKey(const ValueKey('offline-map-status-banner')),
       findsNothing,
     );
-    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
-    expect(find.text('OFFLINE TRAIL'), findsOneWidget);
-
-    final providerScope = ProviderScope.containerOf(
-      tester.element(find.byType(StagesScreen)),
-    );
-    await providerScope.read(offlineMapProvider.notifier).delete();
-    await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.info_outline_rounded), findsWidgets);
-    expect(find.text('OFFLINE MAP NOT DOWNLOADED'), findsOneWidget);
 
     final information = find.byKey(const ValueKey('stage-e4-waymark'));
     final informationHelper = find.byKey(
@@ -129,19 +111,11 @@ void main() {
     );
     final reverse = find.byKey(const ValueKey('reverse-trail-direction'));
     final refresh = find.byKey(const ValueKey('refresh-offline-trail'));
-    final settings = find.byKey(const ValueKey('trail-settings'));
     final toolbar = find.byKey(const ValueKey('trail-toolbar-actions'));
     final bottomNavigation = find.byKey(
       const ValueKey('stage-bottom-navigation'),
     );
     expect(information, findsOneWidget);
-    expect(
-      find.descendant(
-        of: settings,
-        matching: find.byIcon(Icons.settings_outlined),
-      ),
-      findsOneWidget,
-    );
     expect(informationHelper, findsOneWidget);
     expect(
       find.descendant(
@@ -160,20 +134,25 @@ void main() {
     expect(find.byKey(const ValueKey('stage-e4-waymark-halo')), findsOneWidget);
     expect(reverse, findsOneWidget);
     expect(refresh, findsNothing);
-    expect(settings, findsOneWidget);
+    expect(find.byKey(const ValueKey('trail-settings')), findsNothing);
     expect(
       tester.widget<Row>(toolbar).mainAxisAlignment,
-      MainAxisAlignment.end,
+      MainAxisAlignment.start,
     );
     expect(
-      find.descendant(of: toolbar, matching: longDistance),
-      findsOneWidget,
+      find.descendant(
+        of: toolbar,
+        matching: find.byKey(const ValueKey('stage-long-distance-badge')),
+      ),
+      findsNothing,
     );
     expect(
-      find.descendant(of: toolbar, matching: offlineStatus),
-      findsOneWidget,
+      find.descendant(
+        of: toolbar,
+        matching: find.byKey(const ValueKey('offline-map-status-badge')),
+      ),
+      findsNothing,
     );
-    expect(find.descendant(of: toolbar, matching: settings), findsOneWidget);
     expect(find.descendant(of: toolbar, matching: reverse), findsNothing);
     expect(
       find.descendant(of: bottomNavigation, matching: reverse),
@@ -284,7 +263,7 @@ void main() {
     expect(find.byKey(const ValueKey('stage-metrics-helper')), findsOneWidget);
   });
 
-  testWidgets('trail header reveals a compact title after scrolling', (
+  testWidgets('trail header keeps its compact title while scrolling', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(800, 900));
@@ -300,16 +279,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final compactTitle = find.byKey(
-      const ValueKey('trail-compact-title-opacity'),
-    );
-    expect(tester.widget<AnimatedOpacity>(compactTitle).opacity, 0);
+    final compactTitle = find.byKey(const ValueKey('trail-compact-title'));
+    expect(compactTitle, findsOneWidget);
+    expect(find.byKey(const ValueKey('stages-expanded-title')), findsNothing);
 
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -260));
     await tester.pumpAndSettle();
 
-    expect(tester.widget<AnimatedOpacity>(compactTitle).opacity, 1);
-    expect(find.byKey(const ValueKey('trail-compact-title')), findsOneWidget);
+    expect(compactTitle, findsOneWidget);
   });
 
   testWidgets('stage details helper is dismissed after opening a stage', (
@@ -354,7 +331,7 @@ void main() {
     expect(helper, findsNothing);
   });
 
-  testWidgets('left stage metrics helper explains values and can be reset', (
+  testWidgets('left stage metrics helper explains values and can be dismissed', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(800, 1200));
@@ -397,25 +374,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(helper, findsNothing);
     expect(database.settings[cyprusE4StageMetricsHintSeenSetting], 'true');
-
-    await tester.tap(find.byKey(const ValueKey('trail-settings')));
-    await tester.pumpAndSettle();
-    final resetMetricsHint = find.byKey(
-      const ValueKey('reset-stage-metrics-hint'),
-    );
-    await tester.scrollUntilVisible(
-      resetMetricsHint,
-      500,
-      scrollable: find.byType(Scrollable).last,
-    );
-    await tester.ensureVisible(resetMetricsHint);
-    await tester.pumpAndSettle();
-    await tester.tap(resetMetricsHint);
-    await tester.pumpAndSettle();
-
-    expect(find.byType(StagesScreen), findsOneWidget);
-    expect(database.settings[cyprusE4StageMetricsHintSeenSetting], 'false');
-    expect(helper, findsOneWidget);
   });
 
   testWidgets('pulling down at the top refreshes the stages', (tester) async {
@@ -501,7 +459,9 @@ void main() {
     );
   });
 
-  testWidgets('debug settings can restart both guidance hints', (tester) async {
+  testWidgets('landing settings can restart both guidance hints', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(800, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final database = _FakeAppDatabase()
@@ -514,15 +474,12 @@ void main() {
           stagesProvider.overrideWith(_FakeStagesController.new),
           offlineMapProvider.overrideWith(_FakeOfflineMapController.new),
         ],
-        child: const MaterialApp(home: StagesScreen()),
+        child: const MaterialApp(home: TrailsScreen()),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('stage-e4-waymark-seen')), findsOneWidget);
-    expect(find.byKey(const ValueKey('stage-e4-waymark-halo')), findsNothing);
-
-    await tester.tap(find.byKey(const ValueKey('trail-settings')));
+    await tester.tap(find.byKey(const ValueKey('landing-settings')));
     await tester.pumpAndSettle();
     final resetHint = find.byKey(const ValueKey('reset-e4-information-hint'));
     await tester.scrollUntilVisible(
@@ -533,21 +490,10 @@ void main() {
     await tester.tap(resetHint);
     await tester.pumpAndSettle();
 
-    expect(find.byType(StagesScreen), findsOneWidget);
+    expect(find.byType(TrailsScreen), findsOneWidget);
     expect(database.settings[cyprusE4TrailInformationSeenSetting], 'false');
-    expect(
-      find.byKey(const ValueKey('stage-e4-waymark-pulsing')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const ValueKey('stage-e4-waymark-halo')), findsOneWidget);
-    expect(find.byKey(const ValueKey('stage-details-helper')), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('stage-e4-waymark')));
-    await tester.pumpAndSettle();
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const ValueKey('trail-settings')));
+    await tester.tap(find.byKey(const ValueKey('landing-settings')));
     await tester.pumpAndSettle();
     final resetStageHint = find.byKey(
       const ValueKey('reset-stage-details-hint'),
@@ -560,9 +506,8 @@ void main() {
     await tester.tap(resetStageHint);
     await tester.pumpAndSettle();
 
-    expect(find.byType(StagesScreen), findsOneWidget);
+    expect(find.byType(TrailsScreen), findsOneWidget);
     expect(database.settings[cyprusE4StageDetailsHintSeenSetting], 'false');
-    expect(find.byKey(const ValueKey('stage-details-helper')), findsOneWidget);
   });
 
   testWidgets(
@@ -826,7 +771,15 @@ void main() {
     expect(toolbarActions, findsOneWidget);
     expect(
       tester.widget<Row>(toolbarActions).mainAxisAlignment,
-      MainAxisAlignment.end,
+      MainAxisAlignment.start,
+    );
+    final stagesBackButton = find.byType(BackButton);
+    final stagesTitle = find.byKey(const ValueKey('trail-compact-title'));
+    expect(stagesBackButton, findsOneWidget);
+    expect(stagesTitle, findsOneWidget);
+    expect(
+      tester.getCenter(stagesBackButton).dx,
+      lessThan(tester.getCenter(stagesTitle).dx),
     );
     expect(find.byKey(const ValueKey('about-eu-logo')), findsNothing);
     expect(find.byKey(const ValueKey('about-cyprus-logo')), findsNothing);
@@ -1920,10 +1873,7 @@ void main() {
     expect(previewData.titlesData.bottomTitles.sideTitles.showTitles, isTrue);
     expect(previewData.titlesData.topTitles.sideTitles.showTitles, isFalse);
     expect(previewData.titlesData.rightTitles.sideTitles.showTitles, isFalse);
-    expect(
-      previewData.lineBarsData.first.color,
-      EurotrexPalette.navy,
-    );
+    expect(previewData.lineBarsData.first.color, EurotrexPalette.navy);
     expect(previewData.lineBarsData.first.barWidth, 1.5);
 
     await tester.tap(find.byKey(const Key('stage-elevation-open')));
@@ -2594,6 +2544,8 @@ void main() {
     );
     expect(find.byKey(const ValueKey('stage-bottom-filter')), findsOneWidget);
     expect(find.byIcon(Icons.filter_list_rounded), findsOneWidget);
+    expect(find.byKey(const ValueKey('stage-bottom-planner')), findsOneWidget);
+    expect(find.byIcon(Icons.route_rounded), findsOneWidget);
     expect(
       find.byKey(const ValueKey('reverse-trail-direction')),
       findsOneWidget,
@@ -2643,6 +2595,7 @@ void main() {
       findsOneWidget,
     );
     for (final action in [
+      (key: const ValueKey('stage-bottom-planner'), icon: Icons.route_rounded),
       (
         key: const ValueKey('stage-bottom-filter'),
         icon: Icons.filter_list_rounded,
@@ -2707,14 +2660,19 @@ void main() {
       const ValueKey('stage-bottom-navigation-size'),
     );
     final filter = find.byKey(const ValueKey('stage-bottom-filter'));
+    final planner = find.byKey(const ValueKey('stage-bottom-planner'));
     final reverse = find.byKey(const ValueKey('reverse-trail-direction'));
     final gps = find.byKey(const ValueKey('stage-bottom-gps'));
     final initialBottom = tester.getBottomLeft(bottomNavigation).dy;
     expect(tester.getSize(navigationSize), const Size(800, 58));
-    expect(tester.getCenter(reverse).dx, lessThan(tester.getCenter(filter).dx));
+    expect(
+      tester.getCenter(reverse).dx,
+      lessThan(tester.getCenter(planner).dx),
+    );
+    expect(tester.getCenter(planner).dx, lessThan(tester.getCenter(filter).dx));
     expect(tester.getCenter(filter).dx, lessThan(tester.getCenter(gps).dx));
     expect(
-      tester.getCenter(gps).dx,
+      (tester.getCenter(filter).dx + tester.getCenter(gps).dx) / 2,
       moreOrLessEquals(tester.getCenter(bottomNavigation).dx, epsilon: 0.1),
     );
 
@@ -2728,6 +2686,13 @@ void main() {
     expect(tester.getSize(navigationSize), const Size(800, 58));
     expect(tester.getBottomLeft(bottomNavigation).dy, initialBottom);
 
+    await tester.tap(find.byKey(const ValueKey('stage-bottom-planner')));
+    await tester.pumpAndSettle();
+    expect(find.byType(RoutePlannerScreen), findsOneWidget);
+    expect(bottomNavigation, findsNothing);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('stage-bottom-map')));
     await tester.pumpAndSettle();
     expect(find.byType(MapScreen), findsOneWidget);

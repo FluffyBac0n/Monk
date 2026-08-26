@@ -164,6 +164,66 @@ const _translations = <String, Map<String, String>>{
     'Stages': 'Etappen',
     'High point': 'Höchster Punkt',
     'Route': 'Route',
+    'Planner': 'Planer',
+    'Route planner': 'Routenplaner',
+    'My routes': 'Meine Routen',
+    'New route': 'Neue Route',
+    'Add route': 'Route hinzufügen',
+    'No routes saved yet': 'Noch keine Routen gespeichert',
+    'Create a route to keep its itinerary and use it in Stage filters.':
+        'Erstelle eine Route, um ihren Reiseplan zu speichern und sie in den Etappenfiltern zu verwenden.',
+    'Saved routes are unavailable.':
+        'Gespeicherte Routen sind nicht verfügbar.',
+    'Delete route': 'Route löschen',
+    'Delete this saved route?': 'Diese gespeicherte Route löschen?',
+    'Preferences': 'Präferenzen',
+    'Itinerary': 'Reiseplan',
+    'Choose your route': 'Wähle deine Route',
+    'Finish must come after the start in the current direction.':
+        'Das Ziel muss in der aktuellen Richtung nach dem Start liegen.',
+    'Compare': 'Vergleichen',
+    'Choose an itinerary': 'Wähle einen Reiseplan',
+    'Budget': 'Budget',
+    'Balanced': 'Ausgewogen',
+    'Comfort': 'Komfort',
+    'Unavailable for these preferences':
+        'Für diese Präferenzen nicht verfügbar',
+    'Done': 'Fertig',
+    'Saved to My routes and Stage filters.':
+        'Unter „Meine Routen“ und in den Etappenfiltern gespeichert.',
+    'Build a stage-to-stage itinerary': 'Etappenplan erstellen',
+    'Choose your daily limits and overnight requirements. The planner uses the current E4 stage and accommodation data.':
+        'Wähle deine täglichen Grenzen und Anforderungen für Übernachtungen. Der Planer verwendet die aktuellen E4-Etappen- und Unterkunftsdaten.',
+    'Daily walking limits': 'Tägliche Wandergrenzen',
+    'Minimum': 'Minimum',
+    'Maximum': 'Maximum',
+    'Overnight stops': 'Übernachtungen',
+    'Accommodation budget': 'Unterkunftsbudget',
+    'Leave empty for no budget limit.': 'Leer lassen für kein Budgetlimit.',
+    'Allow camping stages': 'Campingetappen zulassen',
+    'Use camping when no accommodation stop fits the daily limits.':
+        'Camping nutzen, wenn keine Unterkunft in die täglichen Grenzen passt.',
+    'Find route': 'Route finden',
+    'Enter a positive number.': 'Gib eine positive Zahl ein.',
+    'Maximum must be at least the minimum.':
+        'Das Maximum muss mindestens dem Minimum entsprechen.',
+    'Trail data is unavailable.': 'Wegdaten sind nicht verfügbar.',
+    'Balanced route found': 'Ausgewogene Route gefunden',
+    'walking days': 'Wandertage',
+    'total distance': 'Gesamtdistanz',
+    'known prices': 'bekannte Preise',
+    '{count} overnight prices are unknown. Confirm prices and availability before travelling.':
+        '{count} Übernachtungspreise sind unbekannt. Bestätige Preise und Verfügbarkeit vor der Reise.',
+    'Day-by-day itinerary': 'Tagesplan',
+    'Walking times and prices are estimates. Check weather, trail conditions and accommodation availability before setting out.':
+        'Gehzeiten und Preise sind Schätzungen. Prüfe Wetter, Wegbedingungen und Unterkunftsverfügbarkeit vor dem Start.',
+    'Camping stage': 'Campingetappe',
+    'Accommodation price unknown': 'Unterkunftspreis unbekannt',
+    'No feasible route found': 'Keine passende Route gefunden',
+    'Try widening the daily distance range or increasing the accommodation budget.':
+        'Versuche, den täglichen Entfernungsbereich zu erweitern oder das Unterkunftsbudget zu erhöhen.',
+    'Try widening the daily distance range, increasing the budget or allowing camping stages.':
+        'Versuche, den täglichen Entfernungsbereich zu erweitern, das Budget zu erhöhen oder Campingetappen zuzulassen.',
     'Filter': 'Filter',
     'Filter stages': 'Etappen filtern',
     'Choose trail points and services.': 'Wegpunkte und Angebote auswählen.',
@@ -566,6 +626,67 @@ const _translations = <String, Map<String, String>>{
     'Stages': 'Etapas',
     'High point': 'Punto más alto',
     'Route': 'Ruta',
+    'Planner': 'Planificador',
+    'Route planner': 'Planificador de ruta',
+    'My routes': 'Mis rutas',
+    'New route': 'Nueva ruta',
+    'Add route': 'Añadir ruta',
+    'No routes saved yet': 'Aún no hay rutas guardadas',
+    'Create a route to keep its itinerary and use it in Stage filters.':
+        'Crea una ruta para guardar su itinerario y usarla en los filtros de etapas.',
+    'Saved routes are unavailable.':
+        'Las rutas guardadas no están disponibles.',
+    'Delete route': 'Eliminar ruta',
+    'Delete this saved route?': '¿Eliminar esta ruta guardada?',
+    'Preferences': 'Preferencias',
+    'Itinerary': 'Itinerario',
+    'Choose your route': 'Elige tu ruta',
+    'Finish must come after the start in the current direction.':
+        'El final debe estar después del inicio en la dirección actual.',
+    'Compare': 'Comparar',
+    'Choose an itinerary': 'Elige un itinerario',
+    'Budget': 'Económico',
+    'Balanced': 'Equilibrado',
+    'Comfort': 'Comodidad',
+    'Unavailable for these preferences':
+        'No disponible para estas preferencias',
+    'Done': 'Listo',
+    'Saved to My routes and Stage filters.':
+        'Guardado en Mis rutas y en los filtros de etapas.',
+    'Build a stage-to-stage itinerary': 'Crea un itinerario etapa por etapa',
+    'Choose your daily limits and overnight requirements. The planner uses the current E4 stage and accommodation data.':
+        'Elige tus límites diarios y requisitos de alojamiento. El planificador utiliza los datos actuales de etapas y alojamientos del E4.',
+    'Daily walking limits': 'Límites diarios de caminata',
+    'Minimum': 'Mínimo',
+    'Maximum': 'Máximo',
+    'Overnight stops': 'Paradas nocturnas',
+    'Accommodation budget': 'Presupuesto de alojamiento',
+    'Leave empty for no budget limit.':
+        'Déjalo vacío para no limitar el presupuesto.',
+    'Allow camping stages': 'Permitir etapas con camping',
+    'Use camping when no accommodation stop fits the daily limits.':
+        'Usa campings cuando ningún alojamiento cumpla los límites diarios.',
+    'Find route': 'Buscar ruta',
+    'Enter a positive number.': 'Introduce un número positivo.',
+    'Maximum must be at least the minimum.':
+        'El máximo debe ser igual o superior al mínimo.',
+    'Trail data is unavailable.': 'Los datos de la ruta no están disponibles.',
+    'Balanced route found': 'Ruta equilibrada encontrada',
+    'walking days': 'días de caminata',
+    'total distance': 'distancia total',
+    'known prices': 'precios conocidos',
+    '{count} overnight prices are unknown. Confirm prices and availability before travelling.':
+        'Se desconocen {count} precios nocturnos. Confirma los precios y la disponibilidad antes de viajar.',
+    'Day-by-day itinerary': 'Itinerario día a día',
+    'Walking times and prices are estimates. Check weather, trail conditions and accommodation availability before setting out.':
+        'Los tiempos y precios son estimaciones. Comprueba el tiempo, las condiciones de la ruta y la disponibilidad antes de salir.',
+    'Camping stage': 'Etapa con camping',
+    'Accommodation price unknown': 'Precio de alojamiento desconocido',
+    'No feasible route found': 'No se encontró una ruta viable',
+    'Try widening the daily distance range or increasing the accommodation budget.':
+        'Prueba a ampliar el intervalo de distancia diaria o aumentar el presupuesto.',
+    'Try widening the daily distance range, increasing the budget or allowing camping stages.':
+        'Prueba a ampliar el intervalo diario, aumentar el presupuesto o permitir campings.',
     'Filter': 'Filtrar',
     'Filter stages': 'Filtrar etapas',
     'Choose trail points and services.': 'Elige puntos de la ruta y servicios.',
