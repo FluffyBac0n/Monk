@@ -9,6 +9,8 @@ import '../../../core/theme/eurotrex_chrome_theme.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 import '../../about/presentation/about_screen.dart';
 import '../../accommodation/presentation/accommodation_controller.dart';
+import '../../elevation/domain/elevation_profile.dart';
+import '../../elevation/domain/elevation_totals.dart';
 import '../../elevation/presentation/elevation_controller.dart';
 import '../../legal/presentation/legal_disclaimer_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
@@ -33,6 +35,30 @@ class TrailsScreen extends ConsumerWidget {
     );
     final stages = ref.watch(stagesProvider);
     final route = ref.watch(elevationProvider);
+    final routePoints = route.value;
+    final elevationTotals = routePoints != null && routePoints.length >= 2
+        ? calculateElevationTotals(
+            smoothElevationProfile(routePoints),
+            minimumChangeM: 1.5,
+          )
+        : null;
+    final stageItems = stages.value;
+    final hasStageElevationUp =
+        stageItems?.any((stage) => stage.elevationUpM != null) ?? false;
+    final hasStageElevationDown =
+        stageItems?.any((stage) => stage.elevationDownM != null) ?? false;
+    final stageElevationUp = hasStageElevationUp
+        ? stageItems!.fold<double>(
+            0,
+            (total, stage) => total + (stage.elevationUpM ?? 0),
+          )
+        : null;
+    final stageElevationDown = hasStageElevationDown
+        ? stageItems!.fold<double>(
+            0,
+            (total, stage) => total + (stage.elevationDownM ?? 0),
+          )
+        : null;
     final trailDataReady =
         stages.hasValue &&
         stages.requireValue.isNotEmpty &&
@@ -119,6 +145,9 @@ class TrailsScreen extends ConsumerWidget {
                   _TrailCard(
                     trail: trail,
                     formatter: formatter,
+                    elevationUpM: stageElevationUp ?? elevationTotals?.ascentM,
+                    elevationDownM:
+                        stageElevationDown ?? elevationTotals?.descentM,
                     isOffline: trailDataReady,
                     isEnabled: canExploreTrails,
                     onExplore: () {
@@ -136,12 +165,12 @@ class TrailsScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 const _ComingSoonTrailCard(
                   trailId: 'crete-e4',
-                  trailName: 'Crete E4',
+                  trailName: 'E4 - Crete',
                 ),
                 const SizedBox(height: 10),
                 const _ComingSoonTrailCard(
                   trailId: 'peloponnese-e4',
-                  trailName: 'Peloponnese E4',
+                  trailName: 'E4 - Peloponnese',
                 ),
               ],
             ),
@@ -220,6 +249,8 @@ class _TrailCard extends StatelessWidget {
   const _TrailCard({
     required this.trail,
     required this.formatter,
+    required this.elevationUpM,
+    required this.elevationDownM,
     required this.isOffline,
     required this.isEnabled,
     required this.onExplore,
@@ -227,6 +258,8 @@ class _TrailCard extends StatelessWidget {
 
   final TrailSummary trail;
   final MeasurementFormatter formatter;
+  final double? elevationUpM;
+  final double? elevationDownM;
   final bool isOffline;
   final bool isEnabled;
   final VoidCallback onExplore;
@@ -351,6 +384,15 @@ class _TrailCard extends StatelessWidget {
                                   fontWeight: FontWeight.w900,
                                 ),
                           ),
+                          const SizedBox(height: 4),
+                          Text(
+                            l10n.routeDirection(trail.startName, trail.endName),
+                            key: ValueKey('trail-card-route-${trail.id}'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -363,27 +405,43 @@ class _TrailCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      l10n.t(trail.description),
-                      style: const TextStyle(height: 1.3),
-                    ),
-                    const SizedBox(height: 12),
                     Row(
+                      key: ValueKey('trail-card-metrics-${trail.id}'),
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _TrailStat(
-                          value: formatter.distance(
-                            trail.distanceKm,
-                            decimals: 0,
+                        Expanded(
+                          child: _TrailStat(
+                            key: ValueKey(
+                              'trail-card-distance-stat-${trail.id}',
+                            ),
+                            value: formatter.distance(
+                              trail.distanceKm,
+                              decimals: 0,
+                            ),
+                            label: l10n.t('Distance'),
                           ),
-                          label: l10n.t('Distance'),
                         ),
-                        _TrailStat(
-                          value: '${trail.stageCount}',
-                          label: l10n.t('Stages'),
+                        Expanded(
+                          child: _TrailStat(
+                            key: ValueKey(
+                              'trail-card-elevation-up-${trail.id}',
+                            ),
+                            value: elevationUpM == null
+                                ? '—'
+                                : formatter.altitude(elevationUpM!),
+                            label: l10n.t('Elevation Up'),
+                          ),
                         ),
-                        _TrailStat(
-                          value: formatter.altitude(trail.highPointM),
-                          label: l10n.t('High point'),
+                        Expanded(
+                          child: _TrailStat(
+                            key: ValueKey(
+                              'trail-card-elevation-down-${trail.id}',
+                            ),
+                            value: elevationDownM == null
+                                ? '—'
+                                : formatter.altitude(elevationDownM!),
+                            label: l10n.t('Elevation Down'),
+                          ),
                         ),
                       ],
                     ),
@@ -526,32 +584,34 @@ class _TrailDataStatusBadge extends StatelessWidget {
 }
 
 class _TrailStat extends StatelessWidget {
-  const _TrailStat({required this.value, required this.label});
+  const _TrailStat({required this.value, required this.label, super.key});
 
   final String value;
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 15,
-              height: 1.1,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          textAlign: TextAlign.start,
+          style: const TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 15,
+            height: 1.1,
           ),
-          const SizedBox(height: 1),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.1),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 1),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.start,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.1),
+        ),
+      ],
     );
   }
 }

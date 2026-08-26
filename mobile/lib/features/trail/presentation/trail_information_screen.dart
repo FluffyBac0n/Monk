@@ -28,7 +28,7 @@ class TrailInformationScreen extends StatelessWidget {
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
             Text(
-              '${l10n.t('Cyprus E4').toUpperCase()} · ${l10n.t('Trail guide').toUpperCase()}',
+              '${l10n.t('E4 - Cyprus').toUpperCase()} · ${l10n.t('Trail guide').toUpperCase()}',
               style: const TextStyle(
                 color: Colors.white60,
                 fontSize: 9,
@@ -87,7 +87,7 @@ class TrailInformationScreen extends StatelessWidget {
                       children: [
                         const Spacer(),
                         Text(
-                          l10n.t('Cyprus E4'),
+                          l10n.t('E4 - Cyprus'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 28,

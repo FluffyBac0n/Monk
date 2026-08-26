@@ -23,13 +23,13 @@ class TrailSummary {
 const availableTrails = [
   TrailSummary(
     id: 'cyprus-e4',
-    name: 'Cyprus E4',
+    name: 'E4 - Cyprus',
     description:
         'A long-distance journey linking the coast, forests and Troodos mountain.',
     distanceKm: 558,
     stageCount: 123,
     highPointM: 1732,
-    startName: 'Pafos Airport',
-    endName: 'Larnaka Airport',
+    startName: 'Paphos',
+    endName: 'Larnaca',
   ),
 ];

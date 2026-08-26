@@ -157,7 +157,7 @@ class _AccommodationScreenState extends ConsumerState<AccommodationScreen> {
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
             Text(
-              '${l10n.t('Cyprus E4').toUpperCase()} · ${l10n.t(stage.name).toUpperCase()}',
+              '${l10n.t('E4 - Cyprus').toUpperCase()} · ${l10n.t(stage.name).toUpperCase()}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(

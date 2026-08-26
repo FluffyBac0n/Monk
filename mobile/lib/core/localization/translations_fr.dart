@@ -23,8 +23,8 @@ const frenchTranslations = <String, String>{
   'No email app is available. Opening the EUROTREX website contact form instead.':
       'Aucune application de messagerie n’est disponible. Le formulaire de contact du site EUROTREX va être ouvert.',
   'Version': 'Version',
-  'Crete E4': 'Crète E4',
-  'Peloponnese E4': 'Péloponnèse E4',
+  'E4 - Crete': 'E4 - Crete',
+  'E4 - Peloponnese': 'E4 - Peloponnese',
   'Settings': 'Paramètres',
   'Reverse': 'Inverser',
   'GPS': 'GPS',
@@ -76,10 +76,12 @@ const frenchTranslations = <String, String>{
   'Walk from Pafos to Larnaka': 'Marcher de Pafos à Larnaka',
   'Walk from Larnaka to Pafos': 'Marcher de Larnaka à Pafos',
   'CYPRUS · LONG DISTANCE TRAIL': 'CHYPRE · SENTIER DE GRANDE RANDONNÉE',
-  'Cyprus E4': 'Chypre E4',
+  'E4 - Cyprus': 'E4 - Cyprus',
   'Pafos Airport': 'Aéroport de Pafos',
   'Larnaka Airport': 'Aéroport de Larnaka',
   'Distance': 'Distance',
+  'Elevation Up': 'Dénivelé positif',
+  'Elevation Down': 'Dénivelé négatif',
   'Stages': 'Étapes',
   'High point': 'Point culminant',
   'Route': 'Itinéraire',
@@ -212,8 +214,8 @@ const frenchTranslations = <String, String>{
   'Open Stage Info': 'Ouvrir les informations de l’étape',
   'Stage': 'Étape',
   'Tap a stage to see its details.': 'Touchez une étape pour voir ses détails.',
-  'The numbers on the left show ascent, descent, stage length, and + distance from the trail.':
-      'Les nombres à gauche indiquent la montée, la descente, la longueur de l’étape et, avec +, la distance par rapport au sentier.',
+  'The numbers on the left show stage length, ascent, descent, and + distance from the trail.':
+      'Les nombres à gauche indiquent la longueur de l’étape, la montée, la descente et, avec +, la distance par rapport au sentier.',
   'Start point': 'Point de départ',
   'Finish point': 'Point d’arrivée',
   'From': 'Depuis',
@@ -225,7 +227,7 @@ const frenchTranslations = <String, String>{
   'No services recorded for this stage.':
       'Aucun service enregistré pour cette étape.',
   'Trail position': 'Position sur le sentier',
-  'Following the Cyprus E4': 'Sur l’E4 de Chypre',
+  'Following E4 - Cyprus': 'Sur l’E4 - Chypre',
   'Route guidance will be available with the offline map.':
       'Le guidage de l’itinéraire sera disponible avec la carte hors ligne.',
   'Available offline': 'Disponible hors ligne',
@@ -237,8 +239,8 @@ const frenchTranslations = <String, String>{
   'Back to stages': 'Retour aux étapes',
   'Take the trail offline': 'Rendre le sentier disponible hors ligne',
   'Could not download the trail': 'Impossible de télécharger le sentier',
-  'Download Cyprus E4 to browse its stages without a connection.':
-      'Téléchargez l’E4 de Chypre pour consulter ses étapes sans connexion.',
+  'Download E4 - Cyprus to browse its stages without a connection.':
+      'Téléchargez l’E4 - Chypre pour consulter ses étapes sans connexion.',
   'Download trail': 'Télécharger le sentier',
   'Lodging': 'Hébergement',
   'Accommodation': 'Hébergements',
@@ -407,12 +409,12 @@ const frenchTranslations = <String, String>{
       'Impossible de télécharger la carte hors ligne. Vérifiez votre connexion et réessayez.',
   'The offline map could not be removed.':
       'Impossible de supprimer la carte hors ligne.',
-  'The detailed Cyprus E4 map is stored on this device.':
-      'La carte détaillée de l’E4 de Chypre est stockée sur cet appareil.',
+  'The detailed E4 - Cyprus map is stored on this device.':
+      'La carte détaillée de l’E4 - Chypre est stockée sur cet appareil.',
   'Please try the download again.':
       'Veuillez essayer de la télécharger à nouveau.',
-  'Downloads a detailed corridor around the complete Cyprus E4 for use without a connection.':
-      'Télécharge une bande cartographique détaillée le long de l’intégralité de l’E4 de Chypre pour une utilisation sans connexion.',
+  'Downloads a detailed corridor around the complete E4 - Cyprus for use without a connection.':
+      'Télécharge une bande cartographique détaillée le long de l’intégralité de l’E4 - Chypre pour une utilisation sans connexion.',
   'Download the route data first.':
       'Téléchargez d’abord les données de l’itinéraire.',
   'The route, stages and elevation will remain offline. Only the offline map will be removed.':

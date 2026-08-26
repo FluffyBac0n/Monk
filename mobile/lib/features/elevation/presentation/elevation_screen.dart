@@ -206,7 +206,7 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
             Text(
-              'CYPRUS E4 · ${l10n.routeDirection(direction.isReversed ? l10n.larnakaAirport : l10n.pafosAirport, direction.isReversed ? l10n.pafosAirport : l10n.larnakaAirport).toUpperCase()}',
+              '${l10n.t('E4 - Cyprus').toUpperCase()} · ${l10n.routeDirection(direction.isReversed ? l10n.larnakaAirport : l10n.pafosAirport, direction.isReversed ? l10n.pafosAirport : l10n.larnakaAirport).toUpperCase()}',
               style: const TextStyle(
                 fontSize: 9,
                 color: Colors.white60,
@@ -365,12 +365,22 @@ class _ElevationContent extends StatelessWidget {
       metricPoints,
       minimumChangeM: _minimumElevationChangeM,
     );
+    final stageElevationTotals = _stageElevationTotals(
+      stages: stages,
+      scope: effectiveScope,
+      selectedStageIndex: selectedStageIndex,
+      direction: direction,
+    );
+    final forwardAscentM =
+        stageElevationTotals.ascentM ?? elevationTotals.ascentM;
+    final forwardDescentM =
+        stageElevationTotals.descentM ?? elevationTotals.descentM;
     final totalAscentM = direction.isReversed
-        ? elevationTotals.descentM
-        : elevationTotals.ascentM;
+        ? forwardDescentM
+        : forwardAscentM;
     final totalDescentM = direction.isReversed
-        ? elevationTotals.ascentM
-        : elevationTotals.descentM;
+        ? forwardAscentM
+        : forwardDescentM;
     final chartPoints = _downsample(displayedProfilePoints, 900);
     final selectedStage =
         selectedStageIndex != null &&
@@ -746,6 +756,45 @@ class _ElevationContent extends StatelessWidget {
       ),
     );
   }
+}
+
+({double? ascentM, double? descentM}) _stageElevationTotals({
+  required List<TrailStage> stages,
+  required _ElevationScope scope,
+  required int? selectedStageIndex,
+  required TrailDirection direction,
+}) {
+  if (scope == _ElevationScope.fullTrail) {
+    final hasAscent = stages.any((stage) => stage.elevationUpM != null);
+    final hasDescent = stages.any((stage) => stage.elevationDownM != null);
+    return (
+      ascentM: hasAscent
+          ? stages.fold<double>(
+              0,
+              (total, stage) => total + (stage.elevationUpM ?? 0),
+            )
+          : null,
+      descentM: hasDescent
+          ? stages.fold<double>(
+              0,
+              (total, stage) => total + (stage.elevationDownM ?? 0),
+            )
+          : null,
+    );
+  }
+
+  if (selectedStageIndex == null ||
+      selectedStageIndex <= 0 ||
+      selectedStageIndex >= stages.length) {
+    return (ascentM: null, descentM: null);
+  }
+  final metricsStage = direction.isReversed
+      ? stages[selectedStageIndex - 1]
+      : stages[selectedStageIndex];
+  return (
+    ascentM: metricsStage.elevationUpM,
+    descentM: metricsStage.elevationDownM,
+  );
 }
 
 typedef _ElevationStageRange = ({

@@ -262,7 +262,7 @@ class MapScreen extends ConsumerWidget {
             const SizedBox(height: 2),
             Text(
               key: const ValueKey('map-route-direction'),
-              'CYPRUS E4 · ${l10n.routeDirection(direction.isReversed ? l10n.larnakaAirport : l10n.pafosAirport, direction.isReversed ? l10n.pafosAirport : l10n.larnakaAirport).toUpperCase()}',
+              '${l10n.t('E4 - Cyprus').toUpperCase()} · ${l10n.routeDirection(direction.isReversed ? l10n.larnakaAirport : l10n.pafosAirport, direction.isReversed ? l10n.pafosAirport : l10n.larnakaAirport).toUpperCase()}',
               maxLines: 2,
               softWrap: true,
               overflow: TextOverflow.visible,
@@ -457,11 +457,11 @@ class _OfflineMapSheetContent extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           ready
-              ? l10n.t('The detailed Cyprus E4 map is stored on this device.')
+              ? l10n.t('The detailed E4 - Cyprus map is stored on this device.')
               : failed
               ? l10n.t(state.message ?? 'Please try the download again.')
               : l10n.t(
-                  'Downloads a detailed corridor around the complete Cyprus E4 for use without a connection.',
+                  'Downloads a detailed corridor around the complete E4 - Cyprus for use without a connection.',
                 ),
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium,
@@ -2283,7 +2283,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
                           child: Text(
                             _locationTrackingActive
                                 ? _gpsStatusText(context)
-                                : '${context.l10n.t('Cyprus E4')} · ${widget.formatter.distance(widget.points.last.distanceKm, decimals: 0)}',
+                                : '${context.l10n.t('E4 - Cyprus')} · ${widget.formatter.distance(widget.points.last.distanceKm, decimals: 0)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -3331,7 +3331,7 @@ class _MapStageInfoSheetState extends State<MapStageInfoSheet> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'CYPRUS E4 · ${(endpointLabel ?? l10n.stage(stage.sequence)).toUpperCase()} · ${widget.stageIndex + 1}/${widget.stages.length}',
+                                    '${l10n.t('E4 - Cyprus').toUpperCase()} · ${(endpointLabel ?? l10n.stage(stage.sequence)).toUpperCase()} · ${widget.stageIndex + 1}/${widget.stages.length}',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(

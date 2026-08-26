@@ -23,8 +23,8 @@ const italianTranslations = <String, String>{
   'No email app is available. Opening the EUROTREX website contact form instead.':
       'Nessuna app di posta è disponibile. Verrà aperto il modulo di contatto sul sito web di EUROTREX.',
   'Version': 'Versione',
-  'Crete E4': 'Creta E4',
-  'Peloponnese E4': 'Peloponneso E4',
+  'E4 - Crete': 'E4 - Crete',
+  'E4 - Peloponnese': 'E4 - Peloponnese',
   'Settings': 'Impostazioni',
   'Reverse': 'Inverti',
   'GPS': 'GPS',
@@ -76,10 +76,12 @@ const italianTranslations = <String, String>{
   'Walk from Pafos to Larnaka': 'Cammina da Pafos a Larnaka',
   'Walk from Larnaka to Pafos': 'Cammina da Larnaka a Pafos',
   'CYPRUS · LONG DISTANCE TRAIL': 'CIPRO · SENTIERO A LUNGA PERCORRENZA',
-  'Cyprus E4': 'Cipro E4',
+  'E4 - Cyprus': 'E4 - Cyprus',
   'Pafos Airport': 'Aeroporto di Pafos',
   'Larnaka Airport': 'Aeroporto di Larnaka',
   'Distance': 'Distanza',
+  'Elevation Up': 'Dislivello positivo',
+  'Elevation Down': 'Dislivello negativo',
   'Stages': 'Tappe',
   'High point': 'Punto più alto',
   'Route': 'Percorso',
@@ -211,8 +213,8 @@ const italianTranslations = <String, String>{
   'Stage': 'Tappa',
   'Tap a stage to see its details.':
       'Tocca una tappa per visualizzarne i dettagli.',
-  'The numbers on the left show ascent, descent, stage length, and + distance from the trail.':
-      'I numeri a sinistra mostrano salita, discesa, lunghezza della tappa e, con +, la distanza dal sentiero.',
+  'The numbers on the left show stage length, ascent, descent, and + distance from the trail.':
+      'I numeri a sinistra mostrano lunghezza della tappa, salita, discesa e, con +, la distanza dal sentiero.',
   'Start point': 'Punto di partenza',
   'Finish point': 'Punto di arrivo',
   'From': 'Da',
@@ -224,7 +226,7 @@ const italianTranslations = <String, String>{
   'No services recorded for this stage.':
       'Nessun servizio registrato per questa tappa.',
   'Trail position': 'Posizione sul sentiero',
-  'Following the Cyprus E4': 'Seguendo l’E4 di Cipro',
+  'Following E4 - Cyprus': 'Seguendo l’E4 - Cipro',
   'Route guidance will be available with the offline map.':
       'Le indicazioni del percorso saranno disponibili con la mappa offline.',
   'Available offline': 'Disponibile offline',
@@ -236,8 +238,8 @@ const italianTranslations = <String, String>{
   'Back to stages': 'Torna alle tappe',
   'Take the trail offline': 'Rendi il sentiero disponibile offline',
   'Could not download the trail': 'Impossibile scaricare il sentiero',
-  'Download Cyprus E4 to browse its stages without a connection.':
-      'Scarica l’E4 di Cipro per consultare le tappe senza connessione.',
+  'Download E4 - Cyprus to browse its stages without a connection.':
+      'Scarica l’E4 - Cipro per consultare le tappe senza connessione.',
   'Download trail': 'Scarica sentiero',
   'Lodging': 'Alloggio',
   'Accommodation': 'Alloggi',
@@ -402,11 +404,11 @@ const italianTranslations = <String, String>{
       'Impossibile scaricare la mappa offline. Controlla la connessione e riprova.',
   'The offline map could not be removed.':
       'Impossibile rimuovere la mappa offline.',
-  'The detailed Cyprus E4 map is stored on this device.':
-      'La mappa dettagliata dell’E4 di Cipro è memorizzata su questo dispositivo.',
+  'The detailed E4 - Cyprus map is stored on this device.':
+      'La mappa dettagliata dell’E4 - Cipro è memorizzata su questo dispositivo.',
   'Please try the download again.': 'Prova a scaricarla di nuovo.',
-  'Downloads a detailed corridor around the complete Cyprus E4 for use without a connection.':
-      'Scarica una fascia cartografica dettagliata lungo l’intero E4 di Cipro per utilizzarla senza connessione.',
+  'Downloads a detailed corridor around the complete E4 - Cyprus for use without a connection.':
+      'Scarica una fascia cartografica dettagliata lungo l’intero E4 - Cipro per utilizzarla senza connessione.',
   'Download the route data first.': 'Scarica prima i dati del percorso.',
   'The route, stages and elevation will remain offline. Only the offline map will be removed.':
       'Il percorso, le tappe e l’altimetria resteranno disponibili offline. Verrà rimossa solo la mappa offline.',

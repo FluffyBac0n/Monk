@@ -108,9 +108,9 @@ void main() {
     );
     expect(
       italian.t(
-        'The numbers on the left show ascent, descent, stage length, and + distance from the trail.',
+        'The numbers on the left show stage length, ascent, descent, and + distance from the trail.',
       ),
-      'I numeri a sinistra mostrano salita, discesa, lunghezza della tappa e, con +, la distanza dal sentiero.',
+      'I numeri a sinistra mostrano lunghezza della tappa, salita, discesa e, con +, la distanza dal sentiero.',
     );
     expect(
       italian.offTrailDistance('240 m'),
@@ -146,9 +146,9 @@ void main() {
     );
     expect(
       french.t(
-        'The numbers on the left show ascent, descent, stage length, and + distance from the trail.',
+        'The numbers on the left show stage length, ascent, descent, and + distance from the trail.',
       ),
-      'Les nombres à gauche indiquent la montée, la descente, la longueur de l’étape et, avec +, la distance par rapport au sentier.',
+      'Les nombres à gauche indiquent la longueur de l’étape, la montée, la descente et, avec +, la distance par rapport au sentier.',
     );
     expect(
       french.offTrailDistance('240 m'),
@@ -170,8 +170,8 @@ void main() {
       'Kofinanziert von der Europäischen Union',
     );
     expect(german.t('Republic of Cyprus'), 'Republik Zypern');
-    expect(german.t('Crete E4'), 'Crete E4');
-    expect(german.t('Peloponnese E4'), 'Peloponnes E4');
+    expect(german.t('E4 - Crete'), 'E4 - Crete');
+    expect(german.t('E4 - Peloponnese'), 'E4 - Peloponnese');
     expect(german.t('OFFLINE TRAIL'), 'OFFLINE-WANDERWEG');
     expect(german.t('Offline access'), 'Offline-Zugriff');
     expect(german.t('Offline map'), 'Offline-Karte');
@@ -222,9 +222,9 @@ void main() {
     );
     expect(
       german.t(
-        'The numbers on the left show ascent, descent, stage length, and + distance from the trail.',
+        'The numbers on the left show stage length, ascent, descent, and + distance from the trail.',
       ),
-      'Links siehst du Aufstieg, Abstieg, Etappenlänge und mit + die Entfernung vom Weg.',
+      'Links siehst du Etappenlänge, Aufstieg, Abstieg und mit + die Entfernung vom Weg.',
     );
     expect(german.t('Filter accommodation'), 'Unterkünfte filtern');
     expect(german.t('Bookable online'), 'Online buchbar');
@@ -296,8 +296,8 @@ void main() {
       'Cofinanciado por la Unión Europea',
     );
     expect(spanish.t('Republic of Cyprus'), 'República de Chipre');
-    expect(spanish.t('Crete E4'), 'Crete E4');
-    expect(spanish.t('Peloponnese E4'), 'Peloponeso E4');
+    expect(spanish.t('E4 - Crete'), 'E4 - Crete');
+    expect(spanish.t('E4 - Peloponnese'), 'E4 - Peloponnese');
     expect(spanish.t('Offline access'), 'Acceso sin conexión');
     expect(spanish.t('Offline map'), 'Mapa sin conexión');
     expect(spanish.t('Map unavailable'), 'Mapa no disponible');
@@ -324,9 +324,9 @@ void main() {
     );
     expect(
       spanish.t(
-        'The numbers on the left show ascent, descent, stage length, and + distance from the trail.',
+        'The numbers on the left show stage length, ascent, descent, and + distance from the trail.',
       ),
-      'Los números de la izquierda muestran ascenso, descenso, longitud de la etapa y la distancia a la ruta indicada con +.',
+      'Los números de la izquierda muestran longitud de la etapa, ascenso, descenso y la distancia a la ruta indicada con +.',
     );
     expect(spanish.t('Show accommodation'), 'Mostrar alojamientos');
     expect(spanish.t('Hide accommodation'), 'Ocultar alojamientos');

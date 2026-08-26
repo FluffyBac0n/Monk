@@ -149,6 +149,22 @@ void main() {
       find.byKey(const ValueKey('stage-length-66-spilia')),
       findsOneWidget,
     );
+    expect(
+      tester.getCenter(find.byKey(const ValueKey('stage-length-66-spilia'))).dy,
+      lessThan(
+        tester
+            .getCenter(find.byKey(const ValueKey('stage-ascent-66-spilia')))
+            .dy,
+      ),
+    );
+    expect(
+      tester.getCenter(find.byKey(const ValueKey('stage-ascent-66-spilia'))).dy,
+      lessThan(
+        tester
+            .getCenter(find.byKey(const ValueKey('stage-descent-66-spilia')))
+            .dy,
+      ),
+    );
     final stageDistance = find.byKey(
       const ValueKey('stage-card-distance-66-spilia'),
     );
@@ -162,7 +178,7 @@ void main() {
         of: stageDistance,
         matching: find.byKey(const ValueKey('stage-progress-track')),
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.byKey(const ValueKey('stage-card-altitude-66-spilia')),
@@ -200,7 +216,7 @@ void main() {
       find.byKey(const ValueKey('detour-detail-teishia-tis-madaris')),
       findsOneWidget,
     );
-    expect(find.text('CYPRUS E4 · DETOUR'), findsOneWidget);
+    expect(find.text('E4 - CYPRUS · DETOUR'), findsOneWidget);
     expect(find.text('Teishia tis Madaris'), findsWidgets);
 
     Navigator.of(

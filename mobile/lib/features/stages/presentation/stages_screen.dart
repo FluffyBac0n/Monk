@@ -61,7 +61,7 @@ const _filterBlueTeal = Color(0xFF356F7A);
 const _timelineLineColor = Color(0xFFB9BDB8);
 const _timelineLeftInset = 12.0;
 const _timelineGutterWidth = 108.0;
-const _trailHeaderExpandedHeight = 72.0;
+const _trailHeaderExpandedHeight = 56.0;
 
 Future<void> _syncOfflineTrailData(
   WidgetRef ref, {
@@ -1183,6 +1183,7 @@ class _StageBottomNavigationBar extends StatelessWidget {
           _StageBottomAction(
             key: const ValueKey('stage-bottom-planner'),
             icon: Icons.route_rounded,
+            showPlannerTrailIcon: true,
             label: l10n.t('Route planner'),
             visibleLabel: l10n.t('Planner'),
             onTap: onPlanner,
@@ -1241,6 +1242,7 @@ class _StageBottomAction extends StatelessWidget {
     this.isPrimary = false,
     this.badgeCount = 0,
     this.showReverseTrailIcon = false,
+    this.showPlannerTrailIcon = false,
     super.key,
   });
 
@@ -1253,6 +1255,7 @@ class _StageBottomAction extends StatelessWidget {
   final bool isPrimary;
   final int badgeCount;
   final bool showReverseTrailIcon;
+  final bool showPlannerTrailIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -1262,9 +1265,16 @@ class _StageBottomAction extends StatelessWidget {
       onTap?.call();
     }
 
-    Widget buildIcon(double size) => showReverseTrailIcon
-        ? _ReverseTrailIcon(color: foreground, size: size + 4)
-        : Icon(icon, color: foreground, size: size);
+    Widget buildIcon(double size) {
+      if (showReverseTrailIcon) {
+        return _ReverseTrailIcon(color: foreground, size: size + 4);
+      }
+      if (showPlannerTrailIcon) {
+        return _PlannerTrailIcon(color: foreground, size: size + 4);
+      }
+      return Icon(icon, color: foreground, size: size);
+    }
+
     return Expanded(
       child: Tooltip(
         message: label,
@@ -1389,6 +1399,85 @@ class _ReverseTrailIcon extends StatelessWidget {
   }
 }
 
+class _PlannerTrailIcon extends StatelessWidget {
+  const _PlannerTrailIcon({required this.color, required this.size});
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      key: const ValueKey('planner-zigzag-route-icon'),
+      dimension: size,
+      child: CustomPaint(painter: _PlannerTrailIconPainter(color)),
+    );
+  }
+}
+
+class _PlannerTrailIconPainter extends CustomPainter {
+  const _PlannerTrailIconPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stages = <Offset>[
+      Offset(size.width * 0.14, size.height * 0.84),
+      Offset(size.width * 0.67, size.height * 0.66),
+      Offset(size.width * 0.28, size.height * 0.43),
+    ];
+    final finish = Offset(size.width * 0.67, size.height * 0.21);
+    final routePoints = [...stages, finish];
+    final routePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    for (var segment = 0; segment < routePoints.length - 1; segment++) {
+      final start = routePoints[segment];
+      final end = routePoints[segment + 1];
+      final distance = (end - start).distance;
+      final dots = (distance / (size.width * 0.10)).ceil();
+      for (var dot = 1; dot < dots; dot++) {
+        canvas.drawCircle(
+          Offset.lerp(start, end, dot / dots)!,
+          size.width * 0.026,
+          routePaint,
+        );
+      }
+    }
+
+    final stopPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final stopOutlinePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.1;
+    for (final stage in stages) {
+      canvas.drawCircle(stage, size.width * 0.058, stopOutlinePaint);
+      canvas.drawCircle(stage, size.width * 0.020, stopPaint);
+    }
+
+    final flagPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.25
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final flag = Path()
+      ..moveTo(finish.dx, finish.dy)
+      ..lineTo(finish.dx, size.height * 0.04)
+      ..lineTo(size.width * 0.90, size.height * 0.12)
+      ..lineTo(finish.dx, size.height * 0.20);
+    canvas.drawPath(flag, flagPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PlannerTrailIconPainter oldDelegate) {
+    return oldDelegate.color != color;
+  }
+}
+
 class _TrailAppBar extends StatelessWidget {
   const _TrailAppBar();
 
@@ -1409,7 +1498,7 @@ class _TrailAppBar extends StatelessWidget {
         children: [
           Flexible(
             child: Text(
-              l10n.t('Cyprus E4'),
+              l10n.t('E4 - Cyprus'),
               key: const ValueKey('trail-compact-title'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1429,33 +1518,6 @@ class _TrailAppBar extends StatelessWidget {
             key: ValueKey('stages-compact-header-gradient'),
             decoration: BoxDecoration(
               gradient: EurotrexChromeTheme.navigationGradient,
-            ),
-          ),
-          FlexibleSpaceBar(
-            background: Stack(
-              fit: StackFit.expand,
-              children: [
-                ExcludeSemantics(
-                  child: Image.asset(
-                    'assets/branding/cyprus_e4_forest.jpg',
-                    key: const ValueKey('stages-header-watermark-cyprus-e4'),
-                    fit: BoxFit.cover,
-                    alignment: Alignment.center,
-                    filterQuality: FilterQuality.medium,
-                  ),
-                ),
-                const DecoratedBox(
-                  key: ValueKey('stages-header-watermark-fade-cyprus-e4'),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0x80000000), Color(0x52000000)],
-                      stops: [0.05, 1],
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
         ],
@@ -2189,7 +2251,6 @@ class _DetourMainStageCard extends StatelessWidget {
                           child: _StageCumulativeDistance(
                             key: ValueKey('stage-card-distance-${stage.id}'),
                             distanceKm: distanceFromStart,
-                            totalDistanceKm: totalDistanceKm,
                             formatter: formatter,
                           ),
                         ),
@@ -2243,6 +2304,15 @@ class _DetourMainStageSideMetrics extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         _StageSideMetric(
+          key: ValueKey('stage-length-${stage.id}'),
+          icon: Icons.straighten_rounded,
+          value: legMetrics.lengthKm == null
+              ? '—'
+              : _compactMeasurement(formatter.distance(legMetrics.lengthKm!)),
+          tooltip: context.l10n.t('Stage length'),
+          color: _filterBlueTeal,
+        ),
+        _StageSideMetric(
           key: ValueKey('stage-ascent-${stage.id}'),
           icon: Icons.arrow_upward_rounded,
           value: legMetrics.ascentM == null
@@ -2259,15 +2329,6 @@ class _DetourMainStageSideMetrics extends StatelessWidget {
               : _compactMeasurement(formatter.altitude(legMetrics.descentM!)),
           tooltip: context.l10n.t('Descent'),
           color: _red,
-        ),
-        _StageSideMetric(
-          key: ValueKey('stage-length-${stage.id}'),
-          icon: Icons.straighten_rounded,
-          value: legMetrics.lengthKm == null
-              ? '—'
-              : _compactMeasurement(formatter.distance(legMetrics.lengthKm!)),
-          tooltip: context.l10n.t('Stage length'),
-          color: _filterBlueTeal,
         ),
         if (stageIsOnTrail(stage) == false) ...[
           const SizedBox(height: 2),
@@ -2443,6 +2504,15 @@ class _StageTimelineRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         _StageSideMetric(
+          key: ValueKey('stage-length-${stage.id}'),
+          icon: Icons.straighten_rounded,
+          value: segmentLengthKm == null
+              ? '—'
+              : _compactMeasurement(formatter.distance(segmentLengthKm!)),
+          tooltip: context.l10n.t('Stage length'),
+          color: _filterBlueTeal,
+        ),
+        _StageSideMetric(
           key: ValueKey('stage-ascent-${stage.id}'),
           icon: Icons.arrow_upward_rounded,
           value: ascentM == null
@@ -2459,15 +2529,6 @@ class _StageTimelineRow extends StatelessWidget {
               : _compactMeasurement(formatter.altitude(descentM!)),
           tooltip: context.l10n.t('Descent'),
           color: _red,
-        ),
-        _StageSideMetric(
-          key: ValueKey('stage-length-${stage.id}'),
-          icon: Icons.straighten_rounded,
-          value: segmentLengthKm == null
-              ? '—'
-              : _compactMeasurement(formatter.distance(segmentLengthKm!)),
-          tooltip: context.l10n.t('Stage length'),
-          color: _filterBlueTeal,
         ),
       ],
     );
@@ -2825,8 +2886,6 @@ class _StageTimelineRow extends StatelessWidget {
                                                       'stage-card-distance-${stage.id}',
                                                     ),
                                                     distanceKm: distanceKm!,
-                                                    totalDistanceKm:
-                                                        totalDistanceKm,
                                                     formatter: formatter,
                                                   ),
                                                 ),
@@ -3085,45 +3144,17 @@ class _StageTrailDistanceLabel extends StatelessWidget {
 class _StageCumulativeDistance extends StatelessWidget {
   const _StageCumulativeDistance({
     required this.distanceKm,
-    required this.totalDistanceKm,
     required this.formatter,
     super.key,
   });
 
   final double distanceKm;
-  final double totalDistanceKm;
   final MeasurementFormatter formatter;
 
   @override
   Widget build(BuildContext context) {
     final label = context.l10n.t('From Start');
     final distance = formatter.distance(distanceKm);
-    final totalDistance = formatter.distance(totalDistanceKm);
-    final progress = totalDistanceKm.isFinite && totalDistanceKm > 0
-        ? (distanceKm / totalDistanceKm).clamp(0.0, 1.0)
-        : 0.0;
-    final progressTrack = ClipRRect(
-      key: const ValueKey('stage-progress-track'),
-      borderRadius: BorderRadius.circular(999),
-      child: SizedBox(
-        height: 3,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const ColoredBox(color: Color(0xFFE0E4E1)),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FractionallySizedBox(
-                key: const ValueKey('stage-progress-fill'),
-                widthFactor: progress,
-                heightFactor: 1,
-                child: const ColoredBox(color: _green),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
     final distanceLabel = Text(
       distance,
       style: const TextStyle(
@@ -3136,21 +3167,15 @@ class _StageCumulativeDistance extends StatelessWidget {
     return Tooltip(
       message: label,
       child: Semantics(
-        label: '$label: $distance / $totalDistance',
+        label: '$label: $distance',
         excludeSemantics: true,
-        child: Row(
-          children: [
-            Expanded(flex: 4, child: progressTrack),
-            const SizedBox(width: 4),
-            Flexible(
-              flex: 2,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: distanceLabel,
-              ),
-            ),
-          ],
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: distanceLabel,
+          ),
         ),
       ),
     );
@@ -3179,7 +3204,7 @@ class _StageMetricsHint extends StatelessWidget {
           Expanded(
             child: Text(
               context.l10n.t(
-                'The numbers on the left show ascent, descent, stage length, and + distance from the trail.',
+                'The numbers on the left show stage length, ascent, descent, and + distance from the trail.',
               ),
               style: const TextStyle(
                 color: _ink,
@@ -3399,7 +3424,7 @@ class DetourDetailScreen extends ConsumerWidget {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
             Text(
-              'CYPRUS E4 · ${l10n.t('Detour').toUpperCase()}',
+              '${l10n.t('E4 - Cyprus').toUpperCase()} · ${l10n.t('Detour').toUpperCase()}',
               style: const TextStyle(
                 fontSize: 9,
                 color: Colors.white60,
@@ -3930,7 +3955,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
             Text(
-              'CYPRUS E4 · ${(endpointLabel ?? l10n.stage(stage.sequence)).toUpperCase()} · ${index + 1}/${widget.stages.length}',
+              '${l10n.t('E4 - Cyprus').toUpperCase()} · ${(endpointLabel ?? l10n.stage(stage.sequence)).toUpperCase()} · ${index + 1}/${widget.stages.length}',
               style: const TextStyle(
                 fontSize: 9,
                 color: Colors.white60,
@@ -6438,7 +6463,7 @@ class _EmptyState extends ConsumerWidget {
               l10n.t(
                 downloadFailed
                     ? 'Check your connection and try again.'
-                    : 'Download Cyprus E4 to browse its stages without a connection.',
+                    : 'Download E4 - Cyprus to browse its stages without a connection.',
               ),
               textAlign: TextAlign.center,
             ),
