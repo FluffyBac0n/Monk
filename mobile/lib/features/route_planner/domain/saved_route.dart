@@ -73,8 +73,9 @@ class SavedRoute {
     required this.finishStageName,
     required this.minimumDailyDistanceKm,
     required this.maximumDailyDistanceKm,
-    required this.accommodationBudgetEur,
-    required this.allowCamping,
+    required this.minimumAccommodationPriceEur,
+    required this.maximumAccommodationPriceEur,
+    required this.overnightPreference,
     required this.days,
     required this.estimatedAccommodationCostEur,
     required this.unknownPriceNights,
@@ -90,8 +91,9 @@ class SavedRoute {
   final String finishStageName;
   final double minimumDailyDistanceKm;
   final double maximumDailyDistanceKm;
-  final double? accommodationBudgetEur;
-  final bool allowCamping;
+  final double? minimumAccommodationPriceEur;
+  final double? maximumAccommodationPriceEur;
+  final RouteOvernightPreference overnightPreference;
   final List<SavedRouteDay> days;
   final double estimatedAccommodationCostEur;
   final int unknownPriceNights;
@@ -124,8 +126,9 @@ class SavedRoute {
     finishStageName: plan.days.last.finish.name,
     minimumDailyDistanceKm: request.minimumDailyDistanceKm,
     maximumDailyDistanceKm: request.maximumDailyDistanceKm,
-    accommodationBudgetEur: request.accommodationBudgetEur,
-    allowCamping: request.allowCamping,
+    minimumAccommodationPriceEur: request.minimumAccommodationPriceEur,
+    maximumAccommodationPriceEur: request.maximumAccommodationPriceEur,
+    overnightPreference: request.overnightPreference,
     days: [
       for (final day in plan.days)
         SavedRouteDay(
@@ -158,8 +161,9 @@ class SavedRoute {
     'finishStageName': finishStageName,
     'minimumDailyDistanceKm': minimumDailyDistanceKm,
     'maximumDailyDistanceKm': maximumDailyDistanceKm,
-    'accommodationBudgetEur': accommodationBudgetEur,
-    'allowCamping': allowCamping,
+    'minimumAccommodationPriceEur': minimumAccommodationPriceEur,
+    'maximumAccommodationPriceEur': maximumAccommodationPriceEur,
+    'overnightPreference': overnightPreference.name,
     'days': [for (final day in days) day.toJson()],
     'estimatedAccommodationCostEur': estimatedAccommodationCostEur,
     'unknownPriceNights': unknownPriceNights,
@@ -168,7 +172,11 @@ class SavedRoute {
   factory SavedRoute.fromJson(Map<String, Object?> json) => SavedRoute(
     id: json['id']! as String,
     createdAt: DateTime.parse(json['createdAt']! as String),
-    style: RoutePlanStyle.values.byName(json['style']! as String),
+    style: switch (json['style']! as String) {
+      'budget' => RoutePlanStyle.relaxed,
+      'comfort' => RoutePlanStyle.adventurous,
+      final value => RoutePlanStyle.values.byName(value),
+    },
     direction: TrailDirection.values.byName(json['direction']! as String),
     startStageId: json['startStageId']! as String,
     startStageName: json['startStageName']! as String,
@@ -176,9 +184,15 @@ class SavedRoute {
     finishStageName: json['finishStageName']! as String,
     minimumDailyDistanceKm: (json['minimumDailyDistanceKm'] as num).toDouble(),
     maximumDailyDistanceKm: (json['maximumDailyDistanceKm'] as num).toDouble(),
-    accommodationBudgetEur: (json['accommodationBudgetEur'] as num?)
+    minimumAccommodationPriceEur: (json['minimumAccommodationPriceEur'] as num?)
         ?.toDouble(),
-    allowCamping: json['allowCamping']! as bool,
+    maximumAccommodationPriceEur: (json['maximumAccommodationPriceEur'] as num?)
+        ?.toDouble(),
+    overnightPreference: switch (json['overnightPreference']) {
+      final String value => RouteOvernightPreference.values.byName(value),
+      _ when json['allowCamping'] == true => RouteOvernightPreference.either,
+      _ => RouteOvernightPreference.accommodation,
+    },
     days: [
       for (final value in json['days']! as List<Object?>)
         SavedRouteDay.fromJson(

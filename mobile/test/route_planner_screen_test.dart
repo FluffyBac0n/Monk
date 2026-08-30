@@ -14,6 +14,10 @@ void main() {
   testWidgets('planner saves a choice through the three-step wizard', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final database = _PlannerDatabase();
     await tester.pumpWidget(
       ProviderScope(
@@ -41,25 +45,72 @@ void main() {
     expect(find.byKey(const ValueKey('route-planner-step-1')), findsOneWidget);
     expect(find.byKey(const ValueKey('route-planner-step-2')), findsOneWidget);
     expect(find.byKey(const ValueKey('route-planner-step-3')), findsOneWidget);
-    expect(find.byKey(const ValueKey('route-planner-start')), findsOneWidget);
-    expect(find.byKey(const ValueKey('route-planner-finish')), findsOneWidget);
+    expect(find.byKey(const ValueKey('route-planner-days')), findsOneWidget);
+    expect(find.byKey(const ValueKey('route-planner-goal')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('route-planner-start-preference')),
+      findsOneWidget,
+    );
+
+    for (var index = 0; index < 3; index++) {
+      await tester.tap(find.byKey(const ValueKey('route-planner-days-minus')));
+      await tester.pump();
+    }
+    expect(find.text('2 days'), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('route-planner-start-preference')),
+        matching: find.text('Larnaka'),
+      ),
+    );
 
     await tester.tap(find.byKey(const ValueKey('route-planner-route-next')));
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey('route-planner-minimum-distance')),
+      find.byKey(const ValueKey('route-planner-pace-slider')),
       findsOneWidget,
     );
-
-    final compareButton = find.byKey(const ValueKey('route-planner-compare'));
-    await tester.ensureVisible(compareButton);
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('route-planner-pace-unit')),
+        matching: find.text('km'),
+      ),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(compareButton);
+    expect(find.text('25 km per day'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('route-planner-pace-next')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('route-planner-price-range')),
+      findsOneWidget,
+    );
+    final stayType = find.byKey(const ValueKey('route-planner-stay-type'));
+    await tester.tap(
+      find.descendant(of: stayType, matching: find.text('Camping')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('route-planner-price-range')),
+      findsNothing,
+    );
+    await tester.tap(
+      find.descendant(of: stayType, matching: find.text('Accommodation')),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('route-option-budget')), findsOneWidget);
+    final buildButton = find.byKey(const ValueKey('route-planner-build'));
+    await tester.ensureVisible(buildButton);
+    await tester.pumpAndSettle();
+    await tester.tap(buildButton);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('route-option-relaxed')), findsOneWidget);
     expect(find.byKey(const ValueKey('route-option-balanced')), findsOneWidget);
-    expect(find.byKey(const ValueKey('route-option-comfort')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('route-option-adventurous')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const ValueKey('route-option-balanced')));
     await tester.pumpAndSettle();
@@ -78,6 +129,7 @@ void main() {
     expect(find.byKey(const ValueKey('saved-routes-empty')), findsNothing);
     expect(find.byKey(const ValueKey('route-planner-add')), findsOneWidget);
     expect(database.settings, contains('savedRoutesV1'));
+    expect(database.settings['savedRoutesV1'], contains('larnakaToPafos'));
 
     await tester.tap(find.byIcon(Icons.delete_outline_rounded));
     await tester.pumpAndSettle();

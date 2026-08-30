@@ -168,6 +168,38 @@ const _translations = <String, Map<String, String>>{
     'Route': 'Route',
     'Planner': 'Planer',
     'Route planner': 'Routenplaner',
+    'Tailored E4 plan': 'Individueller E4-Plan',
+    'Trip': 'Reise',
+    'Pace': 'Tempo',
+    'Stay': 'Übernachtung',
+    'Your trip': 'Deine Reise',
+    'How many walking days do you have?': 'Wie viele Wandertage hast du?',
+    'days': 'Tage',
+    'What would you like to walk?': 'Was möchtest du wandern?',
+    'Best section': 'Bester Abschnitt',
+    'Whole E4': 'Gesamter E4',
+    'Where would you prefer to start?': 'Wo möchtest du beginnen?',
+    'Best direction': 'Beste Richtung',
+    'Pafos': 'Pafos',
+    'Larnaka': 'Larnaka',
+    'We will compare both trail directions and choose the better fit.':
+        'Wir vergleichen beide Wegrichtungen und wählen die passendere.',
+    'Your daily pace': 'Dein tägliches Tempo',
+    'How do you prefer to set your pace?':
+        'Wie möchtest du dein Tempo festlegen?',
+    'Hours': 'Stunden',
+    'hours': 'Stunden',
+    'per day': 'pro Tag',
+    'Walking time includes an allowance for climbing. Each option adjusts the effort around this target.':
+        'Die Gehzeit berücksichtigt Anstiege. Jede Option passt die Belastung an dieses Ziel an.',
+    'Overnight stays': 'Übernachtungen',
+    'Either': 'Beides',
+    'Price per night': 'Preis pro Nacht',
+    'The range applies per room, per night, using listed prices.':
+        'Die Spanne gilt pro Zimmer und Nacht auf Basis der angegebenen Preise.',
+    'Build my plans': 'Meine Pläne erstellen',
+    'Relaxed': 'Entspannt',
+    'Adventurous': 'Abenteuerlich',
     'My routes': 'Meine Routen',
     'New route': 'Neue Route',
     'Add route': 'Route hinzufügen',
@@ -285,6 +317,13 @@ const _translations = <String, Map<String, String>>{
     'Estimated walking time': 'Geschätzte Gehzeit',
     'Naismith estimate based on distance and ascent. Breaks and terrain are not included.':
         'Schätzung nach Naismith basierend auf Distanz und Anstieg. Pausen und Gelände sind nicht berücksichtigt.',
+    "Naismith's Rule estimates walking time by allowing:":
+        'Die Naismith-Regel schätzt die Gehzeit anhand folgender Richtwerte:',
+    '1 hour for every 5 km of distance': '1 Stunde je 5 km Strecke',
+    '1 extra hour for every 600 m of ascent':
+        '1 zusätzliche Stunde je 600 Höhenmeter',
+    'Descent, terrain difficulty, breaks, weather, pack weight, and individual fitness are not included. Actual walking time may vary.':
+        'Abstieg, Schwierigkeit des Geländes, Pausen, Wetter, Rucksackgewicht und individuelle Fitness werden nicht berücksichtigt. Die tatsächliche Gehzeit kann abweichen.',
     'h': 'Std.',
     'min': 'Min.',
     'Preparing the offline elevation profile…':
@@ -632,6 +671,37 @@ const _translations = <String, Map<String, String>>{
     'Route': 'Ruta',
     'Planner': 'Planificador',
     'Route planner': 'Planificador de ruta',
+    'Tailored E4 plan': 'Plan E4 personalizado',
+    'Trip': 'Viaje',
+    'Pace': 'Ritmo',
+    'Stay': 'Estancia',
+    'Your trip': 'Tu viaje',
+    'How many walking days do you have?': '¿Cuántos días de caminata tienes?',
+    'days': 'días',
+    'What would you like to walk?': '¿Qué te gustaría recorrer?',
+    'Best section': 'Mejor tramo',
+    'Whole E4': 'E4 completa',
+    'Where would you prefer to start?': '¿Dónde prefieres empezar?',
+    'Best direction': 'Mejor dirección',
+    'Pafos': 'Pafos',
+    'Larnaka': 'Lárnaca',
+    'We will compare both trail directions and choose the better fit.':
+        'Compararemos ambos sentidos del sendero y elegiremos el más adecuado.',
+    'Your daily pace': 'Tu ritmo diario',
+    'How do you prefer to set your pace?': '¿Cómo prefieres definir tu ritmo?',
+    'Hours': 'Horas',
+    'hours': 'horas',
+    'per day': 'al día',
+    'Walking time includes an allowance for climbing. Each option adjusts the effort around this target.':
+        'El tiempo de caminata incluye un margen para las subidas. Cada opción ajusta el esfuerzo a este objetivo.',
+    'Overnight stays': 'Pernoctaciones',
+    'Either': 'Cualquiera',
+    'Price per night': 'Precio por noche',
+    'The range applies per room, per night, using listed prices.':
+        'El rango se aplica por habitación y noche según los precios indicados.',
+    'Build my plans': 'Crear mis planes',
+    'Relaxed': 'Relajado',
+    'Adventurous': 'Aventurero',
     'My routes': 'Mis rutas',
     'New route': 'Nueva ruta',
     'Add route': 'Añadir ruta',
@@ -750,6 +820,13 @@ const _translations = <String, Map<String, String>>{
     'Estimated walking time': 'Tiempo estimado de caminata',
     'Naismith estimate based on distance and ascent. Breaks and terrain are not included.':
         'Estimación de Naismith basada en la distancia y el ascenso. No incluye descansos ni terreno.',
+    "Naismith's Rule estimates walking time by allowing:":
+        'La regla de Naismith estima el tiempo de caminata considerando:',
+    '1 hour for every 5 km of distance': '1 hora por cada 5 km de distancia',
+    '1 extra hour for every 600 m of ascent':
+        '1 hora adicional por cada 600 m de ascenso',
+    'Descent, terrain difficulty, breaks, weather, pack weight, and individual fitness are not included. Actual walking time may vary.':
+        'No se incluyen el descenso, la dificultad del terreno, los descansos, el clima, el peso de la mochila ni la condición física individual. El tiempo real puede variar.',
     'h': 'h',
     'min': 'min',
     'Preparing the offline elevation profile…':

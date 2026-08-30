@@ -2,7 +2,9 @@ import '../../accommodation/domain/lodging.dart';
 import '../../stages/domain/stage.dart';
 import '../../trail/domain/trail_direction.dart';
 
-enum RoutePlanStyle { budget, balanced, comfort }
+enum RoutePlanStyle { relaxed, balanced, adventurous }
+
+enum RouteOvernightPreference { accommodation, camping, either }
 
 class RoutePlanRequest {
   const RoutePlanRequest({
@@ -10,8 +12,11 @@ class RoutePlanRequest {
     required this.finishStageId,
     required this.minimumDailyDistanceKm,
     required this.maximumDailyDistanceKm,
-    required this.allowCamping,
-    this.accommodationBudgetEur,
+    this.maximumDailyWalkingMinutes,
+    this.walkingDays,
+    this.overnightPreference = RouteOvernightPreference.accommodation,
+    this.minimumAccommodationPriceEur,
+    this.maximumAccommodationPriceEur,
     this.style = RoutePlanStyle.balanced,
   });
 
@@ -19,9 +24,18 @@ class RoutePlanRequest {
   final String finishStageId;
   final double minimumDailyDistanceKm;
   final double maximumDailyDistanceKm;
-  final bool allowCamping;
-  final double? accommodationBudgetEur;
+  final int? maximumDailyWalkingMinutes;
+  final int? walkingDays;
+  final RouteOvernightPreference overnightPreference;
+  final double? minimumAccommodationPriceEur;
+  final double? maximumAccommodationPriceEur;
   final RoutePlanStyle style;
+
+  bool get allowsAccommodation =>
+      overnightPreference != RouteOvernightPreference.camping;
+
+  bool get allowsCamping =>
+      overnightPreference != RouteOvernightPreference.accommodation;
 }
 
 class RoutePlanDay {
@@ -111,10 +125,10 @@ RoutePlan? buildDeterministicRoutePlan({
   final states = List.generate(routeStages.length, (_) => <_PlannerState>[]);
   states[0].add(const _PlannerState(score: 0, knownCostEur: 0, legs: []));
   final targetDistance = switch (request.style) {
-    RoutePlanStyle.budget => request.maximumDailyDistanceKm,
+    RoutePlanStyle.relaxed => request.minimumDailyDistanceKm,
     RoutePlanStyle.balanced =>
       (request.minimumDailyDistanceKm + request.maximumDailyDistanceKm) / 2,
-    RoutePlanStyle.comfort => request.minimumDailyDistanceKm,
+    RoutePlanStyle.adventurous => request.maximumDailyDistanceKm,
   };
 
   for (
@@ -123,6 +137,9 @@ RoutePlan? buildDeterministicRoutePlan({
     sourceIndex++
   ) {
     for (final sourceState in states[sourceIndex]) {
+      if (request.walkingDays case final walkingDays?) {
+        if (sourceState.legs.length >= walkingDays) continue;
+      }
       for (
         var destinationIndex = sourceIndex + 1;
         destinationIndex < routeStages.length;
@@ -137,23 +154,6 @@ RoutePlan? buildDeterministicRoutePlan({
         if (distance + 0.0001 < request.minimumDailyDistanceKm) continue;
 
         final isFinalDestination = destinationIndex == routeStages.length - 1;
-        final budget = request.accommodationBudgetEur;
-        final stop = _resolveOvernightStop(
-          stage: routeStages[destinationIndex],
-          lodgings:
-              lodgingsByStage[routeStages[destinationIndex].id] ?? const [],
-          allowCamping: request.allowCamping,
-          isFinalDestination: isFinalDestination,
-          style: request.style,
-          maximumCostEur: budget == null
-              ? null
-              : budget - sourceState.knownCostEur,
-        );
-        if (stop == null) continue;
-
-        final nextKnownCost = sourceState.knownCostEur + (stop.costEur ?? 0);
-        if (budget != null && nextKnownCost > budget + 0.0001) continue;
-
         final effort = _effortBetween(
           orderedStages: routeStages,
           sourceIndex: sourceIndex,
@@ -161,23 +161,40 @@ RoutePlan? buildDeterministicRoutePlan({
           direction: direction,
         );
         final walkingMinutes = (distance * 12 + effort.ascentM / 10).round();
+        final maximumWalkingMinutes = request.maximumDailyWalkingMinutes;
+        if (maximumWalkingMinutes != null &&
+            walkingMinutes > maximumWalkingMinutes) {
+          continue;
+        }
+        final stop = _resolveOvernightStop(
+          stage: routeStages[destinationIndex],
+          lodgings:
+              lodgingsByStage[routeStages[destinationIndex].id] ?? const [],
+          preference: request.overnightPreference,
+          isFinalDestination: isFinalDestination,
+          style: request.style,
+          minimumPriceEur: request.minimumAccommodationPriceEur,
+          maximumPriceEur: request.maximumAccommodationPriceEur,
+        );
+        if (stop == null) continue;
+
+        final nextKnownCost = sourceState.knownCostEur + (stop.costEur ?? 0);
         final distanceDelta = distance - targetDistance;
         final hasUnknownPrice = stop.costEur == null && !isFinalDestination;
         final legScore = switch (request.style) {
-          RoutePlanStyle.budget =>
-            distanceDelta * distanceDelta * 0.08 +
-                (stop.costEur ?? 0) * 4 +
-                (hasUnknownPrice ? 80 : 0) +
-                (stop.usesCamping ? 20 : 0),
-          RoutePlanStyle.balanced =>
-            distanceDelta * distanceDelta +
-                (hasUnknownPrice ? 4 : 0) +
-                (stop.costEur ?? 0) * 0.002,
-          RoutePlanStyle.comfort =>
+          RoutePlanStyle.relaxed =>
             distanceDelta * distanceDelta * 1.5 +
                 stop.comfortPenalty +
                 (hasUnknownPrice ? 35 : 0) +
                 (stop.usesCamping ? 120 : 0),
+          RoutePlanStyle.balanced =>
+            distanceDelta * distanceDelta +
+                (hasUnknownPrice ? 4 : 0) +
+                (stop.costEur ?? 0) * 0.002,
+          RoutePlanStyle.adventurous =>
+            distanceDelta * distanceDelta * 0.7 +
+                (hasUnknownPrice ? 12 : 0) +
+                (stop.usesCamping ? -8 : 0),
         };
         final score = sourceState.score + legScore;
         final candidate = _PlannerState(
@@ -199,12 +216,16 @@ RoutePlan? buildDeterministicRoutePlan({
         final destinationStates = states[destinationIndex];
         final isDominated = destinationStates.any(
           (existing) =>
+              (request.walkingDays == null ||
+                  existing.legs.length == candidate.legs.length) &&
               existing.score <= candidate.score &&
               existing.knownCostEur <= candidate.knownCostEur,
         );
         if (isDominated) continue;
         destinationStates.removeWhere(
           (existing) =>
+              (request.walkingDays == null ||
+                  existing.legs.length == candidate.legs.length) &&
               candidate.score <= existing.score &&
               candidate.knownCostEur <= existing.knownCostEur,
         );
@@ -213,9 +234,14 @@ RoutePlan? buildDeterministicRoutePlan({
     }
   }
 
-  if (states.last.isEmpty) return null;
-  states.last.sort((left, right) => left.score.compareTo(right.score));
-  final result = states.last.first;
+  final completedStates = request.walkingDays == null
+      ? states.last
+      : states.last
+            .where((state) => state.legs.length == request.walkingDays)
+            .toList(growable: false);
+  if (completedStates.isEmpty) return null;
+  completedStates.sort((left, right) => left.score.compareTo(right.score));
+  final result = completedStates.first;
   final days = <RoutePlanDay>[
     for (var index = 0; index < result.legs.length; index++)
       RoutePlanDay(
@@ -277,10 +303,11 @@ double? _distanceBetween(TrailStage start, TrailStage finish) {
 _OvernightStop? _resolveOvernightStop({
   required TrailStage stage,
   required List<Lodging> lodgings,
-  required bool allowCamping,
+  required RouteOvernightPreference preference,
   required bool isFinalDestination,
   required RoutePlanStyle style,
-  required double? maximumCostEur,
+  required double? minimumPriceEur,
+  required double? maximumPriceEur,
 }) {
   if (isFinalDestination) {
     return const _OvernightStop(
@@ -292,15 +319,19 @@ _OvernightStop? _resolveOvernightStop({
   }
 
   final pricedLodgings =
-      lodgings
-          .where((lodging) {
-            final price = _lodgingPrice(lodging);
-            return price != null &&
-                (maximumCostEur == null || price <= maximumCostEur + 0.0001);
-          })
-          .toList(growable: false)
+      preference == RouteOvernightPreference.camping
+            ? <Lodging>[]
+            : lodgings
+                  .where((lodging) {
+                    return _lodgingMatchesPriceRange(
+                      lodging,
+                      minimumPriceEur: minimumPriceEur,
+                      maximumPriceEur: maximumPriceEur,
+                    );
+                  })
+                  .toList(growable: false)
         ..sort((left, right) {
-          if (style == RoutePlanStyle.comfort) {
+          if (style == RoutePlanStyle.relaxed) {
             final comfortComparison = _lodgingComfortScore(
               left,
             ).compareTo(_lodgingComfortScore(right));
@@ -317,11 +348,17 @@ _OvernightStop? _resolveOvernightStop({
       comfortPenalty: _lodgingComfortScore(lodging),
     );
   }
-  final unpricedLodgings = lodgings
-      .where((lodging) => _lodgingPrice(lodging) == null)
-      .toList(growable: false);
+  final hasPriceFilter = minimumPriceEur != null || maximumPriceEur != null;
+  final unpricedLodgings =
+      preference == RouteOvernightPreference.camping || hasPriceFilter
+      ? <Lodging>[]
+      : lodgings
+            .where((lodging) => _lodgingPrice(lodging) == null)
+            .toList(growable: false);
   if (unpricedLodgings.isNotEmpty ||
-      (stage.services['lodging'] == true && lodgings.isEmpty)) {
+      (!hasPriceFilter &&
+          stage.services['lodging'] == true &&
+          lodgings.isEmpty)) {
     return _OvernightStop(
       lodging: unpricedLodgings.firstOrNull,
       usesCamping: false,
@@ -331,7 +368,8 @@ _OvernightStop? _resolveOvernightStop({
           : _lodgingComfortScore(unpricedLodgings.first),
     );
   }
-  if (allowCamping && stage.services['tent'] == true) {
+  if (preference != RouteOvernightPreference.accommodation &&
+      stage.services['tent'] == true) {
     return const _OvernightStop(
       lodging: null,
       usesCamping: true,
@@ -344,6 +382,19 @@ _OvernightStop? _resolveOvernightStop({
 
 double? _lodgingPrice(Lodging lodging) =>
     lodging.priceMinEur ?? lodging.priceMaxEur;
+
+bool _lodgingMatchesPriceRange(
+  Lodging lodging, {
+  required double? minimumPriceEur,
+  required double? maximumPriceEur,
+}) {
+  final lodgingMinimum = lodging.priceMinEur ?? lodging.priceMaxEur;
+  final lodgingMaximum = lodging.priceMaxEur ?? lodging.priceMinEur;
+  if (lodgingMinimum == null || lodgingMaximum == null) return false;
+  return (minimumPriceEur == null ||
+          lodgingMaximum >= minimumPriceEur - 0.0001) &&
+      (maximumPriceEur == null || lodgingMinimum <= maximumPriceEur + 0.0001);
+}
 
 double _lodgingComfortScore(Lodging lodging) {
   final type = lodging.type?.toLowerCase() ?? '';

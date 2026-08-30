@@ -3995,7 +3995,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: EurotrexPalette.paleBlue),
+                  border: Border.all(color: _stageCardOutline),
                   boxShadow: [
                     BoxShadow(
                       color: EurotrexPalette.navy.withValues(alpha: 0.045),
@@ -4153,6 +4153,7 @@ class StageInfoCards extends StatelessWidget {
                   label: endpointLabel != null
                       ? l10n.t('Trail position')
                       : l10n.t('Stage length'),
+                  dense: endpointLabel == null,
                 ),
               ),
               const SizedBox(width: 12),
@@ -4186,38 +4187,13 @@ class StageInfoCards extends StatelessWidget {
                             ? '—'
                             : _formatWalkingTime(walkingTime, l10n),
                         label: l10n.t('Estimated walking time'),
-                        showFootnoteMarker: true,
+                        onTap: () => _showNaismithEstimateDialog(context),
+                        dense: true,
                       ),
               ),
             ],
           ),
         ),
-        if (walkingTime != null) ...[
-          const SizedBox(height: 8),
-          Text.rich(
-            TextSpan(
-              children: [
-                const TextSpan(
-                  text: '* ',
-                  style: TextStyle(
-                    color: _bookingBlue,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                TextSpan(
-                  text: l10n.t(
-                    'Naismith estimate based on distance and ascent. Breaks and terrain are not included.',
-                  ),
-                ),
-              ],
-            ),
-            key: const ValueKey('walking-time-footnote-note'),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.black54,
-              height: 1.35,
-            ),
-          ),
-        ],
         if (endpointLabel == null || hasEndpointDistance) ...[
           const SizedBox(height: 12),
           _CompactDetailMetrics(
@@ -4274,7 +4250,9 @@ class StageInfoCards extends StatelessWidget {
         const SizedBox(height: 16),
         if (services.isNotEmpty)
           _DetailSection(
+            key: const ValueKey('stage-detail-services'),
             title: l10n.t('Services'),
+            showTitle: false,
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -4341,6 +4319,43 @@ class StageInfoCards extends StatelessWidget {
       ],
     );
   }
+}
+
+Future<void> _showNaismithEstimateDialog(BuildContext context) {
+  final l10n = context.l10n;
+  return showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      key: const ValueKey('naismith-estimate-dialog'),
+      icon: const Icon(Icons.schedule_rounded, color: _bookingBlue),
+      title: Text(l10n.t('Estimated walking time')),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.t("Naismith's Rule estimates walking time by allowing:")),
+          const SizedBox(height: 12),
+          Text(
+            '• ${l10n.t('1 hour for every 5 km of distance')}\n'
+            '• ${l10n.t('1 extra hour for every 600 m of ascent')}',
+            style: const TextStyle(fontWeight: FontWeight.w700, height: 1.5),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.t(
+              'Descent, terrain difficulty, breaks, weather, pack weight, and individual fitness are not included. Actual walking time may vary.',
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: Text(l10n.t('Close')),
+        ),
+      ],
+    ),
+  );
 }
 
 class _StageDetailBottomNavigationBar extends StatelessWidget {
@@ -4435,7 +4450,8 @@ class _DetailMetric extends StatelessWidget {
     this.icon,
     this.iconWidget,
     this.iconColor = _green,
-    this.showFootnoteMarker = false,
+    this.onTap,
+    this.dense = false,
     required this.value,
     required this.label,
     super.key,
@@ -4444,59 +4460,71 @@ class _DetailMetric extends StatelessWidget {
   final IconData? icon;
   final Widget? iconWidget;
   final Color iconColor;
-  final bool showFootnoteMarker;
+  final VoidCallback? onTap;
+  final bool dense;
   final String value;
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+    final borderRadius = BorderRadius.circular(16);
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: borderRadius,
+        side: const BorderSide(color: _stageCardOutline),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          iconWidget ?? Icon(icon, color: iconColor, size: 26),
-          const SizedBox(height: 7),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 3),
-          if (showFootnoteMarker)
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: label),
-                  const TextSpan(
-                    text: ' *',
-                    style: TextStyle(
-                      color: _bookingBlue,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: borderRadius,
+        child: Stack(
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: dense ? 8 : 11,
               ),
-              key: const ValueKey('walking-time-footnote-label'),
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-              textAlign: TextAlign.center,
-            )
-          else
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-              textAlign: TextAlign.center,
+              child: SizedBox(
+                width: double.infinity,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    iconWidget ??
+                        Icon(icon, color: iconColor, size: dense ? 23 : 26),
+                    SizedBox(height: dense ? 5 : 7),
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: dense ? 17 : 18,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: dense ? 2 : 3),
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
             ),
-        ],
+            if (onTap != null)
+              const Positioned(
+                top: 4,
+                right: 8,
+                child: Icon(
+                  Icons.more_horiz_rounded,
+                  key: ValueKey('detail-metric-more'),
+                  size: 20,
+                  color: Colors.black54,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -4515,6 +4543,7 @@ class _CompactDetailMetrics extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _stageCardOutline),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -4963,10 +4992,16 @@ String _signedWalkingTime(int minutes, AppLocalizations l10n) {
 }
 
 class _DetailSection extends StatelessWidget {
-  const _DetailSection({required this.title, required this.child});
+  const _DetailSection({
+    required this.title,
+    required this.child,
+    this.showTitle = true,
+    super.key,
+  });
 
   final String title;
   final Widget child;
+  final bool showTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -4975,15 +5010,18 @@ class _DetailSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _stageCardOutline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 12),
+          if (showTitle) ...[
+            Text(
+              title,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 12),
+          ],
           child,
         ],
       ),
@@ -6073,9 +6111,9 @@ class _ServiceFilterSheetState extends State<_ServiceFilterSheet> {
                           ),
                           label: Text(
                             '${l10n.t(route.startStageName)} → ${l10n.t(route.finishStageName)} · ${l10n.t(switch (route.style) {
-                              RoutePlanStyle.budget => 'Budget',
+                              RoutePlanStyle.relaxed => 'Relaxed',
                               RoutePlanStyle.balanced => 'Balanced',
-                              RoutePlanStyle.comfort => 'Comfort',
+                              RoutePlanStyle.adventurous => 'Adventurous',
                             })}',
                           ),
                           onSelected: (isSelected) => setState(() {

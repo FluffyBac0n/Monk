@@ -28,8 +28,9 @@ void main() {
       finishStageName: 'Finish',
       minimumDailyDistanceKm: 10,
       maximumDailyDistanceKm: 20,
-      accommodationBudgetEur: 100,
-      allowCamping: false,
+      minimumAccommodationPriceEur: 0,
+      maximumAccommodationPriceEur: 100,
+      overnightPreference: RouteOvernightPreference.accommodation,
       days: const [
         SavedRouteDay(
           dayNumber: 1,

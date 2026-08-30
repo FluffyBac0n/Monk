@@ -12,7 +12,6 @@ import '../../accommodation/presentation/accommodation_controller.dart';
 import '../../stages/domain/stage.dart';
 import '../../stages/presentation/stages_controller.dart';
 import '../../trail/domain/trail_direction.dart';
-import '../../trail/presentation/trail_direction_controller.dart';
 import '../domain/route_plan.dart';
 import '../domain/saved_route.dart';
 import 'saved_routes_controller.dart';
@@ -22,6 +21,36 @@ const _green = Color(0xFF277653);
 const _outline = Color(0xFFD8DDDA);
 const _comfort = Color(0xFF75588A);
 
+enum _TripGoal { wholeTrail, bestSection }
+
+enum _StartPreference { automatic, pafos, larnaka }
+
+enum _PaceUnit { hours, distance }
+
+class _PlannedVariant {
+  const _PlannedVariant({
+    required this.plan,
+    required this.direction,
+    required this.request,
+  });
+
+  final RoutePlan plan;
+  final TrailDirection direction;
+  final RoutePlanRequest request;
+}
+
+class _SectionCandidate {
+  const _SectionCandidate({
+    required this.startIndex,
+    required this.finishIndex,
+    required this.distanceDelta,
+  });
+
+  final int startIndex;
+  final int finishIndex;
+  final double distanceDelta;
+}
+
 class RoutePlannerScreen extends ConsumerStatefulWidget {
   const RoutePlannerScreen({super.key});
 
@@ -30,40 +59,31 @@ class RoutePlannerScreen extends ConsumerStatefulWidget {
 }
 
 class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
-  final routeFormKey = GlobalKey<FormState>();
-  final preferencesFormKey = GlobalKey<FormState>();
-  final minimumController = TextEditingController(text: '20');
-  final maximumController = TextEditingController(text: '30');
-  final budgetController = TextEditingController(text: '1000');
   bool showWizard = false;
   int step = 0;
-  String? startStageId;
-  String? finishStageId;
-  String? routeError;
-  bool allowCamping = false;
-  Map<RoutePlanStyle, RoutePlan?> variants = const {};
+  int walkingDays = 5;
+  _TripGoal tripGoal = _TripGoal.bestSection;
+  _StartPreference startPreference = _StartPreference.automatic;
+  _PaceUnit paceUnit = _PaceUnit.hours;
+  double paceValue = 6;
+  RouteOvernightPreference overnightPreference =
+      RouteOvernightPreference.accommodation;
+  RangeValues accommodationPriceRange = const RangeValues(40, 120);
+  Map<RoutePlanStyle, _PlannedVariant?> variants = const {};
   RoutePlanStyle? selectedStyle;
   String? draftRouteId;
   bool saving = false;
 
-  @override
-  void dispose() {
-    minimumController.dispose();
-    maximumController.dispose();
-    budgetController.dispose();
-    super.dispose();
-  }
-
   void startNewRoute() => setState(() {
     showWizard = true;
     step = 0;
-    startStageId = null;
-    finishStageId = null;
-    routeError = null;
-    allowCamping = false;
-    minimumController.text = '20';
-    maximumController.text = '30';
-    budgetController.text = '1000';
+    walkingDays = 5;
+    tripGoal = _TripGoal.bestSection;
+    startPreference = _StartPreference.automatic;
+    paceUnit = _PaceUnit.hours;
+    paceValue = 6;
+    overnightPreference = RouteOvernightPreference.accommodation;
+    accommodationPriceRange = const RangeValues(40, 120);
     variants = const {};
     selectedStyle = null;
     draftRouteId = null;
@@ -83,98 +103,197 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
         .toList(growable: false);
   }
 
-  double distanceKm(String value, MeasurementSystem system) {
-    final parsed = double.parse(value);
-    return system == MeasurementSystem.metric ? parsed : parsed / 0.621371;
-  }
-
-  String? positiveValidator(String? value) {
-    final parsed = double.tryParse(value?.trim() ?? '');
-    return parsed == null || !parsed.isFinite || parsed <= 0
-        ? context.l10n.t('Enter a positive number.')
-        : null;
-  }
-
-  String? maximumValidator(String? value) {
-    final error = positiveValidator(value);
-    if (error != null) return error;
-    final minimum = double.tryParse(minimumController.text.trim());
-    return minimum != null && double.parse(value!.trim()) < minimum
-        ? context.l10n.t('Maximum must be at least the minimum.')
-        : null;
-  }
-
-  String? budgetValidator(String? value) =>
-      value == null || value.trim().isEmpty ? null : positiveValidator(value);
-
   RoutePlanRequest requestFor(
     RoutePlanStyle style,
-    List<TrailStage> ordered,
+    TrailStage start,
+    TrailStage finish,
     MeasurementSystem system,
   ) {
-    final budget = budgetController.text.trim();
+    final styleFactor = switch (style) {
+      RoutePlanStyle.relaxed => 0.8,
+      RoutePlanStyle.balanced => 1.0,
+      RoutePlanStyle.adventurous => 1.15,
+    };
+    final enteredDistanceKm = system == MeasurementSystem.metric
+        ? paceValue
+        : paceValue / 0.621371;
+    final dailyTargetKm =
+        (paceUnit == _PaceUnit.hours ? paceValue * 5 : enteredDistanceKm) *
+        styleFactor;
+    final usesAccommodation =
+        overnightPreference != RouteOvernightPreference.camping;
     return RoutePlanRequest(
-      startStageId: startStageId ?? ordered.first.id,
-      finishStageId: finishStageId ?? ordered.last.id,
-      minimumDailyDistanceKm: distanceKm(minimumController.text, system),
-      maximumDailyDistanceKm: distanceKm(maximumController.text, system),
-      accommodationBudgetEur: budget.isEmpty ? null : double.parse(budget),
-      allowCamping: allowCamping,
+      startStageId: start.id,
+      finishStageId: finish.id,
+      minimumDailyDistanceKm: dailyTargetKm * 0.45,
+      maximumDailyDistanceKm: dailyTargetKm * 1.2,
+      maximumDailyWalkingMinutes: paceUnit == _PaceUnit.hours
+          ? (paceValue * 60 * styleFactor * 1.15).round()
+          : null,
+      walkingDays: walkingDays,
+      overnightPreference: overnightPreference,
+      minimumAccommodationPriceEur: usesAccommodation
+          ? accommodationPriceRange.start
+          : null,
+      maximumAccommodationPriceEur: usesAccommodation
+          ? accommodationPriceRange.end
+          : null,
       style: style,
     );
   }
 
-  void continueRoute(List<TrailStage> stages) {
-    if (!routeFormKey.currentState!.validate()) return;
-    final start = stages.indexWhere(
-      (stage) => stage.id == (startStageId ?? stages.first.id),
-    );
-    final finish = stages.indexWhere(
-      (stage) => stage.id == (finishStageId ?? stages.last.id),
-    );
-    if (finish <= start) {
-      setState(
-        () => routeError = context.l10n.t(
-          'Finish must come after the start in the current direction.',
-        ),
-      );
-      return;
-    }
-    setState(() {
-      routeError = null;
-      step = 1;
-    });
-  }
-
-  void compareRoutes({
+  void buildRoutes({
     required List<TrailStage> stages,
     required List<Lodging> lodgings,
-    required TrailDirection direction,
     required MeasurementSystem system,
   }) {
-    if (!preferencesFormKey.currentState!.validate()) return;
-    final ordered = orderedStages(stages, direction);
     setState(() {
       variants = {
         for (final style in RoutePlanStyle.values)
-          style: buildDeterministicRoutePlan(
+          style: _buildVariant(
+            style: style,
             stages: stages,
             lodgings: lodgings,
-            direction: direction,
-            request: requestFor(style, ordered, system),
+            system: system,
           ),
       };
       selectedStyle = null;
-      step = 2;
+      step = 3;
     });
+  }
+
+  _PlannedVariant? _buildVariant({
+    required RoutePlanStyle style,
+    required List<TrailStage> stages,
+    required List<Lodging> lodgings,
+    required MeasurementSystem system,
+  }) {
+    final directions = switch (startPreference) {
+      _StartPreference.automatic => TrailDirection.values,
+      _StartPreference.pafos => const [TrailDirection.pafosToLarnaka],
+      _StartPreference.larnaka => const [TrailDirection.larnakaToPafos],
+    };
+    _PlannedVariant? best;
+    var bestScore = double.infinity;
+    for (final direction in directions) {
+      final ordered = orderedStages(stages, direction);
+      if (ordered.length < 2) continue;
+      if (tripGoal == _TripGoal.wholeTrail) {
+        final request = requestFor(style, ordered.first, ordered.last, system);
+        final plan = buildDeterministicRoutePlan(
+          stages: stages,
+          lodgings: lodgings,
+          direction: direction,
+          request: request,
+        );
+        if (plan == null) continue;
+        final score = _planScore(plan, request);
+        if (score < bestScore) {
+          bestScore = score;
+          best = _PlannedVariant(
+            plan: plan,
+            direction: direction,
+            request: request,
+          );
+        }
+        continue;
+      }
+
+      final previewRequest = requestFor(
+        style,
+        ordered.first,
+        ordered.last,
+        system,
+      );
+      final targetTotal =
+          (previewRequest.minimumDailyDistanceKm +
+              previewRequest.maximumDailyDistanceKm) /
+          2 *
+          walkingDays;
+      final sectionCandidates = <_SectionCandidate>[];
+      for (var startIndex = 0; startIndex < ordered.length - 1; startIndex++) {
+        final startDistance = ordered[startIndex].accumulatedDistanceKm;
+        if (startDistance == null) continue;
+        var nearestFinish = startIndex + walkingDays;
+        if (nearestFinish >= ordered.length) continue;
+        var nearestDelta = double.infinity;
+        for (
+          var finishIndex = startIndex + walkingDays;
+          finishIndex < ordered.length;
+          finishIndex++
+        ) {
+          final finishDistance = ordered[finishIndex].accumulatedDistanceKm;
+          if (finishDistance == null) continue;
+          final delta = ((finishDistance - startDistance).abs() - targetTotal)
+              .abs();
+          if (delta < nearestDelta) {
+            nearestDelta = delta;
+            nearestFinish = finishIndex;
+          }
+        }
+        for (var offset = -4; offset <= 4; offset++) {
+          final finishIndex = nearestFinish + offset;
+          if (finishIndex < startIndex + walkingDays ||
+              finishIndex >= ordered.length) {
+            continue;
+          }
+          final finishDistance = ordered[finishIndex].accumulatedDistanceKm;
+          if (finishDistance == null) continue;
+          sectionCandidates.add(
+            _SectionCandidate(
+              startIndex: startIndex,
+              finishIndex: finishIndex,
+              distanceDelta:
+                  ((finishDistance - startDistance).abs() - targetTotal).abs(),
+            ),
+          );
+        }
+      }
+      sectionCandidates.sort(
+        (left, right) => left.distanceDelta.compareTo(right.distanceDelta),
+      );
+      for (final candidate in sectionCandidates.take(48)) {
+        final request = requestFor(
+          style,
+          ordered[candidate.startIndex],
+          ordered[candidate.finishIndex],
+          system,
+        );
+        final plan = buildDeterministicRoutePlan(
+          stages: stages,
+          lodgings: lodgings,
+          direction: direction,
+          request: request,
+        );
+        if (plan == null) continue;
+        final score = _planScore(plan, request) + candidate.distanceDelta;
+        if (score < bestScore) {
+          bestScore = score;
+          best = _PlannedVariant(
+            plan: plan,
+            direction: direction,
+            request: request,
+          );
+        }
+      }
+    }
+    return best;
+  }
+
+  double _planScore(RoutePlan plan, RoutePlanRequest request) {
+    final target =
+        (request.minimumDailyDistanceKm + request.maximumDailyDistanceKm) / 2;
+    return plan.days.fold<double>(
+          0,
+          (score, day) =>
+              score + (day.distanceKm - target) * (day.distanceKm - target),
+        ) +
+        plan.unknownPriceNights * 100;
   }
 
   Future<void> selectRoute({
     required RoutePlanStyle style,
-    required RoutePlan plan,
-    required List<TrailStage> stages,
-    required TrailDirection direction,
-    required MeasurementSystem system,
+    required _PlannedVariant variant,
   }) async {
     if (saving) return;
     final id = draftRouteId ?? DateTime.now().microsecondsSinceEpoch.toString();
@@ -182,9 +301,9 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
       id: id,
       createdAt: DateTime.now(),
       style: style,
-      direction: direction,
-      request: requestFor(style, stages, system),
-      plan: plan,
+      direction: variant.direction,
+      request: variant.request,
+      plan: variant.plan,
     );
     setState(() => saving = true);
     try {
@@ -226,7 +345,6 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final direction = ref.watch(trailDirectionProvider);
     final system = ref.watch(
       appSettingsProvider.select((settings) => settings.measurementSystem),
     );
@@ -253,10 +371,7 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
             ),
             Text(
               showWizard
-                  ? context.l10n.routeDirection(
-                      context.l10n.t(direction.startName),
-                      context.l10n.t(direction.endName),
-                    )
+                  ? context.l10n.t('Tailored E4 plan')
                   : context.l10n.t('My routes'),
               style: const TextStyle(
                 color: Colors.white60,
@@ -270,7 +385,7 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
       body: Theme(
         data: EurotrexPalette.controlsTheme(Theme.of(context)),
         child: showWizard
-            ? buildWizardData(direction, formatter, system)
+            ? buildWizardData(formatter, system)
             : _SavedRoutesView(
                 routes: ref.watch(savedRoutesProvider),
                 formatter: formatter,
@@ -282,7 +397,6 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
   }
 
   Widget buildWizardData(
-    TrailDirection direction,
     MeasurementFormatter formatter,
     MeasurementSystem system,
   ) {
@@ -302,8 +416,7 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
             'Accommodation information is currently unavailable.',
           ),
         ),
-        data: (lodgings) =>
-            buildWizard(stages, lodgings, direction, formatter, system),
+        data: (lodgings) => buildWizard(stages, lodgings, formatter, system),
       ),
     );
   }
@@ -311,23 +424,15 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
   Widget buildWizard(
     List<TrailStage> stages,
     List<Lodging> lodgings,
-    TrailDirection direction,
     MeasurementFormatter formatter,
     MeasurementSystem system,
   ) {
-    final ordered = orderedStages(stages, direction);
-    if (ordered.length < 2) {
+    if (orderedStages(stages, TrailDirection.pafosToLarnaka).length < 2) {
       return _Message(
         icon: Icons.route_outlined,
         title: context.l10n.t('Trail data is unavailable.'),
       );
     }
-    final start = ordered.any((stage) => stage.id == startStageId)
-        ? startStageId!
-        : ordered.first.id;
-    final finish = ordered.any((stage) => stage.id == finishStageId)
-        ? finishStageId!
-        : ordered.last.id;
     return ListView(
       key: const ValueKey('route-planner-content'),
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 30),
@@ -335,45 +440,39 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
         _Progress(step: step),
         const SizedBox(height: 14),
         if (step == 0)
-          Form(
-            key: routeFormKey,
-            child: _RouteStep(
-              stages: ordered,
-              start: start,
-              finish: finish,
-              error: routeError,
-              onStart: (value) => setState(() {
-                startStageId = value;
-                routeError = null;
-              }),
-              onFinish: (value) => setState(() {
-                finishStageId = value;
-                routeError = null;
-              }),
-              onNext: () => continueRoute(ordered),
-            ),
+          _TripStep(
+            walkingDays: walkingDays,
+            goal: tripGoal,
+            startPreference: startPreference,
+            onDaysChanged: (value) => setState(() => walkingDays = value),
+            onGoalChanged: (value) => setState(() => tripGoal = value),
+            onStartChanged: (value) => setState(() => startPreference = value),
+            onNext: () => setState(() => step = 1),
           )
         else if (step == 1)
-          Form(
-            key: preferencesFormKey,
-            child: _PreferencesStep(
-              minimum: minimumController,
-              maximum: maximumController,
-              budget: budgetController,
-              distanceUnit: formatter.distanceUnit,
-              allowCamping: allowCamping,
-              minimumValidator: positiveValidator,
-              maximumValidator: maximumValidator,
-              budgetValidator: budgetValidator,
-              onCamping: (value) => setState(() => allowCamping = value),
-              onBack: () => setState(() => step = 0),
-              onCompare: () => compareRoutes(
-                stages: stages,
-                lodgings: lodgings,
-                direction: direction,
-                system: system,
-              ),
-            ),
+          _PaceStep(
+            unit: paceUnit,
+            value: paceValue,
+            distanceUnit: formatter.distanceUnit,
+            onUnitChanged: (value) => setState(() {
+              paceUnit = value;
+              paceValue = value == _PaceUnit.hours ? 6 : 25;
+            }),
+            onValueChanged: (value) => setState(() => paceValue = value),
+            onBack: () => setState(() => step = 0),
+            onNext: () => setState(() => step = 2),
+          )
+        else if (step == 2)
+          _StayStep(
+            preference: overnightPreference,
+            priceRange: accommodationPriceRange,
+            onPreferenceChanged: (value) =>
+                setState(() => overnightPreference = value),
+            onPriceChanged: (value) =>
+                setState(() => accommodationPriceRange = value),
+            onBack: () => setState(() => step = 1),
+            onBuild: () =>
+                buildRoutes(stages: stages, lodgings: lodgings, system: system),
           )
         else
           _CompareStep(
@@ -381,17 +480,12 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
             selected: selectedStyle,
             formatter: formatter,
             saving: saving,
-            onBack: () => setState(() => step = 1),
+            onBack: () => setState(() => step = 2),
             onDone: selectedStyle == null
                 ? null
                 : () => setState(() => showWizard = false),
-            onSelect: (style, plan) => selectRoute(
-              style: style,
-              plan: plan,
-              stages: ordered,
-              direction: direction,
-              system: system,
-            ),
+            onSelect: (style, variant) =>
+                selectRoute(style: style, variant: variant),
           ),
       ],
     );
@@ -525,7 +619,7 @@ class _Progress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labels = ['Route', 'Preferences', 'Itinerary'];
+    final labels = ['Trip', 'Pace', 'Stay'];
     return Row(
       key: const ValueKey('route-planner-progress'),
       children: [
@@ -538,7 +632,7 @@ class _Progress extends StatelessWidget {
                 backgroundColor: index <= step
                     ? EurotrexPalette.blue
                     : Colors.white,
-                child: index < step
+                child: index < step || step >= labels.length
                     ? const Icon(Icons.check_rounded, size: 18)
                     : Text(
                         '${index + 1}',
@@ -575,22 +669,22 @@ class _Progress extends StatelessWidget {
   }
 }
 
-class _RouteStep extends StatelessWidget {
-  const _RouteStep({
-    required this.stages,
-    required this.start,
-    required this.finish,
-    required this.error,
-    required this.onStart,
-    required this.onFinish,
+class _TripStep extends StatelessWidget {
+  const _TripStep({
+    required this.walkingDays,
+    required this.goal,
+    required this.startPreference,
+    required this.onDaysChanged,
+    required this.onGoalChanged,
+    required this.onStartChanged,
     required this.onNext,
   });
-  final List<TrailStage> stages;
-  final String start;
-  final String finish;
-  final String? error;
-  final ValueChanged<String?> onStart;
-  final ValueChanged<String?> onFinish;
+  final int walkingDays;
+  final _TripGoal goal;
+  final _StartPreference startPreference;
+  final ValueChanged<int> onDaysChanged;
+  final ValueChanged<_TripGoal> onGoalChanged;
+  final ValueChanged<_StartPreference> onStartChanged;
   final VoidCallback onNext;
 
   @override
@@ -598,28 +692,106 @@ class _RouteStep extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       _Panel(
-        title: context.l10n.t('Choose your route'),
-        icon: Icons.alt_route_rounded,
+        title: context.l10n.t('Your trip'),
+        icon: Icons.calendar_month_rounded,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _StageDropdown(
-              key: const ValueKey('route-planner-start'),
-              label: context.l10n.t('Start'),
-              value: start,
-              stages: stages,
-              onChanged: onStart,
+            Text(
+              context.l10n.t('How many walking days do you have?'),
+              style: const TextStyle(fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 12),
-            _StageDropdown(
-              key: const ValueKey('route-planner-finish'),
-              label: context.l10n.t('Finish'),
-              value: finish,
-              stages: stages,
-              onChanged: onFinish,
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton.outlined(
+                  key: const ValueKey('route-planner-days-minus'),
+                  onPressed: walkingDays > 1
+                      ? () => onDaysChanged(walkingDays - 1)
+                      : null,
+                  icon: const Icon(Icons.remove_rounded),
+                ),
+                SizedBox(
+                  width: 110,
+                  child: Text(
+                    '$walkingDays ${context.l10n.t('days')}',
+                    key: const ValueKey('route-planner-days'),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: EurotrexPalette.navy,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                IconButton.outlined(
+                  key: const ValueKey('route-planner-days-plus'),
+                  onPressed: walkingDays < 30
+                      ? () => onDaysChanged(walkingDays + 1)
+                      : null,
+                  icon: const Icon(Icons.add_rounded),
+                ),
+              ],
             ),
-            if (error != null) ...[
-              const SizedBox(height: 10),
-              Text(error!, style: const TextStyle(color: Colors.red)),
+            const SizedBox(height: 18),
+            Text(
+              context.l10n.t('What would you like to walk?'),
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<_TripGoal>(
+              key: const ValueKey('route-planner-goal'),
+              expandedInsets: EdgeInsets.zero,
+              segments: [
+                ButtonSegment(
+                  value: _TripGoal.bestSection,
+                  icon: const Icon(Icons.auto_awesome_rounded),
+                  label: Text(context.l10n.t('Best section')),
+                ),
+                ButtonSegment(
+                  value: _TripGoal.wholeTrail,
+                  icon: const Icon(Icons.route_rounded),
+                  label: Text(context.l10n.t('Whole E4')),
+                ),
+              ],
+              selected: {goal},
+              onSelectionChanged: (values) => onGoalChanged(values.single),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              context.l10n.t('Where would you prefer to start?'),
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<_StartPreference>(
+              key: const ValueKey('route-planner-start-preference'),
+              expandedInsets: EdgeInsets.zero,
+              segments: [
+                ButtonSegment(
+                  value: _StartPreference.automatic,
+                  label: Text(context.l10n.t('Best direction')),
+                ),
+                ButtonSegment(
+                  value: _StartPreference.pafos,
+                  label: Text(context.l10n.t('Pafos')),
+                ),
+                ButtonSegment(
+                  value: _StartPreference.larnaka,
+                  label: Text(context.l10n.t('Larnaka')),
+                ),
+              ],
+              selected: {startPreference},
+              onSelectionChanged: (values) => onStartChanged(values.single),
+            ),
+            if (startPreference == _StartPreference.automatic) ...[
+              const SizedBox(height: 8),
+              Text(
+                context.l10n.t(
+                  'We will compare both trail directions and choose the better fit.',
+                ),
+                style: const TextStyle(fontSize: 11, color: Colors.black54),
+              ),
             ],
           ],
         ),
@@ -635,147 +807,241 @@ class _RouteStep extends StatelessWidget {
   );
 }
 
-class _StageDropdown extends StatelessWidget {
-  const _StageDropdown({
-    required this.label,
+class _PaceStep extends StatelessWidget {
+  const _PaceStep({
+    required this.unit,
     required this.value,
-    required this.stages,
-    required this.onChanged,
-    super.key,
+    required this.distanceUnit,
+    required this.onUnitChanged,
+    required this.onValueChanged,
+    required this.onBack,
+    required this.onNext,
   });
-  final String label;
-  final String value;
-  final List<TrailStage> stages;
-  final ValueChanged<String?> onChanged;
+  final _PaceUnit unit;
+  final double value;
+  final String distanceUnit;
+  final ValueChanged<_PaceUnit> onUnitChanged;
+  final ValueChanged<double> onValueChanged;
+  final VoidCallback onBack;
+  final VoidCallback onNext;
 
   @override
-  Widget build(BuildContext context) => DropdownButtonFormField<String>(
-    initialValue: value,
-    isExpanded: true,
-    decoration: InputDecoration(labelText: label),
-    items: [
-      for (final stage in stages)
-        DropdownMenuItem(
-          value: stage.id,
-          child: Text(
-            '${context.l10n.stage(stage.sequence)} · ${context.l10n.t(stage.name)}',
-            overflow: TextOverflow.ellipsis,
+  Widget build(BuildContext context) {
+    final isHours = unit == _PaceUnit.hours;
+    final minimum = isHours ? 2.0 : 5.0;
+    final maximum = isHours ? 10.0 : 45.0;
+    final divisions = isHours ? 16 : 40;
+    final suffix = isHours ? context.l10n.t('hours') : distanceUnit;
+    final valueLabel = isHours
+        ? value.toStringAsFixed(value % 1 == 0 ? 0 : 1)
+        : value.toStringAsFixed(0);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _Panel(
+          title: context.l10n.t('Your daily pace'),
+          icon: Icons.hiking_rounded,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                context.l10n.t('How do you prefer to set your pace?'),
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<_PaceUnit>(
+                key: const ValueKey('route-planner-pace-unit'),
+                expandedInsets: EdgeInsets.zero,
+                segments: [
+                  ButtonSegment(
+                    value: _PaceUnit.hours,
+                    icon: const Icon(Icons.schedule_rounded),
+                    label: Text(context.l10n.t('Hours')),
+                  ),
+                  ButtonSegment(
+                    value: _PaceUnit.distance,
+                    icon: const Icon(Icons.straighten_rounded),
+                    label: Text(distanceUnit),
+                  ),
+                ],
+                selected: {unit},
+                onSelectionChanged: (values) => onUnitChanged(values.single),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                '$valueLabel $suffix ${context.l10n.t('per day')}',
+                key: const ValueKey('route-planner-pace-value'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: EurotrexPalette.navy,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              Slider(
+                key: const ValueKey('route-planner-pace-slider'),
+                min: minimum,
+                max: maximum,
+                divisions: divisions,
+                value: value.clamp(minimum, maximum),
+                label: '$valueLabel $suffix',
+                onChanged: onValueChanged,
+              ),
+              Text(
+                context.l10n.t(
+                  'Walking time includes an allowance for climbing. Each option adjusts the effort around this target.',
+                ),
+                style: const TextStyle(fontSize: 11, color: Colors.black54),
+              ),
+            ],
           ),
         ),
-    ],
-    onChanged: onChanged,
-  );
+        const SizedBox(height: 14),
+        _WizardButtons(
+          backKey: const ValueKey('route-planner-pace-back'),
+          nextKey: const ValueKey('route-planner-pace-next'),
+          onBack: onBack,
+          onNext: onNext,
+          nextLabel: context.l10n.t('Next'),
+        ),
+      ],
+    );
+  }
 }
 
-class _PreferencesStep extends StatelessWidget {
-  const _PreferencesStep({
-    required this.minimum,
-    required this.maximum,
-    required this.budget,
-    required this.distanceUnit,
-    required this.allowCamping,
-    required this.minimumValidator,
-    required this.maximumValidator,
-    required this.budgetValidator,
-    required this.onCamping,
+class _StayStep extends StatelessWidget {
+  const _StayStep({
+    required this.preference,
+    required this.priceRange,
+    required this.onPreferenceChanged,
+    required this.onPriceChanged,
     required this.onBack,
-    required this.onCompare,
+    required this.onBuild,
   });
-  final TextEditingController minimum;
-  final TextEditingController maximum;
-  final TextEditingController budget;
-  final String distanceUnit;
-  final bool allowCamping;
-  final FormFieldValidator<String> minimumValidator;
-  final FormFieldValidator<String> maximumValidator;
-  final FormFieldValidator<String> budgetValidator;
-  final ValueChanged<bool> onCamping;
+  final RouteOvernightPreference preference;
+  final RangeValues priceRange;
+  final ValueChanged<RouteOvernightPreference> onPreferenceChanged;
+  final ValueChanged<RangeValues> onPriceChanged;
   final VoidCallback onBack;
-  final VoidCallback onCompare;
+  final VoidCallback onBuild;
 
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       _Panel(
-        title: context.l10n.t('Daily walking limits'),
-        icon: Icons.hiking_rounded,
-        child: Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                key: const ValueKey('route-planner-minimum-distance'),
-                controller: minimum,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: context.l10n.t('Minimum'),
-                  suffixText: distanceUnit,
-                ),
-                validator: minimumValidator,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                key: const ValueKey('route-planner-maximum-distance'),
-                controller: maximum,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: context.l10n.t('Maximum'),
-                  suffixText: distanceUnit,
-                ),
-                validator: maximumValidator,
-              ),
-            ),
-          ],
-        ),
-      ),
-      const SizedBox(height: 12),
-      _Panel(
-        title: context.l10n.t('Overnight stops'),
+        title: context.l10n.t('Overnight stays'),
         icon: Icons.hotel_rounded,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextFormField(
-              key: const ValueKey('route-planner-budget'),
-              controller: budget,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: context.l10n.t('Accommodation budget'),
-                prefixText: '€ ',
+            SegmentedButton<RouteOvernightPreference>(
+              key: const ValueKey('route-planner-stay-type'),
+              expandedInsets: EdgeInsets.zero,
+              segments: [
+                ButtonSegment(
+                  value: RouteOvernightPreference.accommodation,
+                  label: Text(context.l10n.t('Accommodation')),
+                  icon: const Icon(Icons.bed_rounded),
+                ),
+                ButtonSegment(
+                  value: RouteOvernightPreference.either,
+                  label: Text(context.l10n.t('Either')),
+                  icon: const Icon(Icons.swap_horiz_rounded),
+                ),
+                ButtonSegment(
+                  value: RouteOvernightPreference.camping,
+                  label: Text(context.l10n.t('Camping')),
+                  icon: const Icon(Icons.cabin_rounded),
+                ),
+              ],
+              selected: {preference},
+              onSelectionChanged: (values) =>
+                  onPreferenceChanged(values.single),
+            ),
+            if (preference != RouteOvernightPreference.camping) ...[
+              const SizedBox(height: 20),
+              Text(
+                context.l10n.t('Price per night'),
+                style: const TextStyle(fontWeight: FontWeight.w800),
               ),
-              validator: budgetValidator,
-            ),
-            SwitchListTile.adaptive(
-              key: const ValueKey('route-planner-allow-camping'),
-              contentPadding: EdgeInsets.zero,
-              value: allowCamping,
-              title: Text(context.l10n.t('Allow camping stages')),
-              onChanged: onCamping,
-            ),
+              const SizedBox(height: 4),
+              Text(
+                '€${priceRange.start.toStringAsFixed(0)} – €${priceRange.end.toStringAsFixed(0)}',
+                key: const ValueKey('route-planner-price-range-value'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: EurotrexPalette.navy,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              RangeSlider(
+                key: const ValueKey('route-planner-price-range'),
+                min: 0,
+                max: 300,
+                divisions: 30,
+                values: priceRange,
+                labels: RangeLabels(
+                  '€${priceRange.start.toStringAsFixed(0)}',
+                  '€${priceRange.end.toStringAsFixed(0)}',
+                ),
+                onChanged: onPriceChanged,
+              ),
+              Text(
+                context.l10n.t(
+                  'The range applies per room, per night, using listed prices.',
+                ),
+                style: const TextStyle(fontSize: 11, color: Colors.black54),
+              ),
+            ],
           ],
         ),
       ),
       const SizedBox(height: 14),
-      Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              key: const ValueKey('route-planner-preferences-back'),
-              onPressed: onBack,
-              child: Text(context.l10n.t('Back')),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: FilledButton.icon(
-              key: const ValueKey('route-planner-compare'),
-              onPressed: onCompare,
-              icon: const Icon(Icons.compare_arrows_rounded),
-              label: Text(context.l10n.t('Compare')),
-            ),
-          ),
-        ],
+      _WizardButtons(
+        backKey: const ValueKey('route-planner-stay-back'),
+        nextKey: const ValueKey('route-planner-build'),
+        onBack: onBack,
+        onNext: onBuild,
+        nextLabel: context.l10n.t('Build my plans'),
+      ),
+    ],
+  );
+}
+
+class _WizardButtons extends StatelessWidget {
+  const _WizardButtons({
+    required this.backKey,
+    required this.nextKey,
+    required this.onBack,
+    required this.onNext,
+    required this.nextLabel,
+  });
+  final Key backKey;
+  final Key nextKey;
+  final VoidCallback onBack;
+  final VoidCallback onNext;
+  final String nextLabel;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: OutlinedButton(
+          key: backKey,
+          onPressed: onBack,
+          child: Text(context.l10n.t('Back')),
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: FilledButton.icon(
+          key: nextKey,
+          onPressed: onNext,
+          icon: const Icon(Icons.arrow_forward_rounded),
+          label: Text(nextLabel),
+        ),
       ),
     ],
   );
@@ -791,17 +1057,17 @@ class _CompareStep extends StatelessWidget {
     required this.onDone,
     required this.onSelect,
   });
-  final Map<RoutePlanStyle, RoutePlan?> variants;
+  final Map<RoutePlanStyle, _PlannedVariant?> variants;
   final RoutePlanStyle? selected;
   final MeasurementFormatter formatter;
   final bool saving;
   final VoidCallback onBack;
   final VoidCallback? onDone;
-  final void Function(RoutePlanStyle, RoutePlan) onSelect;
+  final void Function(RoutePlanStyle, _PlannedVariant) onSelect;
 
   @override
   Widget build(BuildContext context) {
-    final selectedPlan = selected == null ? null : variants[selected];
+    final selectedVariant = selected == null ? null : variants[selected];
     return Column(
       key: const ValueKey('route-planner-results'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -818,7 +1084,7 @@ class _CompareStep extends StatelessWidget {
         for (final style in RoutePlanStyle.values) ...[
           _VariantCard(
             style: style,
-            plan: variants[style],
+            variant: variants[style],
             selected: selected == style,
             formatter: formatter,
             onTap: saving || variants[style] == null
@@ -853,7 +1119,7 @@ class _CompareStep extends StatelessWidget {
           const SizedBox(height: 12),
           const Center(child: CircularProgressIndicator()),
         ],
-        if (selectedPlan != null && selected != null) ...[
+        if (selectedVariant != null && selected != null) ...[
           const SizedBox(height: 14),
           Material(
             key: const ValueKey('route-saved-confirmation'),
@@ -872,7 +1138,7 @@ class _CompareStep extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _PlanResult(
-            plan: selectedPlan,
+            plan: selectedVariant.plan,
             style: selected!,
             formatter: formatter,
           ),
@@ -892,13 +1158,13 @@ class _CompareStep extends StatelessWidget {
 class _VariantCard extends StatelessWidget {
   const _VariantCard({
     required this.style,
-    required this.plan,
+    required this.variant,
     required this.selected,
     required this.formatter,
     required this.onTap,
   });
   final RoutePlanStyle style;
-  final RoutePlan? plan;
+  final _PlannedVariant? variant;
   final bool selected;
   final MeasurementFormatter formatter;
   final VoidCallback? onTap;
@@ -906,6 +1172,7 @@ class _VariantCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = styleColor(style);
+    final plan = variant?.plan;
     return Material(
       key: ValueKey('route-option-${style.name}'),
       color: selected ? color.withValues(alpha: 0.1) : Colors.white,
@@ -933,7 +1200,7 @@ class _VariantCard extends StatelessWidget {
                     Text(
                       plan == null
                           ? context.l10n.t('Unavailable for these preferences')
-                          : '${plan!.days.length} ${context.l10n.t('walking days')} · ${formatter.distance(plan!.totalDistanceKm)} · €${plan!.estimatedAccommodationCostEur.toStringAsFixed(0)}+',
+                          : '${context.l10n.t(plan.days.first.start.name)} → ${context.l10n.t(plan.days.last.finish.name)}\n${plan.days.length} ${context.l10n.t('walking days')} · ${formatter.distance(plan.totalDistanceKm)} · €${plan.estimatedAccommodationCostEur.toStringAsFixed(0)}+',
                       style: const TextStyle(fontSize: 11),
                     ),
                   ],
@@ -975,7 +1242,7 @@ class _PlanResult extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
         ),
         child: Text(
-          '${context.l10n.t(styleLabel(style))} · ${plan.days.length} ${context.l10n.t('walking days')} · ${formatter.distance(plan.totalDistanceKm)} · €${plan.estimatedAccommodationCostEur.toStringAsFixed(0)}+',
+          '${context.l10n.t(styleLabel(style))} · ${context.l10n.t(plan.days.first.start.name)} → ${context.l10n.t(plan.days.last.finish.name)}\n${plan.days.length} ${context.l10n.t('walking days')} · ${formatter.distance(plan.totalDistanceKm)} · €${plan.estimatedAccommodationCostEur.toStringAsFixed(0)}+',
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w900,
@@ -1176,19 +1443,19 @@ class _Message extends StatelessWidget {
 }
 
 String styleLabel(RoutePlanStyle style) => switch (style) {
-  RoutePlanStyle.budget => 'Budget',
+  RoutePlanStyle.relaxed => 'Relaxed',
   RoutePlanStyle.balanced => 'Balanced',
-  RoutePlanStyle.comfort => 'Comfort',
+  RoutePlanStyle.adventurous => 'Adventurous',
 };
 
 Color styleColor(RoutePlanStyle style) => switch (style) {
-  RoutePlanStyle.budget => _green,
+  RoutePlanStyle.relaxed => _green,
   RoutePlanStyle.balanced => EurotrexPalette.blue,
-  RoutePlanStyle.comfort => _comfort,
+  RoutePlanStyle.adventurous => _comfort,
 };
 
 IconData styleIcon(RoutePlanStyle style) => switch (style) {
-  RoutePlanStyle.budget => Icons.savings_outlined,
+  RoutePlanStyle.relaxed => Icons.spa_outlined,
   RoutePlanStyle.balanced => Icons.balance_rounded,
-  RoutePlanStyle.comfort => Icons.hotel_class_outlined,
+  RoutePlanStyle.adventurous => Icons.terrain_rounded,
 };

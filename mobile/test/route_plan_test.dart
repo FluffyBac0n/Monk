@@ -28,8 +28,7 @@ void main() {
         finishStageId: 'finish',
         minimumDailyDistanceKm: 15,
         maximumDailyDistanceKm: 25,
-        allowCamping: false,
-        accommodationBudgetEur: 100,
+        maximumAccommodationPriceEur: 100,
       ),
     );
 
@@ -42,7 +41,7 @@ void main() {
     expect(plan.unknownPriceNights, 0);
   });
 
-  test('returns no plan when known accommodation prices exceed the budget', () {
+  test('returns no plan when known accommodation prices exceed the range', () {
     final plan = buildDeterministicRoutePlan(
       stages: [
         _stage('start', 3, 0),
@@ -63,8 +62,7 @@ void main() {
         finishStageId: 'finish',
         minimumDailyDistanceKm: 15,
         maximumDailyDistanceKm: 25,
-        allowCamping: false,
-        accommodationBudgetEur: 50,
+        maximumAccommodationPriceEur: 50,
       ),
     );
 
@@ -85,7 +83,7 @@ void main() {
         finishStageId: 'finish',
         minimumDailyDistanceKm: 15,
         maximumDailyDistanceKm: 25,
-        allowCamping: true,
+        overnightPreference: RouteOvernightPreference.camping,
       ),
     );
 
@@ -94,7 +92,73 @@ void main() {
     expect(plan.unknownPriceNights, 1);
   });
 
-  test('budget and comfort choose different valid accommodation options', () {
+  test('honours exact walking days and the daily time limit', () {
+    final stages = [
+      _stage('start', 5, 0),
+      _stage('night-1', 4, 10, lodging: true),
+      _stage('night-2', 3, 20, lodging: true),
+      _stage('night-3', 2, 30, lodging: true),
+      _stage('finish', 1, 40),
+    ];
+    const lodgings = [
+      Lodging(id: 'one', stageId: 'night-1', priceMinEur: 50),
+      Lodging(id: 'two', stageId: 'night-2', priceMinEur: 50),
+      Lodging(id: 'three', stageId: 'night-3', priceMinEur: 50),
+    ];
+
+    RoutePlan? build(int maximumMinutes) => buildDeterministicRoutePlan(
+      stages: stages,
+      lodgings: lodgings,
+      direction: TrailDirection.pafosToLarnaka,
+      request: RoutePlanRequest(
+        startStageId: 'start',
+        finishStageId: 'finish',
+        minimumDailyDistanceKm: 5,
+        maximumDailyDistanceKm: 25,
+        maximumDailyWalkingMinutes: maximumMinutes,
+        walkingDays: 4,
+        minimumAccommodationPriceEur: 40,
+        maximumAccommodationPriceEur: 60,
+      ),
+    );
+
+    expect(build(140)!.days, hasLength(4));
+    expect(build(120), isNull);
+  });
+
+  test(
+    'accepts accommodation whose listed price range overlaps the filter',
+    () {
+      final plan = buildDeterministicRoutePlan(
+        stages: [
+          _stage('start', 3, 0),
+          _stage('overnight', 2, 20, lodging: true),
+          _stage('finish', 1, 40),
+        ],
+        lodgings: const [
+          Lodging(
+            id: 'stay',
+            stageId: 'overnight',
+            priceMinEur: 40,
+            priceMaxEur: 100,
+          ),
+        ],
+        direction: TrailDirection.pafosToLarnaka,
+        request: const RoutePlanRequest(
+          startStageId: 'start',
+          finishStageId: 'finish',
+          minimumDailyDistanceKm: 15,
+          maximumDailyDistanceKm: 25,
+          minimumAccommodationPriceEur: 60,
+          maximumAccommodationPriceEur: 80,
+        ),
+      );
+
+      expect(plan, isNotNull);
+    },
+  );
+
+  test('relaxed and adventurous choose different accommodation options', () {
     const stages = [
       TrailStage(
         id: 'start',
@@ -152,19 +216,17 @@ void main() {
         finishStageId: 'finish',
         minimumDailyDistanceKm: 15,
         maximumDailyDistanceKm: 25,
-        allowCamping: false,
-        accommodationBudgetEur: 100,
         style: style,
       ),
     );
 
     expect(
-      build(RoutePlanStyle.budget)!.days.first.accommodation!.id,
-      'hostel',
+      build(RoutePlanStyle.relaxed)!.days.first.accommodation!.id,
+      'hotel',
     );
     expect(
-      build(RoutePlanStyle.comfort)!.days.first.accommodation!.id,
-      'hotel',
+      build(RoutePlanStyle.adventurous)!.days.first.accommodation!.id,
+      'hostel',
     );
   });
 }

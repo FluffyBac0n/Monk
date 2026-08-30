@@ -87,6 +87,38 @@ const italianTranslations = <String, String>{
   'Route': 'Percorso',
   'Planner': 'Pianifica',
   'Route planner': 'Pianificatore percorso',
+  'Tailored E4 plan': 'Piano E4 personalizzato',
+  'Trip': 'Viaggio',
+  'Pace': 'Ritmo',
+  'Stay': 'Pernottamento',
+  'Your trip': 'Il tuo viaggio',
+  'How many walking days do you have?':
+      'Quanti giorni di cammino hai a disposizione?',
+  'days': 'giorni',
+  'What would you like to walk?': 'Cosa vorresti percorrere?',
+  'Best section': 'Tratto migliore',
+  'Whole E4': 'Intero E4',
+  'Where would you prefer to start?': 'Da dove preferisci iniziare?',
+  'Best direction': 'Direzione migliore',
+  'Pafos': 'Pafo',
+  'Larnaka': 'Larnaca',
+  'We will compare both trail directions and choose the better fit.':
+      'Confronteremo entrambe le direzioni e sceglieremo quella più adatta.',
+  'Your daily pace': 'Il tuo ritmo giornaliero',
+  'How do you prefer to set your pace?': 'Come preferisci impostare il ritmo?',
+  'Hours': 'Ore',
+  'hours': 'ore',
+  'per day': 'al giorno',
+  'Walking time includes an allowance for climbing. Each option adjusts the effort around this target.':
+      'Il tempo di cammino include un margine per le salite. Ogni opzione regola lo sforzo attorno a questo obiettivo.',
+  'Overnight stays': 'Pernottamenti',
+  'Either': 'Entrambi',
+  'Price per night': 'Prezzo per notte',
+  'The range applies per room, per night, using listed prices.':
+      'La fascia si applica per camera e per notte, usando i prezzi indicati.',
+  'Build my plans': 'Crea i miei itinerari',
+  'Relaxed': 'Rilassato',
+  'Adventurous': 'Avventuroso',
   'My routes': 'I miei percorsi',
   'New route': 'Nuovo percorso',
   'Add route': 'Aggiungi percorso',
@@ -203,6 +235,13 @@ const italianTranslations = <String, String>{
   'Estimated walking time': 'Tempo di cammino stimato',
   'Naismith estimate based on distance and ascent. Breaks and terrain are not included.':
       'Stima di Naismith basata su distanza e salita. Le pause e il tipo di terreno non sono inclusi.',
+  "Naismith's Rule estimates walking time by allowing:":
+      'La regola di Naismith stima il tempo di cammino considerando:',
+  '1 hour for every 5 km of distance': '1 ora ogni 5 km di distanza',
+  '1 extra hour for every 600 m of ascent':
+      '1 ora aggiuntiva ogni 600 m di salita',
+  'Descent, terrain difficulty, breaks, weather, pack weight, and individual fitness are not included. Actual walking time may vary.':
+      'Discesa, difficoltà del terreno, pause, meteo, peso dello zaino e forma fisica individuale non sono inclusi. Il tempo effettivo può variare.',
   'h': 'h',
   'min': 'min',
   'Preparing the offline elevation profile…':

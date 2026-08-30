@@ -1217,36 +1217,67 @@ void main() {
       const Color(0xFFD14B45),
     );
     expect(find.text('1 h 21 min'), findsOneWidget);
-    final walkingTimeLabel = find.byKey(
-      const ValueKey('walking-time-footnote-label'),
+    final walkingTimeCard = find.byKey(const Key('stage-detail-walking-time'));
+    final positionCard = find.byKey(const Key('stage-detail-position'));
+    final positionCardMaterial = tester.widget<Material>(
+      find.descendant(of: positionCard, matching: find.byType(Material)).first,
     );
-    expect(walkingTimeLabel, findsOneWidget);
+    final positionCardShape =
+        positionCardMaterial.shape! as RoundedRectangleBorder;
+    expect(positionCardShape.side.color, const Color(0xFFD8DDDA));
+    expect(positionCardShape.side.width, 1);
+    expect(tester.getSize(positionCard).height, lessThan(100));
     expect(
-      tester.widget<Text>(walkingTimeLabel).textSpan?.toPlainText(),
-      'Estimated walking time *',
-    );
-    expect(
-      find.byKey(const ValueKey('walking-time-footnote-note')),
-      findsOneWidget,
+      tester.getSize(positionCard).height,
+      closeTo(tester.getSize(walkingTimeCard).height, 1),
     );
     expect(
       tester
-          .getTopLeft(find.byKey(const ValueKey('walking-time-footnote-note')))
-          .dy,
-      lessThan(
-        tester
-            .getTopLeft(
-              find.byKey(const ValueKey('stage-detail-secondary-metrics')),
-            )
-            .dy,
-      ),
+          .getCenter(find.byKey(const ValueKey('stage-length-route-icon')))
+          .dx,
+      closeTo(tester.getCenter(positionCard).dx, 1),
+    );
+    final secondaryMetrics = tester.widget<Container>(
+      find.byKey(const ValueKey('stage-detail-secondary-metrics')),
+    );
+    final secondaryDecoration = secondaryMetrics.decoration! as BoxDecoration;
+    expect(
+      (secondaryDecoration.border! as Border).top.color,
+      const Color(0xFFD8DDDA),
     );
     expect(
-      tester.getCenter(find.byKey(const Key('stage-detail-position'))).dy,
-      closeTo(
-        tester.getCenter(find.byKey(const Key('stage-detail-walking-time'))).dy,
-        1,
+      find.descendant(
+        of: walkingTimeCard,
+        matching: find.byIcon(Icons.more_horiz_rounded),
       ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('walking-time-footnote-note')),
+      findsNothing,
+    );
+    await tester.tap(walkingTimeCard);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('naismith-estimate-dialog')),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        '• 1 hour for every 5 km of distance\n'
+        '• 1 extra hour for every 600 m of ascent',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Actual walking time may vary.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithText(TextButton, 'Close'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getCenter(find.byKey(const Key('stage-detail-position'))).dy,
+      closeTo(tester.getCenter(walkingTimeCard).dy, 1),
     );
     expect(
       tester
@@ -1275,6 +1306,27 @@ void main() {
       const Color(0xFF1565C0),
     );
     expect(find.text('Drinking water'), findsOneWidget);
+    expect(find.text('Services'), findsNothing);
+    final servicesSection = find.byKey(const ValueKey('stage-detail-services'));
+    expect(servicesSection, findsOneWidget);
+    final servicesContainer = tester.widget<Container>(
+      find
+          .descendant(of: servicesSection, matching: find.byType(Container))
+          .first,
+    );
+    expect(
+      ((servicesContainer.decoration! as BoxDecoration).border! as Border)
+          .top
+          .color,
+      const Color(0xFFD8DDDA),
+    );
+    final routePreview = tester.widget<Container>(
+      find.byKey(const Key('stage-route-preview-panel')),
+    );
+    expect(
+      ((routePreview.decoration! as BoxDecoration).border! as Border).top.color,
+      const Color(0xFFD8DDDA),
+    );
     expect(find.text('Available offline'), findsNothing);
     final bottomNavigation = find.byKey(
       const ValueKey('stage-detail-bottom-navigation'),
