@@ -14,6 +14,7 @@ class SavedRouteDay {
     required this.estimatedWalkingMinutes,
     required this.usesCamping,
     required this.accommodationName,
+    this.accommodationId,
     required this.estimatedCostEur,
   });
 
@@ -28,6 +29,7 @@ class SavedRouteDay {
   final int estimatedWalkingMinutes;
   final bool usesCamping;
   final String? accommodationName;
+  final String? accommodationId;
   final double? estimatedCostEur;
 
   Map<String, Object?> toJson() => {
@@ -42,6 +44,7 @@ class SavedRouteDay {
     'estimatedWalkingMinutes': estimatedWalkingMinutes,
     'usesCamping': usesCamping,
     'accommodationName': accommodationName,
+    'accommodationId': accommodationId,
     'estimatedCostEur': estimatedCostEur,
   };
 
@@ -57,6 +60,7 @@ class SavedRouteDay {
     estimatedWalkingMinutes: (json['estimatedWalkingMinutes'] as num).toInt(),
     usesCamping: json['usesCamping']! as bool,
     accommodationName: json['accommodationName'] as String?,
+    accommodationId: json['accommodationId'] as String?,
     estimatedCostEur: (json['estimatedCostEur'] as num?)?.toDouble(),
   );
 }
@@ -76,6 +80,7 @@ class SavedRoute {
     required this.minimumAccommodationPriceEur,
     required this.maximumAccommodationPriceEur,
     required this.overnightPreference,
+    this.startDate,
     required this.days,
     required this.estimatedAccommodationCostEur,
     required this.unknownPriceNights,
@@ -94,6 +99,7 @@ class SavedRoute {
   final double? minimumAccommodationPriceEur;
   final double? maximumAccommodationPriceEur;
   final RouteOvernightPreference overnightPreference;
+  final DateTime? startDate;
   final List<SavedRouteDay> days;
   final double estimatedAccommodationCostEur;
   final int unknownPriceNights;
@@ -129,6 +135,7 @@ class SavedRoute {
     minimumAccommodationPriceEur: request.minimumAccommodationPriceEur,
     maximumAccommodationPriceEur: request.maximumAccommodationPriceEur,
     overnightPreference: request.overnightPreference,
+    startDate: request.startDate,
     days: [
       for (final day in plan.days)
         SavedRouteDay(
@@ -143,6 +150,7 @@ class SavedRoute {
           estimatedWalkingMinutes: day.estimatedWalkingMinutes,
           usesCamping: day.usesCamping,
           accommodationName: day.accommodation?.name,
+          accommodationId: day.accommodation?.id,
           estimatedCostEur: day.estimatedCostEur,
         ),
     ],
@@ -164,6 +172,7 @@ class SavedRoute {
     'minimumAccommodationPriceEur': minimumAccommodationPriceEur,
     'maximumAccommodationPriceEur': maximumAccommodationPriceEur,
     'overnightPreference': overnightPreference.name,
+    'startDate': startDate?.toIso8601String(),
     'days': [for (final day in days) day.toJson()],
     'estimatedAccommodationCostEur': estimatedAccommodationCostEur,
     'unknownPriceNights': unknownPriceNights,
@@ -192,6 +201,10 @@ class SavedRoute {
       final String value => RouteOvernightPreference.values.byName(value),
       _ when json['allowCamping'] == true => RouteOvernightPreference.either,
       _ => RouteOvernightPreference.accommodation,
+    },
+    startDate: switch (json['startDate']) {
+      final String value => DateTime.tryParse(value),
+      _ => null,
     },
     days: [
       for (final value in json['days']! as List<Object?>)

@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && (
+        request.auth.token.admin == true ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isOwner(ownerId) {
+      return signedIn() && request.auth.uid == ownerId;
+    }
+
+    match /trails/{trailId}/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /ownerProfiles/{ownerId} {
+      allow read, create, update: if isOwner(ownerId);
+      allow read, write: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /accommodationSubmissions/{submissionId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.ownerId == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerEmail == request.auth.token.email
+        && request.resource.data.policyAgreement == true
+        && request.resource.data.status == 'pending';
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerEmail == request.auth.token.email
+        && request.resource.data.policyAgreement == true
+        && request.resource.data.status in ['pending', 'pending_update']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'trailId', 'trailName', 'stageId', 'stageName', 'stageSequence',
+          'name', 'type', 'village', 'address', 'description', 'phone',
+          'email', 'website', 'whatsapp', 'googleMapsUrl', 'priceMinEur',
+          'priceMaxEur', 'distanceFromTrailKm', 'capacityPeople', 'monthsOpen',
+          'latitude', 'longitude', 'policyAgreement', 'status', 'reviewNote',
+          'updatedAt'
+        ])
+      );
+      allow delete: if signedIn()
+        && resource.data.ownerId == request.auth.uid
+        && resource.data.status in ['draft', 'rejected', 'changes_requested'];
+    }
+
+    match /admins/{adminId} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == adminId);
+      allow write: if isAdmin();
+    }
+
+    match /accommodationAudit/{entryId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -18,6 +18,17 @@ build/
 *.egg-info/
 .DS_Store
 
+# EuroTrex website local configuration and generated artifacts
+/www/.env*
+!/www/.env.example
+/www/.next/
+/www/.vinext/
+/www/node_modules/
+/www/dist/
+/www/.wrangler/
+/www/outputs/
+/www/work/
+
 # Flutter mobile app local configuration and generated artifacts
 /mobile/env.local.json
 /mobile/.dart_tool/

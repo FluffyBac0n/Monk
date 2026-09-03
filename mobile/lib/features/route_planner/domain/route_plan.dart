@@ -14,6 +14,7 @@ class RoutePlanRequest {
     required this.maximumDailyDistanceKm,
     this.maximumDailyWalkingMinutes,
     this.walkingDays,
+    this.startDate,
     this.overnightPreference = RouteOvernightPreference.accommodation,
     this.minimumAccommodationPriceEur,
     this.maximumAccommodationPriceEur,
@@ -26,6 +27,7 @@ class RoutePlanRequest {
   final double maximumDailyDistanceKm;
   final int? maximumDailyWalkingMinutes;
   final int? walkingDays;
+  final DateTime? startDate;
   final RouteOvernightPreference overnightPreference;
   final double? minimumAccommodationPriceEur;
   final double? maximumAccommodationPriceEur;
@@ -62,6 +64,37 @@ class RoutePlanDay {
   final bool usesCamping;
   final Lodging? accommodation;
   final double? estimatedCostEur;
+
+  RoutePlanDay copyWith({
+    int? dayNumber,
+    TrailStage? start,
+    TrailStage? finish,
+    double? distanceKm,
+    double? ascentM,
+    double? descentM,
+    int? estimatedWalkingMinutes,
+    bool? usesCamping,
+    Lodging? accommodation,
+    bool clearAccommodation = false,
+    double? estimatedCostEur,
+    bool clearEstimatedCost = false,
+  }) => RoutePlanDay(
+    dayNumber: dayNumber ?? this.dayNumber,
+    start: start ?? this.start,
+    finish: finish ?? this.finish,
+    distanceKm: distanceKm ?? this.distanceKm,
+    ascentM: ascentM ?? this.ascentM,
+    descentM: descentM ?? this.descentM,
+    estimatedWalkingMinutes:
+        estimatedWalkingMinutes ?? this.estimatedWalkingMinutes,
+    usesCamping: usesCamping ?? this.usesCamping,
+    accommodation: clearAccommodation
+        ? null
+        : accommodation ?? this.accommodation,
+    estimatedCostEur: clearEstimatedCost
+        ? null
+        : estimatedCostEur ?? this.estimatedCostEur,
+  );
 }
 
 class RoutePlan {
@@ -77,6 +110,148 @@ class RoutePlan {
 
   double get totalDistanceKm =>
       days.fold(0, (total, day) => total + day.distanceKm);
+
+  factory RoutePlan.fromDays(List<RoutePlanDay> days) {
+    final immutableDays = List<RoutePlanDay>.unmodifiable(days);
+    return RoutePlan(
+      days: immutableDays,
+      estimatedAccommodationCostEur: immutableDays.fold(
+        0,
+        (total, day) => total + (day.estimatedCostEur ?? 0),
+      ),
+      unknownPriceNights: immutableDays
+          .take(immutableDays.isEmpty ? 0 : immutableDays.length - 1)
+          .where((day) => day.estimatedCostEur == null)
+          .length,
+    );
+  }
+}
+
+/// Rebuilds an itinerary around user-selected overnight boundaries.
+///
+/// [stopStageIds] contains only intermediate stops; the request start and
+/// finish are always retained. Explicit accommodation choices take precedence
+/// over the automatic preference and price ranking.
+RoutePlan? buildRoutePlanFromStops({
+  required List<TrailStage> stages,
+  required List<Lodging> lodgings,
+  required TrailDirection direction,
+  required RoutePlanRequest request,
+  required List<String> stopStageIds,
+  Map<String, String> accommodationIdsByStage = const {},
+  Set<String> campingStageIds = const {},
+}) {
+  final ordered = direction.isReversed
+      ? stages.reversed.toList(growable: false)
+      : stages.toList(growable: false);
+  final routeStages = ordered
+      .where(
+        (stage) =>
+            stage.accumulatedDistanceKm != null &&
+            stageIsOnTrail(stage) != false,
+      )
+      .toList(growable: false);
+  final indexes = <String, int>{
+    for (var index = 0; index < routeStages.length; index++)
+      routeStages[index].id: index,
+  };
+  final startIndex = indexes[request.startStageId];
+  final finishIndex = indexes[request.finishStageId];
+  if (startIndex == null || finishIndex == null || finishIndex <= startIndex) {
+    return null;
+  }
+
+  final requestedStops =
+      stopStageIds
+          .where((id) {
+            final index = indexes[id];
+            return index != null && index > startIndex && index < finishIndex;
+          })
+          .toSet()
+          .toList(growable: false)
+        ..sort((left, right) => indexes[left]!.compareTo(indexes[right]!));
+  final boundaryIndexes = <int>[
+    startIndex,
+    for (final id in requestedStops) indexes[id]!,
+    finishIndex,
+  ];
+  final lodgingById = {for (final lodging in lodgings) lodging.id: lodging};
+  final lodgingsByStage = <String, List<Lodging>>{};
+  for (final lodging in lodgings) {
+    final stageId = lodging.stageId;
+    if (stageId != null) {
+      lodgingsByStage.putIfAbsent(stageId, () => []).add(lodging);
+    }
+  }
+
+  final days = <RoutePlanDay>[];
+  for (var dayIndex = 0; dayIndex < boundaryIndexes.length - 1; dayIndex++) {
+    final sourceIndex = boundaryIndexes[dayIndex];
+    final destinationIndex = boundaryIndexes[dayIndex + 1];
+    final start = routeStages[sourceIndex];
+    final finish = routeStages[destinationIndex];
+    final distance = _distanceBetween(start, finish);
+    if (distance == null) return null;
+    final effort = _effortBetween(
+      orderedStages: routeStages,
+      sourceIndex: sourceIndex,
+      destinationIndex: destinationIndex,
+      direction: direction,
+    );
+    final isFinalDestination = dayIndex == boundaryIndexes.length - 2;
+    final explicitLodging = lodgingById[accommodationIdsByStage[finish.id]];
+    final _OvernightStop? overnight;
+    if (isFinalDestination) {
+      overnight = const _OvernightStop(
+        lodging: null,
+        usesCamping: false,
+        costEur: 0,
+        comfortPenalty: 0,
+      );
+    } else if (campingStageIds.contains(finish.id) &&
+        finish.services['tent'] == true) {
+      overnight = const _OvernightStop(
+        lodging: null,
+        usesCamping: true,
+        costEur: null,
+        comfortPenalty: 80,
+      );
+    } else if (explicitLodging != null &&
+        explicitLodging.stageId == finish.id) {
+      overnight = _OvernightStop(
+        lodging: explicitLodging,
+        usesCamping: false,
+        costEur: _lodgingPrice(explicitLodging),
+        comfortPenalty: _lodgingComfortScore(explicitLodging),
+      );
+    } else {
+      overnight = _resolveOvernightStop(
+        stage: finish,
+        lodgings: lodgingsByStage[finish.id] ?? const [],
+        preference: request.overnightPreference,
+        isFinalDestination: false,
+        style: request.style,
+        minimumPriceEur: request.minimumAccommodationPriceEur,
+        maximumPriceEur: request.maximumAccommodationPriceEur,
+      );
+    }
+    if (overnight == null) return null;
+    days.add(
+      RoutePlanDay(
+        dayNumber: dayIndex + 1,
+        start: start,
+        finish: finish,
+        distanceKm: distance,
+        ascentM: effort.ascentM,
+        descentM: effort.descentM,
+        estimatedWalkingMinutes: (distance * 12 + effort.ascentM / 10).round(),
+        usesCamping: overnight.usesCamping,
+        accommodation: overnight.lodging,
+        estimatedCostEur: overnight.costEur,
+      ),
+    );
+  }
+  return RoutePlan.fromDays(days);
 }
 
 RoutePlan? buildDeterministicRoutePlan({

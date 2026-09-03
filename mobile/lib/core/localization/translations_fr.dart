@@ -100,6 +100,7 @@ const frenchTranslations = <String, String>{
   'Whole E4': 'E4 complet',
   'Where would you prefer to start?': 'Où préférez-vous commencer ?',
   'Best direction': 'Meilleur sens',
+  'Auto': 'Auto',
   'Pafos': 'Paphos',
   'Larnaka': 'Larnaca',
   'We will compare both trail directions and choose the better fit.':
@@ -123,6 +124,38 @@ const frenchTranslations = <String, String>{
   'My routes': 'Mes itinéraires',
   'New route': 'Nouvel itinéraire',
   'Add route': 'Ajouter un itinéraire',
+  'Open and edit': 'Ouvrir et modifier',
+  'Start date': 'Date de départ',
+  'Choose section': 'Choisir un tronçon',
+  'Custom': 'Personnalisé',
+  'Suggested': 'Suggéré',
+  'Smart': 'Smart',
+  'Walking days': 'Jours de marche',
+  'The planner will choose the best-fitting section.':
+      'Le planificateur choisira le tronçon le plus adapté.',
+  'Move overnight stop': 'Déplacer l’étape de nuit',
+  'Choose where to stay': 'Choisir un hébergement',
+  'No accommodation is listed at this stop.':
+      'Aucun hébergement n’est répertorié à cette étape.',
+  'Move stop': 'Déplacer l’étape',
+  'Choose stay': 'Choisir l’hébergement',
+  'Start this day': 'Démarrer cette journée',
+  'Your route at a glance': 'Votre itinéraire en un coup d’œil',
+  'Route map is loading…': 'Chargement de la carte…',
+  'Day': 'Jour',
+  'Offline readiness': 'Préparation hors ligne',
+  'Offline map download in progress':
+      'Téléchargement de la carte hors ligne en cours',
+  'Download the trail map before you leave coverage.':
+      'Téléchargez la carte du sentier avant de perdre la couverture.',
+  'Open map': 'Ouvrir la carte',
+  'Manage': 'Gérer',
+  'from trail': 'du sentier',
+  'Open': 'Ouvert',
+  'Confirm availability for your planned date.':
+      'Confirmez la disponibilité pour la date prévue.',
+  'Pafos to Larnaka': 'Paphos à Larnaca',
+  'Larnaka to Pafos': 'Larnaca à Paphos',
   'No routes saved yet': 'Aucun itinéraire enregistré',
   'Create a route to keep its itinerary and use it in Stage filters.':
       'Créez un itinéraire pour le conserver et l’utiliser dans les filtres d’étapes.',

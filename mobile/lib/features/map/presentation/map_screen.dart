@@ -212,6 +212,8 @@ class MapScreen extends ConsumerWidget {
     this.initialExcursions = const [],
     this.initialDetours = const [],
     this.locationStageId,
+    this.plannedStartDistanceKm,
+    this.plannedFinishDistanceKm,
     this.accessToken = mapboxAccessToken,
     super.key,
   }) : assert(initialStageIndex == null || initialLodging == null),
@@ -223,6 +225,8 @@ class MapScreen extends ConsumerWidget {
   final List<TrailExcursionRoute> initialExcursions;
   final List<TrailDetourRoute> initialDetours;
   final String? locationStageId;
+  final double? plannedStartDistanceKm;
+  final double? plannedFinishDistanceKm;
   final String accessToken;
 
   @override
@@ -309,6 +313,8 @@ class MapScreen extends ConsumerWidget {
                       initialExcursions: initialExcursions,
                       initialDetours: initialDetours,
                       locationStageId: locationStageId,
+                      plannedStartDistanceKm: plannedStartDistanceKm,
+                      plannedFinishDistanceKm: plannedFinishDistanceKm,
                     ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (_, _) => _EmptyRouteState(
@@ -614,6 +620,8 @@ class _RouteMap extends ConsumerStatefulWidget {
     required this.initialExcursions,
     required this.initialDetours,
     required this.locationStageId,
+    required this.plannedStartDistanceKm,
+    required this.plannedFinishDistanceKm,
   });
 
   final List<RoutePoint> points;
@@ -626,6 +634,8 @@ class _RouteMap extends ConsumerStatefulWidget {
   final List<TrailExcursionRoute> initialExcursions;
   final List<TrailDetourRoute> initialDetours;
   final String? locationStageId;
+  final double? plannedStartDistanceKm;
+  final double? plannedFinishDistanceKm;
 
   @override
   ConsumerState<_RouteMap> createState() => _RouteMapState();
@@ -912,6 +922,36 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         lineOpacity: 0.95,
       ),
     );
+    final plannedStart = widget.plannedStartDistanceKm;
+    final plannedFinish = widget.plannedFinishDistanceKm;
+    if (plannedStart != null && plannedFinish != null) {
+      final minimumDistance = math.min(plannedStart, plannedFinish);
+      final maximumDistance = math.max(plannedStart, plannedFinish);
+      final highlightedPoints = widget.points
+          .where(
+            (point) =>
+                point.distanceKm >= minimumDistance - 0.01 &&
+                point.distanceKm <= maximumDistance + 0.01,
+          )
+          .toList(growable: false);
+      if (highlightedPoints.length >= 2) {
+        await manager.create(
+          PolylineAnnotationOptions(
+            geometry: LineString(
+              coordinates: [
+                for (final point in highlightedPoints)
+                  Position(point.lng, point.lat),
+              ],
+            ),
+            lineColor: _yellow.toARGB32(),
+            lineWidth: 8,
+            lineBorderColor: Colors.white.toARGB32(),
+            lineBorderWidth: 2,
+            lineOpacity: 1,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _drawDirectionMarkers(MapboxMap map) async {

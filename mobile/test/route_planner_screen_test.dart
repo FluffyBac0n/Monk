@@ -48,7 +48,15 @@ void main() {
     expect(find.byKey(const ValueKey('route-planner-days')), findsOneWidget);
     expect(find.byKey(const ValueKey('route-planner-goal')), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('route-planner-start-preference')),
+      find.byKey(const ValueKey('route-planner-selection-map')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('route-planner-start-stage')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('route-planner-finish-stage')),
       findsOneWidget,
     );
 
@@ -57,13 +65,6 @@ void main() {
       await tester.pump();
     }
     expect(find.text('2 days'), findsOneWidget);
-    await tester.tap(
-      find.descendant(
-        of: find.byKey(const ValueKey('route-planner-start-preference')),
-        matching: find.text('Larnaka'),
-      ),
-    );
-
     await tester.tap(find.byKey(const ValueKey('route-planner-route-next')));
     await tester.pumpAndSettle();
     expect(
@@ -129,7 +130,7 @@ void main() {
     expect(find.byKey(const ValueKey('saved-routes-empty')), findsNothing);
     expect(find.byKey(const ValueKey('route-planner-add')), findsOneWidget);
     expect(database.settings, contains('savedRoutesV1'));
-    expect(database.settings['savedRoutesV1'], contains('larnakaToPafos'));
+    expect(database.settings['savedRoutesV1'], contains('pafosToLarnaka'));
 
     await tester.tap(find.byIcon(Icons.delete_outline_rounded));
     await tester.pumpAndSettle();

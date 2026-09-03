@@ -229,6 +229,40 @@ void main() {
       'hostel',
     );
   });
+
+  test('rebuilds a route around edited stops and explicit lodging choices', () {
+    final stages = [
+      _stage('start', 5, 0),
+      _stage('night-1', 4, 10, lodging: true),
+      _stage('night-2', 3, 20, lodging: true),
+      _stage('night-3', 2, 30, lodging: true),
+      _stage('finish', 1, 40),
+    ];
+    const lodgings = [
+      Lodging(id: 'basic', stageId: 'night-2', priceMinEur: 30),
+      Lodging(id: 'chosen', stageId: 'night-2', priceMinEur: 75),
+    ];
+
+    final plan = buildRoutePlanFromStops(
+      stages: stages,
+      lodgings: lodgings,
+      direction: TrailDirection.pafosToLarnaka,
+      request: const RoutePlanRequest(
+        startStageId: 'start',
+        finishStageId: 'finish',
+        minimumDailyDistanceKm: 5,
+        maximumDailyDistanceKm: 30,
+      ),
+      stopStageIds: const ['night-2'],
+      accommodationIdsByStage: const {'night-2': 'chosen'},
+    );
+
+    expect(plan, isNotNull);
+    expect(plan!.days, hasLength(2));
+    expect(plan.days.first.finish.id, 'night-2');
+    expect(plan.days.first.accommodation?.id, 'chosen');
+    expect(plan.estimatedAccommodationCostEur, 75);
+  });
 }
 
 TrailStage _stage(

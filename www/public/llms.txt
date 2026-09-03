@@ -1,0 +1,13 @@
+# EuroTrex
+
+EuroTrex is a mobile trail companion for the E4 in Cyprus. It provides offline trail maps, elevation context, tailored stage planning and verified accommodation near the route.
+
+Hikers do not create website accounts. They use the EuroTrex iOS or Android app.
+
+Accommodation owners can create a website partner account, submit a property, follow its review status and maintain approved information. The EuroTrex team verifies submissions and material updates before publishing them in the mobile app.
+
+Official pages:
+- / — product overview and app download links
+- /portal — accommodation owner sign-in and listing management
+- /partner-terms — accommodation listing standards
+- /privacy — website privacy information
