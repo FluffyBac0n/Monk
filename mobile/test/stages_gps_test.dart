@@ -53,13 +53,14 @@ void main() {
           .widget<CustomScrollView>(find.byType(CustomScrollView))
           .controller!;
       final offsetBeforeGps = scrollController.offset;
-      expect(tester.getTopLeft(selectedCard).dy, greaterThan(900));
+      expect(selectedCard, findsNothing);
 
       await tester.tap(gpsButton);
       await tester.pumpAndSettle();
 
       expect(locationReadCount, 1);
       expect(scrollController.offset, greaterThan(offsetBeforeGps));
+      expect(selectedCard, findsOneWidget);
       expect(tester.getTopLeft(selectedCard).dy, greaterThanOrEqualTo(0));
       expect(tester.getBottomLeft(selectedCard).dy, lessThanOrEqualTo(900));
       expect(
@@ -311,12 +312,13 @@ void main() {
         .widget<CustomScrollView>(find.byType(CustomScrollView))
         .controller!;
     final offsetBeforeGps = scrollController.offset;
-    expect(tester.getTopLeft(selectedCard).dy, greaterThan(900));
+    expect(selectedCard, findsNothing);
 
     await tester.tap(gpsButton);
     await tester.pumpAndSettle();
 
     expect(scrollController.offset, greaterThan(offsetBeforeGps));
+    expect(selectedCard, findsOneWidget);
     expect(tester.getTopLeft(selectedCard).dy, greaterThanOrEqualTo(0));
     expect(tester.getBottomLeft(selectedCard).dy, lessThanOrEqualTo(900));
     expect(
@@ -366,15 +368,21 @@ void main() {
 
       expect(find.textContaining('Du bist ungefähr'), findsOneWidget);
       expect(find.textContaining('vom Weg entfernt.'), findsOneWidget);
-      for (var index = 0; index < _gpsStageCount; index++) {
-        expect(
-          tester
-              .widget<Material>(
-                find.byKey(ValueKey('stage-card-gps-stage-$index')),
-              )
-              .color,
-          Colors.white,
-        );
+      expect(
+        find.byKey(const ValueKey('stage-marker-selection-gps-stage-0')),
+        findsNothing,
+      );
+      final visibleStageCards = find.byWidgetPredicate(
+        (widget) =>
+            widget is Material &&
+            widget.key is ValueKey<String> &&
+            (widget.key! as ValueKey<String>).value.startsWith(
+              'stage-card-gps-stage-',
+            ),
+      );
+      expect(visibleStageCards, findsWidgets);
+      for (final element in visibleStageCards.evaluate()) {
+        expect((element.widget as Material).color, Colors.white);
       }
     },
   );

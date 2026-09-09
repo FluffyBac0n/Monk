@@ -621,7 +621,30 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted) return;
 
-      final targetContext = _stageRowKeys[stage.id]?.currentContext;
+      var targetContext = _stageRowKeys[stage.id]?.currentContext;
+      if (targetContext == null && scrollController.hasClients) {
+        final selectedIndex = orderedStages.indexWhere(
+          (candidate) => candidate.id == stage.id,
+        );
+        if (selectedIndex >= 0) {
+          final targetFraction = orderedStages.length <= 1
+              ? 0.0
+              : selectedIndex / (orderedStages.length - 1);
+          final estimatedOffset =
+              scrollController.position.maxScrollExtent * targetFraction;
+          await scrollController.animateTo(
+            estimatedOffset.clamp(
+              scrollController.position.minScrollExtent,
+              scrollController.position.maxScrollExtent,
+            ),
+            duration: const Duration(milliseconds: 450),
+            curve: Curves.easeOutCubic,
+          );
+          await WidgetsBinding.instance.endOfFrame;
+          if (!mounted) return;
+          targetContext = _stageRowKeys[stage.id]?.currentContext;
+        }
+      }
       if (targetContext != null &&
           targetContext.mounted &&
           !_isFullyVisible(targetContext)) {
@@ -1098,23 +1121,22 @@ class _StagesScreenState extends ConsumerState<StagesScreen> {
                           20,
                           40,
                         ),
-                        sliver: SliverToBoxAdapter(
-                          child: Column(
-                            children: [
-                              _TrailTimelineWaymark(
-                                shouldPulse: _hasSeenTrailInformation == false,
-                                connectsToTimeline:
-                                    connectsSingleNamedStageToWaymark ||
-                                    orderedItems.indexWhere(
-                                          (item) =>
-                                              item.id == filteredItems.first.id,
-                                        ) ==
-                                        0,
-                                onTap: _openTrailInformation,
-                              ),
-                              ...timelineRows,
-                            ],
-                          ),
+                        sliver: SliverList.builder(
+                          itemCount: timelineRows.length + 1,
+                          itemBuilder: (context, index) {
+                            if (index > 0) return timelineRows[index - 1];
+                            return _TrailTimelineWaymark(
+                              shouldPulse: _hasSeenTrailInformation == false,
+                              connectsToTimeline:
+                                  connectsSingleNamedStageToWaymark ||
+                                  orderedItems.indexWhere(
+                                        (item) =>
+                                            item.id == filteredItems.first.id,
+                                      ) ==
+                                      0,
+                              onTap: _openTrailInformation,
+                            );
+                          },
                         ),
                       );
               },

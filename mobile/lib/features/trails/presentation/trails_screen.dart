@@ -151,7 +151,6 @@ class TrailsScreen extends ConsumerWidget {
                     isOffline: trailDataReady,
                     isEnabled: canExploreTrails,
                     onExplore: () {
-                      ref.read(lodgingsForTrailProvider);
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           settings: const RouteSettings(
@@ -160,6 +159,11 @@ class TrailsScreen extends ConsumerWidget {
                           builder: (_) => const StagesScreen(),
                         ),
                       );
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (context.mounted) {
+                          ref.read(lodgingsForTrailProvider);
+                        }
+                      });
                     },
                   ),
                 const SizedBox(height: 16),
