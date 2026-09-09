@@ -14,6 +14,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('saved route preserves planner pace and stay preferences', () {
+    final route = SavedRoute(
+      id: 'preferences',
+      createdAt: DateTime(2026, 9, 9),
+      style: RoutePlanStyle.balanced,
+      direction: TrailDirection.pafosToLarnaka,
+      startStageId: 'start',
+      startStageName: 'Start',
+      finishStageId: 'finish',
+      finishStageName: 'Finish',
+      minimumDailyDistanceKm: 1,
+      maximumDailyDistanceKm: 24,
+      maximumDailyWalkingMinutes: 360,
+      preferredDailyDistanceKm: 20,
+      constraint: RoutePlanConstraint.dailyPace,
+      paceUnit: RoutePaceUnit.distance,
+      paceValue: 20,
+      includeUnknownAccommodationPrices: false,
+      minimumAccommodationPriceEur: 40,
+      maximumAccommodationPriceEur: 120,
+      overnightPreference: RouteOvernightPreference.either,
+      startDate: DateTime(2024, 5, 1),
+      days: const [],
+      estimatedAccommodationCostEur: 0,
+      unknownPriceNights: 0,
+    );
+
+    final restored = SavedRoute.fromJson(route.toJson());
+    expect(restored.constraint, RoutePlanConstraint.dailyPace);
+    expect(restored.paceUnit, RoutePaceUnit.distance);
+    expect(restored.paceValue, 20);
+    expect(restored.maximumDailyWalkingMinutes, 360);
+    expect(restored.preferredDailyDistanceKm, 20);
+    expect(restored.includeUnknownAccommodationPrices, isFalse);
+    expect(restored.startDate, DateTime(2024, 5, 1));
+  });
+
   testWidgets('a saved itinerary is available in Stage filters', (
     tester,
   ) async {

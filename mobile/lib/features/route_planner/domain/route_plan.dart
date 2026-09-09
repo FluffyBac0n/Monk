@@ -6,6 +6,22 @@ enum RoutePlanStyle { relaxed, balanced, adventurous }
 
 enum RouteOvernightPreference { accommodation, camping, either }
 
+enum RoutePlanConstraint { fixedDays, dailyPace }
+
+enum RoutePaceUnit { hours, distance }
+
+enum RoutePlanFailure {
+  invalidEndpoints,
+  tooFarForSelectedDays,
+  tooManySelectedDays,
+  dailyPaceExceeded,
+  unknownPricesExcluded,
+  accommodationBudget,
+  overnightPreference,
+  exactDayCount,
+  noOvernightStops,
+}
+
 class RoutePlanRequest {
   const RoutePlanRequest({
     required this.startStageId,
@@ -18,6 +34,11 @@ class RoutePlanRequest {
     this.overnightPreference = RouteOvernightPreference.accommodation,
     this.minimumAccommodationPriceEur,
     this.maximumAccommodationPriceEur,
+    this.preferredDailyDistanceKm,
+    this.constraint = RoutePlanConstraint.fixedDays,
+    this.paceUnit = RoutePaceUnit.hours,
+    this.paceValue = 6,
+    this.includeUnknownAccommodationPrices = true,
     this.style = RoutePlanStyle.balanced,
   });
 
@@ -31,6 +52,11 @@ class RoutePlanRequest {
   final RouteOvernightPreference overnightPreference;
   final double? minimumAccommodationPriceEur;
   final double? maximumAccommodationPriceEur;
+  final double? preferredDailyDistanceKm;
+  final RoutePlanConstraint constraint;
+  final RoutePaceUnit paceUnit;
+  final double paceValue;
+  final bool includeUnknownAccommodationPrices;
   final RoutePlanStyle style;
 
   bool get allowsAccommodation =>
@@ -38,6 +64,49 @@ class RoutePlanRequest {
 
   bool get allowsCamping =>
       overnightPreference != RouteOvernightPreference.accommodation;
+
+  RoutePlanRequest copyWith({
+    int? walkingDays,
+    bool clearWalkingDays = false,
+    int? maximumDailyWalkingMinutes,
+    bool clearMaximumDailyWalkingMinutes = false,
+    RouteOvernightPreference? overnightPreference,
+    double? minimumAccommodationPriceEur,
+    double? maximumAccommodationPriceEur,
+    bool clearAccommodationPriceRange = false,
+    double? preferredDailyDistanceKm,
+    RoutePlanConstraint? constraint,
+    RoutePaceUnit? paceUnit,
+    double? paceValue,
+    bool? includeUnknownAccommodationPrices,
+    RoutePlanStyle? style,
+  }) => RoutePlanRequest(
+    startStageId: startStageId,
+    finishStageId: finishStageId,
+    minimumDailyDistanceKm: minimumDailyDistanceKm,
+    maximumDailyDistanceKm: maximumDailyDistanceKm,
+    maximumDailyWalkingMinutes: clearMaximumDailyWalkingMinutes
+        ? null
+        : maximumDailyWalkingMinutes ?? this.maximumDailyWalkingMinutes,
+    walkingDays: clearWalkingDays ? null : walkingDays ?? this.walkingDays,
+    startDate: startDate,
+    overnightPreference: overnightPreference ?? this.overnightPreference,
+    minimumAccommodationPriceEur: clearAccommodationPriceRange
+        ? null
+        : minimumAccommodationPriceEur ?? this.minimumAccommodationPriceEur,
+    maximumAccommodationPriceEur: clearAccommodationPriceRange
+        ? null
+        : maximumAccommodationPriceEur ?? this.maximumAccommodationPriceEur,
+    preferredDailyDistanceKm:
+        preferredDailyDistanceKm ?? this.preferredDailyDistanceKm,
+    constraint: constraint ?? this.constraint,
+    paceUnit: paceUnit ?? this.paceUnit,
+    paceValue: paceValue ?? this.paceValue,
+    includeUnknownAccommodationPrices:
+        includeUnknownAccommodationPrices ??
+        this.includeUnknownAccommodationPrices,
+    style: style ?? this.style,
+  );
 }
 
 class RoutePlanDay {
@@ -233,6 +302,7 @@ RoutePlan? buildRoutePlanFromStops({
         style: request.style,
         minimumPriceEur: request.minimumAccommodationPriceEur,
         maximumPriceEur: request.maximumAccommodationPriceEur,
+        includeUnknownPrices: request.includeUnknownAccommodationPrices,
       );
     }
     if (overnight == null) return null;
@@ -299,12 +369,29 @@ RoutePlan? buildDeterministicRoutePlan({
 
   final states = List.generate(routeStages.length, (_) => <_PlannerState>[]);
   states[0].add(const _PlannerState(score: 0, knownCostEur: 0, legs: []));
+  final preferredDistance =
+      (request.preferredDailyDistanceKm ??
+              (request.minimumDailyDistanceKm +
+                      request.maximumDailyDistanceKm) /
+                  2)
+          .clamp(
+            request.minimumDailyDistanceKm,
+            request.maximumDailyDistanceKm,
+          );
   final targetDistance = switch (request.style) {
-    RoutePlanStyle.relaxed => request.minimumDailyDistanceKm,
-    RoutePlanStyle.balanced =>
-      (request.minimumDailyDistanceKm + request.maximumDailyDistanceKm) / 2,
-    RoutePlanStyle.adventurous => request.maximumDailyDistanceKm,
+    RoutePlanStyle.relaxed => (preferredDistance * 0.85).clamp(
+      request.minimumDailyDistanceKm,
+      request.maximumDailyDistanceKm,
+    ),
+    RoutePlanStyle.balanced => preferredDistance,
+    RoutePlanStyle.adventurous => (preferredDistance * 1.15).clamp(
+      request.minimumDailyDistanceKm,
+      request.maximumDailyDistanceKm,
+    ),
   };
+  final exactWalkingDays = request.constraint == RoutePlanConstraint.fixedDays
+      ? request.walkingDays
+      : null;
 
   for (
     var sourceIndex = 0;
@@ -312,7 +399,7 @@ RoutePlan? buildDeterministicRoutePlan({
     sourceIndex++
   ) {
     for (final sourceState in states[sourceIndex]) {
-      if (request.walkingDays case final walkingDays?) {
+      if (exactWalkingDays case final walkingDays?) {
         if (sourceState.legs.length >= walkingDays) continue;
       }
       for (
@@ -350,6 +437,7 @@ RoutePlan? buildDeterministicRoutePlan({
           style: request.style,
           minimumPriceEur: request.minimumAccommodationPriceEur,
           maximumPriceEur: request.maximumAccommodationPriceEur,
+          includeUnknownPrices: request.includeUnknownAccommodationPrices,
         );
         if (stop == null) continue;
 
@@ -391,7 +479,7 @@ RoutePlan? buildDeterministicRoutePlan({
         final destinationStates = states[destinationIndex];
         final isDominated = destinationStates.any(
           (existing) =>
-              (request.walkingDays == null ||
+              (exactWalkingDays == null ||
                   existing.legs.length == candidate.legs.length) &&
               existing.score <= candidate.score &&
               existing.knownCostEur <= candidate.knownCostEur,
@@ -399,7 +487,7 @@ RoutePlan? buildDeterministicRoutePlan({
         if (isDominated) continue;
         destinationStates.removeWhere(
           (existing) =>
-              (request.walkingDays == null ||
+              (exactWalkingDays == null ||
                   existing.legs.length == candidate.legs.length) &&
               candidate.score <= existing.score &&
               candidate.knownCostEur <= existing.knownCostEur,
@@ -409,10 +497,10 @@ RoutePlan? buildDeterministicRoutePlan({
     }
   }
 
-  final completedStates = request.walkingDays == null
+  final completedStates = exactWalkingDays == null
       ? states.last
       : states.last
-            .where((state) => state.legs.length == request.walkingDays)
+            .where((state) => state.legs.length == exactWalkingDays)
             .toList(growable: false);
   if (completedStates.isEmpty) return null;
   completedStates.sort((left, right) => left.score.compareTo(right.score));
@@ -444,6 +532,110 @@ RoutePlan? buildDeterministicRoutePlan({
     estimatedAccommodationCostEur: result.knownCostEur,
     unknownPriceNights: unknownPriceNights,
   );
+}
+
+/// Explains the most actionable reason why a request cannot be planned.
+RoutePlanFailure diagnoseRoutePlanFailure({
+  required List<TrailStage> stages,
+  required List<Lodging> lodgings,
+  required TrailDirection direction,
+  required RoutePlanRequest request,
+}) {
+  final ordered = direction.isReversed
+      ? stages.reversed.toList(growable: false)
+      : stages.toList(growable: false);
+  final startIndex = ordered.indexWhere(
+    (stage) => stage.id == request.startStageId,
+  );
+  final finishIndex = ordered.indexWhere(
+    (stage) => stage.id == request.finishStageId,
+  );
+  if (startIndex < 0 || finishIndex <= startIndex) {
+    return RoutePlanFailure.invalidEndpoints;
+  }
+
+  final distance = _distanceBetween(ordered[startIndex], ordered[finishIndex]);
+  if (distance == null) return RoutePlanFailure.invalidEndpoints;
+  final exactDays = request.constraint == RoutePlanConstraint.fixedDays
+      ? request.walkingDays
+      : null;
+  if (exactDays != null) {
+    if (distance > request.maximumDailyDistanceKm * exactDays + 0.0001) {
+      return RoutePlanFailure.tooFarForSelectedDays;
+    }
+    if (distance + 0.0001 < request.minimumDailyDistanceKm * exactDays) {
+      return RoutePlanFailure.tooManySelectedDays;
+    }
+  }
+
+  if (!request.includeUnknownAccommodationPrices &&
+      buildDeterministicRoutePlan(
+            stages: stages,
+            lodgings: lodgings,
+            direction: direction,
+            request: request.copyWith(includeUnknownAccommodationPrices: true),
+          ) !=
+          null) {
+    return RoutePlanFailure.unknownPricesExcluded;
+  }
+
+  final withoutPriceRange = request.copyWith(
+    clearAccommodationPriceRange: true,
+  );
+  if (buildDeterministicRoutePlan(
+        stages: stages,
+        lodgings: lodgings,
+        direction: direction,
+        request: withoutPriceRange,
+      ) !=
+      null) {
+    return RoutePlanFailure.accommodationBudget;
+  }
+
+  final flexibleStay = withoutPriceRange.copyWith(
+    overnightPreference: RouteOvernightPreference.either,
+    includeUnknownAccommodationPrices: true,
+  );
+  if (buildDeterministicRoutePlan(
+        stages: stages,
+        lodgings: lodgings,
+        direction: direction,
+        request: flexibleStay,
+      ) !=
+      null) {
+    return RoutePlanFailure.overnightPreference;
+  }
+
+  if (exactDays != null &&
+      buildDeterministicRoutePlan(
+            stages: stages,
+            lodgings: lodgings,
+            direction: direction,
+            request: flexibleStay.copyWith(
+              clearWalkingDays: true,
+              constraint: RoutePlanConstraint.dailyPace,
+            ),
+          ) !=
+          null) {
+    return RoutePlanFailure.exactDayCount;
+  }
+
+  if (request.maximumDailyWalkingMinutes != null &&
+      buildDeterministicRoutePlan(
+            stages: stages,
+            lodgings: lodgings,
+            direction: direction,
+            request: flexibleStay.copyWith(
+              clearMaximumDailyWalkingMinutes: true,
+              clearWalkingDays: true,
+              constraint: RoutePlanConstraint.dailyPace,
+            ),
+          ) !=
+          null) {
+    return RoutePlanFailure.dailyPaceExceeded;
+  }
+
+  return RoutePlanFailure.noOvernightStops;
 }
 
 double? _distanceBetween(TrailStage start, TrailStage finish) {
@@ -483,6 +675,7 @@ _OvernightStop? _resolveOvernightStop({
   required RoutePlanStyle style,
   required double? minimumPriceEur,
   required double? maximumPriceEur,
+  required bool includeUnknownPrices,
 }) {
   if (isFinalDestination) {
     return const _OvernightStop(
@@ -493,7 +686,7 @@ _OvernightStop? _resolveOvernightStop({
     );
   }
 
-  final pricedLodgings =
+  final matchingLodgings =
       preference == RouteOvernightPreference.camping
             ? <Lodging>[]
             : lodgings
@@ -502,6 +695,7 @@ _OvernightStop? _resolveOvernightStop({
                       lodging,
                       minimumPriceEur: minimumPriceEur,
                       maximumPriceEur: maximumPriceEur,
+                      includeUnknownPrices: includeUnknownPrices,
                     );
                   })
                   .toList(growable: false)
@@ -512,10 +706,14 @@ _OvernightStop? _resolveOvernightStop({
             ).compareTo(_lodgingComfortScore(right));
             if (comfortComparison != 0) return comfortComparison;
           }
-          return _lodgingPrice(left)!.compareTo(_lodgingPrice(right)!);
+          final leftPrice = _lodgingPrice(left);
+          final rightPrice = _lodgingPrice(right);
+          if (leftPrice == null) return rightPrice == null ? 0 : 1;
+          if (rightPrice == null) return -1;
+          return leftPrice.compareTo(rightPrice);
         });
-  if (pricedLodgings.isNotEmpty) {
-    final lodging = pricedLodgings.first;
+  if (matchingLodgings.isNotEmpty) {
+    final lodging = matchingLodgings.first;
     return _OvernightStop(
       lodging: lodging,
       usesCamping: false,
@@ -523,15 +721,14 @@ _OvernightStop? _resolveOvernightStop({
       comfortPenalty: _lodgingComfortScore(lodging),
     );
   }
-  final hasPriceFilter = minimumPriceEur != null || maximumPriceEur != null;
   final unpricedLodgings =
-      preference == RouteOvernightPreference.camping || hasPriceFilter
+      preference == RouteOvernightPreference.camping || !includeUnknownPrices
       ? <Lodging>[]
       : lodgings
             .where((lodging) => _lodgingPrice(lodging) == null)
             .toList(growable: false);
   if (unpricedLodgings.isNotEmpty ||
-      (!hasPriceFilter &&
+      (includeUnknownPrices &&
           stage.services['lodging'] == true &&
           lodgings.isEmpty)) {
     return _OvernightStop(
@@ -562,10 +759,13 @@ bool _lodgingMatchesPriceRange(
   Lodging lodging, {
   required double? minimumPriceEur,
   required double? maximumPriceEur,
+  required bool includeUnknownPrices,
 }) {
   final lodgingMinimum = lodging.priceMinEur ?? lodging.priceMaxEur;
   final lodgingMaximum = lodging.priceMaxEur ?? lodging.priceMinEur;
-  if (lodgingMinimum == null || lodgingMaximum == null) return false;
+  if (lodgingMinimum == null || lodgingMaximum == null) {
+    return includeUnknownPrices;
+  }
   return (minimumPriceEur == null ||
           lodgingMaximum >= minimumPriceEur - 0.0001) &&
       (maximumPriceEur == null || lodgingMinimum <= maximumPriceEur + 0.0001);

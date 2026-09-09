@@ -131,6 +131,67 @@ const frenchTranslations = <String, String>{
   'Suggested': 'Suggéré',
   'Smart': 'Smart',
   'Walking days': 'Jours de marche',
+  'Swap start and finish': 'Inverser départ et arrivée',
+  'Choose stage': 'Choisir une étape',
+  'Search by stage or place': 'Rechercher une étape ou un lieu',
+  'Water': 'Eau',
+  'per night': 'par nuit',
+  'Flexible': 'Flexible',
+  'Set as start': 'Définir comme départ',
+  'Set as finish': 'Définir comme arrivée',
+  'What should the planner hold fixed?': 'Que doit fixer le planificateur ?',
+  'Fit my days': 'Adapter à mes jours',
+  'Limit effort': 'Limiter l’effort',
+  'Remove walking day': 'Retirer un jour de marche',
+  'Add walking day': 'Ajouter un jour de marche',
+  'We will choose the number of days that stays within your daily limit.':
+      'Nous choisirons le nombre de jours respectant votre limite quotidienne.',
+  'Walking time includes an allowance for climbing. Route styles rank alternatives without changing this limit.':
+      'Le temps inclut les montées. Les styles classent les options sans modifier cette limite.',
+  'Required average': 'Moyenne nécessaire',
+  'Projected finish': 'Arrivée prévue',
+  'Use suggested days': 'Utiliser les jours suggérés',
+  'Include stays without a listed price':
+      'Inclure les hébergements sans prix indiqué',
+  'You can confirm their price before booking.':
+      'Vous pourrez confirmer leur prix avant de réserver.',
+  'Save route': 'Enregistrer l’itinéraire',
+  'Review pace': 'Revoir le rythme',
+  'Review stays': 'Revoir les nuitées',
+  'Recommended': 'Recommandé',
+  'average': 'en moyenne',
+  'Longest day': 'Journée la plus longue',
+  'Camping nights': 'Nuits en camping',
+  'Choose two stages in trail order.':
+      'Choisissez deux étapes dans l’ordre du sentier.',
+  'This section is too far for the selected number of days.':
+      'Ce tronçon est trop long pour le nombre de jours choisi.',
+  'This short section has fewer useful stops than selected days.':
+      'Ce tronçon court a moins d’arrêts utiles que de jours choisis.',
+  'One or more trail sections exceed your daily effort limit.':
+      'Un ou plusieurs tronçons dépassent votre limite quotidienne.',
+  'A suitable stay is available, but its price is not listed.':
+      'Un hébergement adapté est disponible, mais son prix n’est pas indiqué.',
+  'No listed stays fit the selected price range.':
+      'Aucun hébergement indiqué ne correspond à cette fourchette de prix.',
+  'The selected stay type is not available at the required stops.':
+      'Le type de nuitée choisi n’est pas disponible aux arrêts nécessaires.',
+  'The available overnight stops cannot make this exact day count.':
+      'Les arrêts disponibles ne permettent pas ce nombre exact de jours.',
+  'There are not enough suitable overnight stops for this section.':
+      'Il n’y a pas assez d’arrêts adaptés pour ce tronçon.',
+  'Tap a stage on the map to choose your start, then your finish.':
+      'Touchez une étape sur la carte pour choisir votre départ, puis votre arrivée.',
+  'Choose two different stages.': 'Choisissez deux étapes différentes.',
+  'Show my location': 'Afficher ma position',
+  'Center trail': 'Centrer le sentier',
+  'Show all stages': 'Afficher toutes les étapes',
+  'Choose start': 'Choisir le départ',
+  'Choose finish': 'Choisir l’arrivée',
+  'Choose a different stage for the finish.':
+      'Choisissez une autre étape pour l’arrivée.',
+  'Choose a start and finish stage.':
+      'Choisissez une étape de départ et une étape d’arrivée.',
   'The planner will choose the best-fitting section.':
       'Le planificateur choisira le tronçon le plus adapté.',
   'Move overnight stop': 'Déplacer l’étape de nuit',

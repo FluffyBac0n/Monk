@@ -77,6 +77,12 @@ class SavedRoute {
     required this.finishStageName,
     required this.minimumDailyDistanceKm,
     required this.maximumDailyDistanceKm,
+    this.maximumDailyWalkingMinutes,
+    this.preferredDailyDistanceKm,
+    this.constraint = RoutePlanConstraint.fixedDays,
+    this.paceUnit = RoutePaceUnit.hours,
+    this.paceValue = 6,
+    this.includeUnknownAccommodationPrices = true,
     required this.minimumAccommodationPriceEur,
     required this.maximumAccommodationPriceEur,
     required this.overnightPreference,
@@ -96,6 +102,12 @@ class SavedRoute {
   final String finishStageName;
   final double minimumDailyDistanceKm;
   final double maximumDailyDistanceKm;
+  final int? maximumDailyWalkingMinutes;
+  final double? preferredDailyDistanceKm;
+  final RoutePlanConstraint constraint;
+  final RoutePaceUnit paceUnit;
+  final double paceValue;
+  final bool includeUnknownAccommodationPrices;
   final double? minimumAccommodationPriceEur;
   final double? maximumAccommodationPriceEur;
   final RouteOvernightPreference overnightPreference;
@@ -132,6 +144,13 @@ class SavedRoute {
     finishStageName: plan.days.last.finish.name,
     minimumDailyDistanceKm: request.minimumDailyDistanceKm,
     maximumDailyDistanceKm: request.maximumDailyDistanceKm,
+    maximumDailyWalkingMinutes: request.maximumDailyWalkingMinutes,
+    preferredDailyDistanceKm: request.preferredDailyDistanceKm,
+    constraint: request.constraint,
+    paceUnit: request.paceUnit,
+    paceValue: request.paceValue,
+    includeUnknownAccommodationPrices:
+        request.includeUnknownAccommodationPrices,
     minimumAccommodationPriceEur: request.minimumAccommodationPriceEur,
     maximumAccommodationPriceEur: request.maximumAccommodationPriceEur,
     overnightPreference: request.overnightPreference,
@@ -169,6 +188,12 @@ class SavedRoute {
     'finishStageName': finishStageName,
     'minimumDailyDistanceKm': minimumDailyDistanceKm,
     'maximumDailyDistanceKm': maximumDailyDistanceKm,
+    'maximumDailyWalkingMinutes': maximumDailyWalkingMinutes,
+    'preferredDailyDistanceKm': preferredDailyDistanceKm,
+    'constraint': constraint.name,
+    'paceUnit': paceUnit.name,
+    'paceValue': paceValue,
+    'includeUnknownAccommodationPrices': includeUnknownAccommodationPrices,
     'minimumAccommodationPriceEur': minimumAccommodationPriceEur,
     'maximumAccommodationPriceEur': maximumAccommodationPriceEur,
     'overnightPreference': overnightPreference.name,
@@ -193,6 +218,21 @@ class SavedRoute {
     finishStageName: json['finishStageName']! as String,
     minimumDailyDistanceKm: (json['minimumDailyDistanceKm'] as num).toDouble(),
     maximumDailyDistanceKm: (json['maximumDailyDistanceKm'] as num).toDouble(),
+    maximumDailyWalkingMinutes: (json['maximumDailyWalkingMinutes'] as num?)
+        ?.toInt(),
+    preferredDailyDistanceKm: (json['preferredDailyDistanceKm'] as num?)
+        ?.toDouble(),
+    constraint: switch (json['constraint']) {
+      final String value => RoutePlanConstraint.values.byName(value),
+      _ => RoutePlanConstraint.fixedDays,
+    },
+    paceUnit: switch (json['paceUnit']) {
+      final String value => RoutePaceUnit.values.byName(value),
+      _ => RoutePaceUnit.hours,
+    },
+    paceValue: (json['paceValue'] as num?)?.toDouble() ?? 6,
+    includeUnknownAccommodationPrices:
+        json['includeUnknownAccommodationPrices'] as bool? ?? true,
     minimumAccommodationPriceEur: (json['minimumAccommodationPriceEur'] as num?)
         ?.toDouble(),
     maximumAccommodationPriceEur: (json['maximumAccommodationPriceEur'] as num?)

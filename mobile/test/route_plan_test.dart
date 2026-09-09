@@ -263,6 +263,96 @@ void main() {
     expect(plan.days.first.accommodation?.id, 'chosen');
     expect(plan.estimatedAccommodationCostEur, 75);
   });
+
+  test(
+    'daily pace is the hard constraint and does not enforce walking days',
+    () {
+      final plan = buildDeterministicRoutePlan(
+        stages: [
+          _stage('start', 4, 0),
+          _stage('night-1', 3, 10, lodging: true),
+          _stage('night-2', 2, 20, lodging: true),
+          _stage('finish', 1, 30),
+        ],
+        lodgings: const [
+          Lodging(id: 'one', stageId: 'night-1', priceMinEur: 40),
+          Lodging(id: 'two', stageId: 'night-2', priceMinEur: 40),
+        ],
+        direction: TrailDirection.pafosToLarnaka,
+        request: const RoutePlanRequest(
+          startStageId: 'start',
+          finishStageId: 'finish',
+          minimumDailyDistanceKm: 1,
+          maximumDailyDistanceKm: 12,
+          walkingDays: 1,
+          constraint: RoutePlanConstraint.dailyPace,
+        ),
+      );
+
+      expect(plan, isNotNull);
+      expect(plan!.days, hasLength(3));
+    },
+  );
+
+  test('unknown accommodation prices are an explicit preference', () {
+    RoutePlan? build({required bool includeUnknown}) =>
+        buildDeterministicRoutePlan(
+          stages: [
+            _stage('start', 3, 0),
+            _stage('overnight', 2, 20, lodging: true),
+            _stage('finish', 1, 40),
+          ],
+          lodgings: const [Lodging(id: 'unknown', stageId: 'overnight')],
+          direction: TrailDirection.pafosToLarnaka,
+          request: RoutePlanRequest(
+            startStageId: 'start',
+            finishStageId: 'finish',
+            minimumDailyDistanceKm: 15,
+            maximumDailyDistanceKm: 25,
+            minimumAccommodationPriceEur: 40,
+            maximumAccommodationPriceEur: 120,
+            includeUnknownAccommodationPrices: includeUnknown,
+          ),
+        );
+
+    expect(build(includeUnknown: true), isNotNull);
+    expect(build(includeUnknown: false), isNull);
+
+    final failure = diagnoseRoutePlanFailure(
+      stages: [
+        _stage('start', 3, 0),
+        _stage('overnight', 2, 20, lodging: true),
+        _stage('finish', 1, 40),
+      ],
+      lodgings: const [Lodging(id: 'unknown', stageId: 'overnight')],
+      direction: TrailDirection.pafosToLarnaka,
+      request: const RoutePlanRequest(
+        startStageId: 'start',
+        finishStageId: 'finish',
+        minimumDailyDistanceKm: 15,
+        maximumDailyDistanceKm: 25,
+        includeUnknownAccommodationPrices: false,
+      ),
+    );
+    expect(failure, RoutePlanFailure.unknownPricesExcluded);
+  });
+
+  test('diagnoses a section that is too far for selected days', () {
+    final failure = diagnoseRoutePlanFailure(
+      stages: [_stage('start', 2, 0), _stage('finish', 1, 80)],
+      lodgings: const [],
+      direction: TrailDirection.pafosToLarnaka,
+      request: const RoutePlanRequest(
+        startStageId: 'start',
+        finishStageId: 'finish',
+        minimumDailyDistanceKm: 1,
+        maximumDailyDistanceKm: 25,
+        walkingDays: 2,
+      ),
+    );
+
+    expect(failure, RoutePlanFailure.tooFarForSelectedDays);
+  });
 }
 
 TrailStage _stage(

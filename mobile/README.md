@@ -26,11 +26,20 @@ Cross-platform Flutter MVP for the Cyprus E4 trail.
 
 ```bash
 flutter pub get
-flutter run --dart-define=MAPBOX_ACCESS_TOKEN=pk.your_public_token
+flutter run --dart-define-from-file=env.local.json
 ```
 
-The app can launch without a Mapbox token, but the map screen will show setup instructions
-instead of map tiles. Use a public `pk…` token; do not commit a secret token.
+Keep the public Mapbox token in the ignored `env.local.json` file:
+
+```json
+{
+  "MAPBOX_ACCESS_TOKEN": "pk.your_public_token"
+}
+```
+
+Always include `--dart-define-from-file=env.local.json` when launching the app on a simulator
+or device. Without it, the map screen will show setup instructions instead of map tiles. Do not
+commit the token file.
 
 ## Connect Firebase
 

@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 
+import '../../../core/location/device_location.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/settings/app_settings_controller.dart';
@@ -29,12 +32,6 @@ const _green = Color(0xFF277653);
 const _outline = Color(0xFFD8DDDA);
 const _comfort = Color(0xFF75588A);
 
-enum _TripGoal { customSection, wholeTrail, bestSection }
-
-enum _StartPreference { automatic, pafos, larnaka }
-
-enum _PaceUnit { hours, distance }
-
 class _PlannedVariant {
   const _PlannedVariant({
     required this.plan,
@@ -47,16 +44,18 @@ class _PlannedVariant {
   final RoutePlanRequest request;
 }
 
-class _SectionCandidate {
-  const _SectionCandidate({
-    required this.startIndex,
-    required this.finishIndex,
-    required this.distanceDelta,
+class _SectionEstimate {
+  const _SectionEstimate({
+    required this.distanceKm,
+    required this.ascentM,
+    required this.estimatedWalkingMinutes,
+    required this.suggestedDays,
   });
 
-  final int startIndex;
-  final int finishIndex;
-  final double distanceDelta;
+  final double distanceKm;
+  final double ascentM;
+  final int estimatedWalkingMinutes;
+  final int suggestedDays;
 }
 
 class RoutePlannerScreen extends ConsumerStatefulWidget {
@@ -71,37 +70,64 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
   int step = 0;
   int walkingDays = 5;
   DateTime startDate = DateUtils.dateOnly(DateTime.now());
-  _TripGoal tripGoal = _TripGoal.customSection;
-  _StartPreference startPreference = _StartPreference.automatic;
-  _PaceUnit paceUnit = _PaceUnit.hours;
+  RoutePaceUnit paceUnit = RoutePaceUnit.hours;
   double paceValue = 6;
+  RoutePlanConstraint planConstraint = RoutePlanConstraint.fixedDays;
   RouteOvernightPreference overnightPreference =
       RouteOvernightPreference.accommodation;
   RangeValues accommodationPriceRange = const RangeValues(40, 120);
+  bool includeUnknownPrices = true;
   Map<RoutePlanStyle, _PlannedVariant?> variants = const {};
+  Map<RoutePlanStyle, RoutePlanFailure?> variantFailures = const {};
   RoutePlanStyle? selectedStyle;
   String? customStartStageId;
   String? customFinishStageId;
   String? draftRouteId;
   bool saving = false;
+  bool selectedRouteSaved = false;
 
-  void startNewRoute() => setState(() {
-    showWizard = true;
-    step = 0;
-    walkingDays = 5;
-    startDate = DateUtils.dateOnly(DateTime.now());
-    tripGoal = _TripGoal.customSection;
-    startPreference = _StartPreference.automatic;
-    paceUnit = _PaceUnit.hours;
-    paceValue = 6;
-    overnightPreference = RouteOvernightPreference.accommodation;
-    accommodationPriceRange = const RangeValues(40, 120);
-    variants = const {};
-    selectedStyle = null;
-    customStartStageId = null;
-    customFinishStageId = null;
-    draftRouteId = null;
-  });
+  void startNewRoute(List<TrailStage> stages, MeasurementSystem system) =>
+      setState(() {
+        final forward = orderedStages(stages, TrailDirection.pafosToLarnaka);
+        final start = forward.firstOrNull;
+        TrailStage? finish;
+        if (start?.accumulatedDistanceKm case final startDistance?
+            when forward.length > 1) {
+          const targetDistance = 100.0;
+          finish = forward
+              .skip(1)
+              .reduce(
+                (left, right) =>
+                    ((left.accumulatedDistanceKm ?? startDistance) -
+                                startDistance -
+                                targetDistance)
+                            .abs() <=
+                        ((right.accumulatedDistanceKm ?? startDistance) -
+                                startDistance -
+                                targetDistance)
+                            .abs()
+                    ? left
+                    : right,
+              );
+        }
+        showWizard = true;
+        step = 0;
+        walkingDays = 5;
+        startDate = DateUtils.dateOnly(DateTime.now());
+        paceUnit = RoutePaceUnit.hours;
+        paceValue = 6;
+        planConstraint = RoutePlanConstraint.fixedDays;
+        overnightPreference = RouteOvernightPreference.accommodation;
+        accommodationPriceRange = const RangeValues(40, 120);
+        includeUnknownPrices = true;
+        variants = const {};
+        variantFailures = const {};
+        selectedStyle = null;
+        selectedRouteSaved = false;
+        customStartStageId = start?.id;
+        customFinishStageId = finish?.id ?? forward.lastOrNull?.id;
+        draftRouteId = null;
+      });
 
   List<TrailStage> orderedStages(
     List<TrailStage> stages,
@@ -117,49 +143,48 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
         .toList(growable: false);
   }
 
-  TrailStage defaultCustomFinish(List<TrailStage> stages) {
-    final startDistance = stages.first.accumulatedDistanceKm ?? 0;
-    final targetDistance = startDistance + walkingDays * 24;
-    return stages
-        .skip(1)
-        .reduce(
-          (left, right) =>
-              ((left.accumulatedDistanceKm ?? 0) - targetDistance).abs() <=
-                  ((right.accumulatedDistanceKm ?? 0) - targetDistance).abs()
-              ? left
-              : right,
-        );
-  }
-
   RoutePlanRequest requestFor(
     RoutePlanStyle style,
     TrailStage start,
     TrailStage finish,
     MeasurementSystem system,
   ) {
-    final styleFactor = switch (style) {
-      RoutePlanStyle.relaxed => 0.8,
-      RoutePlanStyle.balanced => 1.0,
-      RoutePlanStyle.adventurous => 1.15,
-    };
     final enteredDistanceKm = system == MeasurementSystem.metric
         ? paceValue
         : paceValue / 0.621371;
-    final dailyTargetKm =
-        (paceUnit == _PaceUnit.hours ? paceValue * 5 : enteredDistanceKm) *
-        styleFactor;
+    final dailyTargetKm = paceUnit == RoutePaceUnit.hours
+        ? paceValue * 5
+        : enteredDistanceKm;
+    final sectionDistance =
+        ((finish.accumulatedDistanceKm ?? 0) -
+                (start.accumulatedDistanceKm ?? 0))
+            .abs();
+    final requiredDailyKm = sectionDistance / math.max(1, walkingDays);
+    final maximumDistance = planConstraint == RoutePlanConstraint.fixedDays
+        ? math.max(dailyTargetKm * 1.75, requiredDailyKm * 1.2)
+        : paceUnit == RoutePaceUnit.distance
+        ? dailyTargetKm
+        : dailyTargetKm * 1.65;
     final usesAccommodation =
         overnightPreference != RouteOvernightPreference.camping;
     return RoutePlanRequest(
       startStageId: start.id,
       finishStageId: finish.id,
-      minimumDailyDistanceKm: dailyTargetKm * 0.45,
-      maximumDailyDistanceKm: dailyTargetKm * 1.2,
-      maximumDailyWalkingMinutes: paceUnit == _PaceUnit.hours
-          ? (paceValue * 60 * styleFactor * 1.15).round()
+      minimumDailyDistanceKm: 1,
+      maximumDailyDistanceKm: maximumDistance,
+      preferredDailyDistanceKm: dailyTargetKm,
+      maximumDailyWalkingMinutes:
+          planConstraint == RoutePlanConstraint.dailyPace &&
+              paceUnit == RoutePaceUnit.hours
+          ? (paceValue * 60).round()
           : null,
-      walkingDays: walkingDays,
+      walkingDays: planConstraint == RoutePlanConstraint.fixedDays
+          ? walkingDays
+          : null,
       startDate: startDate,
+      constraint: planConstraint,
+      paceUnit: paceUnit,
+      paceValue: paceValue,
       overnightPreference: overnightPreference,
       minimumAccommodationPriceEur: usesAccommodation
           ? accommodationPriceRange.start
@@ -167,6 +192,7 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
       maximumAccommodationPriceEur: usesAccommodation
           ? accommodationPriceRange.end
           : null,
+      includeUnknownAccommodationPrices: includeUnknownPrices,
       style: style,
     );
   }
@@ -177,7 +203,7 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
     required MeasurementSystem system,
   }) {
     setState(() {
-      variants = {
+      final built = {
         for (final style in RoutePlanStyle.values)
           style: _buildVariant(
             style: style,
@@ -186,9 +212,57 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
             system: system,
           ),
       };
-      selectedStyle = null;
+      variants = built;
+      variantFailures = {
+        for (final style in RoutePlanStyle.values)
+          style: built[style] == null
+              ? _diagnoseFailure(
+                  style: style,
+                  stages: stages,
+                  lodgings: lodgings,
+                  system: system,
+                )
+              : null,
+      };
+      selectedStyle = built[RoutePlanStyle.balanced] != null
+          ? RoutePlanStyle.balanced
+          : RoutePlanStyle.values
+                .where((style) => built[style] != null)
+                .firstOrNull;
+      selectedRouteSaved = false;
       step = 3;
     });
+  }
+
+  RoutePlanFailure _diagnoseFailure({
+    required RoutePlanStyle style,
+    required List<TrailStage> stages,
+    required List<Lodging> lodgings,
+    required MeasurementSystem system,
+  }) {
+    for (final direction in TrailDirection.values) {
+      final ordered = orderedStages(stages, direction);
+      final startIndex = ordered.indexWhere(
+        (stage) => stage.id == customStartStageId,
+      );
+      final finishIndex = ordered.indexWhere(
+        (stage) => stage.id == customFinishStageId,
+      );
+      if (startIndex >= 0 && finishIndex > startIndex) {
+        return diagnoseRoutePlanFailure(
+          stages: stages,
+          lodgings: lodgings,
+          direction: direction,
+          request: requestFor(
+            style,
+            ordered[startIndex],
+            ordered[finishIndex],
+            system,
+          ),
+        );
+      }
+    }
+    return RoutePlanFailure.invalidEndpoints;
   }
 
   _PlannedVariant? _buildVariant({
@@ -197,144 +271,38 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
     required List<Lodging> lodgings,
     required MeasurementSystem system,
   }) {
-    final directions = switch (startPreference) {
-      _StartPreference.automatic => TrailDirection.values,
-      _StartPreference.pafos => const [TrailDirection.pafosToLarnaka],
-      _StartPreference.larnaka => const [TrailDirection.larnakaToPafos],
-    };
     _PlannedVariant? best;
     var bestScore = double.infinity;
-    for (final direction in directions) {
+    for (final direction in TrailDirection.values) {
       final ordered = orderedStages(stages, direction);
       if (ordered.length < 2) continue;
-      if (tripGoal == _TripGoal.customSection) {
-        final startId = customStartStageId;
-        final finishId = customFinishStageId;
-        if (startId == null || finishId == null) continue;
-        final startIndex = ordered.indexWhere((stage) => stage.id == startId);
-        final finishIndex = ordered.indexWhere((stage) => stage.id == finishId);
-        if (startIndex < 0 || finishIndex <= startIndex) continue;
-        final request = requestFor(
-          style,
-          ordered[startIndex],
-          ordered[finishIndex],
-          system,
-        );
-        final plan = buildDeterministicRoutePlan(
-          stages: stages,
-          lodgings: lodgings,
-          direction: direction,
-          request: request,
-        );
-        if (plan == null) continue;
-        final score = _planScore(plan, request);
-        if (score < bestScore) {
-          bestScore = score;
-          best = _PlannedVariant(
-            plan: plan,
-            direction: direction,
-            request: request,
-          );
-        }
-        continue;
-      }
-      if (tripGoal == _TripGoal.wholeTrail) {
-        final request = requestFor(style, ordered.first, ordered.last, system);
-        final plan = buildDeterministicRoutePlan(
-          stages: stages,
-          lodgings: lodgings,
-          direction: direction,
-          request: request,
-        );
-        if (plan == null) continue;
-        final score = _planScore(plan, request);
-        if (score < bestScore) {
-          bestScore = score;
-          best = _PlannedVariant(
-            plan: plan,
-            direction: direction,
-            request: request,
-          );
-        }
-        continue;
-      }
-
-      final previewRequest = requestFor(
+      final startId = customStartStageId;
+      final finishId = customFinishStageId;
+      if (startId == null || finishId == null || startId == finishId) continue;
+      final startIndex = ordered.indexWhere((stage) => stage.id == startId);
+      final finishIndex = ordered.indexWhere((stage) => stage.id == finishId);
+      if (startIndex < 0 || finishIndex <= startIndex) continue;
+      final request = requestFor(
         style,
-        ordered.first,
-        ordered.last,
+        ordered[startIndex],
+        ordered[finishIndex],
         system,
       );
-      final targetTotal =
-          (previewRequest.minimumDailyDistanceKm +
-              previewRequest.maximumDailyDistanceKm) /
-          2 *
-          walkingDays;
-      final sectionCandidates = <_SectionCandidate>[];
-      for (var startIndex = 0; startIndex < ordered.length - 1; startIndex++) {
-        final startDistance = ordered[startIndex].accumulatedDistanceKm;
-        if (startDistance == null) continue;
-        var nearestFinish = startIndex + walkingDays;
-        if (nearestFinish >= ordered.length) continue;
-        var nearestDelta = double.infinity;
-        for (
-          var finishIndex = startIndex + walkingDays;
-          finishIndex < ordered.length;
-          finishIndex++
-        ) {
-          final finishDistance = ordered[finishIndex].accumulatedDistanceKm;
-          if (finishDistance == null) continue;
-          final delta = ((finishDistance - startDistance).abs() - targetTotal)
-              .abs();
-          if (delta < nearestDelta) {
-            nearestDelta = delta;
-            nearestFinish = finishIndex;
-          }
-        }
-        for (var offset = -4; offset <= 4; offset++) {
-          final finishIndex = nearestFinish + offset;
-          if (finishIndex < startIndex + walkingDays ||
-              finishIndex >= ordered.length) {
-            continue;
-          }
-          final finishDistance = ordered[finishIndex].accumulatedDistanceKm;
-          if (finishDistance == null) continue;
-          sectionCandidates.add(
-            _SectionCandidate(
-              startIndex: startIndex,
-              finishIndex: finishIndex,
-              distanceDelta:
-                  ((finishDistance - startDistance).abs() - targetTotal).abs(),
-            ),
-          );
-        }
-      }
-      sectionCandidates.sort(
-        (left, right) => left.distanceDelta.compareTo(right.distanceDelta),
+      final plan = buildDeterministicRoutePlan(
+        stages: stages,
+        lodgings: lodgings,
+        direction: direction,
+        request: request,
       );
-      for (final candidate in sectionCandidates.take(48)) {
-        final request = requestFor(
-          style,
-          ordered[candidate.startIndex],
-          ordered[candidate.finishIndex],
-          system,
-        );
-        final plan = buildDeterministicRoutePlan(
-          stages: stages,
-          lodgings: lodgings,
+      if (plan == null) continue;
+      final score = _planScore(plan, request);
+      if (score < bestScore) {
+        bestScore = score;
+        best = _PlannedVariant(
+          plan: plan,
           direction: direction,
           request: request,
         );
-        if (plan == null) continue;
-        final score = _planScore(plan, request) + candidate.distanceDelta;
-        if (score < bestScore) {
-          bestScore = score;
-          best = _PlannedVariant(
-            plan: plan,
-            direction: direction,
-            request: request,
-          );
-        }
       }
     }
     return best;
@@ -342,6 +310,7 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
 
   double _planScore(RoutePlan plan, RoutePlanRequest request) {
     final target =
+        request.preferredDailyDistanceKm ??
         (request.minimumDailyDistanceKm + request.maximumDailyDistanceKm) / 2;
     return plan.days.fold<double>(
           0,
@@ -351,7 +320,57 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
         plan.unknownPriceNights * 100;
   }
 
-  Future<void> selectRoute({
+  _SectionEstimate sectionEstimate(
+    List<TrailStage> stages,
+    TrailStage start,
+    TrailStage finish,
+    MeasurementSystem system,
+  ) {
+    final startIndex = stages.indexWhere((stage) => stage.id == start.id);
+    final finishIndex = stages.indexWhere((stage) => stage.id == finish.id);
+    final lower = math.min(startIndex, finishIndex);
+    final upper = math.max(startIndex, finishIndex);
+    var ascent = 0.0;
+    if (lower >= 0) {
+      for (final stage in stages.sublist(lower + 1, upper + 1)) {
+        ascent += stage.elevationUpM ?? 0;
+      }
+    }
+    final distance =
+        ((finish.accumulatedDistanceKm ?? 0) -
+                (start.accumulatedDistanceKm ?? 0))
+            .abs();
+    final minutes = (distance * 12 + ascent / 10).round();
+    final targetDistance = paceUnit == RoutePaceUnit.hours
+        ? paceValue * 5
+        : system == MeasurementSystem.metric
+        ? paceValue
+        : paceValue / 0.621371;
+    final daysByDistance = (distance / math.max(1, targetDistance)).ceil();
+    final daysByTime = paceUnit == RoutePaceUnit.hours
+        ? (minutes / math.max(60, paceValue * 60)).ceil()
+        : 1;
+    return _SectionEstimate(
+      distanceKm: distance,
+      ascentM: ascent,
+      estimatedWalkingMinutes: minutes,
+      suggestedDays: math.max(1, math.max(daysByDistance, daysByTime)),
+    );
+  }
+
+  void chooseRoute(RoutePlanStyle style) => setState(() {
+    selectedStyle = style;
+    selectedRouteSaved = false;
+  });
+
+  Future<void> saveSelectedRoute() async {
+    final style = selectedStyle;
+    final variant = style == null ? null : variants[style];
+    if (style == null || variant == null) return;
+    await _saveRoute(style: style, variant: variant);
+  }
+
+  Future<void> _saveRoute({
     required RoutePlanStyle style,
     required _PlannedVariant variant,
   }) async {
@@ -372,6 +391,7 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
         setState(() {
           draftRouteId = id;
           selectedStyle = style;
+          selectedRouteSaved = true;
         });
       }
     } finally {
@@ -389,8 +409,10 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
       direction: current.direction,
       request: current.request,
     );
-    setState(() => variants = {...variants, style: updated});
-    await selectRoute(style: style, variant: updated);
+    setState(() {
+      variants = {...variants, style: updated};
+      selectedRouteSaved = false;
+    });
   }
 
   Future<void> editBoundary({
@@ -600,11 +622,20 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
       finishStageId: route.finishStageId,
       minimumDailyDistanceKm: route.minimumDailyDistanceKm,
       maximumDailyDistanceKm: route.maximumDailyDistanceKm,
-      walkingDays: route.days.length,
+      maximumDailyWalkingMinutes: route.maximumDailyWalkingMinutes,
+      preferredDailyDistanceKm: route.preferredDailyDistanceKm,
+      walkingDays: route.constraint == RoutePlanConstraint.fixedDays
+          ? route.days.length
+          : null,
       startDate: route.startDate,
+      constraint: route.constraint,
+      paceUnit: route.paceUnit,
+      paceValue: route.paceValue,
       overnightPreference: route.overnightPreference,
       minimumAccommodationPriceEur: route.minimumAccommodationPriceEur,
       maximumAccommodationPriceEur: route.maximumAccommodationPriceEur,
+      includeUnknownAccommodationPrices:
+          route.includeUnknownAccommodationPrices,
       style: route.style,
     );
     final plan = buildRoutePlanFromStops(
@@ -631,8 +662,21 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
       showWizard = true;
       step = 3;
       selectedStyle = route.style;
+      selectedRouteSaved = true;
       draftRouteId = route.id;
+      walkingDays = route.days.length;
       startDate = route.startDate ?? DateUtils.dateOnly(DateTime.now());
+      planConstraint = route.constraint;
+      paceUnit = route.paceUnit;
+      paceValue = route.paceValue;
+      overnightPreference = route.overnightPreference;
+      accommodationPriceRange = RangeValues(
+        route.minimumAccommodationPriceEur ?? 0,
+        route.maximumAccommodationPriceEur ?? 300,
+      );
+      includeUnknownPrices = route.includeUnknownAccommodationPrices;
+      customStartStageId = route.startStageId;
+      customFinishStageId = route.finishStageId;
       variants = {
         route.style: _PlannedVariant(
           plan: plan,
@@ -744,7 +788,7 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
             : _SavedRoutesView(
                 routes: ref.watch(savedRoutesProvider),
                 formatter: formatter,
-                onAdd: startNewRoute,
+                onAdd: () => startNewRoute(availableStages, system),
                 onDelete: deleteRoute,
                 onOpen: (route) => openSavedRoute(
                   route: route,
@@ -808,47 +852,67 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
         title: context.l10n.t('Trail data is unavailable.'),
       );
     }
+    final selectedStartStageId = customStartStageId ?? forwardStages.first.id;
+    final selectedFinishStageId = customFinishStageId ?? forwardStages.last.id;
+    final start = forwardStages
+        .where((stage) => stage.id == selectedStartStageId)
+        .firstOrNull;
+    final finish = forwardStages
+        .where((stage) => stage.id == selectedFinishStageId)
+        .firstOrNull;
+    final estimate = start == null || finish == null
+        ? null
+        : sectionEstimate(forwardStages, start, finish, system);
+    if (step == 0) {
+      return _TripStep(
+        startDate: startDate,
+        stages: forwardStages,
+        routePoints: routePoints,
+        startStageId: selectedStartStageId,
+        finishStageId: selectedFinishStageId,
+        formatter: formatter,
+        onDateChanged: (value) => setState(() => startDate = value),
+        onStartStageChanged: (value) =>
+            setState(() => customStartStageId = value),
+        onFinishStageChanged: (value) =>
+            setState(() => customFinishStageId = value),
+        onSwap: () => setState(() {
+          customStartStageId = selectedFinishStageId;
+          customFinishStageId = selectedStartStageId;
+        }),
+        onNext: () => setState(() {
+          customStartStageId = selectedStartStageId;
+          customFinishStageId = selectedFinishStageId;
+          step = 1;
+        }),
+      );
+    }
     return ListView(
       key: const ValueKey('route-planner-content'),
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 30),
       children: [
         _Progress(step: step),
         const SizedBox(height: 14),
-        if (step == 0)
-          _TripStep(
-            walkingDays: walkingDays,
-            startDate: startDate,
-            goal: tripGoal,
-            startPreference: startPreference,
-            stages: forwardStages,
-            routePoints: routePoints,
-            startStageId: customStartStageId ?? forwardStages.first.id,
-            finishStageId:
-                customFinishStageId ?? defaultCustomFinish(forwardStages).id,
-            onDaysChanged: (value) => setState(() => walkingDays = value),
-            onDateChanged: (value) => setState(() => startDate = value),
-            onGoalChanged: (value) => setState(() => tripGoal = value),
-            onStartChanged: (value) => setState(() => startPreference = value),
-            onStartStageChanged: (value) =>
-                setState(() => customStartStageId = value),
-            onFinishStageChanged: (value) =>
-                setState(() => customFinishStageId = value),
-            onNext: () => setState(() {
-              if (tripGoal == _TripGoal.customSection) {
-                customStartStageId ??= forwardStages.first.id;
-                customFinishStageId ??= defaultCustomFinish(forwardStages).id;
-              }
-              step = 1;
-            }),
-          )
-        else if (step == 1)
+        if (step == 1)
           _PaceStep(
+            walkingDays: walkingDays,
+            constraint: planConstraint,
             unit: paceUnit,
             value: paceValue,
             distanceUnit: formatter.distanceUnit,
+            estimate: estimate,
+            formatter: formatter,
+            startDate: startDate,
+            onDaysChanged: (value) => setState(() => walkingDays = value),
+            onConstraintChanged: (value) =>
+                setState(() => planConstraint = value),
             onUnitChanged: (value) => setState(() {
               paceUnit = value;
-              paceValue = value == _PaceUnit.hours ? 6 : 25;
+              paceValue = value == RoutePaceUnit.hours
+                  ? 6
+                  : system == MeasurementSystem.metric
+                  ? 25
+                  : 15.5;
             }),
             onValueChanged: (value) => setState(() => paceValue = value),
             onBack: () => setState(() => step = 0),
@@ -858,10 +922,13 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
           _StayStep(
             preference: overnightPreference,
             priceRange: accommodationPriceRange,
+            includeUnknownPrices: includeUnknownPrices,
             onPreferenceChanged: (value) =>
                 setState(() => overnightPreference = value),
             onPriceChanged: (value) =>
                 setState(() => accommodationPriceRange = value),
+            onIncludeUnknownChanged: (value) =>
+                setState(() => includeUnknownPrices = value),
             onBack: () => setState(() => step = 1),
             onBuild: () =>
                 buildRoutes(stages: stages, lodgings: lodgings, system: system),
@@ -869,7 +936,9 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
         else
           _CompareStep(
             variants: variants,
+            failures: variantFailures,
             selected: selectedStyle,
+            saved: selectedRouteSaved,
             formatter: formatter,
             routePoints: routePoints,
             stages: stages,
@@ -877,11 +946,20 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
             offlineMap: offlineMap,
             saving: saving,
             onBack: () => setState(() => step = 2),
-            onDone: selectedStyle == null
+            onDone: !selectedRouteSaved
                 ? null
                 : () => setState(() => showWizard = false),
-            onSelect: (style, variant) =>
-                selectRoute(style: style, variant: variant),
+            onSelect: (style, variant) => chooseRoute(style),
+            onSave: saveSelectedRoute,
+            onReviewPace: () => setState(() => step = 1),
+            onReviewStay: () => setState(() => step = 2),
+            onUseSuggestedDays: estimate == null
+                ? null
+                : () => setState(() {
+                    walkingDays = estimate.suggestedDays;
+                    planConstraint = RoutePlanConstraint.fixedDays;
+                    step = 1;
+                  }),
             onEditBoundary: (dayIndex) => editBoundary(
               dayIndex: dayIndex,
               stages: stages,
@@ -1095,338 +1173,1001 @@ class _Progress extends StatelessWidget {
   }
 }
 
-class _TripStep extends StatelessWidget {
+class _TripStep extends StatefulWidget {
   const _TripStep({
-    required this.walkingDays,
     required this.startDate,
-    required this.goal,
-    required this.startPreference,
     required this.stages,
     required this.routePoints,
     required this.startStageId,
     required this.finishStageId,
-    required this.onDaysChanged,
+    required this.formatter,
     required this.onDateChanged,
-    required this.onGoalChanged,
-    required this.onStartChanged,
     required this.onStartStageChanged,
     required this.onFinishStageChanged,
+    required this.onSwap,
     required this.onNext,
   });
-  final int walkingDays;
   final DateTime startDate;
-  final _TripGoal goal;
-  final _StartPreference startPreference;
   final List<TrailStage> stages;
   final List<RoutePoint> routePoints;
   final String? startStageId;
   final String? finishStageId;
-  final ValueChanged<int> onDaysChanged;
+  final MeasurementFormatter formatter;
   final ValueChanged<DateTime> onDateChanged;
-  final ValueChanged<_TripGoal> onGoalChanged;
-  final ValueChanged<_StartPreference> onStartChanged;
   final ValueChanged<String?> onStartStageChanged;
   final ValueChanged<String?> onFinishStageChanged;
+  final VoidCallback onSwap;
   final VoidCallback onNext;
 
   @override
+  State<_TripStep> createState() => _TripStepState();
+}
+
+class _TripStepState extends State<_TripStep> {
+  TrailStage? inspectedStage;
+
+  @override
   Widget build(BuildContext context) {
-    final start = stages.where((stage) => stage.id == startStageId).firstOrNull;
-    final finish = stages
-        .where((stage) => stage.id == finishStageId)
+    final start = widget.stages
+        .where((stage) => stage.id == widget.startStageId)
         .firstOrNull;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final finish = widget.stages
+        .where((stage) => stage.id == widget.finishStageId)
+        .firstOrNull;
+    final distance =
+        start?.accumulatedDistanceKm == null ||
+            finish?.accumulatedDistanceKm == null
+        ? null
+        : (start!.accumulatedDistanceKm! - finish!.accumulatedDistanceKm!)
+              .abs();
+    return Stack(
+      key: const ValueKey('route-planner-content'),
+      fit: StackFit.expand,
       children: [
-        _Panel(
-          title: context.l10n.t('Choose your route'),
-          icon: Icons.map_outlined,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _RouteSelectionMap(
-                points: routePoints,
-                start: goal == _TripGoal.customSection ? start : null,
-                finish: goal == _TripGoal.customSection ? finish : null,
-              ),
-              const SizedBox(height: 14),
-              SegmentedButton<_TripGoal>(
-                key: const ValueKey('route-planner-goal'),
-                expandedInsets: EdgeInsets.zero,
-                segments: [
-                  ButtonSegment(
-                    value: _TripGoal.customSection,
-                    icon: const Icon(Icons.tune_rounded),
-                    label: Text(context.l10n.t('Custom')),
+        _RouteSelectionMap(
+          points: widget.routePoints,
+          stages: widget.stages,
+          start: start,
+          finish: finish,
+          onStageInspected: (stage) => setState(() => inspectedStage = stage),
+        ),
+        Positioned(
+          left: 14,
+          right: 70,
+          top: 12,
+          child: Material(
+            color: Colors.white.withValues(alpha: 0.96),
+            elevation: 2,
+            borderRadius: BorderRadius.circular(16),
+            child: const Padding(
+              padding: EdgeInsets.fromLTRB(14, 10, 14, 7),
+              child: _Progress(step: 0),
+            ),
+          ),
+        ),
+        DraggableScrollableSheet(
+          minChildSize: 0.28,
+          initialChildSize: 0.42,
+          maxChildSize: 0.78,
+          snap: true,
+          snapSizes: const [0.42, 0.78],
+          builder: (context, controller) => Material(
+            color: _sand,
+            elevation: 12,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            clipBehavior: Clip.antiAlias,
+            child: ListView(
+              controller: controller,
+              padding: const EdgeInsets.fromLTRB(16, 9, 16, 26),
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
                   ),
-                  ButtonSegment(
-                    value: _TripGoal.bestSection,
-                    icon: const Icon(Icons.auto_awesome_rounded),
-                    label: Text(context.l10n.t('Smart')),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  context.l10n.t('Choose your route'),
+                  style: const TextStyle(
+                    color: EurotrexPalette.navy,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w900,
                   ),
-                  ButtonSegment(
-                    value: _TripGoal.wholeTrail,
-                    icon: const Icon(Icons.route_rounded),
-                    label: Text(context.l10n.t('Whole E4')),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  start == null || finish == null
+                      ? context.l10n.t('Choose a start and finish stage.')
+                      : '${context.l10n.t(start.name)} → ${context.l10n.t(finish.name)}${distance == null ? '' : ' · ${widget.formatter.distance(distance)}'}',
+                  key: const ValueKey('route-planner-selection-summary'),
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+                if (inspectedStage case final stage?) ...[
+                  const SizedBox(height: 12),
+                  _StageMapCallout(
+                    stage: stage,
+                    stageNumber: widget.stages.indexOf(stage) + 1,
+                    formatter: widget.formatter,
+                    onStart: () {
+                      widget.onStartStageChanged(stage.id);
+                      setState(() => inspectedStage = null);
+                    },
+                    onFinish: () {
+                      widget.onFinishStageChanged(stage.id);
+                      setState(() => inspectedStage = null);
+                    },
                   ),
                 ],
-                selected: {goal},
-                onSelectionChanged: (values) => onGoalChanged(values.single),
-              ),
-              if (goal == _TripGoal.customSection && stages.length >= 2) ...[
                 const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  key: const ValueKey('route-planner-start-stage'),
-                  isExpanded: true,
-                  initialValue: startStageId ?? stages.first.id,
-                  decoration: InputDecoration(
-                    labelText: context.l10n.t('Start point'),
-                    prefixIcon: const Icon(Icons.trip_origin_rounded),
-                  ),
-                  items: [
-                    for (final stage in stages)
-                      DropdownMenuItem(
-                        value: stage.id,
-                        child: Text(
-                          context.l10n.t(stage.name),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StageComboBox(
+                        key: const ValueKey('route-planner-start-stage'),
+                        label: context.l10n.t('Start point'),
+                        icon: Icons.trip_origin_rounded,
+                        stages: widget.stages,
+                        selectedStageId: widget.startStageId,
+                        unavailableStageId: widget.finishStageId,
+                        formatter: widget.formatter,
+                        onChanged: widget.onStartStageChanged,
                       ),
+                    ),
+                    IconButton(
+                      key: const ValueKey('route-planner-swap-stages'),
+                      tooltip: context.l10n.t('Swap start and finish'),
+                      onPressed: widget.onSwap,
+                      icon: const Icon(Icons.swap_horiz_rounded),
+                    ),
+                    Expanded(
+                      child: _StageComboBox(
+                        key: const ValueKey('route-planner-finish-stage'),
+                        label: context.l10n.t('Finish point'),
+                        icon: Icons.flag_rounded,
+                        stages: widget.stages,
+                        selectedStageId: widget.finishStageId,
+                        unavailableStageId: widget.startStageId,
+                        formatter: widget.formatter,
+                        onChanged: widget.onFinishStageChanged,
+                      ),
+                    ),
                   ],
-                  onChanged: onStartStageChanged,
                 ),
                 const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  key: const ValueKey('route-planner-finish-stage'),
-                  isExpanded: true,
-                  initialValue: finishStageId ?? stages.last.id,
-                  decoration: InputDecoration(
-                    labelText: context.l10n.t('Finish point'),
-                    prefixIcon: const Icon(Icons.flag_rounded),
+                OutlinedButton.icon(
+                  key: const ValueKey('route-planner-start-date'),
+                  icon: const Icon(Icons.event_rounded),
+                  label: Text(
+                    '${context.l10n.t('Start date')}: ${MaterialLocalizations.of(context).formatMediumDate(widget.startDate)}',
                   ),
-                  items: [
-                    for (final stage in stages)
-                      DropdownMenuItem(
-                        value: stage.id,
-                        child: Text(
-                          context.l10n.t(stage.name),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                  onChanged: onFinishStageChanged,
+                  onPressed: () async {
+                    final defaultFirst = DateTime(2000);
+                    final defaultLast = DateTime.now().add(
+                      const Duration(days: 730),
+                    );
+                    final value = await showDatePicker(
+                      context: context,
+                      initialDate: widget.startDate,
+                      firstDate: widget.startDate.isBefore(defaultFirst)
+                          ? widget.startDate
+                          : defaultFirst,
+                      lastDate: widget.startDate.isAfter(defaultLast)
+                          ? widget.startDate.add(const Duration(days: 1))
+                          : defaultLast,
+                    );
+                    if (value != null) widget.onDateChanged(value);
+                  },
                 ),
-              ] else ...[
-                const SizedBox(height: 14),
-                SegmentedButton<_StartPreference>(
-                  key: const ValueKey('route-planner-start-preference'),
-                  expandedInsets: EdgeInsets.zero,
-                  segments: [
-                    ButtonSegment(
-                      value: _StartPreference.automatic,
-                      icon: const Icon(Icons.compare_arrows_rounded),
-                      label: Text(context.l10n.t('Auto')),
-                    ),
-                    ButtonSegment(
-                      value: _StartPreference.pafos,
-                      label: Text(context.l10n.t('Pafos')),
-                    ),
-                    ButtonSegment(
-                      value: _StartPreference.larnaka,
-                      label: Text(context.l10n.t('Larnaka')),
-                    ),
-                  ],
-                  selected: {startPreference},
-                  onSelectionChanged: (values) => onStartChanged(values.single),
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  key: const ValueKey('route-planner-route-next'),
+                  onPressed:
+                      widget.startStageId == null ||
+                          widget.finishStageId == null ||
+                          widget.startStageId == widget.finishStageId
+                      ? null
+                      : widget.onNext,
+                  icon: const Icon(Icons.arrow_forward_rounded),
+                  label: Text(context.l10n.t('Next')),
                 ),
               ],
-            ],
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        _Panel(
-          title: context.l10n.t('Your trip'),
-          icon: Icons.calendar_month_rounded,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      context.l10n.t('Walking days'),
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                  IconButton.outlined(
-                    key: const ValueKey('route-planner-days-minus'),
-                    onPressed: walkingDays > 1
-                        ? () => onDaysChanged(walkingDays - 1)
-                        : null,
-                    icon: const Icon(Icons.remove_rounded),
-                  ),
-                  SizedBox(
-                    width: 82,
-                    child: Text(
-                      '$walkingDays ${context.l10n.t('days')}',
-                      key: const ValueKey('route-planner-days'),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: EurotrexPalette.navy,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  IconButton.outlined(
-                    key: const ValueKey('route-planner-days-plus'),
-                    onPressed: walkingDays < 30
-                        ? () => onDaysChanged(walkingDays + 1)
-                        : null,
-                    icon: const Icon(Icons.add_rounded),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                key: const ValueKey('route-planner-start-date'),
-                icon: const Icon(Icons.event_rounded),
-                label: Text(
-                  '${context.l10n.t('Start date')}: ${MaterialLocalizations.of(context).formatMediumDate(startDate)}',
-                ),
-                onPressed: () async {
-                  final value = await showDatePicker(
-                    context: context,
-                    initialDate: startDate,
-                    firstDate: DateUtils.dateOnly(DateTime.now()),
-                    lastDate: DateTime.now().add(const Duration(days: 730)),
-                  );
-                  if (value != null) onDateChanged(value);
-                },
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        FilledButton.icon(
-          key: const ValueKey('route-planner-route-next'),
-          onPressed: onNext,
-          icon: const Icon(Icons.arrow_forward_rounded),
-          label: Text(context.l10n.t('Next')),
         ),
       ],
     );
   }
 }
 
-class _RouteSelectionMap extends StatelessWidget {
+class _StageMapCallout extends StatelessWidget {
+  const _StageMapCallout({
+    required this.stage,
+    required this.stageNumber,
+    required this.formatter,
+    required this.onStart,
+    required this.onFinish,
+  });
+
+  final TrailStage stage;
+  final int stageNumber;
+  final MeasurementFormatter formatter;
+  final VoidCallback onStart;
+  final VoidCallback onFinish;
+
+  @override
+  Widget build(BuildContext context) {
+    final services = <String>[
+      if (stage.services['lodging'] == true) context.l10n.t('Lodging'),
+      if (stage.services['tent'] == true) context.l10n.t('Camping'),
+      if (stage.services['water'] == true) context.l10n.t('Water'),
+    ];
+    return Semantics(
+      label:
+          '${context.l10n.t('Stage')} $stageNumber, ${context.l10n.t(stage.name)}',
+      child: Container(
+        key: const ValueKey('route-planner-stage-callout'),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: EurotrexPalette.blue),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '${context.l10n.t('Stage')} $stageNumber · ${context.l10n.t(stage.name)}',
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            Text(
+              [
+                if (stage.accumulatedDistanceKm != null)
+                  formatter.distance(stage.accumulatedDistanceKm!),
+                ...services,
+              ].join(' · '),
+              style: const TextStyle(fontSize: 11, color: Colors.black54),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    key: const ValueKey('route-planner-callout-start'),
+                    onPressed: onStart,
+                    child: Text(context.l10n.t('Set as start')),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton(
+                    key: const ValueKey('route-planner-callout-finish'),
+                    onPressed: onFinish,
+                    child: Text(context.l10n.t('Set as finish')),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StageComboBox extends StatelessWidget {
+  const _StageComboBox({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.stages,
+    required this.selectedStageId,
+    required this.unavailableStageId,
+    required this.formatter,
+    required this.onChanged,
+  });
+
+  final String label;
+  final IconData icon;
+  final List<TrailStage> stages;
+  final String? selectedStageId;
+  final String? unavailableStageId;
+  final MeasurementFormatter formatter;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = stages
+        .where((stage) => stage.id == selectedStageId)
+        .firstOrNull;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () async {
+        final value = await showModalBottomSheet<String>(
+          context: context,
+          isScrollControlled: true,
+          showDragHandle: true,
+          builder: (context) => _StagePickerSheet(
+            label: label,
+            stages: stages,
+            selectedStageId: selectedStageId,
+            unavailableStageId: unavailableStageId,
+            formatter: formatter,
+          ),
+        );
+        if (value != null) onChanged(value);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon),
+          suffixIcon: const Icon(Icons.search_rounded),
+        ),
+        child: Text(
+          selected == null
+              ? context.l10n.t('Choose stage')
+              : context.l10n.t(selected.name),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+        ),
+      ),
+    );
+  }
+}
+
+class _StagePickerSheet extends StatefulWidget {
+  const _StagePickerSheet({
+    required this.label,
+    required this.stages,
+    required this.selectedStageId,
+    required this.unavailableStageId,
+    required this.formatter,
+  });
+
+  final String label;
+  final List<TrailStage> stages;
+  final String? selectedStageId;
+  final String? unavailableStageId;
+  final MeasurementFormatter formatter;
+
+  @override
+  State<_StagePickerSheet> createState() => _StagePickerSheetState();
+}
+
+class _StagePickerSheetState extends State<_StagePickerSheet> {
+  String query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = [
+      for (var index = 0; index < widget.stages.length; index++)
+        if (query.isEmpty ||
+            widget.stages[index].name.toLowerCase().contains(
+              query.toLowerCase(),
+            ) ||
+            '${index + 1}'.contains(query))
+          (index: index, stage: widget.stages[index]),
+    ];
+    return SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.76,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: TextField(
+                key: const ValueKey('route-planner-stage-search'),
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: widget.label,
+                  hintText: context.l10n.t('Search by stage or place'),
+                  prefixIcon: const Icon(Icons.search_rounded),
+                ),
+                onChanged: (value) => setState(() => query = value),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  final item = filtered[index];
+                  final disabled = item.stage.id == widget.unavailableStageId;
+                  return ListTile(
+                    enabled: !disabled,
+                    leading: CircleAvatar(child: Text('${item.index + 1}')),
+                    title: Text(context.l10n.t(item.stage.name)),
+                    subtitle: item.stage.accumulatedDistanceKm == null
+                        ? null
+                        : Text(
+                            widget.formatter.distance(
+                              item.stage.accumulatedDistanceKm!,
+                            ),
+                          ),
+                    trailing: item.stage.id == widget.selectedStageId
+                        ? const Icon(
+                            Icons.check_circle_rounded,
+                            color: EurotrexPalette.blue,
+                          )
+                        : null,
+                    onTap: disabled
+                        ? null
+                        : () => Navigator.pop(context, item.stage.id),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlannerLocatedStage {
+  const _PlannerLocatedStage({
+    required this.index,
+    required this.stage,
+    required this.point,
+  });
+
+  final int index;
+  final TrailStage stage;
+  final RoutePoint point;
+}
+
+List<Position> _plannerLineCoordinates(
+  List<RoutePoint> points, {
+  int maximumPoints = 5000,
+}) {
+  return [
+    for (final point in _plannerDisplayPoints(
+      points,
+      maximumPoints: maximumPoints,
+    ))
+      Position(point.lng, point.lat),
+  ];
+}
+
+List<RoutePoint> _plannerDisplayPoints(
+  List<RoutePoint> points, {
+  int maximumPoints = 5000,
+}) {
+  if (points.length <= maximumPoints) return points;
+  final stride = (points.length / maximumPoints).ceil();
+  final simplified = <RoutePoint>[
+    for (var index = 0; index < points.length; index += stride) points[index],
+  ];
+  if (!identical(simplified.last, points.last)) simplified.add(points.last);
+  return simplified;
+}
+
+class _RouteSelectionMap extends ConsumerStatefulWidget {
   const _RouteSelectionMap({
     required this.points,
+    required this.stages,
     required this.start,
     required this.finish,
+    required this.onStageInspected,
   });
 
   final List<RoutePoint> points;
+  final List<TrailStage> stages;
   final TrailStage? start;
   final TrailStage? finish;
+  final ValueChanged<TrailStage> onStageInspected;
 
   @override
-  Widget build(BuildContext context) => Container(
-    key: const ValueKey('route-planner-selection-map'),
-    height: 190,
-    decoration: BoxDecoration(
-      color: const Color(0xFFEAF0EA),
-      borderRadius: BorderRadius.circular(15),
-      border: Border.all(color: _outline),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: points.length < 2
-        ? Center(child: Text(context.l10n.t('Route map is loading…')))
-        : Stack(
-            fit: StackFit.expand,
-            children: [
-              CustomPaint(
-                painter: _RouteSelectionPainter(
-                  points: points,
-                  startDistance: start?.accumulatedDistanceKm,
-                  finishDistance: finish?.accumulatedDistanceKm,
-                ),
-              ),
-              Positioned(
-                left: 10,
-                right: 10,
-                bottom: 8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    start == null || finish == null
-                        ? context.l10n.t(
-                            'The planner will choose the best-fitting section.',
-                          )
-                        : '${context.l10n.t(start!.name)} → ${context.l10n.t(finish!.name)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: EurotrexPalette.navy,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+  ConsumerState<_RouteSelectionMap> createState() => _RouteSelectionMapState();
+}
+
+class _RouteSelectionMapState extends ConsumerState<_RouteSelectionMap> {
+  MapboxMap? _map;
+  PolylineAnnotationManager? _baseRouteManager;
+  PolylineAnnotationManager? _selectionRouteManager;
+  PointAnnotationManager? _stageManager;
+  Cancelable? _stageTapListener;
+  final Map<String, int> _stageIndexByAnnotation = {};
+  bool _stagesVisible = false;
+  bool _locating = false;
+  bool _gpsVisible = false;
+  bool _mapLoaded = false;
+  double _currentZoom = 7;
+  int _currentStageVisibilityStride = mapStageVisibilityStride(7);
+  bool _updatingZoomLayers = false;
+
+  List<_PlannerLocatedStage> get _locatedStages => [
+    for (var index = 0; index < widget.stages.length; index++)
+      if (widget.stages[index].accumulatedDistanceKm case final distance?)
+        _PlannerLocatedStage(
+          index: index,
+          stage: widget.stages[index],
+          point: routePointNearestDistance(widget.points, distance),
+        ),
+  ];
+
+  CameraViewportState get _initialViewport {
+    final first = widget.points.firstOrNull;
+    final last = widget.points.lastOrNull;
+    return CameraViewportState(
+      center: Point(
+        coordinates: Position(
+          first == null || last == null ? 33.2 : (first.lng + last.lng) / 2,
+          first == null || last == null ? 35.0 : (first.lat + last.lat) / 2,
+        ),
+      ),
+      zoom: 7,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _RouteSelectionMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_mapLoaded) return;
+    final map = _map;
+    if (map == null) return;
+    if (oldWidget.points != widget.points) {
+      unawaited(_redrawMap());
+    } else if (oldWidget.start?.id != widget.start?.id ||
+        oldWidget.finish?.id != widget.finish?.id) {
+      unawaited(_drawSelectedRoute(map));
+      unawaited(_drawStages(map));
+    } else if (oldWidget.stages != widget.stages) {
+      unawaited(_drawStages(map));
+    }
+  }
+
+  @override
+  void dispose() {
+    _stageTapListener?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _onMapCreated(MapboxMap map) async {
+    _map = map;
+    await map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
+    await map.compass.updateSettings(
+      CompassSettings(
+        position: OrnamentPosition.TOP_LEFT,
+        marginTop: 142,
+        marginLeft: 12,
+      ),
+    );
+    await map.logo.updateSettings(
+      LogoSettings(
+        position: OrnamentPosition.TOP_LEFT,
+        marginTop: 86,
+        marginLeft: 12,
+      ),
+    );
+    await map.attribution.updateSettings(
+      AttributionSettings(
+        position: OrnamentPosition.TOP_LEFT,
+        marginTop: 116,
+        marginLeft: 12,
+      ),
+    );
+  }
+
+  Future<void> _handleMapIdle() async {
+    if (_updatingZoomLayers) return;
+    final map = _map;
+    if (map == null) return;
+    _updatingZoomLayers = true;
+    try {
+      final camera = await map.getCameraState();
+      final nextStride = mapStageVisibilityStride(camera.zoom);
+      _currentZoom = camera.zoom;
+      if (_stagesVisible && nextStride != _currentStageVisibilityStride) {
+        _currentStageVisibilityStride = nextStride;
+        await _drawStages(map);
+      } else {
+        _currentStageVisibilityStride = nextStride;
+      }
+    } finally {
+      _updatingZoomLayers = false;
+    }
+  }
+
+  Future<void> _onMapLoaded(MapLoadedEventData _) async {
+    _mapLoaded = true;
+    await _redrawMap();
+    await _fitTrail();
+  }
+
+  Future<void> _redrawMap() async {
+    final map = _map;
+    if (map == null || widget.points.length < 2) return;
+    await _drawBaseRoute(map);
+    await _drawSelectedRoute(map);
+    await _drawStages(map);
+  }
+
+  Future<void> _drawBaseRoute(MapboxMap map) async {
+    final previous = _baseRouteManager;
+    _baseRouteManager = null;
+    if (previous != null) {
+      await map.annotations.removeAnnotationManager(previous);
+    }
+    final manager = await map.annotations.createPolylineAnnotationManager();
+    _baseRouteManager = manager;
+    await manager.setLineCap(LineCap.ROUND);
+    await manager.setLineJoin(LineJoin.ROUND);
+    await manager.create(
+      PolylineAnnotationOptions(
+        geometry: LineString(
+          coordinates: _plannerLineCoordinates(widget.points),
+        ),
+        lineColor: EurotrexPalette.navy.withValues(alpha: 0.55).toARGB32(),
+        lineWidth: 5,
+        lineBorderColor: Colors.white.toARGB32(),
+        lineBorderWidth: 1.5,
+      ),
+    );
+  }
+
+  Future<void> _drawSelectedRoute(MapboxMap map) async {
+    final previous = _selectionRouteManager;
+    _selectionRouteManager = null;
+    if (previous != null) {
+      await map.annotations.removeAnnotationManager(previous);
+    }
+    final startDistance = widget.start?.accumulatedDistanceKm;
+    final finishDistance = widget.finish?.accumulatedDistanceKm;
+    if (startDistance == null || finishDistance == null) return;
+    final minimumDistance = math.min(startDistance, finishDistance);
+    final maximumDistance = math.max(startDistance, finishDistance);
+    final selectedPoints = widget.points
+        .where(
+          (point) =>
+              point.distanceKm >= minimumDistance - 0.01 &&
+              point.distanceKm <= maximumDistance + 0.01,
+        )
+        .toList(growable: false);
+    if (selectedPoints.length < 2) return;
+    final manager = await map.annotations.createPolylineAnnotationManager();
+    _selectionRouteManager = manager;
+    await manager.setLineCap(LineCap.ROUND);
+    await manager.setLineJoin(LineJoin.ROUND);
+    await manager.create(
+      PolylineAnnotationOptions(
+        geometry: LineString(
+          coordinates: _plannerLineCoordinates(selectedPoints),
+        ),
+        lineColor: EurotrexPalette.blue.toARGB32(),
+        lineWidth: 8,
+        lineBorderColor: Colors.white.toARGB32(),
+        lineBorderWidth: 2,
+      ),
+    );
+  }
+
+  Future<void> _drawStages(MapboxMap map) async {
+    _stageTapListener?.cancel();
+    _stageTapListener = null;
+    final previous = _stageManager;
+    _stageManager = null;
+    _stageIndexByAnnotation.clear();
+    if (previous != null) {
+      await map.annotations.removeAnnotationManager(previous);
+    }
+    final progressiveIndexes = _stagesVisible
+        ? mapProgressiveStageIndexes(
+            stageIndexes: [for (final item in _locatedStages) item.index],
+            zoom: _currentZoom,
+          ).toSet()
+        : const <int>{};
+    final located = _locatedStages
+        .where(
+          (item) =>
+              progressiveIndexes.contains(item.index) ||
+              item.stage.id == widget.start?.id ||
+              item.stage.id == widget.finish?.id,
+        )
+        .toList(growable: false);
+    if (located.isEmpty) return;
+    final manager = await map.annotations.createPointAnnotationManager();
+    _stageManager = manager;
+    await manager.setTextAllowOverlap(false);
+    await manager.setTextIgnorePlacement(false);
+    final annotations = await manager.createMulti([
+      for (final item in located)
+        PointAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(item.point.lng, item.point.lat),
           ),
+          textField: item.stage.id == widget.start?.id
+              ? 'S'
+              : item.stage.id == widget.finish?.id
+              ? 'F'
+              : '${item.index + 1}',
+          textSize:
+              item.stage.id == widget.start?.id ||
+                  item.stage.id == widget.finish?.id
+              ? 14
+              : 11,
+          textColor:
+              item.stage.id == widget.start?.id ||
+                  item.stage.id == widget.finish?.id
+              ? Colors.white.toARGB32()
+              : EurotrexPalette.navy.toARGB32(),
+          textHaloColor: item.stage.id == widget.finish?.id
+              ? _comfort.toARGB32()
+              : item.stage.id == widget.start?.id
+              ? EurotrexPalette.blue.toARGB32()
+              : Colors.white.toARGB32(),
+          textHaloWidth:
+              item.stage.id == widget.start?.id ||
+                  item.stage.id == widget.finish?.id
+              ? 6
+              : 4,
+          symbolSortKey:
+              item.stage.id == widget.start?.id ||
+                  item.stage.id == widget.finish?.id
+              ? 2
+              : 1,
+          customData: {'stageIndex': item.index, 'name': item.stage.name},
+        ),
+    ]);
+    for (var index = 0; index < annotations.length; index++) {
+      final annotation = annotations[index];
+      if (annotation != null) {
+        _stageIndexByAnnotation[annotation.id] = located[index].index;
+      }
+    }
+    _stageTapListener = manager.tapEvents(
+      onTap: (annotation) {
+        final index = _stageIndexByAnnotation[annotation.id];
+        if (index != null && mounted) _inspectStage(index);
+      },
+    );
+  }
+
+  void _inspectStage(int index) {
+    if (index < 0 || index >= widget.stages.length) return;
+    widget.onStageInspected(widget.stages[index]);
+  }
+
+  Future<void> _toggleStages() async {
+    setState(() => _stagesVisible = !_stagesVisible);
+    final map = _map;
+    if (map != null && _mapLoaded) await _drawStages(map);
+  }
+
+  Future<void> _fitTrail() async {
+    final map = _map;
+    if (map == null || widget.points.length < 2) return;
+    var minLat = widget.points.first.lat;
+    var maxLat = minLat;
+    var minLng = widget.points.first.lng;
+    var maxLng = minLng;
+    for (final point in widget.points.skip(1)) {
+      minLat = math.min(minLat, point.lat);
+      maxLat = math.max(maxLat, point.lat);
+      minLng = math.min(minLng, point.lng);
+      maxLng = math.max(maxLng, point.lng);
+    }
+    final camera = await map.cameraForCoordinateBounds(
+      CoordinateBounds(
+        southwest: Point(coordinates: Position(minLng, minLat)),
+        northeast: Point(coordinates: Position(maxLng, maxLat)),
+        infiniteBounds: false,
+      ),
+      MbxEdgeInsets(top: 58, left: 30, bottom: 76, right: 66),
+      0,
+      0,
+      null,
+      null,
+    );
+    await map.flyTo(camera, MapAnimationOptions(duration: 650, startDelay: 0));
+  }
+
+  Future<void> _showGps() async {
+    final map = _map;
+    if (_locating || map == null) return;
+    setState(() => _locating = true);
+    try {
+      final location = await ref.read(deviceLocationReaderProvider)();
+      await map.location.updateSettings(
+        LocationComponentSettings(
+          enabled: true,
+          pulsingEnabled: true,
+          showAccuracyRing: true,
+        ),
+      );
+      await map.easeTo(
+        CameraOptions(
+          center: Point(
+            coordinates: Position(location.longitude, location.latitude),
+          ),
+          zoom: 14,
+          bearing: 0,
+        ),
+        MapAnimationOptions(duration: 650, startDelay: 0),
+      );
+      if (mounted) setState(() => _gpsVisible = true);
+    } on LocationServicesDisabledException {
+      _showMessage('Turn on Location Services to show your position.');
+    } on LocationPermissionDeniedException {
+      _showMessage('Location permission is needed to show your position.');
+    } catch (_) {
+      _showMessage('Your location could not be read right now.');
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.t(message))));
+  }
+
+  void _selectFallbackStage(Offset tap, Size size) {
+    if (widget.points.length < 2) return;
+    final projection = _RouteProjection(widget.points, size);
+    _PlannerLocatedStage? nearest;
+    var nearestDistance = 30.0;
+    for (final item in _locatedStages) {
+      final projected = projection.project(item.point);
+      final distance = (projected - tap).distance;
+      if (distance < nearestDistance) {
+        nearest = item;
+        nearestDistance = distance;
+      }
+    }
+    if (nearest != null) _inspectStage(nearest.index);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mapAvailable =
+        mapboxAccessToken.isNotEmpty && widget.points.length > 1;
+    return Container(
+      key: const ValueKey('route-planner-selection-map'),
+      decoration: BoxDecoration(
+        color: EurotrexPalette.paleBlue.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: _outline),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (mapAvailable)
+            MapWidget(
+              key: const ValueKey('route-planner-mapbox-map'),
+              styleUri: MapboxStyles.OUTDOORS,
+              viewport: _initialViewport,
+              onMapCreated: _onMapCreated,
+              onMapLoadedListener: _onMapLoaded,
+              onMapIdleListener: (_) => _handleMapIdle(),
+            )
+          else if (widget.points.length < 2)
+            Center(child: Text(context.l10n.t('Route map is loading…')))
+          else
+            LayoutBuilder(
+              builder: (context, constraints) => GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapUp: (details) => _selectFallbackStage(
+                  details.localPosition,
+                  constraints.biggest,
+                ),
+                child: CustomPaint(
+                  painter: _RouteSelectionPainter(
+                    points: widget.points,
+                    stages: widget.stages,
+                    showAllStages: _stagesVisible,
+                    startDistance: widget.start?.accumulatedDistanceKm,
+                    finishDistance: widget.finish?.accumulatedDistanceKm,
+                  ),
+                ),
+              ),
+            ),
+          Positioned(
+            right: 12,
+            top: 84,
+            child: Column(
+              children: [
+                _PlannerMapButton(
+                  key: const ValueKey('route-planner-map-stages'),
+                  tooltip: context.l10n.t(
+                    _stagesVisible ? 'Hide stages' : 'Show all stages',
+                  ),
+                  active: _stagesVisible,
+                  onPressed: _toggleStages,
+                  child: const Icon(Icons.signpost_outlined),
+                ),
+                const SizedBox(height: 8),
+                _PlannerMapButton(
+                  key: const ValueKey('route-planner-map-gps'),
+                  tooltip: context.l10n.t('Show my location'),
+                  active: _gpsVisible,
+                  onPressed: mapAvailable && !_locating ? _showGps : null,
+                  child: _locating
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.my_location_rounded),
+                ),
+                const SizedBox(height: 8),
+                _PlannerMapButton(
+                  key: const ValueKey('route-planner-map-center'),
+                  tooltip: context.l10n.t('Center trail'),
+                  onPressed: mapAvailable ? _fitTrail : null,
+                  child: const Icon(Icons.center_focus_strong_rounded),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlannerMapButton extends StatelessWidget {
+  const _PlannerMapButton({
+    super.key,
+    required this.tooltip,
+    required this.child,
+    required this.onPressed,
+    this.active = false,
+  });
+
+  final String tooltip;
+  final Widget child;
+  final VoidCallback? onPressed;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: active ? EurotrexPalette.blue : Colors.white.withValues(alpha: 0.95),
+    shape: const CircleBorder(),
+    elevation: 2,
+    child: IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      color: active ? Colors.white : EurotrexPalette.navy,
+      disabledColor: EurotrexPalette.navy.withValues(alpha: 0.35),
+      iconSize: 21,
+      icon: child,
+    ),
   );
 }
 
 class _RouteSelectionPainter extends CustomPainter {
   const _RouteSelectionPainter({
     required this.points,
+    required this.stages,
+    required this.showAllStages,
     required this.startDistance,
     required this.finishDistance,
   });
 
   final List<RoutePoint> points;
+  final List<TrailStage> stages;
+  final bool showAllStages;
   final double? startDistance;
   final double? finishDistance;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (points.length < 2) return;
-    const horizontalPadding = 20.0;
-    const topPadding = 14.0;
-    const bottomPadding = 48.0;
-    final minimumLat = points.map((point) => point.lat).reduce(math.min);
-    final maximumLat = points.map((point) => point.lat).reduce(math.max);
-    final minimumLng = points.map((point) => point.lng).reduce(math.min);
-    final maximumLng = points.map((point) => point.lng).reduce(math.max);
-    final latRange = math.max(0.000001, maximumLat - minimumLat);
-    final lngRange = math.max(0.000001, maximumLng - minimumLng);
-    final availableWidth = size.width - horizontalPadding * 2;
-    final availableHeight = size.height - topPadding - bottomPadding;
-    final scale = math.min(
-      availableWidth / lngRange,
-      availableHeight / latRange,
-    );
-    final offsetX = (size.width - lngRange * scale) / 2;
-    final offsetY = topPadding + (availableHeight - latRange * scale) / 2;
-    Offset project(RoutePoint point) => Offset(
-      offsetX + (point.lng - minimumLng) * scale,
-      offsetY + (maximumLat - point.lat) * scale,
-    );
+    final projection = _RouteProjection(points, size);
+    Offset projectPoint(RoutePoint point) => projection.project(point);
     Path pathFor(List<RoutePoint> source) {
-      final first = project(source.first);
+      final displayed = _plannerDisplayPoints(source);
+      final first = projectPoint(displayed.first);
       final path = Path()..moveTo(first.dx, first.dy);
-      for (final point in source.skip(1)) {
-        final offset = project(point);
+      for (final point in displayed.skip(1)) {
+        final offset = projectPoint(point);
         path.lineTo(offset.dx, offset.dy);
       }
       return path;
@@ -1435,7 +2176,7 @@ class _RouteSelectionPainter extends CustomPainter {
     canvas.drawPath(
       pathFor(points),
       Paint()
-        ..color = const Color(0xFF9CAB9F)
+        ..color = EurotrexPalette.navy.withValues(alpha: 0.5)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 5
         ..strokeCap = StrokeCap.round
@@ -1443,61 +2184,128 @@ class _RouteSelectionPainter extends CustomPainter {
     );
     final startValue = startDistance;
     final finishValue = finishDistance;
-    if (startValue == null || finishValue == null) return;
-    final minimumDistance = math.min(startValue, finishValue);
-    final maximumDistance = math.max(startValue, finishValue);
-    final selected = points
-        .where(
-          (point) =>
-              point.distanceKm >= minimumDistance - 0.01 &&
-              point.distanceKm <= maximumDistance + 0.01,
-        )
-        .toList(growable: false);
-    if (selected.length < 2) return;
-    canvas.drawPath(
-      pathFor(selected),
-      Paint()
-        ..color = EurotrexPalette.blue
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 7
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-    for (final point in [selected.first, selected.last]) {
-      final center = project(point);
-      canvas.drawCircle(center, 9, Paint()..color = Colors.white);
-      canvas.drawCircle(center, 6, Paint()..color = _green);
+    if (startValue != null && finishValue != null) {
+      final minimumDistance = math.min(startValue, finishValue);
+      final maximumDistance = math.max(startValue, finishValue);
+      final selected = points
+          .where(
+            (point) =>
+                point.distanceKm >= minimumDistance - 0.01 &&
+                point.distanceKm <= maximumDistance + 0.01,
+          )
+          .toList(growable: false);
+      if (selected.length >= 2) {
+        canvas.drawPath(
+          pathFor(selected),
+          Paint()
+            ..color = EurotrexPalette.blue
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 7
+            ..strokeCap = StrokeCap.round
+            ..strokeJoin = StrokeJoin.round,
+        );
+      }
+    }
+    for (final stage in stages) {
+      final distance = stage.accumulatedDistanceKm;
+      if (distance == null) continue;
+      final isStart = distance == startValue;
+      final isFinish = distance == finishValue;
+      if (!showAllStages && !isStart && !isFinish) continue;
+      final point = routePointNearestDistance(points, distance);
+      final center = projectPoint(point);
+      canvas.drawCircle(
+        center,
+        isStart || isFinish ? 9 : 7,
+        Paint()..color = Colors.white,
+      );
+      canvas.drawCircle(
+        center,
+        isStart || isFinish ? 6 : 4,
+        Paint()..color = isFinish ? _comfort : EurotrexPalette.blue,
+      );
     }
   }
 
   @override
   bool shouldRepaint(covariant _RouteSelectionPainter oldDelegate) =>
       oldDelegate.points != points ||
+      oldDelegate.stages != stages ||
+      oldDelegate.showAllStages != showAllStages ||
       oldDelegate.startDistance != startDistance ||
       oldDelegate.finishDistance != finishDistance;
 }
 
+class _RouteProjection {
+  _RouteProjection(List<RoutePoint> points, Size size)
+    : _size = size,
+      _minimumLat = points.map((item) => item.lat).reduce(math.min),
+      _maximumLat = points.map((item) => item.lat).reduce(math.max),
+      _minimumLng = points.map((item) => item.lng).reduce(math.min),
+      _maximumLng = points.map((item) => item.lng).reduce(math.max);
+
+  final Size _size;
+  final double _minimumLat;
+  final double _maximumLat;
+  final double _minimumLng;
+  final double _maximumLng;
+
+  Offset project(RoutePoint point) {
+    const horizontalPadding = 20.0;
+    const topPadding = 14.0;
+    const bottomPadding = 48.0;
+    final latRange = math.max(0.000001, _maximumLat - _minimumLat);
+    final lngRange = math.max(0.000001, _maximumLng - _minimumLng);
+    final availableWidth = _size.width - horizontalPadding * 2;
+    final availableHeight = _size.height - topPadding - bottomPadding;
+    final scale = math.min(
+      availableWidth / lngRange,
+      availableHeight / latRange,
+    );
+    final offsetX = (_size.width - lngRange * scale) / 2;
+    final offsetY = topPadding + (availableHeight - latRange * scale) / 2;
+    return Offset(
+      offsetX + (point.lng - _minimumLng) * scale,
+      offsetY + (_maximumLat - point.lat) * scale,
+    );
+  }
+}
+
 class _PaceStep extends StatelessWidget {
   const _PaceStep({
+    required this.walkingDays,
+    required this.constraint,
     required this.unit,
     required this.value,
     required this.distanceUnit,
+    required this.estimate,
+    required this.formatter,
+    required this.startDate,
+    required this.onDaysChanged,
+    required this.onConstraintChanged,
     required this.onUnitChanged,
     required this.onValueChanged,
     required this.onBack,
     required this.onNext,
   });
-  final _PaceUnit unit;
+  final int walkingDays;
+  final RoutePlanConstraint constraint;
+  final RoutePaceUnit unit;
   final double value;
   final String distanceUnit;
-  final ValueChanged<_PaceUnit> onUnitChanged;
+  final _SectionEstimate? estimate;
+  final MeasurementFormatter formatter;
+  final DateTime startDate;
+  final ValueChanged<int> onDaysChanged;
+  final ValueChanged<RoutePlanConstraint> onConstraintChanged;
+  final ValueChanged<RoutePaceUnit> onUnitChanged;
   final ValueChanged<double> onValueChanged;
   final VoidCallback onBack;
   final VoidCallback onNext;
 
   @override
   Widget build(BuildContext context) {
-    final isHours = unit == _PaceUnit.hours;
+    final isHours = unit == RoutePaceUnit.hours;
     final minimum = isHours ? 2.0 : 5.0;
     final maximum = isHours ? 10.0 : 45.0;
     final divisions = isHours ? 16 : 40;
@@ -1515,21 +2323,98 @@ class _PaceStep extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
+                context.l10n.t('What should the planner hold fixed?'),
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<RoutePlanConstraint>(
+                key: const ValueKey('route-planner-constraint'),
+                expandedInsets: EdgeInsets.zero,
+                segments: [
+                  ButtonSegment(
+                    value: RoutePlanConstraint.fixedDays,
+                    icon: const Icon(Icons.calendar_view_week_rounded),
+                    label: Text(context.l10n.t('Fit my days')),
+                  ),
+                  ButtonSegment(
+                    value: RoutePlanConstraint.dailyPace,
+                    icon: const Icon(Icons.speed_rounded),
+                    label: Text(context.l10n.t('Limit effort')),
+                  ),
+                ],
+                selected: {constraint},
+                onSelectionChanged: (values) =>
+                    onConstraintChanged(values.single),
+              ),
+              if (constraint == RoutePlanConstraint.fixedDays) ...[
+                const SizedBox(height: 18),
+                Text(
+                  context.l10n.t('Walking days'),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton.outlined(
+                      key: const ValueKey('route-planner-days-minus'),
+                      tooltip: context.l10n.t('Remove walking day'),
+                      onPressed: walkingDays > 1
+                          ? () => onDaysChanged(walkingDays - 1)
+                          : null,
+                      icon: const Icon(Icons.remove_rounded),
+                    ),
+                    SizedBox(
+                      width: 110,
+                      child: Text(
+                        '$walkingDays ${context.l10n.t('days')}',
+                        key: const ValueKey('route-planner-days'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: EurotrexPalette.navy,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    IconButton.outlined(
+                      key: const ValueKey('route-planner-days-plus'),
+                      tooltip: context.l10n.t('Add walking day'),
+                      onPressed: walkingDays < 90
+                          ? () => onDaysChanged(walkingDays + 1)
+                          : null,
+                      icon: const Icon(Icons.add_rounded),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                const SizedBox(height: 14),
+                Text(
+                  context.l10n.t(
+                    'We will choose the number of days that stays within your daily limit.',
+                  ),
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+              ],
+              const SizedBox(height: 14),
+              const Divider(height: 1),
+              const SizedBox(height: 18),
+              Text(
                 context.l10n.t('How do you prefer to set your pace?'),
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
-              SegmentedButton<_PaceUnit>(
+              SegmentedButton<RoutePaceUnit>(
                 key: const ValueKey('route-planner-pace-unit'),
                 expandedInsets: EdgeInsets.zero,
                 segments: [
                   ButtonSegment(
-                    value: _PaceUnit.hours,
+                    value: RoutePaceUnit.hours,
                     icon: const Icon(Icons.schedule_rounded),
                     label: Text(context.l10n.t('Hours')),
                   ),
                   ButtonSegment(
-                    value: _PaceUnit.distance,
+                    value: RoutePaceUnit.distance,
                     icon: const Icon(Icons.straighten_rounded),
                     label: Text(distanceUnit),
                   ),
@@ -1559,10 +2444,55 @@ class _PaceStep extends StatelessWidget {
               ),
               Text(
                 context.l10n.t(
-                  'Walking time includes an allowance for climbing. Each option adjusts the effort around this target.',
+                  'Walking time includes an allowance for climbing. Route styles rank alternatives without changing this limit.',
                 ),
                 style: const TextStyle(fontSize: 11, color: Colors.black54),
               ),
+              if (estimate case final details?) ...[
+                const SizedBox(height: 16),
+                Container(
+                  key: const ValueKey('route-planner-feasibility'),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color:
+                        details.suggestedDays > walkingDays &&
+                            constraint == RoutePlanConstraint.fixedDays
+                        ? const Color(0xFFFFF3E0)
+                        : EurotrexPalette.paleBlue.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        '${formatter.distance(details.distanceKm)} · ↑ ${formatter.altitude(details.ascentM)}',
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      Text(
+                        '${context.l10n.t('Required average')}: ${formatter.distance(details.distanceKm / math.max(1, constraint == RoutePlanConstraint.fixedDays ? walkingDays : details.suggestedDays))} ${context.l10n.t('per day')} · ${context.l10n.t('Suggested')}: ${details.suggestedDays} ${context.l10n.t('days')}',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                      Text(
+                        '${context.l10n.t('Projected finish')}: ${MaterialLocalizations.of(context).formatMediumDate(startDate.add(Duration(days: (constraint == RoutePlanConstraint.fixedDays ? walkingDays : details.suggestedDays) - 1)))}',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                      if (details.suggestedDays > walkingDays &&
+                          constraint == RoutePlanConstraint.fixedDays)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            key: const ValueKey(
+                              'route-planner-use-suggested-days',
+                            ),
+                            onPressed: () =>
+                                onDaysChanged(details.suggestedDays),
+                            child: Text(context.l10n.t('Use suggested days')),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -1583,15 +2513,19 @@ class _StayStep extends StatelessWidget {
   const _StayStep({
     required this.preference,
     required this.priceRange,
+    required this.includeUnknownPrices,
     required this.onPreferenceChanged,
     required this.onPriceChanged,
+    required this.onIncludeUnknownChanged,
     required this.onBack,
     required this.onBuild,
   });
   final RouteOvernightPreference preference;
   final RangeValues priceRange;
+  final bool includeUnknownPrices;
   final ValueChanged<RouteOvernightPreference> onPreferenceChanged;
   final ValueChanged<RangeValues> onPriceChanged;
+  final ValueChanged<bool> onIncludeUnknownChanged;
   final VoidCallback onBack;
   final VoidCallback onBuild;
 
@@ -1605,29 +2539,41 @@ class _StayStep extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SegmentedButton<RouteOvernightPreference>(
+            Row(
               key: const ValueKey('route-planner-stay-type'),
-              expandedInsets: EdgeInsets.zero,
-              segments: [
-                ButtonSegment(
-                  value: RouteOvernightPreference.accommodation,
-                  label: Text(context.l10n.t('Accommodation')),
-                  icon: const Icon(Icons.bed_rounded),
+              children: [
+                Expanded(
+                  child: _StayChoice(
+                    label: context.l10n.t('Lodging'),
+                    icon: Icons.bed_rounded,
+                    selected:
+                        preference == RouteOvernightPreference.accommodation,
+                    onTap: () => onPreferenceChanged(
+                      RouteOvernightPreference.accommodation,
+                    ),
+                  ),
                 ),
-                ButtonSegment(
-                  value: RouteOvernightPreference.either,
-                  label: Text(context.l10n.t('Either')),
-                  icon: const Icon(Icons.swap_horiz_rounded),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: _StayChoice(
+                    label: context.l10n.t('Flexible'),
+                    icon: Icons.swap_horiz_rounded,
+                    selected: preference == RouteOvernightPreference.either,
+                    onTap: () =>
+                        onPreferenceChanged(RouteOvernightPreference.either),
+                  ),
                 ),
-                ButtonSegment(
-                  value: RouteOvernightPreference.camping,
-                  label: Text(context.l10n.t('Camping')),
-                  icon: const Icon(Icons.cabin_rounded),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: _StayChoice(
+                    label: context.l10n.t('Camping'),
+                    icon: Icons.cabin_rounded,
+                    selected: preference == RouteOvernightPreference.camping,
+                    onTap: () =>
+                        onPreferenceChanged(RouteOvernightPreference.camping),
+                  ),
                 ),
               ],
-              selected: {preference},
-              onSelectionChanged: (values) =>
-                  onPreferenceChanged(values.single),
             ),
             if (preference != RouteOvernightPreference.camping) ...[
               const SizedBox(height: 20),
@@ -1656,6 +2602,8 @@ class _StayStep extends StatelessWidget {
                   '€${priceRange.start.toStringAsFixed(0)}',
                   '€${priceRange.end.toStringAsFixed(0)}',
                 ),
+                semanticFormatterCallback: (value) =>
+                    '€${value.round()} ${context.l10n.t('per night')}',
                 onChanged: onPriceChanged,
               ),
               Text(
@@ -1663,6 +2611,23 @@ class _StayStep extends StatelessWidget {
                   'The range applies per room, per night, using listed prices.',
                 ),
                 style: const TextStyle(fontSize: 11, color: Colors.black54),
+              ),
+              SwitchListTile.adaptive(
+                key: const ValueKey('route-planner-unknown-prices'),
+                contentPadding: EdgeInsets.zero,
+                value: includeUnknownPrices,
+                onChanged: onIncludeUnknownChanged,
+                title: Text(
+                  context.l10n.t('Include stays without a listed price'),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                subtitle: Text(
+                  context.l10n.t('You can confirm their price before booking.'),
+                  style: const TextStyle(fontSize: 11),
+                ),
               ),
             ],
           ],
@@ -1677,6 +2642,55 @@ class _StayStep extends StatelessWidget {
         nextLabel: context.l10n.t('Build my plans'),
       ),
     ],
+  );
+}
+
+class _StayChoice extends StatelessWidget {
+  const _StayChoice({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    label: label,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(13),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? EurotrexPalette.paleBlue : Colors.white,
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: selected ? EurotrexPalette.blue : _outline),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: selected ? EurotrexPalette.blue : EurotrexPalette.navy,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+            ),
+          ],
+        ),
+      ),
+    ),
   );
 }
 
@@ -1720,7 +2734,9 @@ class _WizardButtons extends StatelessWidget {
 class _CompareStep extends StatelessWidget {
   const _CompareStep({
     required this.variants,
+    required this.failures,
     required this.selected,
+    required this.saved,
     required this.formatter,
     required this.routePoints,
     required this.stages,
@@ -1730,13 +2746,19 @@ class _CompareStep extends StatelessWidget {
     required this.onBack,
     required this.onDone,
     required this.onSelect,
+    required this.onSave,
+    required this.onReviewPace,
+    required this.onReviewStay,
+    required this.onUseSuggestedDays,
     required this.onEditBoundary,
     required this.onChooseAccommodation,
     required this.onStartDay,
     required this.onOpenMap,
   });
   final Map<RoutePlanStyle, _PlannedVariant?> variants;
+  final Map<RoutePlanStyle, RoutePlanFailure?> failures;
   final RoutePlanStyle? selected;
+  final bool saved;
   final MeasurementFormatter formatter;
   final List<RoutePoint> routePoints;
   final List<TrailStage> stages;
@@ -1746,6 +2768,10 @@ class _CompareStep extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback? onDone;
   final void Function(RoutePlanStyle, _PlannedVariant) onSelect;
+  final VoidCallback onSave;
+  final VoidCallback onReviewPace;
+  final VoidCallback onReviewStay;
+  final VoidCallback? onUseSuggestedDays;
   final ValueChanged<int> onEditBoundary;
   final ValueChanged<int> onChooseAccommodation;
   final ValueChanged<RoutePlanDay> onStartDay;
@@ -1771,7 +2797,11 @@ class _CompareStep extends StatelessWidget {
           _VariantCard(
             style: style,
             variant: variants[style],
+            failure: failures[style],
             selected: selected == style,
+            recommended:
+                style == RoutePlanStyle.balanced &&
+                variants[RoutePlanStyle.balanced] != null,
             formatter: formatter,
             onTap: saving || variants[style] == null
                 ? null
@@ -1788,7 +2818,17 @@ class _CompareStep extends StatelessWidget {
                 child: Text(context.l10n.t('Back')),
               ),
             ),
-            if (onDone != null) ...[
+            if (selectedVariant != null && !saved) ...[
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  key: const ValueKey('route-planner-save'),
+                  onPressed: saving ? null : onSave,
+                  icon: const Icon(Icons.bookmark_add_rounded),
+                  label: Text(context.l10n.t('Save route')),
+                ),
+              ),
+            ] else if (onDone != null) ...[
               const SizedBox(width: 12),
               Expanded(
                 child: FilledButton.icon(
@@ -1807,22 +2847,23 @@ class _CompareStep extends StatelessWidget {
         ],
         if (selectedVariant != null && selected != null) ...[
           const SizedBox(height: 14),
-          Material(
-            key: const ValueKey('route-saved-confirmation'),
-            color: _green.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(14),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(
-                context.l10n.t('Saved to My routes and Stage filters.'),
-                style: const TextStyle(
-                  color: _green,
-                  fontWeight: FontWeight.w900,
+          if (saved)
+            Material(
+              key: const ValueKey('route-saved-confirmation'),
+              color: _green.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  context.l10n.t('Saved to My routes and Stage filters.'),
+                  style: const TextStyle(
+                    color: _green,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
+          if (saved) const SizedBox(height: 12),
           _PlanResult(
             plan: selectedVariant.plan,
             style: selected!,
@@ -1843,7 +2884,36 @@ class _CompareStep extends StatelessWidget {
           _Message(
             key: const ValueKey('route-planner-no-result'),
             icon: Icons.wrong_location_outlined,
-            title: context.l10n.t('No feasible route found'),
+            title: context.l10n.t(
+              routeFailureLabel(
+                failures.values.whereType<RoutePlanFailure>().firstOrNull ??
+                    RoutePlanFailure.noOvernightStops,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton(
+                key: const ValueKey('route-planner-review-pace'),
+                onPressed: onReviewPace,
+                child: Text(context.l10n.t('Review pace')),
+              ),
+              OutlinedButton(
+                key: const ValueKey('route-planner-review-stays'),
+                onPressed: onReviewStay,
+                child: Text(context.l10n.t('Review stays')),
+              ),
+              if (onUseSuggestedDays != null)
+                FilledButton(
+                  key: const ValueKey('route-planner-recovery-days'),
+                  onPressed: onUseSuggestedDays,
+                  child: Text(context.l10n.t('Use suggested days')),
+                ),
+            ],
           ),
         ],
       ],
@@ -1855,13 +2925,17 @@ class _VariantCard extends StatelessWidget {
   const _VariantCard({
     required this.style,
     required this.variant,
+    required this.failure,
     required this.selected,
+    required this.recommended,
     required this.formatter,
     required this.onTap,
   });
   final RoutePlanStyle style;
   final _PlannedVariant? variant;
+  final RoutePlanFailure? failure;
   final bool selected;
+  final bool recommended;
   final MeasurementFormatter formatter;
   final VoidCallback? onTap;
 
@@ -1869,6 +2943,21 @@ class _VariantCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = styleColor(style);
     final plan = variant?.plan;
+    final longestDay = plan?.days.fold<RoutePlanDay?>(
+      null,
+      (current, day) => current == null || day.distanceKm > current.distanceKm
+          ? day
+          : current,
+    );
+    final averageMinutes = plan == null || plan.days.isEmpty
+        ? 0
+        : plan.days.fold<int>(
+                0,
+                (total, day) => total + day.estimatedWalkingMinutes,
+              ) ~/
+              plan.days.length;
+    final campingNights =
+        plan?.days.where((day) => day.usesCamping).length ?? 0;
     return Material(
       key: ValueKey('route-option-${style.name}'),
       color: selected ? color.withValues(alpha: 0.1) : Colors.white,
@@ -1889,14 +2978,43 @@ class _VariantCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      context.l10n.t(styleLabel(style)),
-                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            context.l10n.t(styleLabel(style)),
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                        if (recommended)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: EurotrexPalette.blue,
+                              borderRadius: BorderRadius.circular(99),
+                            ),
+                            child: Text(
+                              context.l10n.t('Recommended'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     Text(
                       plan == null
-                          ? context.l10n.t('Unavailable for these preferences')
-                          : '${context.l10n.t(plan.days.first.start.name)} → ${context.l10n.t(plan.days.last.finish.name)}\n${plan.days.length} ${context.l10n.t('walking days')} · ${formatter.distance(plan.totalDistanceKm)} · €${plan.estimatedAccommodationCostEur.toStringAsFixed(0)}+',
+                          ? context.l10n.t(
+                              routeFailureLabel(
+                                failure ?? RoutePlanFailure.noOvernightStops,
+                              ),
+                            )
+                          : '${plan.days.length} ${context.l10n.t('walking days')} · ${formatter.distance(plan.totalDistanceKm)} · ${_formatMinutes(context, averageMinutes)} ${context.l10n.t('average')}\n${context.l10n.t('Longest day')}: ${formatter.distance(longestDay!.distanceKm)} · ${context.l10n.t('Camping nights')}: $campingNights · €${plan.estimatedAccommodationCostEur.toStringAsFixed(0)}${plan.unknownPriceNights > 0 ? '+' : ''}',
                       style: const TextStyle(fontSize: 11),
                     ),
                   ],
@@ -2595,6 +3713,32 @@ String styleLabel(RoutePlanStyle style) => switch (style) {
   RoutePlanStyle.balanced => 'Balanced',
   RoutePlanStyle.adventurous => 'Adventurous',
 };
+
+String routeFailureLabel(RoutePlanFailure failure) => switch (failure) {
+  RoutePlanFailure.invalidEndpoints => 'Choose two stages in trail order.',
+  RoutePlanFailure.tooFarForSelectedDays =>
+    'This section is too far for the selected number of days.',
+  RoutePlanFailure.tooManySelectedDays =>
+    'This short section has fewer useful stops than selected days.',
+  RoutePlanFailure.dailyPaceExceeded =>
+    'One or more trail sections exceed your daily effort limit.',
+  RoutePlanFailure.unknownPricesExcluded =>
+    'A suitable stay is available, but its price is not listed.',
+  RoutePlanFailure.accommodationBudget =>
+    'No listed stays fit the selected price range.',
+  RoutePlanFailure.overnightPreference =>
+    'The selected stay type is not available at the required stops.',
+  RoutePlanFailure.exactDayCount =>
+    'The available overnight stops cannot make this exact day count.',
+  RoutePlanFailure.noOvernightStops =>
+    'There are not enough suitable overnight stops for this section.',
+};
+
+String _formatMinutes(BuildContext context, int minutes) {
+  final hours = minutes ~/ 60;
+  final remainder = minutes.remainder(60);
+  return '$hours ${context.l10n.t('h')} $remainder ${context.l10n.t('min')}';
+}
 
 Color styleColor(RoutePlanStyle style) => switch (style) {
   RoutePlanStyle.relaxed => _green,
