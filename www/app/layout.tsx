@@ -1,24 +1,33 @@
 import type { Metadata } from 'next';
+import { SITE_URL } from '@/lib/site';
 import './globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://eurotrex.groovy-newt-8196.chatgpt.site'),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'EuroTrex — Find your way on Europe’s long-distance trails',
+    default: 'EuroTrex — Cyprus E4 trail app and route planner',
     template: '%s · EuroTrex',
   },
-  description: 'Explore Europe’s long-distance trails with accessible guidance, offline maps, stage planning and trusted places to stay—starting with the Cyprus E4.',
+  description: 'Plan and navigate the Cyprus E4 with offline route guidance, flexible stages, elevation context and practical trail-side stays.',
   applicationName: 'EuroTrex',
-  icons: { icon: '/icon.png', apple: '/icon.png' },
+  keywords: ['Cyprus E4', 'E4 trail app', 'Cyprus hiking', 'offline hiking maps', 'long-distance trails Europe', 'EuroTrex'],
+  alternates: { canonical: '/' },
+  icons: { icon: '/eurotrex-app-icon.png', apple: '/eurotrex-app-icon.png' },
   openGraph: {
     type: 'website',
     locale: 'en_CY',
+    url: '/',
     siteName: 'EuroTrex',
-    title: 'EuroTrex — Find your way on Europe’s long-distance trails',
-    description: 'Accessible trail guidance, planning and trusted stays—starting with the Cyprus E4.',
-    images: [{ url: '/og.png', width: 1672, height: 941, alt: 'EuroTrex — Find your way on Europe’s long-distance trails' }],
+    title: 'EuroTrex — Cyprus E4 trail app and route planner',
+    description: 'Offline route guidance, flexible stage planning and trail-side stays for the Cyprus E4.',
+    images: [{ url: '/og.png', width: 1672, height: 941, alt: 'EuroTrex guide to the Cyprus E4 trail' }],
   },
-  twitter: { card: 'summary_large_image', images: ['/og.png'] },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'EuroTrex — Cyprus E4 trail app',
+    description: 'Plan and navigate the Cyprus E4 with offline guidance, flexible stages and practical stays.',
+    images: ['/og.png'],
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

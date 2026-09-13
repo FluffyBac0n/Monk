@@ -1,6 +1,9 @@
 import type { MetadataRoute } from 'next';
+import { SITE_URL } from '@/lib/site';
 
 export default function robots(): MetadataRoute.Robots {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://eurotrex.groovy-newt-8196.chatgpt.site';
-  return { rules: [{ userAgent: '*', allow: '/', disallow: ['/admin'] }], sitemap: `${base}/sitemap.xml` };
+  return {
+    rules: [{ userAgent: '*', allow: '/', disallow: ['/admin', '/admin/', '/portal', '/portal/'] }],
+    sitemap: `${SITE_URL}/sitemap.xml`,
+  };
 }

@@ -1,13 +1,15 @@
 # EuroTrex
 
-EuroTrex is a mobile trail companion for the E4 in Cyprus. It provides offline trail maps, elevation context, tailored stage planning and verified accommodation near the route.
+EuroTrex is a mobile trail companion and route planner for European long-distance trails, beginning with the E4 in Cyprus. It is designed to make multi-stage hiking more approachable for beginners and experienced walkers.
 
-Hikers do not create website accounts. They use the EuroTrex iOS or Android app.
+Core app features include offline route guidance, flexible start and finish selection, day-by-day stage planning, elevation context and practical accommodation near the trail. EuroTrex is preparing official iOS and Android releases.
 
-Accommodation owners can create a website partner account, submit a property, follow its review status and maintain approved information. The EuroTrex team verifies submissions and material updates before publishing them in the mobile app.
+The Cyprus E4 is the first EuroTrex route. The longer-term aim is to extend the same clear trail-planning and host-network model to Greece and other European E-paths.
+
+Hikers use the mobile app and do not create website accounts. Accommodation owners can use the partner portal to submit a property, follow its review and maintain approved information. EuroTrex verifies listings and material updates before publishing them in the app.
 
 Official pages:
-- / — product overview and app download links
-- /portal — accommodation owner sign-in and listing management
-- /partner-terms — accommodation listing standards
-- /privacy — website privacy information
+- https://eurotrex.andreasmic332452.chatgpt.site/ — EuroTrex product, Cyprus E4 project and app information
+- https://eurotrex.andreasmic332452.chatgpt.site/portal — accommodation partner sign-in and listing management
+- https://eurotrex.andreasmic332452.chatgpt.site/partner-terms — accommodation listing standards
+- https://eurotrex.andreasmic332452.chatgpt.site/privacy — website privacy information
