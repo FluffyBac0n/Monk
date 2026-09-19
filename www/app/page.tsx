@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { SITE_URL } from '@/lib/site';
+import MobileMenu from './mobile-menu';
 
 const paths = [
   {
@@ -37,11 +38,32 @@ const appFeatures = [
   ['Trail-side stays', 'Find practical accommodation close to the route and contact verified hosts.'],
 ];
 
+const hostSteps = [
+  {
+    title: 'Create your account',
+    copy: 'Register as an accommodation partner and tell us who you represent.',
+    image: '/host-step-account-photo.webp',
+    alt: 'A Cyprus guesthouse owner creating a host account on a laptop',
+  },
+  {
+    title: 'Add the essentials',
+    copy: 'Share your location, nearest stage, price range and reliable contact information.',
+    image: '/host-step-details-photo.webp',
+    alt: 'A Cyprus guesthouse owner checking trail-ready property details',
+  },
+  {
+    title: 'Submit for verification',
+    copy: 'Approved information becomes available to hikers inside the EuroTrex app.',
+    image: '/host-step-verified-photo.webp',
+    alt: 'A hiker finding a verified trail-side guesthouse',
+  },
+];
+
 const involvement = [
-  ['Volunteer', 'Contribute local knowledge and help verify trail information as the network grows.', 'Volunteer with us', 'mailto:info@eurotrex.eu?subject=EuroTrex%20volunteer'],
-  ['Collaborate', 'Work with EuroTrex on responsible tourism, trail access and regional initiatives.', 'Start a conversation', 'mailto:info@eurotrex.eu?subject=Working%20with%20EuroTrex'],
-  ['Walk with us', 'Join field walks and share the landscapes, conditions and stories you find.', 'Ask about field walks', 'mailto:info@eurotrex.eu?subject=Walking%20with%20EuroTrex'],
-  ['Support the vision', 'Help keep European long-distance hiking practical, welcoming and accessible.', 'Support EuroTrex', 'mailto:info@eurotrex.eu?subject=Supporting%20EuroTrex'],
+  { title: 'Volunteer', copy: 'Contribute local knowledge and help verify trail information as the network grows.', action: 'Volunteer with us', href: 'mailto:info@eurotrex.eu?subject=EuroTrex%20volunteer', image: '/involved-volunteer.webp', alt: 'Illustration of a volunteer checking a trail waymark and recording a field note' },
+  { title: 'Collaborate', copy: 'Work with EuroTrex on responsible tourism, trail access and regional initiatives.', action: 'Start a conversation', href: 'mailto:info@eurotrex.eu?subject=Working%20with%20EuroTrex', image: '/involved-collaborate.webp', alt: 'Illustration of two collaborators connecting sections of a trail route together' },
+  { title: 'Walk with us', copy: 'Join field walks and share the landscapes, conditions and stories you find.', action: 'Ask about field walks', href: 'mailto:info@eurotrex.eu?subject=Walking%20with%20EuroTrex', image: '/involved-walk.webp', alt: 'Illustration of two hikers walking together on a Cyprus trail' },
+  { title: 'Support the vision', copy: 'Help keep European long-distance hiking practical, welcoming and accessible.', action: 'Support EuroTrex', href: 'mailto:info@eurotrex.eu?subject=Supporting%20EuroTrex', image: '/involved-support.webp', alt: 'Illustration of people helping a trail network reach a new waypoint' },
 ];
 
 const faqs = [
@@ -141,16 +163,7 @@ export default function Home() {
             <a href="#involved">Get involved</a>
             <Link className="nav-portal" href="/portal">Host portal</Link>
           </nav>
-          <details className="mobile-menu">
-            <summary>Menu</summary>
-            <nav aria-label="Mobile navigation">
-              <a href="#hikers">For hikers</a>
-              <a href="#hosts">For hosts</a>
-              <a href="#project">The project</a>
-              <a href="#involved">Get involved</a>
-              <Link href="/portal">Host portal</Link>
-            </nav>
-          </details>
+          <MobileMenu />
         </div>
       </header>
 
@@ -176,14 +189,17 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="intro-section section-shell" aria-labelledby="intro-title">
-          <div>
-            <p className="eyebrow">Why EuroTrex</p>
-            <h2 id="intro-title">Long-distance hiking, without the guesswork.</h2>
-          </div>
-          <div className="intro-copy">
-            <p>EuroTrex brings the route, its stages, elevation and useful stays into one calm experience. It is built for curious walkers—not only seasoned trekkers.</p>
-            <p className="intro-note">Start with a single stage. Go as far as feels right.</p>
+        <section className="manifesto-section" aria-labelledby="manifesto-title">
+          <div className="section-shell manifesto-layout">
+            <blockquote className="manifesto-quote">
+              <p className="eyebrow">The EuroTrex manifesto</p>
+              <h2 id="manifesto-title">“When you start to walk on the way, the way appears.”</h2>
+            </blockquote>
+            <div className="manifesto-copy">
+              <p>You don’t need to be an expert, the fastest, or the strongest to go far.</p>
+              <p>Because what truly matters is the sense of adventure, the joy of wandering, the curiosity to see what lies beyond the next hill, and the need to reconnect with nature.</p>
+              <p className="manifesto-signoff"><strong>Start walking. Plan less. Discover more.</strong><span>Slowly. Deeply. One step at a time.</span></p>
+            </div>
           </div>
         </section>
 
@@ -266,18 +282,28 @@ export default function Home() {
         </section>
 
         <section className="host-section" id="hosts" aria-labelledby="hosts-title">
-          <div className="section-shell host-layout">
-            <div className="host-copy">
-              <p className="eyebrow">For accommodation hosts</p>
-              <h2 id="hosts-title">Put your stay on the hiker’s path.</h2>
-              <p>A reliable bed can turn an ambitious route into a practical one. EuroTrex gives eligible accommodation partners a focused place to submit, verify and maintain trail-ready information.</p>
+          <div className="section-shell">
+            <div className="host-heading">
+              <div>
+                <p className="eyebrow">For accommodation hosts</p>
+                <h2 id="hosts-title">Your stay on the trail in three simple steps.</h2>
+              </div>
+              <div className="host-summary">
+                <p>No complicated setup. Create an account, add the details hikers need and send your stay for verification. We’ll guide you through each step.</p>
+              </div>
+            </div>
+            <ol className="host-steps" role="list">
+              {hostSteps.map((step) => (
+                <li key={step.title}>
+                  <div className="host-step-image"><Image src={step.image} alt={step.alt} fill sizes="(max-width: 500px) 100vw, (max-width: 760px) 38vw, 33vw" /></div>
+                  <div className="host-step-body"><h3>{step.title}</h3><p>{step.copy}</p></div>
+                </li>
+              ))}
+            </ol>
+            <div className="host-cta-row">
+              <p><strong>Ready to welcome hikers?</strong><span>Start your listing and take it one step at a time.</span></p>
               <ActionLink href="/portal" className="button button-blue">Open the host portal</ActionLink>
             </div>
-            <ol className="host-steps">
-              <li><span>01</span><div><strong>Create a host account</strong><p>Register as an accommodation partner and tell us who you represent.</p></div></li>
-              <li><span>02</span><div><strong>Add trail-ready details</strong><p>Share location, nearest stage, price range and reliable contact information.</p></div></li>
-              <li><span>03</span><div><strong>Get verified</strong><p>Approved information becomes available to hikers inside the EuroTrex app.</p></div></li>
-            </ol>
           </div>
         </section>
 
@@ -288,12 +314,14 @@ export default function Home() {
               <p>EuroTrex grows through local knowledge, useful partnerships and people who care for the trail.</p>
             </div>
             <div className="involved-grid">
-              {involvement.map(([title, copy, action, href]) => (
+              {involvement.map(({ title, copy, action, href, image, alt }) => (
                 <article key={title}>
-                  <span className="involved-tag">EuroTrex network</span>
-                  <h3>{title}</h3>
-                  <p>{copy}</p>
-                  <ActionLink href={href} className="card-link">{action}<b aria-hidden="true">↗</b></ActionLink>
+                  <div className="involved-image"><Image src={image} alt={alt} fill sizes="(max-width: 500px) 100vw, (max-width: 760px) 42vw, 21vw" /></div>
+                  <div className="involved-card-body">
+                    <h3>{title}</h3>
+                    <p>{copy}</p>
+                    <ActionLink href={href} className="card-link">{action}<b aria-hidden="true">↗</b></ActionLink>
+                  </div>
                 </article>
               ))}
             </div>
@@ -352,16 +380,18 @@ export default function Home() {
             <div><strong>Information</strong><Link href="/privacy">Privacy</Link><Link href="/partner-terms">Partner policy</Link></div>
           </nav>
         </div>
-        <div className="section-shell funding-row" aria-label="Project funders">
-          <div className="funding-mark">
-            <Image src="/eu-flag-color.png" alt="European Union flag" width={1247} height={853} />
-            <span>Co-funded by the<br /><strong>European Union</strong></span>
-          </div>
-          <div className="funding-mark">
-            <Image src="/republic-of-cyprus-emblem.png" alt="Republic of Cyprus emblem" width={817} height={812} />
-            <span>Co-funded by the<br /><strong>Republic of Cyprus</strong></span>
-          </div>
+        <div className="section-shell funding-row">
           <p className="footer-legal">© {new Date().getFullYear()} EuroTrex. Apple and the Apple logo are trademarks of Apple Inc. Google Play and the Google Play logo are trademarks of Google LLC.</p>
+          <div className="funding-marks" aria-label="Project funders">
+            <div className="funding-mark">
+              <Image src="/eu-flag-color.png" alt="European Union flag" width={1247} height={853} />
+              <span>Co-funded by the<br /><strong>European Union</strong></span>
+            </div>
+            <div className="funding-mark">
+              <Image src="/republic-of-cyprus-emblem.png" alt="Republic of Cyprus emblem" width={817} height={812} />
+              <span>Co-funded by the<br /><strong>Republic of Cyprus</strong></span>
+            </div>
+          </div>
         </div>
       </footer>
     </>

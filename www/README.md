@@ -11,9 +11,9 @@ The EuroTrex marketing site and accommodation partner portal. The public site se
 
 ## Local development
 
-1. Copy `.env.example` to `.env.local` and add the Firebase web-app configuration.
-2. In Firebase Authentication, enable Email/Password sign-in.
-3. Run `pnpm install --ignore-workspace` and `pnpm dev` from this folder.
+1. Copy `.env.example` to `.env.local` if local values need to differ from the
+   prepared Firebase Web app configuration.
+2. Run `pnpm install --ignore-workspace` and `pnpm dev` from this folder.
 
 The checked-in Firebase fallback points to the existing `eurotrex` project so this site and the mobile app share the same trail data. Firebase API keys identify the project; Firestore rules provide authorization.
 
@@ -39,10 +39,15 @@ firebase deploy --only firestore:rules --project eurotrex
 
 Do not replace broader production rules blindly; merge if the mobile app relies on additional collections.
 
+## Private testing and release
+
+Follow [the private host-portal testing checklist](docs/private-host-portal-testing.md)
+to create an owner account, bootstrap an administrator, exercise the approval
+flow, and run the self-cleaning production smoke test.
+
 ## Release checklist
 
 - Replace the placeholder partner policy and privacy notice with counsel-approved documents.
 - Add the final App Store, Google Play and production site URLs as environment variables.
-- Add the deployed domain to Firebase Authentication's authorized domains.
-- Verify the Firestore trail/stage names and run owner approval/removal tests against a staging project.
+- Verify the Firestore trail/stage names and run owner approval/removal tests.
 - Keep the website owner-only until these launch checks are complete.

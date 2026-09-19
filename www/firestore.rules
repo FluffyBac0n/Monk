@@ -16,31 +16,157 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == ownerId;
     }
 
+    function validShortString(value, maximum) {
+      return value is string && value.size() > 0 && value.size() <= maximum;
+    }
+
+    function validOptionalString(value, maximum) {
+      return value == null || (value is string && value.size() <= maximum);
+    }
+
+    function ownerCreateKeysOnly(data) {
+      return data.keys().hasOnly([
+        'trailId', 'trailName', 'stageId', 'stageName', 'stageSequence',
+        'name', 'type', 'village', 'address', 'description', 'phone',
+        'email', 'website', 'whatsapp', 'googleMapsUrl', 'priceMinEur',
+        'priceMaxEur', 'distanceFromTrailKm', 'capacityPeople', 'monthsOpen',
+        'latitude', 'longitude', 'policyAgreement', 'ownerId', 'ownerEmail',
+        'status', 'reviewNote', 'createdAt', 'updatedAt'
+      ]);
+    }
+
+    function submissionResultKeysOnly(data) {
+      return data.keys().hasOnly([
+        'trailId', 'trailName', 'stageId', 'stageName', 'stageSequence',
+        'name', 'type', 'village', 'address', 'description', 'phone',
+        'email', 'website', 'whatsapp', 'googleMapsUrl', 'priceMinEur',
+        'priceMaxEur', 'distanceFromTrailKm', 'capacityPeople', 'monthsOpen',
+        'latitude', 'longitude', 'policyAgreement', 'ownerId', 'ownerEmail',
+        'status', 'reviewNote', 'createdAt', 'updatedAt',
+        'publishedLodgingId', 'publishedTrailId', 'reviewedBy', 'reviewedAt'
+      ]);
+    }
+
+    function requiredSubmissionKeys(data) {
+      return data.keys().hasAll([
+        'trailId', 'trailName', 'stageId', 'stageName', 'stageSequence',
+        'name', 'type', 'village', 'address', 'description', 'phone',
+        'email', 'website', 'whatsapp', 'googleMapsUrl', 'priceMinEur',
+        'priceMaxEur', 'distanceFromTrailKm', 'capacityPeople', 'monthsOpen',
+        'latitude', 'longitude', 'policyAgreement', 'ownerId', 'ownerEmail',
+        'status', 'reviewNote', 'createdAt', 'updatedAt'
+      ]);
+    }
+
+    function validOwnerSubmissionData(data) {
+      return requiredSubmissionKeys(data)
+        && data.ownerId == request.auth.uid
+        && data.ownerEmail == request.auth.token.email
+        && data.policyAgreement == true
+        && validShortString(data.trailId, 120)
+        && validShortString(data.trailName, 160)
+        && validShortString(data.stageId, 160)
+        && validShortString(data.stageName, 160)
+        && data.stageSequence is number
+        && validShortString(data.name, 160)
+        && data.type in ['Hotel', 'Guesthouse', 'Hostel', 'Apartment', 'Villa', 'Camping']
+        && validShortString(data.village, 160)
+        && validShortString(data.address, 300)
+        && data.description is string
+        && data.description.size() > 0
+        && data.description.size() <= 800
+        && validShortString(data.phone, 80)
+        && validShortString(data.email, 254)
+        && validShortString(data.website, 1000)
+        && validOptionalString(data.whatsapp, 80)
+        && validOptionalString(data.googleMapsUrl, 1000)
+        && data.priceMinEur is number
+        && data.priceMinEur >= 0
+        && data.priceMaxEur is number
+        && data.priceMaxEur >= data.priceMinEur
+        && data.distanceFromTrailKm is number
+        && data.distanceFromTrailKm >= 0
+        && (data.capacityPeople == null || (data.capacityPeople is number && data.capacityPeople >= 1))
+        && validOptionalString(data.monthsOpen, 160)
+        && (data.latitude == null || (data.latitude is number && data.latitude >= -90 && data.latitude <= 90))
+        && (data.longitude == null || (data.longitude is number && data.longitude >= -180 && data.longitude <= 180))
+        && data.reviewNote is string
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && exists(/databases/$(database)/documents/trails/$(data.trailId)/stages/$(data.stageId));
+    }
+
+    function validOwnerTransition(before, after) {
+      return (
+        before in ['draft', 'pending', 'changes_requested', 'rejected']
+        && after == 'pending'
+      ) || (
+        before in ['approved', 'pending_update']
+        && after == 'pending_update'
+      );
+    }
+
+    match /trails/{trailId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /trails/{trailId}/{document=**} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
     match /ownerProfiles/{ownerId} {
-      allow read, create, update: if isOwner(ownerId);
-      allow read, write: if isAdmin();
-      allow delete: if false;
+      allow get: if isAdmin() || isOwner(ownerId);
+      allow list: if isAdmin();
+
+      allow create: if isOwner(ownerId)
+        && request.resource.data.keys().hasOnly(['email', 'businessName', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['email', 'businessName', 'createdAt', 'updatedAt'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.email is string
+        && request.resource.data.businessName is string
+        && request.resource.data.businessName.size() <= 160
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if isOwner(ownerId)
+        && request.resource.data.keys().hasOnly(['email', 'businessName', 'createdAt', 'updatedAt'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.email is string
+        && request.resource.data.businessName is string
+        && request.resource.data.businessName.size() <= 160
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['businessName', 'updatedAt']);
+
+      allow create, update, delete: if isAdmin();
     }
 
     match /accommodationSubmissions/{submissionId} {
       allow read: if isAdmin() || (signedIn() && resource.data.ownerId == request.auth.uid);
-      allow create: if signedIn()
-        && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerEmail == request.auth.token.email
-        && request.resource.data.policyAgreement == true
-        && request.resource.data.status == 'pending';
+
+      allow create: if isAdmin() || (
+        signedIn()
+        && ownerCreateKeysOnly(request.resource.data)
+        && validOwnerSubmissionData(request.resource.data)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.reviewNote == ''
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+      );
+
       allow update: if isAdmin() || (
         signedIn()
         && resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.ownerEmail == request.auth.token.email
-        && request.resource.data.policyAgreement == true
-        && request.resource.data.status in ['pending', 'pending_update']
+        && submissionResultKeysOnly(request.resource.data)
+        && validOwnerSubmissionData(request.resource.data)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.ownerEmail == resource.data.ownerEmail
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.reviewNote == ''
+        && request.resource.data.updatedAt == request.time
+        && validOwnerTransition(resource.data.status, request.resource.data.status)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'trailId', 'trailName', 'stageId', 'stageName', 'stageSequence',
           'name', 'type', 'village', 'address', 'description', 'phone',
@@ -50,18 +176,41 @@ service cloud.firestore {
           'updatedAt'
         ])
       );
-      allow delete: if signedIn()
+
+      allow delete: if isAdmin() || (
+        signedIn()
         && resource.data.ownerId == request.auth.uid
-        && resource.data.status in ['draft', 'rejected', 'changes_requested'];
+        && resource.data.status in ['draft', 'rejected', 'changes_requested']
+      );
     }
 
     match /admins/{adminId} {
-      allow read: if isAdmin() || (signedIn() && request.auth.uid == adminId);
-      allow write: if isAdmin();
+      allow get: if isAdmin() || (signedIn() && request.auth.uid == adminId);
+      allow list, create, update, delete: if isAdmin();
     }
 
     match /accommodationAudit/{entryId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'submissionId', 'lodgingId', 'trailId', 'ownerId',
+          'accommodationName', 'action', 'note', 'actorId', 'actorEmail',
+          'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'submissionId', 'lodgingId', 'trailId', 'ownerId',
+          'accommodationName', 'action', 'note', 'actorId', 'actorEmail',
+          'createdAt'
+        ])
+        && request.resource.data.actorId == request.auth.uid
+        && request.resource.data.actorEmail == request.auth.token.email
+        && request.resource.data.action in ['approved', 'changes_requested', 'rejected', 'removed']
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 1000
+        && request.resource.data.createdAt == request.time;
+
+      allow update, delete: if false;
     }
 
     match /{document=**} {

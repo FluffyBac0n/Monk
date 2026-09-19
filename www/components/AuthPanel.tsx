@@ -5,7 +5,27 @@ import { FormEvent, useState } from 'react';
 import { auth } from '@/lib/firebase';
 import { registerOwnerProfile } from '@/lib/accommodations';
 
-export function AuthPanel() {
+type AuthPanelProps = {
+  onNotice?: (message: string) => void;
+  onError?: (message: string) => void;
+};
+
+function authErrorMessage(caught: unknown) {
+  const code = typeof caught === 'object' && caught && 'code' in caught ? String(caught.code) : '';
+  const messages: Record<string, string> = {
+    'auth/email-already-in-use': 'An account already exists for this email. Sign in instead.',
+    'auth/invalid-credential': 'The email or password is incorrect.',
+    'auth/invalid-email': 'Enter a valid email address.',
+    'auth/network-request-failed': 'The connection was interrupted. Please try again.',
+    'auth/operation-not-allowed': 'Owner registration is temporarily unavailable.',
+    'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
+    'auth/weak-password': 'Use a password with at least eight characters.',
+    'auth/user-disabled': 'This account has been disabled. Contact EuroTrex for help.',
+  };
+  return messages[code] || 'We could not complete that request. Please try again.';
+}
+
+export function AuthPanel({ onNotice, onError }: AuthPanelProps = {}) {
   const [mode, setMode] = useState<'signin' | 'register'>('signin');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -22,12 +42,19 @@ export function AuthPanel() {
     try {
       if (mode === 'register') {
         const result = await createUserWithEmailAndPassword(auth, email, password);
-        await registerOwnerProfile(result.user, String(data.get('businessName') || '').trim());
+        try {
+          await registerOwnerProfile(result.user, String(data.get('businessName') || '').trim());
+          onNotice?.('Account created. You can now submit your accommodation.');
+        } catch {
+          const profileError = 'Your account was created, but the owner profile could not be completed. Please contact EuroTrex support.';
+          setError(profileError);
+          onError?.(profileError);
+        }
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message.replace('Firebase: ', '') : 'We could not sign you in.');
+      setError(authErrorMessage(caught));
     } finally {
       setBusy(false);
     }
@@ -36,22 +63,33 @@ export function AuthPanel() {
   async function resetPassword() {
     const email = window.prompt('Enter your account email');
     if (!email) return;
+    setBusy(true);
+    setError('');
+    setMessage('');
     try {
       await sendPasswordResetEmail(auth, email.trim());
       setMessage('Password reset email sent.');
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message.replace('Firebase: ', '') : 'Reset failed.');
+      setError(authErrorMessage(caught));
+    } finally {
+      setBusy(false);
     }
+  }
+
+  function switchMode(next: 'signin' | 'register') {
+    setMode(next);
+    setError('');
+    setMessage('');
   }
 
   return (
     <section className="auth-card">
       <p className="eyebrow dark">ACCOMMODATION PARTNERS</p>
       <h1>{mode === 'signin' ? 'Welcome back.' : 'List your accommodation.'}</h1>
-      <p className="muted">This account area is for verified accommodation owners. Hikers can explore EuroTrex in the mobile app.</p>
+      <p className="muted">This account area is for accommodation owners. Every listing is reviewed before it appears in EuroTrex.</p>
       <div className="auth-tabs" role="tablist" aria-label="Account action">
-        <button className={mode === 'signin' ? 'active' : ''} onClick={() => setMode('signin')}>Sign in</button>
-        <button className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>Create owner account</button>
+        <button type="button" className={mode === 'signin' ? 'active' : ''} onClick={() => switchMode('signin')}>Sign in</button>
+        <button type="button" className={mode === 'register' ? 'active' : ''} onClick={() => switchMode('register')}>Create owner account</button>
       </div>
       <form onSubmit={submit} className="form-grid single">
         {mode === 'register' && <label>Business or owner name<input name="businessName" autoComplete="organization" required /></label>}
@@ -61,7 +99,7 @@ export function AuthPanel() {
         {message && <p className="form-message success" role="status">{message}</p>}
         <button className="button button-primary" disabled={busy}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}</button>
       </form>
-      {mode === 'signin' && <button className="text-button reset-link" onClick={resetPassword}>Forgot your password?</button>}
+      {mode === 'signin' && <button type="button" className="text-button reset-link" disabled={busy} onClick={resetPassword}>Forgot your password?</button>}
     </section>
   );
 }

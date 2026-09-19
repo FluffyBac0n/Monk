@@ -38,13 +38,15 @@ function submissionFromDoc(id: string, data: DocumentData): AccommodationSubmiss
 }
 
 export async function registerOwnerProfile(user: User, businessName = '') {
+  const profile = doc(db, 'ownerProfiles', user.uid);
+  const existing = await getDoc(profile);
   await setDoc(
-    doc(db, 'ownerProfiles', user.uid),
+    profile,
     {
       email: user.email || '',
       businessName,
       updatedAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
+      ...(existing.exists() ? {} : { createdAt: serverTimestamp() }),
     },
     { merge: true },
   );
@@ -88,17 +90,34 @@ export async function listStages(trailId: string): Promise<StageOption[]> {
 
 export async function saveSubmission(
   user: User,
-  values: Omit<AccommodationSubmission, 'id' | 'ownerId' | 'ownerEmail' | 'status'>,
+  values: Omit<
+    AccommodationSubmission,
+    | 'id'
+    | 'ownerId'
+    | 'ownerEmail'
+    | 'status'
+    | 'reviewNote'
+    | 'publishedLodgingId'
+    | 'publishedTrailId'
+    | 'createdAt'
+    | 'updatedAt'
+  >,
   existing?: AccommodationSubmission,
 ) {
+  if (existing?.status === 'removed') {
+    throw new Error('Removed accommodations cannot be resubmitted. Create a new listing instead.');
+  }
   const record = existing ? doc(db, 'accommodationSubmissions', existing.id) : doc(submissions);
   const status: SubmissionStatus = existing?.status === 'approved' || existing?.status === 'pending_update'
     ? 'pending_update'
     : 'pending';
+  const safeValues = Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [key, value === undefined ? null : value]),
+  );
   await setDoc(
     record,
     {
-      ...values,
+      ...safeValues,
       ownerId: user.uid,
       ownerEmail: user.email || '',
       status,
@@ -116,15 +135,15 @@ function publicLodgingData(submission: AccommodationSubmission) {
     trailId: submission.trailId,
     stageId: submission.stageId,
     stageName: submission.stageName,
-    stageSequence: submission.stageSequence || null,
+    stageSequence: submission.stageSequence ?? null,
     name: submission.name,
     type: submission.type,
     village: submission.village,
     address: submission.address,
     description: submission.description,
-    priceMinEur: submission.priceMinEur || null,
-    priceMaxEur: submission.priceMaxEur || null,
-    minPriceText: submission.priceMinEur ? `From €${submission.priceMinEur}` : null,
+    priceMinEur: submission.priceMinEur ?? null,
+    priceMaxEur: submission.priceMaxEur ?? null,
+    minPriceText: submission.priceMinEur != null ? `From €${submission.priceMinEur}` : null,
     contact: {
       phone: submission.phone,
       whatsapp: submission.whatsapp || '',
@@ -171,10 +190,14 @@ async function addAudit(
 export async function approveSubmission(actor: User, submission: AccommodationSubmission, note = '') {
   const batch = writeBatch(db);
   const lodgingId = submission.publishedLodgingId || submission.id;
+  if (submission.publishedTrailId && submission.publishedTrailId !== submission.trailId) {
+    batch.delete(doc(db, 'trails', submission.publishedTrailId, 'lodgings', lodgingId));
+  }
   batch.set(doc(db, 'trails', submission.trailId, 'lodgings', lodgingId), publicLodgingData(submission), { merge: true });
   batch.update(doc(db, 'accommodationSubmissions', submission.id), {
     status: 'approved',
     publishedLodgingId: lodgingId,
+    publishedTrailId: submission.trailId,
     reviewNote: note,
     reviewedBy: actor.uid,
     reviewedAt: serverTimestamp(),
@@ -205,7 +228,8 @@ export async function reviewSubmission(
 export async function removeSubmissionAccommodation(actor: User, submission: AccommodationSubmission, note: string) {
   const batch = writeBatch(db);
   const lodgingId = submission.publishedLodgingId || submission.id;
-  batch.delete(doc(db, 'trails', submission.trailId, 'lodgings', lodgingId));
+  const publishedTrailId = submission.publishedTrailId || submission.trailId;
+  batch.delete(doc(db, 'trails', publishedTrailId, 'lodgings', lodgingId));
   batch.update(doc(db, 'accommodationSubmissions', submission.id), {
     status: 'removed',
     reviewNote: note,
@@ -282,6 +306,9 @@ export async function userIsAdmin(user: User) {
 }
 
 export async function deleteDraft(user: User, submission: AccommodationSubmission) {
-  if (submission.ownerId !== user.uid || !['draft', 'rejected', 'changes_requested'].includes(submission.status)) return;
+  if (submission.ownerId !== user.uid) throw new Error('You can only delete your own accommodation.');
+  if (!['draft', 'rejected', 'changes_requested'].includes(submission.status)) {
+    throw new Error('Only drafts or listings returned for changes can be deleted.');
+  }
   await deleteDoc(doc(db, 'accommodationSubmissions', submission.id));
 }

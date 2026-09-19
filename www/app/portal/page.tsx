@@ -48,7 +48,7 @@ function toForm(row: AccommodationSubmission) {
     trailName: row.trailName,
     stageId: row.stageId,
     stageName: row.stageName,
-    stageSequence: row.stageSequence || 0,
+    stageSequence: row.stageSequence ?? 0,
     name: row.name,
     type: row.type,
     village: row.village,
@@ -57,17 +57,21 @@ function toForm(row: AccommodationSubmission) {
     phone: row.phone,
     email: row.email,
     website: row.website,
-    whatsapp: row.whatsapp || '',
-    googleMapsUrl: row.googleMapsUrl || '',
-    priceMinEur: row.priceMinEur?.toString() || '',
-    priceMaxEur: row.priceMaxEur?.toString() || '',
-    distanceFromTrailKm: row.distanceFromTrailKm?.toString() || '',
-    capacityPeople: row.capacityPeople?.toString() || '',
-    monthsOpen: row.monthsOpen || '',
-    latitude: row.latitude?.toString() || '',
-    longitude: row.longitude?.toString() || '',
+    whatsapp: row.whatsapp ?? '',
+    googleMapsUrl: row.googleMapsUrl ?? '',
+    priceMinEur: row.priceMinEur?.toString() ?? '',
+    priceMaxEur: row.priceMaxEur?.toString() ?? '',
+    distanceFromTrailKm: row.distanceFromTrailKm?.toString() ?? '',
+    capacityPeople: row.capacityPeople?.toString() ?? '',
+    monthsOpen: row.monthsOpen ?? '',
+    latitude: row.latitude?.toString() ?? '',
+    longitude: row.longitude?.toString() ?? '',
     policyAgreement: row.policyAgreement,
   };
+}
+
+function errorMessage(caught: unknown, fallback: string) {
+  return caught instanceof Error ? caught.message : fallback;
 }
 
 export default function OwnerPortal() {
@@ -79,6 +83,11 @@ export default function OwnerPortal() {
   const [form, setForm] = useState(emptyForm);
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [deletingId, setDeletingId] = useState('');
+  const [trailsLoading, setTrailsLoading] = useState(true);
+  const [stagesLoading, setStagesLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState('');
+  const [catalogRetry, setCatalogRetry] = useState(0);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -89,13 +98,27 @@ export default function OwnerPortal() {
 
   useEffect(() => {
     if (!user) return;
-    listTrails().then(setTrails).catch(() => undefined);
-  }, [user]);
+    let active = true;
+    listTrails()
+      .then((rows) => { if (active) setTrails(rows); })
+      .catch((caught) => { if (active) setCatalogError(errorMessage(caught, 'Trail choices could not be loaded.')); })
+      .finally(() => { if (active) setTrailsLoading(false); });
+    return () => { active = false; };
+  }, [user, catalogRetry]);
 
   useEffect(() => {
     if (!user || !form.trailId) return;
-    listStages(form.trailId).then(setStages).catch((caught) => setError(caught.message));
-  }, [user, form.trailId]);
+    let active = true;
+    listStages(form.trailId)
+      .then((rows) => {
+        if (!active) return;
+        setStages(rows);
+        if (!rows.length) setCatalogError('No stages are available for this trail yet.');
+      })
+      .catch((caught) => { if (active) setCatalogError(errorMessage(caught, 'Trail stages could not be loaded.')); })
+      .finally(() => { if (active) setStagesLoading(false); });
+    return () => { active = false; };
+  }, [user, form.trailId, catalogRetry]);
 
   const counts = useMemo(() => ({
     live: submissions.filter((row) => row.status === 'approved').length,
@@ -109,6 +132,10 @@ export default function OwnerPortal() {
 
   function startNew() {
     setEditing(null);
+    setCatalogError('');
+    setStages([]);
+    setStagesLoading(true);
+    setCatalogRetry((value) => value + 1);
     setForm({ ...emptyForm, email: user?.email || '' });
     setShowForm(true);
     setNotice('');
@@ -117,6 +144,10 @@ export default function OwnerPortal() {
 
   function startEdit(row: AccommodationSubmission) {
     setEditing(row);
+    setCatalogError('');
+    setStages([]);
+    setStagesLoading(true);
+    setCatalogRetry((value) => value + 1);
     setForm(toForm(row));
     setShowForm(true);
     setNotice('');
@@ -126,6 +157,10 @@ export default function OwnerPortal() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user) return;
+    if (trailsLoading || stagesLoading || catalogError || !stages.length) {
+      setError('Wait for the trail stages to load before submitting.');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -136,7 +171,7 @@ export default function OwnerPortal() {
         trailName: selectedTrail?.name || form.trailName,
         stageId: form.stageId,
         stageName: selectedStage?.name || form.stageName,
-        stageSequence: selectedStage?.sequence || form.stageSequence,
+        stageSequence: selectedStage?.sequence ?? form.stageSequence,
         name: form.name.trim(),
         type: form.type,
         village: form.village.trim(),
@@ -147,27 +182,56 @@ export default function OwnerPortal() {
         website: form.website.trim(),
         whatsapp: form.whatsapp.trim(),
         googleMapsUrl: form.googleMapsUrl.trim(),
-        priceMinEur: form.priceMinEur ? Number(form.priceMinEur) : undefined,
-        priceMaxEur: form.priceMaxEur ? Number(form.priceMaxEur) : undefined,
-        distanceFromTrailKm: form.distanceFromTrailKm ? Number(form.distanceFromTrailKm) : undefined,
-        capacityPeople: form.capacityPeople ? Number(form.capacityPeople) : undefined,
+        priceMinEur: form.priceMinEur === '' ? null : Number(form.priceMinEur),
+        priceMaxEur: form.priceMaxEur === '' ? null : Number(form.priceMaxEur),
+        distanceFromTrailKm: form.distanceFromTrailKm === '' ? null : Number(form.distanceFromTrailKm),
+        capacityPeople: form.capacityPeople === '' ? null : Number(form.capacityPeople),
         monthsOpen: form.monthsOpen.trim(),
-        latitude: form.latitude ? Number(form.latitude) : undefined,
-        longitude: form.longitude ? Number(form.longitude) : undefined,
+        latitude: form.latitude === '' ? null : Number(form.latitude),
+        longitude: form.longitude === '' ? null : Number(form.longitude),
         policyAgreement: form.policyAgreement,
       }, editing || undefined);
       setShowForm(false);
       setEditing(null);
       setNotice(editing?.status === 'approved' ? 'Your update was submitted for review. The current live listing remains visible until approval.' : 'Accommodation submitted for review.');
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Submission failed.');
+      setError(errorMessage(caught, 'Submission failed.'));
     } finally {
       setBusy(false);
     }
   }
 
+  async function removeListing(row: AccommodationSubmission) {
+    if (!user || !window.confirm(`Delete ${row.name}? This cannot be undone.`)) return;
+    setDeletingId(row.id);
+    setError('');
+    setNotice('');
+    try {
+      await deleteDraft(user, row);
+      setNotice('Accommodation deleted.');
+    } catch (caught) {
+      setError(errorMessage(caught, 'The accommodation could not be deleted.'));
+    } finally {
+      setDeletingId('');
+    }
+  }
+
+  function retryCatalog() {
+    setCatalogError('');
+    setTrailsLoading(true);
+    setStagesLoading(true);
+    setCatalogRetry((value) => value + 1);
+  }
+
+  function selectTrail(trailId: string) {
+    setCatalogError('');
+    setStages([]);
+    setStagesLoading(true);
+    setForm((current) => ({ ...current, trailId, stageId: '', stageName: '', stageSequence: 0 }));
+  }
+
   if (loading) return <div className="loading-screen">Loading EuroTrex…</div>;
-  if (!user) return <main className="portal-page"><PortalHeader /><AuthPanel /></main>;
+  if (!user) return <main className="portal-page"><PortalHeader /><AuthPanel onNotice={setNotice} onError={setError} /></main>;
 
   return (
     <main className="portal-page">
@@ -192,9 +256,10 @@ export default function OwnerPortal() {
           <section className="form-panel">
             <div className="panel-heading"><div><p className="eyebrow dark">{editing ? 'UPDATE LISTING' : 'NEW LISTING'}</p><h2>{editing ? editing.name : 'Accommodation details'}</h2></div><button className="text-button" onClick={() => setShowForm(false)}>Close</button></div>
             {editing?.status === 'approved' && <p className="notice info">Changes to a live listing are reviewed before replacing the version in the app.</p>}
+            {catalogError && <p className="notice error with-action" role="alert"><span>{catalogError}</span><button type="button" className="text-button" onClick={retryCatalog}>Retry</button></p>}
             <form className="form-grid" onSubmit={submit}>
-              <label>Trail<select value={form.trailId} onChange={(event) => update('trailId', event.target.value)} required>{trails.map((trail) => <option key={trail.id} value={trail.id}>{trail.name}</option>)}</select></label>
-              <label>Nearest trail stage<select value={form.stageId} onChange={(event) => update('stageId', event.target.value)} required><option value="">Select a named location</option>{stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</select></label>
+              <label>Trail<select value={form.trailId} disabled={trailsLoading} onChange={(event) => selectTrail(event.target.value)} required>{trails.map((trail) => <option key={trail.id} value={trail.id}>{trail.name}</option>)}</select></label>
+              <label>Nearest trail stage<select value={form.stageId} disabled={stagesLoading || Boolean(catalogError)} onChange={(event) => update('stageId', event.target.value)} required><option value="">{stagesLoading ? 'Loading stages…' : 'Select a named location'}</option>{stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</select></label>
               <label>Accommodation name<input value={form.name} onChange={(event) => update('name', event.target.value)} required /></label>
               <label>Type<select value={form.type} onChange={(event) => update('type', event.target.value)}>{lodgingTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
               <label>Village or town<input value={form.village} onChange={(event) => update('village', event.target.value)} required /></label>
@@ -213,7 +278,7 @@ export default function OwnerPortal() {
               <label>Longitude<input type="number" min="-180" max="180" step="any" value={form.longitude} onChange={(event) => update('longitude', event.target.value)} /></label>
               <label className="full">Description<textarea rows={4} maxLength={800} value={form.description} onChange={(event) => update('description', event.target.value)} required /></label>
               <label className="check-label full"><input type="checkbox" checked={form.policyAgreement} onChange={(event) => update('policyAgreement', event.target.checked)} required /><span>I confirm that I represent this accommodation, the information is accurate, and I accept the <a href="/partner-terms" target="_blank">partner listing policy</a>.</span></label>
-              <div className="form-actions full"><button type="button" className="button button-secondary" onClick={() => setShowForm(false)}>Cancel</button><button className="button button-primary" disabled={busy}>{busy ? 'Submitting…' : editing ? 'Submit update' : 'Submit for review'}</button></div>
+              <div className="form-actions full"><button type="button" className="button button-secondary" onClick={() => setShowForm(false)}>Cancel</button><button className="button button-primary" disabled={busy || trailsLoading || stagesLoading || Boolean(catalogError) || !stages.length}>{busy ? 'Submitting…' : editing ? 'Submit update' : 'Submit for review'}</button></div>
             </form>
           </section>
         )}
@@ -230,7 +295,7 @@ export default function OwnerPortal() {
                   <h3>{row.name}</h3>
                   <p>{row.type} · {row.village} · near {row.stageName}</p>
                   {row.reviewNote && <blockquote><strong>Reviewer note</strong>{row.reviewNote}</blockquote>}
-                  <div className="card-actions"><button className="button button-secondary" onClick={() => startEdit(row)}>Edit details</button>{['draft', 'rejected', 'changes_requested'].includes(row.status) && <button className="text-button danger" onClick={() => user && deleteDraft(user, row)}>Delete</button>}</div>
+                  <div className="card-actions">{row.status !== 'removed' && <button className="button button-secondary" onClick={() => startEdit(row)}>Edit details</button>}{['draft', 'rejected', 'changes_requested'].includes(row.status) && <button className="text-button danger" disabled={deletingId === row.id} onClick={() => void removeListing(row)}>{deletingId === row.id ? 'Deleting…' : 'Delete'}</button>}</div>
                 </article>
               ))}
             </div>
