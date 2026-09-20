@@ -20,6 +20,8 @@ import {
 import { db } from './firebase';
 import type {
   AccommodationSubmission,
+  AccommodationDraft,
+  AccommodationDraftValues,
   AuditEntry,
   PublishedLodging,
   StageOption,
@@ -28,6 +30,7 @@ import type {
 } from './models';
 
 const submissions = collection(db, 'accommodationSubmissions');
+const drafts = collection(db, 'accommodationDrafts');
 
 function sortedSubmissions(rows: AccommodationSubmission[]) {
   return rows.sort((a, b) => a.name.localeCompare(b.name));
@@ -62,6 +65,46 @@ export function watchOwnerSubmissions(
     (snapshot) => onData(sortedSubmissions(snapshot.docs.map((row) => submissionFromDoc(row.id, row.data())))),
     onError,
   );
+}
+
+export function watchOwnerDrafts(
+  ownerId: string,
+  onData: (rows: AccommodationDraft[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    query(drafts, where('ownerId', '==', ownerId)),
+    (snapshot) => onData(snapshot.docs.map((row) => ({ id: row.id, ...row.data() } as AccommodationDraft)).sort((a, b) => a.values.name.localeCompare(b.values.name))),
+    onError,
+  );
+}
+
+export async function saveAccommodationDraft(
+  user: User,
+  values: AccommodationDraftValues,
+  currentStep: number,
+  draftId = '',
+  sourceSubmissionId = '',
+) {
+  const record = draftId ? doc(db, 'accommodationDrafts', draftId) : doc(drafts);
+  await setDoc(record, {
+    ownerId: user.uid,
+    ownerEmail: user.email || '',
+    sourceSubmissionId,
+    currentStep: Math.min(4, Math.max(1, currentStep)),
+    values,
+    updatedAt: serverTimestamp(),
+    ...(draftId ? {} : { createdAt: serverTimestamp() }),
+  }, { merge: true });
+  return record.id;
+}
+
+export async function deleteAccommodationDraft(user: User, draftId: string) {
+  const record = doc(db, 'accommodationDrafts', draftId);
+  const snapshot = await getDoc(record);
+  if (!snapshot.exists()) return;
+  if (snapshot.data().ownerId !== user.uid) throw new Error('You can only delete your own draft.');
+  await deleteDoc(record);
 }
 
 export function watchAllSubmissions(

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { NotifyDialog } from '@/components/NotifyDialog';
 import { SITE_URL } from '@/lib/site';
 import './globals.css';
 
@@ -31,5 +32,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="en"><body>{children}<NotifyDialog /></body></html>;
 }

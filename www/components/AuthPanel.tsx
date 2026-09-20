@@ -1,13 +1,14 @@
 'use client';
 
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { auth } from '@/lib/firebase';
 import { registerOwnerProfile } from '@/lib/accommodations';
 
 type AuthPanelProps = {
   onNotice?: (message: string) => void;
   onError?: (message: string) => void;
+  initialMode?: 'signin' | 'register';
 };
 
 function authErrorMessage(caught: unknown) {
@@ -25,11 +26,19 @@ function authErrorMessage(caught: unknown) {
   return messages[code] || 'We could not complete that request. Please try again.';
 }
 
-export function AuthPanel({ onNotice, onError }: AuthPanelProps = {}) {
-  const [mode, setMode] = useState<'signin' | 'register'>('signin');
+export function AuthPanel({ onNotice, onError, initialMode = 'signin' }: AuthPanelProps = {}) {
+  const [mode, setMode] = useState<'signin' | 'register'>(initialMode);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('mode');
+    const timer = window.setTimeout(() => {
+      if (requested === 'signin' || requested === 'register') setMode(requested);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -87,9 +96,9 @@ export function AuthPanel({ onNotice, onError }: AuthPanelProps = {}) {
       <p className="eyebrow dark">ACCOMMODATION PARTNERS</p>
       <h1>{mode === 'signin' ? 'Welcome back.' : 'List your accommodation.'}</h1>
       <p className="muted">This account area is for accommodation owners. Every listing is reviewed before it appears in EuroTrex.</p>
-      <div className="auth-tabs" role="tablist" aria-label="Account action">
-        <button type="button" className={mode === 'signin' ? 'active' : ''} onClick={() => switchMode('signin')}>Sign in</button>
-        <button type="button" className={mode === 'register' ? 'active' : ''} onClick={() => switchMode('register')}>Create owner account</button>
+      <div className="auth-tabs" role="group" aria-label="Account action">
+        <button type="button" aria-pressed={mode === 'signin'} className={mode === 'signin' ? 'active' : ''} onClick={() => switchMode('signin')}>Sign in</button>
+        <button type="button" aria-pressed={mode === 'register'} className={mode === 'register' ? 'active' : ''} onClick={() => switchMode('register')}>Create owner account</button>
       </div>
       <form onSubmit={submit} className="form-grid single">
         {mode === 'register' && <label>Business or owner name<input name="businessName" autoComplete="organization" required /></label>}

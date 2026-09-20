@@ -11,6 +11,9 @@ importers:
       firebase:
         specifier: ^12.18.0
         version: 12.18.0
+      htmx.org:
+        specifier: 2.0.10
+        version: 2.0.10
       next:
         specifier: 16.2.6
         version: 16.2.6(@babel/core@7.29.7(supports-color@10.2.2))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -2128,6 +2131,9 @@ packages:
   hex-rgb@4.3.0:
     resolution: {integrity: sha512-Ox1pJVrDCyGHMG9CFg1tmrRUMRPRsAWYc/PinY0XzJU4K7y7vjNoLKIQ7BR5UJMCxNN8EM1MNDmHWA/B3aZUuw==}
     engines: {node: '>=6'}
+
+  htmx.org@2.0.10:
+    resolution: {integrity: sha512-kdeJe7ZVwaS6QMz/ebBIVtZdpwen6L0OQ5GOhPV9MKBb196TCZeZu4yA7ZIQsaLKv7EpXz+So7KSXNuHXhj7Cw==}
 
   http-parser-js@0.5.10:
     resolution: {integrity: sha512-Pysuw9XpUq5dVc/2SMHpuTY01RFl8fttgcyunjL7eEMhGM3cI4eOmiCycJDVCo/7O7ClfQD3SaI6ftDzqOXYMA==}
@@ -5461,6 +5467,8 @@ snapshots:
       hermes-estree: 0.25.1
 
   hex-rgb@4.3.0: {}
+
+  htmx.org@2.0.10: {}
 
   http-parser-js@0.5.10: {}
 

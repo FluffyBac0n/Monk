@@ -45,6 +45,43 @@ export type AccommodationSubmission = {
 export type TrailOption = { id: string; name: string };
 export type StageOption = { id: string; name: string; sequence: number };
 
+export type AccommodationDraftValues = {
+  trailId: string;
+  trailName: string;
+  stageId: string;
+  stageName: string;
+  stageSequence: number;
+  name: string;
+  type: string;
+  village: string;
+  address: string;
+  description: string;
+  phone: string;
+  email: string;
+  website: string;
+  whatsapp: string;
+  googleMapsUrl: string;
+  priceMinEur: string;
+  priceMaxEur: string;
+  distanceFromTrailKm: string;
+  capacityPeople: string;
+  monthsOpen: string;
+  latitude: string;
+  longitude: string;
+  policyAgreement: boolean;
+};
+
+export type AccommodationDraft = {
+  id: string;
+  ownerId: string;
+  ownerEmail: string;
+  sourceSubmissionId: string;
+  currentStep: number;
+  values: AccommodationDraftValues;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+};
+
 export type PublishedLodging = {
   id: string;
   trailId: string;

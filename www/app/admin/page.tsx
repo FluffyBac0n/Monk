@@ -82,11 +82,11 @@ export default function AdminDashboard() {
         </section>
         {error && <p className="notice error" role="alert">{error}</p>}
 
-        <div className="dashboard-tabs" role="tablist" aria-label="Admin views">
-          <button className={tab === 'review' ? 'active' : ''} onClick={() => setTab('review')}>Review queue <b>{queue.length}</b></button>
-          <button className={tab === 'all' ? 'active' : ''} onClick={() => setTab('all')}>All submissions</button>
-          <button className={tab === 'published' ? 'active' : ''} onClick={() => setTab('published')}>Live accommodations</button>
-          <button className={tab === 'audit' ? 'active' : ''} onClick={() => setTab('audit')}>Audit log</button>
+        <div className="dashboard-tabs" role="group" aria-label="Admin views">
+          <button aria-pressed={tab === 'review'} className={tab === 'review' ? 'active' : ''} onClick={() => setTab('review')}>Review queue <b>{queue.length}</b></button>
+          <button aria-pressed={tab === 'all'} className={tab === 'all' ? 'active' : ''} onClick={() => setTab('all')}>All submissions</button>
+          <button aria-pressed={tab === 'published'} className={tab === 'published' ? 'active' : ''} onClick={() => setTab('published')}>Live accommodations</button>
+          <button aria-pressed={tab === 'audit'} className={tab === 'audit' ? 'active' : ''} onClick={() => setTab('audit')}>Audit log</button>
         </div>
 
         {tab === 'review' && (

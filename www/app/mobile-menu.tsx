@@ -1,7 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useRef } from 'react';
+import { NotifyButton } from '@/components/NotifyDialog';
+import { disableHtmxNavigation } from '@/lib/htmx';
 
 export default function MobileMenu() {
   const menuRef = useRef<HTMLDetailsElement>(null);
@@ -14,11 +15,12 @@ export default function MobileMenu() {
     <details className="mobile-menu" ref={menuRef}>
       <summary>Menu</summary>
       <nav aria-label="Mobile navigation">
-        <a href="#hikers" onClick={closeMenu}>For hikers</a>
-        <a href="#hosts" onClick={closeMenu}>For hosts</a>
-        <a href="#project" onClick={closeMenu}>The project</a>
-        <a href="#involved" onClick={closeMenu}>Get involved</a>
-        <Link href="/portal" onClick={closeMenu}>Host portal</Link>
+        <a href="/#hikers" onClick={closeMenu}>For hikers</a>
+        <a href="/trails/cyprus-e4" onClick={closeMenu}>Trail guide</a>
+        <a href="/#hosts" onClick={closeMenu}>For hosts</a>
+        <a href="/get-involved" onClick={closeMenu}>Get involved</a>
+        <a href="/portal?mode=signin" onClick={closeMenu} {...disableHtmxNavigation}>Host sign in</a>
+        <NotifyButton className="mobile-primary" onOpen={closeMenu}>Notify me</NotifyButton>
       </nav>
     </details>
   );

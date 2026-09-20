@@ -184,6 +184,62 @@ service cloud.firestore {
       );
     }
 
+    match /accommodationDrafts/{draftId} {
+      allow read: if signedIn() && resource.data.ownerId == request.auth.uid;
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'ownerId', 'ownerEmail', 'sourceSubmissionId', 'currentStep',
+          'values', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerEmail == request.auth.token.email
+        && request.resource.data.sourceSubmissionId is string
+        && request.resource.data.sourceSubmissionId.size() <= 200
+        && request.resource.data.currentStep is number
+        && request.resource.data.currentStep >= 1
+        && request.resource.data.currentStep <= 4
+        && request.resource.data.values is map
+        && request.resource.data.values.keys().hasOnly([
+          'trailId', 'trailName', 'stageId', 'stageName', 'stageSequence',
+          'name', 'type', 'village', 'address', 'description', 'phone',
+          'email', 'website', 'whatsapp', 'googleMapsUrl', 'priceMinEur',
+          'priceMaxEur', 'distanceFromTrailKm', 'capacityPeople', 'monthsOpen',
+          'latitude', 'longitude', 'policyAgreement'
+        ])
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if signedIn()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'ownerId', 'ownerEmail', 'sourceSubmissionId', 'currentStep',
+          'values', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.ownerEmail == resource.data.ownerEmail
+        && request.resource.data.sourceSubmissionId is string
+        && request.resource.data.sourceSubmissionId.size() <= 200
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.currentStep is number
+        && request.resource.data.currentStep >= 1
+        && request.resource.data.currentStep <= 4
+        && request.resource.data.values is map
+        && request.resource.data.values.keys().hasOnly([
+          'trailId', 'trailName', 'stageId', 'stageName', 'stageSequence',
+          'name', 'type', 'village', 'address', 'description', 'phone',
+          'email', 'website', 'whatsapp', 'googleMapsUrl', 'priceMinEur',
+          'priceMaxEur', 'distanceFromTrailKm', 'capacityPeople', 'monthsOpen',
+          'latitude', 'longitude', 'policyAgreement'
+        ])
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'sourceSubmissionId', 'currentStep', 'values', 'updatedAt'
+        ]);
+
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
     match /admins/{adminId} {
       allow get: if isAdmin() || (signedIn() && request.auth.uid == adminId);
       allow list, create, update, delete: if isAdmin();

@@ -4,12 +4,16 @@ EuroTrex is a mobile trail companion and route planner for European long-distanc
 
 Core app features include offline route guidance, flexible start and finish selection, day-by-day stage planning, elevation context and practical accommodation near the trail. EuroTrex is preparing official iOS and Android releases.
 
-The Cyprus E4 is the first EuroTrex route. The longer-term aim is to extend the same clear trail-planning and host-network model to Greece and other European E-paths.
+The Cyprus E4 is the first EuroTrex route. The current trail-data snapshot covers 558.1 km from Pafos Airport to Larnaka Airport, 123 named stage points and a route high point of approximately 1,732 m. Trail data was updated on 7 August 2026. The longer-term aim is to extend the same clear trail-planning and host-network model to Greece and other European E-paths.
 
 Hikers use the mobile app and do not create website accounts. Accommodation owners can use the partner portal to submit a property, follow its review and maintain approved information. EuroTrex verifies listings and material updates before publishing them in the app.
 
 Official pages:
 - https://eurotrex.andreasmic332452.chatgpt.site/ — EuroTrex product, Cyprus E4 project and app information
+- https://eurotrex.andreasmic332452.chatgpt.site/trails/cyprus-e4 — Cyprus E4 overview, coverage, service counts and safety baseline
+- https://eurotrex.andreasmic332452.chatgpt.site/trails/cyprus-e4/stages — index of all published Cyprus E4 stage points
+- https://eurotrex.andreasmic332452.chatgpt.site/get-involved — volunteering, field walks and collaboration enquiries
+- https://eurotrex.andreasmic332452.chatgpt.site/partnerships — sponsorship and partnership information
 - https://eurotrex.andreasmic332452.chatgpt.site/portal — accommodation partner sign-in and listing management
 - https://eurotrex.andreasmic332452.chatgpt.site/partner-terms — accommodation listing standards
 - https://eurotrex.andreasmic332452.chatgpt.site/privacy — website privacy information
