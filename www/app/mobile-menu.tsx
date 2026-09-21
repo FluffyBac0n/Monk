@@ -19,7 +19,7 @@ export default function MobileMenu() {
         <a href="/trails/cyprus-e4" onClick={closeMenu}>Trail guide</a>
         <a href="/#hosts" onClick={closeMenu}>For hosts</a>
         <a href="/get-involved" onClick={closeMenu}>Get involved</a>
-        <a href="/portal?mode=signin" onClick={closeMenu} {...disableHtmxNavigation}>Host sign in</a>
+        <a className="mobile-host" href="/portal?mode=signin" onClick={closeMenu} {...disableHtmxNavigation}>Host sign in</a>
         <NotifyButton className="mobile-primary" onOpen={closeMenu}>Notify me</NotifyButton>
       </nav>
     </details>

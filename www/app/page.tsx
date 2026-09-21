@@ -157,11 +157,9 @@ export default function Home() {
             <div className="hiker-launch-band" id="app-updates" aria-labelledby="download-title">
               <Image className="app-icon" src="/eurotrex-app-icon.png" alt="EuroTrex app icon" width={1024} height={1024} />
               <div className="hiker-launch-copy"><p className="eyebrow">The E4 in your pocket</p><h3 id="download-title">Be first on the trail.</h3><p>Get testing invitations and verified iPhone or Android store links when they are ready.</p></div>
-              <div className="hiker-launch-actions">
-                <div className="store-group" aria-label="Future EuroTrex app stores" role="group">
-                  <div className="store-item">{appStoreUrl ? <a href={appStoreUrl} target="_blank" rel="noreferrer" aria-label="Download EuroTrex on the App Store"><Image src="/app-store-badge.svg" alt="Download on the App Store" width={180} height={60} /></a> : <span className="store-badge"><Image src="/app-store-badge.svg" alt="" aria-hidden="true" width={180} height={60} /></span>}</div>
-                  <div className="store-item store-item-google">{playStoreUrl ? <a href={playStoreUrl} target="_blank" rel="noreferrer" aria-label="Get EuroTrex on Google Play"><Image src="/google-play-badge.png" alt="Get it on Google Play" width={194} height={75} /></a> : <span className="store-badge"><Image src="/google-play-badge.png" alt="" aria-hidden="true" width={194} height={75} /></span>}</div>
-                </div>
+              <div className="hiker-launch-actions" aria-label="EuroTrex app availability" role="group">
+                <div className="store-item">{appStoreUrl ? <a href={appStoreUrl} target="_blank" rel="noreferrer" aria-label="Download EuroTrex on the App Store"><Image src="/app-store-badge.svg" alt="Download on the App Store" width={180} height={60} /></a> : <span className="store-badge"><Image src="/app-store-badge.svg" alt="" aria-hidden="true" width={180} height={60} /></span>}</div>
+                <div className="store-item store-item-google">{playStoreUrl ? <a href={playStoreUrl} target="_blank" rel="noreferrer" aria-label="Get EuroTrex on Google Play"><Image src="/google-play-badge.png" alt="Get it on Google Play" width={194} height={75} /></a> : <span className="store-badge"><Image src="/google-play-badge.png" alt="" aria-hidden="true" width={194} height={75} /></span>}</div>
                 <NotifyButton className="button button-yellow">Notify me</NotifyButton>
               </div>
             </div>

@@ -3,7 +3,7 @@ import { InterestForm } from '@/components/InterestForm';
 import { PublicContent } from '@/components/PublicContent';
 import { PublicFooter } from '@/components/PublicFooter';
 import { PublicHeader } from '@/components/PublicHeader';
-import { publicHtmxNavigation } from '@/lib/htmx';
+import { disableHtmxNavigation, publicHtmxNavigation } from '@/lib/htmx';
 
 export const metadata: Metadata = {
   title: 'Get involved',
@@ -22,7 +22,7 @@ export default async function GetInvolved({ searchParams }: { searchParams: Prom
       <a className="skip-link" href="#main-content">Skip to content</a><PublicHeader />
       <PublicContent>
       <main id="main-content" className="content-page" tabIndex={-1} {...publicHtmxNavigation}>
-        <header className="simple-page-header section-shell"><nav className="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><span>Get involved</span></nav><p className="eyebrow">Get involved</p><h1>Make the trail more useful.</h1><p>Local knowledge, careful field notes and thoughtful collaborations help EuroTrex turn a line on a map into a dependable journey.</p></header>
+        <header className="simple-page-header section-shell"><nav className="breadcrumbs" aria-label="Breadcrumb"><a className="back-home-link" href="/" {...disableHtmxNavigation}><span aria-hidden="true">←</span> Back to home</a><span aria-hidden="true">/</span><span>Get involved</span></nav><p className="eyebrow">Get involved</p><h1>Make the trail more useful.</h1><p>Local knowledge, careful field notes and thoughtful collaborations help EuroTrex turn a line on a map into a dependable journey.</p></header>
         <section className="section-shell involvement-options">
           <article><span aria-hidden="true">01</span><h2>Volunteer</h2><p>Help check trail information, services and practical details. Tell us where you are based and what you know well.</p></article>
           <article><span aria-hidden="true">02</span><h2>Collaborate</h2><p>Connect a community, public body, trail organisation or responsible-tourism initiative with the project.</p></article>
