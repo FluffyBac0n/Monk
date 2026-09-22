@@ -306,7 +306,7 @@ void main() {
     expect(
       find.descendant(
         of: helper,
-        matching: find.text('Tap a stage to see its details.'),
+        matching: find.text('Tap a stage point to see its details.'),
       ),
       findsOneWidget,
     );
@@ -349,7 +349,7 @@ void main() {
       find.descendant(
         of: helper,
         matching: find.text(
-          'The numbers on the left show stage length, ascent, descent, and + distance from the trail.',
+          'The numbers on the left show section distance, ascent, descent, and + distance from the trail.',
         ),
       ),
       findsOneWidget,
@@ -752,7 +752,7 @@ void main() {
       findsNothing,
     );
     expect(
-      find.descendant(of: cyprusCard, matching: find.text('Stages')),
+      find.descendant(of: cyprusCard, matching: find.text('Stage points')),
       findsNothing,
     );
     expect(
@@ -1145,7 +1145,7 @@ void main() {
     );
 
     expect(find.text('Acheleia'), findsOneWidget);
-    expect(find.textContaining('STAGE 123'), findsOneWidget);
+    expect(find.textContaining('STAGE POINT 123'), findsOneWidget);
     expect(find.text('From Start'), findsOneWidget);
     expect(find.text('From Pafos'), findsNothing);
     expect(
@@ -1956,7 +1956,10 @@ void main() {
       findsNothing,
     );
     expect(
-      find.descendant(of: positionCard, matching: find.text('Stage length')),
+      find.descendant(
+        of: positionCard,
+        matching: find.text('Section distance'),
+      ),
       findsNothing,
     );
     expect(
@@ -2046,7 +2049,7 @@ void main() {
     expect(find.byType(LineChart), findsOneWidget);
     final chart = tester.widget<LineChart>(find.byType(LineChart));
     expect(chart.data.maxX, 5);
-    expect(find.text('Stage length'), findsOneWidget);
+    expect(find.text('Section distance'), findsOneWidget);
     final stagesAction = find.byKey(const Key('elevation-stages-shortcut'));
     expect(stagesAction, findsOneWidget);
     expect(
@@ -2370,11 +2373,8 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
     await tester.pumpAndSettle();
     expect(find.text('Filter stages'), findsNothing);
-    expect(
-      find.text('Choose stages, trail points and services.'),
-      findsNothing,
-    );
-    expect(find.text('Stage name'), findsOneWidget);
+    expect(find.text('Choose stage points and services.'), findsNothing);
+    expect(find.text('Stage-point name'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('stage-filter-name-panel')),
       findsOneWidget,
@@ -2564,13 +2564,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('service-filter-lodging')));
     await tapFilterAction(const Key('apply-service-filters'));
-    expect(find.text('No stages match these filters.'), findsOneWidget);
+    expect(find.text('No stage points match these filters.'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('stage-bottom-filter')));
     await tester.pumpAndSettle();
     await tapFilterAction(const Key('clear-service-filter-selection'));
     expect(find.text('Filter stages'), findsNothing);
-    expect(find.text('No stages match these filters.'), findsNothing);
+    expect(find.text('No stage points match these filters.'), findsNothing);
   });
 
   testWidgets('stage number search matches an exact single-digit stage', (
@@ -3248,7 +3248,7 @@ void main() {
       find.descendant(of: accommodation, matching: find.byType(Tooltip)),
     );
     expect(action.onTap, isNull);
-    expect(tooltip.message, 'No accommodation is listed for this stage.');
+    expect(tooltip.message, 'No stays are listed for this stage point.');
   });
 
   testWidgets('accommodation filters by booking distance and type', (
@@ -3650,7 +3650,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('accommodation-empty')), findsOneWidget);
     expect(
-      find.text('No accommodation is listed for this stage.'),
+      find.text('No stays are listed for this stage point.'),
       findsOneWidget,
     );
   });
@@ -4195,7 +4195,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Stage length'), findsOneWidget);
+      expect(find.text('Section distance'), findsOneWidget);
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('elevation-trail-distance')),
@@ -4238,9 +4238,9 @@ void main() {
       chart = tester.widget<LineChart>(find.byType(LineChart));
       expect(chart.data.gridData.verticalInterval, lessThan(initialInterval));
 
-      await tester.tap(find.text('Stage'));
+      await tester.tap(find.text('Stage point'));
       await tester.pumpAndSettle();
-      expect(find.text('Stage length'), findsOneWidget);
+      expect(find.text('Section distance'), findsOneWidget);
       chart = tester.widget<LineChart>(find.byType(LineChart));
       expect(
         chart.data.rangeAnnotations.verticalRangeAnnotations,

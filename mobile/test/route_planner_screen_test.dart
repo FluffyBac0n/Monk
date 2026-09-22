@@ -116,7 +116,7 @@ void main() {
       findsNothing,
     );
     await tester.tap(
-      find.descendant(of: stayType, matching: find.text('Lodging')),
+      find.descendant(of: stayType, matching: find.text('Stays')),
     );
     await tester.pumpAndSettle();
 

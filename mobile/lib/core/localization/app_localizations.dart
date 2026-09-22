@@ -26,7 +26,9 @@ class AppLocalizations {
       const AppLocalizations(Locale('en'));
 
   String t(String english) =>
-      _translations[locale.languageCode]?[english] ?? english;
+      _translations[locale.languageCode]?[english] ??
+      (locale.languageCode == 'en' ? _englishTerminology[english] : null) ??
+      english;
 
   String stage(int sequence) => '${t('Stage')} $sequence';
 
@@ -57,6 +59,72 @@ class AppLocalizations {
 extension AppLocalizationsContext on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this);
 }
+
+const _englishTerminology = <String, String>{
+  'Stage by stage': 'Point by point',
+  'Stages': 'Stage points',
+  'Stage': 'Stage point',
+  'Stay': 'Stays',
+  'Lodging': 'Stays',
+  'Choose stage': 'Choose a stage point',
+  'Search by stage or place': 'Search by stage point or place',
+  'Choose two stages in trail order.':
+      'Choose two stage points in trail order.',
+  'Tap a stage on the map to choose your start, then your finish.':
+      'Tap a stage point on the map to choose your start, then your finish.',
+  'Choose two different stages.': 'Choose two different stage points.',
+  'Show all stages': 'Show all stage points',
+  'Choose a different stage for the finish.':
+      'Choose a different stage point for the finish.',
+  'Choose a start and finish stage.': 'Choose a start and finish stage point.',
+  'Create a route to keep its itinerary and use it in Stage filters.':
+      'Create a route to keep its itinerary and use it in stage-point filters.',
+  'Saved to My routes and Stage filters.':
+      'Saved to My routes and stage-point filters.',
+  'Build a stage-to-stage itinerary': 'Build a route itinerary',
+  'Choose your daily limits and overnight requirements. The planner uses the current E4 stage and accommodation data.':
+      'Choose your daily limits and overnight requirements. The planner uses the current E4 stage-point and accommodation data.',
+  'Filter stages': 'Filter stage points',
+  'Choose stages, trail points and services.':
+      'Choose stage points and services.',
+  'Stage name': 'Stage-point name',
+  'Search by stage name': 'Search by stage-point name',
+  'Search by stage name or number': 'Search by stage point or number',
+  'No stages found.': 'No stage points found.',
+  'Stages must offer every selected service.':
+      'Stage points must offer every selected service.',
+  'No stages match these services.': 'No stage points match these services.',
+  'No stages match these filters.': 'No stage points match these filters.',
+  'The route stages are shown below.':
+      'The route’s stage points are shown below.',
+  'Hide stages': 'Hide stage points',
+  'Show stages': 'Show stage points',
+  'Close stage summary': 'Close stage-point summary',
+  'Open Stage Info': 'Open stage-point information',
+  'Tap a stage to see its details.': 'Tap a stage point to see its details.',
+  'The numbers on the left show stage length, ascent, descent, and + distance from the trail.':
+      'The numbers on the left show section distance, ascent, descent, and + distance from the trail.',
+  'Stage length': 'Section distance',
+  'No services recorded for this stage.':
+      'No services recorded for this stage point.',
+  'Stage information is stored on this device.':
+      'Stage-point information is stored on this device.',
+  'Back to stages': 'Back to stage points',
+  'Download E4 - Cyprus to browse its stages without a connection.':
+      'Download E4 - Cyprus to browse its stage points without a connection.',
+  'Places to stay near this stage': 'Places to stay near this stage point',
+  'No accommodation is listed for this stage.':
+      'No stays are listed for this stage point.',
+  'Try another nearby stage.': 'Try another nearby stage point.',
+  'Route, stages and elevation': 'Route, stage points and elevation',
+  'The route, stages and elevation will be removed. The offline map will remain on this device.':
+      'The route, stage points and elevation will be removed. The offline map will remain on this device.',
+  'Selected stage': 'Selected stage point',
+  'Other stages': 'Other stage points',
+  'The route, stages and elevation will remain offline. Only the offline map will be removed.':
+      'The route, stage points and elevation will remain offline. Only the offline map will be removed.',
+  'Find my stage': 'Find my stage point',
+};
 
 class _AppLocalizationsDelegate
     extends LocalizationsDelegate<AppLocalizations> {

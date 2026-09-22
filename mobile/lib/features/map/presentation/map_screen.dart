@@ -2516,7 +2516,7 @@ class _MapLayersSheet extends StatelessWidget {
             ),
             _MapLayerRow(
               key: const ValueKey('map-layer-accommodation'),
-              label: l10n.t('Accommodation'),
+              label: l10n.t('Overnight stays'),
               icon: Icons.hotel_outlined,
               color: _accommodationBlue,
               selected: lodgingsVisible,

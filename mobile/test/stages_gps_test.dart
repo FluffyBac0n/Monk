@@ -42,8 +42,8 @@ void main() {
       final gpsTooltip = tester.widget<Tooltip>(
         find.descendant(of: gpsButton, matching: find.byType(Tooltip)),
       );
-      expect(find.text('Find my stage'), findsNothing);
-      expect(gpsTooltip.message, 'Find my stage');
+      expect(find.text('Find my stage point'), findsNothing);
+      expect(gpsTooltip.message, 'Find my stage point');
       _expectGpsToggleState(tester, gpsButton, isToggled: false);
 
       final selectedCard = find.byKey(
@@ -183,7 +183,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Stage length'), findsOneWidget);
+    expect(find.text('Section distance'), findsOneWidget);
 
     await tester.tap(elevationGps);
     await tester.pumpAndSettle();

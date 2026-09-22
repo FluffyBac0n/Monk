@@ -153,7 +153,7 @@ class _AccommodationScreenState extends ConsumerState<AccommodationScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              l10n.t('Accommodation'),
+              l10n.t('Overnight stays'),
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
             Text(

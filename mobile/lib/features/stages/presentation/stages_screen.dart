@@ -4429,7 +4429,7 @@ class _StageDetailBottomNavigationBar extends StatelessWidget {
                   ? 'No accommodation is listed for this stage.'
                   : 'Accommodation',
             ),
-            visibleLabel: l10n.t('Lodging'),
+            visibleLabel: l10n.t('Overnight stays'),
             badgeCount: accommodationCount,
             onTap: isLoadingAccommodation ? null : onAccommodation,
           ),

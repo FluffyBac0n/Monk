@@ -438,7 +438,7 @@ void main() {
     await tester.tap(openAction);
     expect(openCount, 1);
 
-    await tester.tap(find.byTooltip('Close stage summary'));
+    await tester.tap(find.byTooltip('Close stage-point summary'));
     expect(closeCount, 1);
   });
 
