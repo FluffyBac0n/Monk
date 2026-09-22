@@ -88,8 +88,16 @@ export type PublishedLodging = {
   name?: string;
   type?: string;
   village?: string;
+  address?: string;
+  description?: string;
   stageName?: string;
   stageId?: string;
+  stageSequence?: number | null;
+  priceMinEur?: number | null;
+  priceMaxEur?: number | null;
+  distanceFromTrailKm?: number | null;
+  capacityPeople?: number | null;
+  monthsOpen?: string | null;
   ownerId?: string;
   sourceSubmissionId?: string;
 };
@@ -112,7 +120,11 @@ export const statusLabels: Record<SubmissionStatus, string> = {
   pending: 'Awaiting review',
   pending_update: 'Update awaiting review',
   changes_requested: 'Changes requested',
-  approved: 'Live in EuroTrex',
+  approved: 'Live version',
   rejected: 'Not approved',
   removed: 'Removed',
 };
+
+export function submissionHasPublishedVersion(row: AccommodationSubmission) {
+  return row.status === 'approved' || Boolean(row.publishedLodgingId && row.publishedTrailId);
+}

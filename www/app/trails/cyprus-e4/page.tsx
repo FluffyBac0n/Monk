@@ -18,7 +18,7 @@ const serviceCounts = Object.entries(cyprusE4Stages.reduce<Record<string, number
 }, {}));
 
 const serviceLabels: Record<string, string> = {
-  lodging: 'lodging', tent: 'camping', food: 'food', grocery: 'groceries', drinkableWater: 'drinking water', toilets: 'toilets', medical: 'medical help', pharmacy: 'pharmacies', atm: 'ATMs', busStop: 'bus stops',
+  lodging: 'stays', tent: 'camping', food: 'food', grocery: 'groceries', drinkableWater: 'drinking water', toilets: 'toilets', medical: 'medical help', pharmacy: 'pharmacies', atm: 'ATMs', busStop: 'bus stops',
 };
 
 export default function CyprusE4Overview() {
@@ -53,7 +53,7 @@ export default function CyprusE4Overview() {
             <div><dt>Direction</dt><dd>Pafos ↔ Larnaka</dd></div>
           </dl>
           <div className="route-copy-grid">
-            <article><p className="eyebrow">What is published</p><h2>Practical facts before the app opens.</h2><p>Each stage page lists segment and cumulative distance, ascent, descent, altitude and services recorded at that named point. This public guide is intentionally factual and indexable.</p></article>
+            <article><p className="eyebrow">What is published</p><h2>Practical facts before the app opens.</h2><p>Each stage-point page lists section and cumulative distance, ascent, descent, altitude and services recorded at that named point. This public guide is intentionally factual and indexable.</p></article>
             <aside className="data-note"><strong>Trail data updated {updated}</strong><p>The current snapshot contains 23,107 route points. Conditions can change after publication, so confirm weather, closures, water and transport locally before walking.</p></aside>
           </div>
         </section>

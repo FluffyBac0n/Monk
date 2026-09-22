@@ -101,9 +101,9 @@ export function AuthPanel({ onNotice, onError, initialMode = 'signin' }: AuthPan
         <button type="button" aria-pressed={mode === 'register'} className={mode === 'register' ? 'active' : ''} onClick={() => switchMode('register')}>Create owner account</button>
       </div>
       <form onSubmit={submit} className="form-grid single">
-        {mode === 'register' && <label>Business or owner name<input name="businessName" autoComplete="organization" required /></label>}
-        <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
-        <label>Password<input name="password" type="password" minLength={8} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} required /></label>
+        {mode === 'register' && <label><span className="field-label">Business or owner name <span className="required-marker" aria-hidden="true">*</span></span><input name="businessName" autoComplete="organization" required /></label>}
+        <label><span className="field-label">Email address <span className="required-marker" aria-hidden="true">*</span></span><input name="email" type="email" autoComplete="email" required /></label>
+        <label><span className="field-label">Password <span className="required-marker" aria-hidden="true">*</span></span><input name="password" type="password" minLength={8} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} required /></label>
         {error && <p className="form-message error" role="alert">{error}</p>}
         {message && <p className="form-message success" role="status">{message}</p>}
         <button className="button button-primary" disabled={busy}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}</button>

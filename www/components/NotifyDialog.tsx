@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { InterestForm } from '@/components/InterestForm';
 
@@ -67,8 +68,13 @@ export function NotifyDialog() {
     >
       <div className="notify-dialog-panel">
         <button className="notify-dialog-close" type="button" onClick={closeDialog} aria-label="Close notification form">×</button>
-        <p className="eyebrow">App updates</p>
-        <h2 id="notify-dialog-title">Know when EuroTrex is ready.</h2>
+        <div className="notify-dialog-heading">
+          <Image className="notify-dialog-icon" src="/eurotrex-app-icon.png" alt="" width={1024} height={1024} sizes="64px" />
+          <div>
+            <p className="eyebrow">App updates</p>
+            <h2 id="notify-dialog-title">Know when EuroTrex is ready.</h2>
+          </div>
+        </div>
         <p className="notify-dialog-intro">Tell us where to reach you and we’ll share testing invitations and official store links when they are available.</p>
         <InterestForm key={formInstance} kind="beta" compact />
       </div>

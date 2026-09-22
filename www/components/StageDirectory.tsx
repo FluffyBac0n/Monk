@@ -4,7 +4,7 @@ export function StageDirectory({ stages }: { stages: CyprusE4Stage[] }) {
   return (
     <section className="stage-directory" aria-labelledby="stage-directory-title">
       <div className="directory-heading">
-        <div><p className="eyebrow">Stage directory</p><h2 id="stage-directory-title">Every named point, in trail order.</h2></div>
+        <div><p className="eyebrow">Points along the trail</p><h2 id="stage-directory-title">Every stage point, in trail order.</h2></div>
         <label className="stage-search">Find a place<input type="search" data-stage-filter placeholder="Try Troodos or Pafos" /></label>
       </div>
       <p className="directory-count" data-stage-count role="status">Showing {stages.length} of {stages.length} stage points</p>

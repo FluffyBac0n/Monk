@@ -53,6 +53,13 @@ export default function AdminDashboard() {
     const textMatch = !needle || [row.name, row.ownerEmail, row.village, row.stageName, row.trailName].join(' ').toLowerCase().includes(needle);
     return statusMatch && textMatch;
   }), [submissions, search, status]);
+  const publishedBySubmission = useMemo(() => new Map(published
+    .filter((row) => row.sourceSubmissionId)
+    .map((row) => [row.sourceSubmissionId as string, row])), [published]);
+
+  function publishedVersionFor(row: AccommodationSubmission) {
+    return publishedBySubmission.get(row.id) || published.find((live) => live.id === row.publishedLodgingId && live.trailId === row.publishedTrailId);
+  }
 
   async function act(id: string, action: () => Promise<void>) {
     setBusyId(id);
@@ -76,8 +83,8 @@ export default function AdminDashboard() {
         </section>
         <section className="metric-grid">
           <article><span>{queue.length}</span><p>Awaiting review</p></article>
-          <article><span>{published.length}</span><p>Published stays</p></article>
-          <article><span>{owners}</span><p>Hotel owners</p></article>
+          <article><span>{published.length}</span><p>Live listings</p></article>
+          <article><span>{owners}</span><p>Hosts</p></article>
           <article><span>{submissions.filter((row) => row.status === 'changes_requested').length}</span><p>Changes requested</p></article>
         </section>
         {error && <p className="notice error" role="alert">{error}</p>}
@@ -85,14 +92,14 @@ export default function AdminDashboard() {
         <div className="dashboard-tabs" role="group" aria-label="Admin views">
           <button aria-pressed={tab === 'review'} className={tab === 'review' ? 'active' : ''} onClick={() => setTab('review')}>Review queue <b>{queue.length}</b></button>
           <button aria-pressed={tab === 'all'} className={tab === 'all' ? 'active' : ''} onClick={() => setTab('all')}>All submissions</button>
-          <button aria-pressed={tab === 'published'} className={tab === 'published' ? 'active' : ''} onClick={() => setTab('published')}>Live accommodations</button>
+          <button aria-pressed={tab === 'published'} className={tab === 'published' ? 'active' : ''} onClick={() => setTab('published')}>Live listings</button>
           <button aria-pressed={tab === 'audit'} className={tab === 'audit' ? 'active' : ''} onClick={() => setTab('audit')}>Audit log</button>
         </div>
 
         {tab === 'review' && (
           <section className="admin-list">
             {!queue.length ? <div className="empty-state"><span>✓</span><h3>The review queue is clear.</h3><p>New owner submissions and updates will appear here.</p></div> : queue.map((row) => (
-              <ReviewCard key={row.id} row={row} busy={busyId === row.id} onAct={(action) => act(row.id, action)} user={user} />
+              <ReviewCard key={row.id} row={row} live={publishedVersionFor(row)} busy={busyId === row.id} onAct={(action) => act(row.id, action)} user={user} />
             ))}
           </section>
         )}
@@ -100,14 +107,14 @@ export default function AdminDashboard() {
         {tab === 'all' && (
           <section>
             <div className="filters"><label>Search<input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Accommodation, owner, trail…" /></label><label>Status<select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}><option value="all">All statuses</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
-            <div className="table-wrap"><table><thead><tr><th>Accommodation</th><th>Trail location</th><th>Owner</th><th>Status</th><th>Control</th></tr></thead><tbody>{filtered.map((row) => <tr key={row.id}><td><strong>{row.name}</strong><small>{row.type} · {row.village}</small></td><td>{row.trailName}<small>{row.stageName}</small></td><td>{row.ownerEmail}</td><td><span className={`status status-${row.status}`}>{statusLabels[row.status]}</span></td><td>{row.status === 'approved' ? <button className="text-button danger" disabled={busyId === row.id} onClick={() => { const note = window.prompt('Reason for removal (shown in the audit log)'); if (note) act(row.id, () => removeSubmissionAccommodation(user, row, note)); }}>Remove</button> : <button className="text-button" onClick={() => { setTab('review'); }}>Review</button>}</td></tr>)}</tbody></table></div>
+            <div className="table-wrap"><table><thead><tr><th>Accommodation</th><th>Trail & stage point</th><th>Owner</th><th>Status</th><th>Control</th></tr></thead><tbody>{filtered.map((row) => { const live = publishedVersionFor(row); return <tr key={row.id}><td><strong>{row.name}</strong><small>{row.type} · {row.village}</small></td><td>{row.trailName}<small>{row.stageName}</small></td><td>{row.ownerEmail}</td><td><div className="status-row">{live && <span className="status status-approved">Live version</span>}{(!live || row.status !== 'approved') && <span className={`status status-${row.status}`}>{statusLabels[row.status]}</span>}</div></td><td>{row.status === 'approved' ? <button className="text-button danger" disabled={busyId === row.id} onClick={() => { const note = window.prompt('Reason for removal (shown in the audit log)'); if (note) act(row.id, () => removeSubmissionAccommodation(user, row, note)); }}>Remove</button> : <button className="text-button" onClick={() => { setTab('review'); }}>Review</button>}</td></tr>; })}</tbody></table></div>
           </section>
         )}
 
         {tab === 'published' && (
           <section>
-            <div className="panel-heading"><div><p className="eyebrow dark">APP INVENTORY</p><h2>Live accommodations by trail</h2></div><p>{published.length} entries</p></div>
-            <div className="table-wrap"><table><thead><tr><th>Accommodation</th><th>Trail & stage</th><th>Owner/source</th><th>Control</th></tr></thead><tbody>{published.map((row) => <tr key={`${row.trailId}-${row.id}`}><td><strong>{row.name || 'Unnamed accommodation'}</strong><small>{row.type || 'Type not set'} · {row.village || 'Location not set'}</small></td><td><strong>{row.trailId}</strong><small>{row.stageName || row.stageId || 'Not linked'}</small></td><td>{row.ownerId ? 'Owner-managed' : 'Imported data'}<small>{row.sourceSubmissionId || row.id}</small></td><td><button className="text-button danger" disabled={busyId === row.id} onClick={() => { const note = window.prompt('Reason for removing this accommodation'); if (note) act(row.id, () => removePublishedLodging(user, row, note)); }}>Remove from app</button></td></tr>)}</tbody></table></div>
+            <div className="panel-heading"><div><p className="eyebrow dark">APP INVENTORY</p><h2>Live listings by trail</h2></div><p>{published.length} entries</p></div>
+            <div className="table-wrap"><table><thead><tr><th>Accommodation</th><th>Trail & stage point</th><th>Owner/source</th><th>Control</th></tr></thead><tbody>{published.map((row) => <tr key={`${row.trailId}-${row.id}`}><td><strong>{row.name || 'Unnamed accommodation'}</strong><small>{row.type || 'Type not set'} · {row.village || 'Location not set'}</small></td><td><strong>{row.trailId}</strong><small>{row.stageName || row.stageId || 'Not linked'}</small></td><td>{row.ownerId ? 'Owner-managed' : 'Imported data'}<small>{row.sourceSubmissionId || row.id}</small></td><td><button className="text-button danger" disabled={busyId === row.id} onClick={() => { const note = window.prompt('Reason for removing this accommodation'); if (note) act(row.id, () => removePublishedLodging(user, row, note)); }}>Remove from app</button></td></tr>)}</tbody></table></div>
           </section>
         )}
 
@@ -120,18 +127,18 @@ export default function AdminDashboard() {
 
         <section className="admin-guidance">
           <h2>Review safeguards</h2>
-          <div><article><strong>Verify ownership</strong><p>Confirm the contact domain, business identity and right to manage the property.</p></article><article><strong>Check trail relevance</strong><p>Validate stage linkage, coordinates, realistic walking distance and seasonal access.</p></article><article><strong>Protect hikers</strong><p>Review pricing clarity, contact details, booking URL and any safety or policy reports.</p></article><article><strong>Keep an audit trail</strong><p>Every approval, rejection, change request and removal records the acting administrator.</p></article></div>
+          <div><article><strong>Verify ownership</strong><p>Confirm the contact domain, business identity and right to manage the property.</p></article><article><strong>Check trail relevance</strong><p>Validate stage-point linkage, coordinates, realistic walking distance and seasonal access.</p></article><article><strong>Protect hikers</strong><p>Review pricing clarity, contact details, booking URL and any safety or policy reports.</p></article><article><strong>Keep an audit trail</strong><p>Every approval, rejection, change request and removal records the acting administrator.</p></article></div>
         </section>
       </div>
     </main>
   );
 }
 
-function ReviewCard({ row, busy, onAct, user }: { row: AccommodationSubmission; busy: boolean; onAct: (action: () => Promise<void>) => void; user: User }) {
+function ReviewCard({ row, live, busy, onAct, user }: { row: AccommodationSubmission; live?: PublishedLodging; busy: boolean; onAct: (action: () => Promise<void>) => void; user: User }) {
   const note = (title: string) => window.prompt(title) || '';
   return (
     <article className="review-card">
-      <div className="review-main"><div className="card-top"><span className={`status status-${row.status}`}>{statusLabels[row.status]}</span><span>{row.trailName} · {row.stageName}</span></div><h2>{row.name}</h2><p>{row.type} · {row.village}</p><dl><div><dt>Owner</dt><dd>{row.ownerEmail}</dd></div><div><dt>Nightly price</dt><dd>€{row.priceMinEur ?? '—'}–€{row.priceMaxEur ?? '—'}</dd></div><div><dt>Trail distance</dt><dd>{row.distanceFromTrailKm ?? '—'} km</dd></div><div><dt>Contact</dt><dd>{row.phone}<br />{row.email}</dd></div><div><dt>Website</dt><dd><a href={row.website} target="_blank" rel="noreferrer">Open booking site ↗</a></dd></div><div><dt>Coordinates</dt><dd>{row.latitude ?? '—'}, {row.longitude ?? '—'}</dd></div></dl><p className="review-description">{row.description}</p></div>
+      <div className="review-main"><div className="card-top"><div className="status-row">{live && <span className="status status-approved">Live version</span>}<span className={`status status-${row.status}`}>{statusLabels[row.status]}</span></div><span>{row.trailName} · {row.stageName}</span></div>{live && row.status === 'pending_update' && <div className="listing-version-grid admin-version-grid"><section><span>LIVE IN THE APP</span><h3>{live.name || row.name}</h3><p>{live.type || row.type} · {live.village || row.village}<br />Nearest stage point: {live.stageName || row.stageName}</p></section><section><span>PROPOSED UPDATE</span><h3>{row.name}</h3><p>{row.type} · {row.village}<br />Nearest stage point: {row.stageName}</p></section></div>}<h2>{row.name}</h2><p>{row.type} · {row.village}</p><dl><div><dt>Owner</dt><dd>{row.ownerEmail}</dd></div><div><dt>Nightly price</dt><dd>€{row.priceMinEur ?? '—'}–€{row.priceMaxEur ?? '—'}</dd></div><div><dt>Trail distance</dt><dd>{row.distanceFromTrailKm ?? '—'} km</dd></div><div><dt>Contact</dt><dd>{row.phone}<br />{row.email}</dd></div><div><dt>Website</dt><dd><a href={row.website} target="_blank" rel="noreferrer">Open booking site ↗</a></dd></div><div><dt>Coordinates</dt><dd>{row.latitude ?? '—'}, {row.longitude ?? '—'}</dd></div></dl><p className="review-description">{row.description}</p></div>
       <aside className="review-actions"><button className="button button-primary" disabled={busy} onClick={() => onAct(() => approveSubmission(user, row, 'Verified and approved'))}>Approve & publish</button><button className="button button-secondary" disabled={busy} onClick={() => { const value = note('What should the owner change?'); if (value) onAct(() => reviewSubmission(user, row, 'changes_requested', value)); }}>Request changes</button><button className="text-button danger" disabled={busy} onClick={() => { const value = note('Reason for rejection'); if (value) onAct(() => reviewSubmission(user, row, 'rejected', value)); }}>Reject</button></aside>
     </article>
   );

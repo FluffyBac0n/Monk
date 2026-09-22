@@ -10,7 +10,7 @@ import { SITE_URL } from '@/lib/site';
 type StagePageProps = { params: Promise<{ stageId: string }> };
 
 const serviceLabels: Record<string, string> = {
-  lodging: 'Lodging', tent: 'Camping', food: 'Food', grocery: 'Groceries', drinkableWater: 'Drinking water', nonDrinkableWater: 'Non-drinking water', toilets: 'Toilets', medical: 'Medical help', pharmacy: 'Pharmacy', atm: 'ATM', busStop: 'Bus stop',
+  lodging: 'Stays', tent: 'Camping', food: 'Food', grocery: 'Groceries', drinkableWater: 'Drinking water', nonDrinkableWater: 'Non-drinking water', toilets: 'Toilets', medical: 'Medical help', pharmacy: 'Pharmacy', atm: 'ATM', busStop: 'Bus stop',
 };
 
 export function generateStaticParams() {
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: StagePageProps): Promise<Meta
   const stage = getCyprusE4Stage(stageId);
   if (!stage) return {};
   return {
-    title: `${stage.name} · Cyprus E4 stage`,
+    title: `${stage.name} · Cyprus E4 stage point`,
     description: `${stage.name} on the Cyprus E4: distance, elevation, recorded services, transport and trail data update information.`,
     alternates: { canonical: `/trails/cyprus-e4/stages/${stage.id}` },
   };

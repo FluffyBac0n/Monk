@@ -11,13 +11,13 @@ const paths = [
   {
     label: 'For hikers', title: 'Plan the trail', image: '/cyprus-e4-forest.jpg',
     alt: 'A marked section of the E4 long-distance trail through a Cyprus forest',
-    copy: 'Plan stages, carry the route offline and find practical places to stay with the EuroTrex mobile app.',
+    copy: 'Plan your route, carry it offline and find practical places to stay with the EuroTrex mobile app.',
     action: 'Explore the hiker app', href: '#hikers',
   },
   {
     label: 'For hosts', title: 'Welcome hikers', image: '/hosts-path.webp',
     alt: 'A welcoming stone guesthouse beside a Cyprus hiking route',
-    copy: 'Put a warm, practical stay on the trail and help hikers travel lighter, safer and farther.',
+    copy: 'List your property near the trail and help hikers travel lighter, safer and farther.',
     action: 'See how listings work', href: '#hosts',
   },
   {
@@ -29,15 +29,15 @@ const paths = [
 ];
 
 const appFeatures = [
-  ['Offline route guidance', 'Download trail geometry and stage context before leaving mobile coverage.'],
+  ['Offline route guidance', 'Download trail geometry and stage-point context before leaving mobile coverage.'],
   ['Flexible trip planning', 'Choose your start and finish, compare walking days and shape a route around your pace.'],
   ['Elevation at a glance', 'Understand climbs, descents and the terrain ahead before committing to the next section.'],
-  ['Trail-side stays', 'Find practical accommodation near a stage and contact hosts directly.'],
+  ['Trail-side stays', 'Find practical accommodation near a stage point and contact hosts directly.'],
 ];
 
 const hostSteps = [
   { title: 'Create your account', copy: 'Register as an accommodation partner and tell us who you represent.', image: '/host-step-account-photo.webp', alt: 'A Cyprus guesthouse owner creating a host account on a laptop' },
-  { title: 'Add the essentials', copy: 'Share your location, nearest stage, price range and reliable contact information.', image: '/host-step-details-photo.webp', alt: 'A Cyprus guesthouse owner checking trail-ready property details' },
+  { title: 'Add the essentials', copy: 'Share your location, nearest stage point, price range and reliable contact information.', image: '/host-step-details-photo.webp', alt: 'A Cyprus guesthouse owner checking trail-ready property details' },
   { title: 'Submit for verification', copy: 'We review owner authority, contact details and trail relevance before publication.', image: '/host-step-verified-photo.webp', alt: 'A hiker finding a verified trail-side guesthouse' },
 ];
 
@@ -77,8 +77,8 @@ export default function Home() {
     '@graph': [
       { '@type': 'Organization', '@id': `${SITE_URL}/#organization`, name: 'EuroTrex', url: SITE_URL, logo: `${SITE_URL}/eurotrex-app-icon.png`, email: 'info@eurotrex.eu' },
       { '@type': 'WebSite', '@id': `${SITE_URL}/#website`, url: SITE_URL, name: 'EuroTrex', publisher: { '@id': `${SITE_URL}/#organization` }, inLanguage: 'en' },
-      { '@type': 'WebPage', '@id': `${SITE_URL}/#webpage`, url: SITE_URL, name: 'EuroTrex — Cyprus E4 trail app and route planner', description: 'Plan and navigate the Cyprus E4 with offline maps, flexible stages, elevation context and practical trail-side stays.', isPartOf: { '@id': `${SITE_URL}/#website` }, about: { '@id': `${SITE_URL}/#app` }, inLanguage: 'en' },
-      { '@type': 'MobileApplication', '@id': `${SITE_URL}/#app`, name: 'EuroTrex', url: SITE_URL, operatingSystem: 'iOS, Android', applicationCategory: 'TravelApplication', description: 'Offline route guidance, flexible stage planning, elevation context and trail-side accommodation for the Cyprus E4.', featureList: appFeatures.map(([feature]) => feature), screenshot: [`${SITE_URL}/app-stages.webp`, `${SITE_URL}/app-planner.webp`, `${SITE_URL}/app-elevation.webp`], ...(storeUrls.length ? { sameAs: storeUrls } : {}) },
+      { '@type': 'WebPage', '@id': `${SITE_URL}/#webpage`, url: SITE_URL, name: 'EuroTrex — Cyprus E4 trail app and route planner', description: 'Plan and navigate the Cyprus E4 with offline maps, flexible route planning, elevation context and practical trail-side stays.', isPartOf: { '@id': `${SITE_URL}/#website` }, about: { '@id': `${SITE_URL}/#app` }, inLanguage: 'en' },
+      { '@type': 'MobileApplication', '@id': `${SITE_URL}/#app`, name: 'EuroTrex', url: SITE_URL, operatingSystem: 'iOS, Android', applicationCategory: 'TravelApplication', description: 'Offline route guidance, flexible route planning, elevation context and trail-side accommodation for the Cyprus E4.', featureList: appFeatures.map(([feature]) => feature), screenshot: [`${SITE_URL}/app-stages.webp`, `${SITE_URL}/app-planner.webp`, `${SITE_URL}/app-elevation.webp`], ...(storeUrls.length ? { sameAs: storeUrls } : {}) },
       { '@type': 'FAQPage', '@id': `${SITE_URL}/#faq`, mainEntity: faqs.map(([question, answer]) => ({ '@type': 'Question', name: question, acceptedAnswer: { '@type': 'Answer', text: answer } })) },
     ],
   };
@@ -144,7 +144,7 @@ export default function Home() {
             <div className="app-gallery-wrap reveal">
               <div className="app-gallery" aria-label="Screenshots from the EuroTrex iPhone app" role="region" tabIndex={0}>
                 <figure className="phone-shot phone-planner"><Image src="/app-planner.webp" alt="EuroTrex iPhone route planner showing the Cyprus E4 on a map" width={720} height={1565} sizes="(max-width: 760px) 72vw, 250px" /><figcaption>Shape your trip</figcaption></figure>
-                <figure className="phone-shot phone-stages"><Image src="/app-stages.webp" alt="EuroTrex iPhone app showing Cyprus E4 stages" width={720} height={1565} sizes="(max-width: 760px) 72vw, 230px" /><figcaption>Browse stage points</figcaption></figure>
+                <figure className="phone-shot phone-stages"><Image src="/app-stages.webp" alt="EuroTrex iPhone app showing Cyprus E4 stage points" width={720} height={1565} sizes="(max-width: 760px) 72vw, 230px" /><figcaption>Browse stage points</figcaption></figure>
                 <figure className="phone-shot phone-elevation"><Image src="/app-elevation.webp" alt="EuroTrex iPhone app showing an E4 elevation profile" width={720} height={1565} sizes="(max-width: 760px) 72vw, 230px" /><figcaption>Read the terrain</figcaption></figure>
               </div>
               <p className="swipe-hint">Swipe to explore the app <span aria-hidden="true">→</span></p>
@@ -172,7 +172,7 @@ export default function Home() {
           <div className="section-shell project-layout">
             <div className="project-copy">
               <div className="project-kicker"><div className="project-badge" aria-hidden="true"><small>European</small><strong>E4</strong><small>Cyprus</small></div><p className="eyebrow">Current trail</p></div>
-              <h2 id="project-title">From Pafos to Larnaka, one stage point at a time.</h2><p>The first EuroTrex guide follows the Cyprus E4 across coast, forest and the Troodos mountains. Public stage pages expose practical facts now; the app adds flexible planning and offline navigation.</p><a className="simple-link" href="/trails/cyprus-e4">Open the Cyprus E4 guide <span aria-hidden="true">→</span></a>
+              <h2 id="project-title">From Pafos to Larnaka, one stage point at a time.</h2><p>The first EuroTrex guide follows the Cyprus E4 across coast, forest and the Troodos mountains. Public stage-point pages expose practical facts now; the app adds flexible planning and offline navigation.</p><a className="simple-link" href="/trails/cyprus-e4">Open the Cyprus E4 guide <span aria-hidden="true">→</span></a>
             </div>
             <dl className="project-facts"><div><dt>Distance</dt><dd>{cyprusE4.distanceKm.toFixed(1)} km</dd></div><div><dt>Stage points</dt><dd>{cyprusE4.stageCount}</dd></div><div><dt>High point</dt><dd>{Math.round(cyprusE4.highPointM).toLocaleString('en-GB')} m</dd></div><div><dt>Trail data updated</dt><dd>{updated}</dd></div></dl>
           </div>
@@ -182,12 +182,12 @@ export default function Home() {
 
         <section className="host-section" id="hosts" aria-labelledby="hosts-title">
           <div className="section-shell">
-            <div className="host-heading"><div><p className="eyebrow">For accommodation hosts</p><h2 id="hosts-title">A clear, three-step path to the trail.</h2></div><div className="host-summary"><p>Hotels, guesthouses, hostels, apartments, villas and camping providers can submit a stay. Hikers contact and book with hosts directly.</p></div></div>
+            <div className="host-heading"><div><p className="eyebrow">For accommodation hosts</p><h2 id="hosts-title">A clear, three-step path to the trail.</h2></div><div className="host-summary"><p>Hotels, guesthouses, hostels, apartments, villas and camping providers can submit a listing. Hikers contact and book with hosts directly.</p></div></div>
             <ol className="host-steps" role="list">
               {hostSteps.map((step) => <li key={step.title}><div className="host-step-image"><Image src={step.image} alt={step.alt} fill sizes="(max-width: 500px) 38vw, (max-width: 900px) 38vw, 33vw" /></div><div className="host-step-body"><h3>{step.title}</h3><p>{step.copy}</p></div></li>)}
             </ol>
             <dl className="host-facts">
-              <div><dt>Eligibility</dt><dd>Authorised accommodation representatives near a named trail stage.</dd></div>
+              <div><dt>Eligibility</dt><dd>Authorised accommodation representatives near a named stage point.</dd></div>
               <div><dt>Booking model</dt><dd>Direct with the host; EuroTrex does not process guest payments.</dd></div>
               <div><dt>Pilot terms</dt><dd>Any fee or commission terms are confirmed before publication.</dd></div>
               <div><dt>Review timing</dt><dd>Manual during private testing; status appears in your portal.</dd></div>

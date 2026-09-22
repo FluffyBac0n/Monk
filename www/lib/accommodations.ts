@@ -79,6 +79,22 @@ export function watchOwnerDrafts(
   );
 }
 
+export function watchOwnerPublishedLodgings(
+  ownerId: string,
+  onData: (rows: PublishedLodging[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    query(collectionGroup(db, 'lodgings'), where('ownerId', '==', ownerId)),
+    (snapshot) => onData(snapshot.docs.map((row) => ({
+      id: row.id,
+      trailId: row.ref.parent.parent?.id || '',
+      ...row.data(),
+    } as PublishedLodging)).sort((a, b) => (a.name || '').localeCompare(b.name || ''))),
+    onError,
+  );
+}
+
 export async function saveAccommodationDraft(
   user: User,
   values: AccommodationDraftValues,
@@ -151,7 +167,8 @@ export async function saveSubmission(
     throw new Error('Removed accommodations cannot be resubmitted. Create a new listing instead.');
   }
   const record = existing ? doc(db, 'accommodationSubmissions', existing.id) : doc(submissions);
-  const status: SubmissionStatus = existing?.status === 'approved' || existing?.status === 'pending_update'
+  const hasPublishedVersion = Boolean(existing?.publishedLodgingId && existing?.publishedTrailId);
+  const status: SubmissionStatus = hasPublishedVersion || existing?.status === 'approved' || existing?.status === 'pending_update'
     ? 'pending_update'
     : 'pending';
   const safeValues = Object.fromEntries(

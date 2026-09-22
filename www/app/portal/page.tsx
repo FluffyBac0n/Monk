@@ -9,10 +9,11 @@ import {
   deleteDraft as deleteSubmission,
   userIsAdmin,
   watchOwnerDrafts,
+  watchOwnerPublishedLodgings,
   watchOwnerSubmissions,
 } from '@/lib/accommodations';
-import type { AccommodationDraft, AccommodationDraftValues, AccommodationSubmission } from '@/lib/models';
-import { statusLabels } from '@/lib/models';
+import type { AccommodationDraft, AccommodationDraftValues, AccommodationSubmission, PublishedLodging } from '@/lib/models';
+import { statusLabels, submissionHasPublishedVersion } from '@/lib/models';
 import { useAuthState } from '@/lib/use-auth';
 
 type EditorState = {
@@ -29,6 +30,7 @@ function errorMessage(caught: unknown, fallback: string) {
 export default function OwnerPortal() {
   const { user, loading } = useAuthState();
   const [submissions, setSubmissions] = useState<AccommodationSubmission[]>([]);
+  const [published, setPublished] = useState<PublishedLodging[]>([]);
   const [drafts, setDrafts] = useState<AccommodationDraft[]>([]);
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [canAccessAdmin, setCanAccessAdmin] = useState(false);
@@ -43,17 +45,23 @@ export default function OwnerPortal() {
     if (!user) return;
     const stopSubmissions = watchOwnerSubmissions(user.uid, setSubmissions, (caught) => setError(caught.message));
     const stopDrafts = watchOwnerDrafts(user.uid, setDrafts, (caught) => setError(caught.message));
+    const stopPublished = watchOwnerPublishedLodgings(user.uid, setPublished, (caught) => setError(caught.message));
     userIsAdmin(user).then(setCanAccessAdmin).catch(() => setCanAccessAdmin(false));
-    return () => { stopSubmissions(); stopDrafts(); };
+    return () => { stopSubmissions(); stopDrafts(); stopPublished(); };
   }, [user]);
 
   useEffect(() => { if (confirmation) confirmationRef.current?.focus(); }, [confirmation]);
 
   const counts = useMemo(() => ({
-    live: submissions.filter((row) => row.status === 'approved').length,
+    live: published.length,
     review: submissions.filter((row) => ['pending', 'pending_update'].includes(row.status)).length,
     attention: submissions.filter((row) => row.status === 'changes_requested').length,
-  }), [submissions]);
+  }), [published.length, submissions]);
+
+  function publishedVersionFor(row: AccommodationSubmission) {
+    return published.find((live) => live.sourceSubmissionId === row.id
+      || (live.id === row.publishedLodgingId && live.trailId === row.publishedTrailId));
+  }
 
   function rememberLauncher(target: EventTarget | null) {
     launchRef.current = target instanceof HTMLElement ? target : null;
@@ -119,12 +127,12 @@ export default function OwnerPortal() {
       <PortalHeader user={user} canAccessAdmin={canAccessAdmin} />
       <div className="dashboard-shell">
         <section className="dashboard-title">
-          <div><p className="eyebrow dark">OWNER WORKSPACE</p><h1>Your trail stays.</h1><p>Create a guided draft, submit it for review and keep every approved listing accurate.</p></div>
+          <div><p className="eyebrow dark">OWNER WORKSPACE</p><h1>Your accommodation listings.</h1><p>Create a guided draft, submit it for review and keep every live listing accurate.</p></div>
           <button className="button button-primary" onClick={(event) => startNew(event.currentTarget)}>+ Add accommodation</button>
         </section>
 
         <section className="metric-grid" aria-label="Listing summary">
-          <article><span>{drafts.length}</span><p>Saved drafts</p></article><article><span>{counts.live}</span><p>Live in the app</p></article><article><span>{counts.review}</span><p>Under review</p></article><article><span>{counts.attention}</span><p>Need attention</p></article>
+          <article><span>{drafts.length}</span><p>Saved drafts</p></article><article><span>{counts.live}</span><p>Live listings</p></article><article><span>{counts.review}</span><p>Awaiting review</p></article><article><span>{counts.attention}</span><p>Needs attention</p></article>
         </section>
 
         {notice && <p className="notice success" role="status">{notice}</p>}
@@ -138,8 +146,21 @@ export default function OwnerPortal() {
         )}
 
         <section className="list-section">
-          <div className="panel-heading"><div><p className="eyebrow dark">MY ACCOMMODATIONS</p><h2>Listings and reviews</h2></div></div>
-          {!submissions.length ? <div className="empty-state"><span>⌂</span><h3>No accommodation submitted yet.</h3><p>Create a draft at your pace. The EuroTrex team reviews it only after you submit.</p><button className="button button-primary" onClick={(event) => startNew(event.currentTarget)}>Add accommodation</button></div> : <div className="listing-grid">{submissions.map((row) => <article className="listing-card" key={row.id}><div className="card-top"><span className={`status status-${row.status}`}>{statusLabels[row.status]}</span><span>{row.trailName}</span></div><h3>{row.name}</h3><p>{row.type} · {row.village} · near {row.stageName}</p>{row.reviewNote && <blockquote><strong>Reviewer note</strong>{row.reviewNote}</blockquote>}<div className="card-actions">{row.status !== 'removed' && <button className="button button-secondary" onClick={(event) => startEdit(row, event.currentTarget)}>Edit details</button>}{['draft', 'rejected', 'changes_requested'].includes(row.status) && <button className="text-button danger" disabled={deletingId === row.id} onClick={() => void removeListing(row)}>{deletingId === row.id ? 'Deleting…' : 'Delete'}</button>}</div></article>)}</div>}
+          <div className="panel-heading"><div><p className="eyebrow dark">MY LISTINGS</p><h2>Listings and reviews</h2></div></div>
+          {!submissions.length ? <div className="empty-state"><span>⌂</span><h3>No listings submitted yet.</h3><p>Create a draft at your pace. The EuroTrex team reviews it only after you submit.</p><button className="button button-primary" onClick={(event) => startNew(event.currentTarget)}>Add accommodation</button></div> : <div className="listing-grid">{submissions.map((row) => {
+            const live = publishedVersionFor(row);
+            const hasLiveVersion = Boolean(live) || submissionHasPublishedVersion(row);
+            const showVersionComparison = Boolean(live && row.status !== 'approved' && row.status !== 'removed');
+            return <article className={`listing-card ${showVersionComparison ? 'listing-card-versions' : ''}`} key={row.id}>
+              <div className="card-top"><div className="status-row">{hasLiveVersion && <span className="status status-approved">Live version</span>}{(!hasLiveVersion || row.status !== 'approved') && <span className={`status status-${row.status}`}>{statusLabels[row.status]}</span>}</div><span>{row.trailName}</span></div>
+              {showVersionComparison && live ? <div className="listing-version-grid">
+                <section><span>LIVE IN THE APP</span><h3>{live.name || row.name}</h3><p>{live.type || row.type} · {live.village || row.village}<br />Nearest stage point: {live.stageName || row.stageName}</p></section>
+                <section><span>PROPOSED UPDATE</span><h3>{row.name}</h3><p>{row.type} · {row.village}<br />Nearest stage point: {row.stageName}</p></section>
+              </div> : <><h3>{row.name}</h3><p>{row.type} · {row.village} · nearest stage point: {row.stageName}</p></>}
+              {row.reviewNote && <blockquote><strong>Reviewer note</strong>{row.reviewNote}</blockquote>}
+              <div className="card-actions">{row.status !== 'removed' && <button className="button button-secondary" onClick={(event) => startEdit(row, event.currentTarget)}>Edit details</button>}{['draft', 'rejected', 'changes_requested'].includes(row.status) && <button className="text-button danger" disabled={deletingId === row.id} onClick={() => void removeListing(row)}>{deletingId === row.id ? 'Deleting…' : 'Delete'}</button>}</div>
+            </article>;
+          })}</div>}
         </section>
       </div>
     </main>

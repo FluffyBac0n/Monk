@@ -2,7 +2,7 @@
 
 EuroTrex is a mobile trail companion and route planner for European long-distance trails, beginning with the E4 in Cyprus. It is designed to make multi-stage hiking more approachable for beginners and experienced walkers.
 
-Core app features include offline route guidance, flexible start and finish selection, day-by-day stage planning, elevation context and practical accommodation near the trail. EuroTrex is preparing official iOS and Android releases.
+Core app features include offline route guidance, flexible start and finish selection, day-by-day route planning, elevation context and practical accommodation near the trail. EuroTrex is preparing official iOS and Android releases.
 
 The Cyprus E4 is the first EuroTrex route. The current trail-data snapshot covers 558.1 km from Pafos Airport to Larnaka Airport, 123 named stage points and a route high point of approximately 1,732 m. Trail data was updated on 7 August 2026. The longer-term aim is to extend the same clear trail-planning and host-network model to Greece and other European E-paths.
 

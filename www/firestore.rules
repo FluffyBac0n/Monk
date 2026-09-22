@@ -96,13 +96,24 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/trails/$(data.trailId)/stages/$(data.stageId));
     }
 
-    function validOwnerTransition(before, after) {
+    function hasPublishedVersion(data) {
+      return data.keys().hasAll(['publishedLodgingId', 'publishedTrailId'])
+        && data.publishedLodgingId is string
+        && data.publishedLodgingId.size() > 0
+        && data.publishedTrailId is string
+        && data.publishedTrailId.size() > 0;
+    }
+
+    function validOwnerTransition(beforeData, after) {
       return (
-        before in ['draft', 'pending', 'changes_requested', 'rejected']
+        beforeData.status in ['draft', 'pending']
         && after == 'pending'
       ) || (
-        before in ['approved', 'pending_update']
+        beforeData.status in ['approved', 'pending_update']
         && after == 'pending_update'
+      ) || (
+        beforeData.status in ['changes_requested', 'rejected']
+        && after == (hasPublishedVersion(beforeData) ? 'pending_update' : 'pending')
       );
     }
 
@@ -166,7 +177,7 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.reviewNote == ''
         && request.resource.data.updatedAt == request.time
-        && validOwnerTransition(resource.data.status, request.resource.data.status)
+        && validOwnerTransition(resource.data, request.resource.data.status)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'trailId', 'trailName', 'stageId', 'stageName', 'stageSequence',
           'name', 'type', 'village', 'address', 'description', 'phone',
