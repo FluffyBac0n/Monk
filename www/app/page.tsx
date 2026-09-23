@@ -42,10 +42,10 @@ const hostSteps = [
 ];
 
 const involvement = [
-  { title: 'Volunteer', copy: 'Contribute local knowledge and help check trail information as the network grows.', action: 'Volunteer with us', href: '/get-involved?interest=volunteer', image: '/involved-volunteer.webp', alt: 'Illustration of a volunteer checking a trail waymark and recording a field note' },
-  { title: 'Collaborate', copy: 'Work with EuroTrex on responsible tourism, trail access and regional initiatives.', action: 'Start a collaboration', href: '/get-involved?interest=collaborate', image: '/involved-collaborate.webp', alt: 'Illustration of two collaborators connecting sections of a trail route together' },
-  { title: 'Walk with us', copy: 'Join field walks and share the conditions and stories you find along the route.', action: 'Ask about field walks', href: '/get-involved?interest=field-walks', image: '/involved-walk.webp', alt: 'Illustration of two hikers walking together on a Cyprus trail' },
-  { title: 'Support the vision', copy: 'Help keep long-distance hiking practical, welcoming and accessible.', action: 'Explore partnerships', href: '/partnerships', image: '/involved-support.webp', alt: 'Illustration of people helping a trail network reach a new waypoint' },
+  { label: 'Field walks', title: 'Walk with us', copy: 'Join a trail walk and share the conditions and stories you find along the way.', action: 'Ask about field walks', href: '/get-involved?interest=field-walks', image: '/involved-walk.webp', alt: 'Illustration of two hikers walking together on a Cyprus trail', featured: true },
+  { label: 'Trail knowledge', title: 'Volunteer', copy: 'Help check local trail information as the network grows.', action: 'Volunteer with us', href: '/get-involved?interest=volunteer', image: '/involved-volunteer.webp', alt: 'Illustration of a volunteer checking a trail waymark and recording a field note' },
+  { label: 'Regional ideas', title: 'Collaborate', copy: 'Work with us on responsible tourism, access and regional initiatives.', action: 'Start a collaboration', href: '/get-involved?interest=collaborate', image: '/involved-collaborate.webp', alt: 'Illustration of two collaborators connecting sections of a trail route together' },
+  { label: 'Partnerships', title: 'Support the vision', copy: 'Help keep long-distance hiking practical, welcoming and accessible.', action: 'Explore partnerships', href: '/partnerships', image: '/involved-support.webp', alt: 'Illustration of people helping a trail network reach a new waypoint' },
 ];
 
 const faqs = [
@@ -120,11 +120,12 @@ export default function Home() {
           <div className="section-shell">
             <div className="section-heading"><div><p className="eyebrow">Choose your path</p><h2 id="paths-title">A trail network shaped by everyone around it.</h2></div><p>Walk it, welcome those who do, or help make the route more useful.</p></div>
             <div className="path-grid">
-              {paths.map((path) => (
-                <article className="path-card" key={path.label}>
+              {paths.map((path, index) => (
+                <article className={`path-card reveal${index === 0 ? ' path-card-featured' : ''}`} key={path.label}>
                   <a className="path-card-link" href={path.href}>
-                    <div className="path-image-wrap"><Image className="path-image" src={path.image} alt={path.alt} fill sizes="(max-width: 760px) 42vw, 33vw" /></div>
-                    <div className="path-card-body"><p className="eyebrow">{path.label}</p><h3>{path.title}</h3><p>{path.copy}</p><span className="card-link">{path.action}<b aria-hidden="true">→</b></span></div>
+                    <div className="path-image-wrap"><Image className="path-image" src={path.image} alt={path.alt} fill sizes={index === 0 ? '(max-width: 760px) 100vw, 64vw' : '(max-width: 760px) 100vw, 36vw'} /></div>
+                    <div className="path-card-shade" />
+                    <div className="path-card-body"><p className="eyebrow light">{path.label}</p><h3>{path.title}</h3><p>{path.copy}</p><span className="editorial-link">{path.action}<i aria-hidden="true" /></span></div>
                   </a>
                 </article>
               ))}
@@ -183,8 +184,8 @@ export default function Home() {
         <section className="host-section" id="hosts" aria-labelledby="hosts-title">
           <div className="section-shell">
             <div className="host-heading"><div><p className="eyebrow">For accommodation hosts</p><h2 id="hosts-title">A clear, three-step path to the trail.</h2></div><div className="host-summary"><p>Hotels, guesthouses, hostels, apartments, villas and camping providers can submit a listing. Hikers contact and book with hosts directly.</p></div></div>
-            <ol className="host-steps" role="list">
-              {hostSteps.map((step) => <li key={step.title}><div className="host-step-image"><Image src={step.image} alt={step.alt} fill sizes="(max-width: 500px) 38vw, (max-width: 900px) 38vw, 33vw" /></div><div className="host-step-body"><h3>{step.title}</h3><p>{step.copy}</p></div></li>)}
+            <ol className="host-steps host-journey" role="list">
+              {hostSteps.map((step, index) => <li className="host-moment reveal" key={step.title}><span className="host-waypoint" aria-hidden="true" /><div className="host-step-image"><Image src={step.image} alt={step.alt} fill sizes="(max-width: 500px) 88vw, (max-width: 900px) 45vw, 31vw" /></div><div className="host-step-body"><p className="host-step-label">{['Create', 'Prepare', 'Verify'][index]}</p><h3>{step.title}</h3><p>{step.copy}</p></div></li>)}
             </ol>
             <dl className="host-facts">
               <div><dt>Eligibility</dt><dd>Authorised accommodation representatives near a named stage point.</dd></div>
@@ -201,9 +202,9 @@ export default function Home() {
         <section className="involved-section" id="involved" aria-labelledby="involved-title">
           <div className="section-shell">
             <div className="section-heading"><div><p className="eyebrow">Get involved</p><h2 id="involved-title">Help the path reach farther.</h2></div><p>EuroTrex grows through local knowledge, useful partnerships and people who care for the trail.</p></div>
-            <div className="involved-grid">
-              {involvement.map(({ title, copy, action, href, image, alt }) => (
-                <article key={title}><a className="involved-card-link" href={href}><div className="involved-image"><Image src={image} alt={alt} fill sizes="(max-width: 820px) 36vw, 21vw" /></div><div className="involved-card-body"><h3>{title}</h3><p>{copy}</p><span className="card-link">{action}<b aria-hidden="true">→</b></span></div></a></article>
+            <div className="involved-grid involved-mosaic">
+              {involvement.map(({ label, title, copy, action, href, image, alt, featured }) => (
+                <article className={`reveal${featured ? ' involved-featured' : ''}`} key={title}><a className="involved-card-link" href={href}><div className="involved-image"><Image src={image} alt={alt} fill sizes={featured ? '(max-width: 820px) 100vw, 58vw' : '(max-width: 820px) 100vw, 36vw'} /></div><div className="involved-card-shade" /><div className="involved-card-body"><p className="eyebrow light">{label}</p><h3>{title}</h3><p>{copy}</p><span className="editorial-link">{action}<i aria-hidden="true" /></span></div></a></article>
               ))}
             </div>
           </div>
