@@ -38,7 +38,7 @@ h1 { font-size: clamp(42px, 5.3vw, 68px); font-weight: 760; letter-spacing: -.03
 h2 { color: var(--navy); font-size: clamp(31px, 3.6vw, 48px); font-weight: 750; letter-spacing: -.028em; line-height: 1.08; margin: 0; }
 h3 { color: var(--navy); font-size: 23px; letter-spacing: -.018em; line-height: 1.16; }
 
-.site-header { background: linear-gradient(90deg, var(--blue-soft), var(--blue-deep)); box-shadow: 0 6px 24px rgba(20,31,42,.16); color: white; height: 60px; position: sticky; top: 0; z-index: 100; }
+.site-header { background: linear-gradient(90deg, var(--blue-soft), var(--blue-deep)); border-bottom: 1px solid rgba(255,255,255,.22); box-shadow: 0 6px 24px rgba(20,31,42,.16); color: white; height: 60px; position: sticky; top: 0; z-index: 100; }
 .header-inner { align-items: center; display: flex; height: 100%; margin: auto; max-width: 1240px; padding: 0 30px; }
 .brand { display: block; flex: 0 0 auto; width: 132px; }
 .brand img { display: block; height: auto; width: 100%; }
@@ -120,10 +120,6 @@ h3 { color: var(--navy); font-size: 23px; letter-spacing: -.018em; line-height: 
 .manifesto-signoff span { color: var(--blue); font-size: 12px; font-weight: 800; letter-spacing: .025em; margin-top: 4px; }
 
 .paths-section, .host-section, .involved-section { overflow: clip; position: relative; }
-.paths-section::before, .host-section::before, .involved-section::before { background: repeating-radial-gradient(ellipse at 50% 50%, transparent 0 28px, rgba(45,93,211,.075) 29px 30px, transparent 31px 48px); content: ''; height: 680px; opacity: .7; pointer-events: none; position: absolute; width: 680px; }
-.paths-section::before { right: -230px; top: -250px; transform: rotate(-12deg); }
-.host-section::before { bottom: -330px; left: -260px; transform: rotate(18deg); }
-.involved-section::before { right: -250px; top: -260px; transform: rotate(10deg); }
 .paths-section > .section-shell, .host-section > .section-shell, .involved-section > .section-shell { position: relative; z-index: 1; }
 .paths-section { background: var(--sand); padding-block: 80px; }
 .section-heading { align-items: end; display: grid; gap: 55px; grid-template-columns: minmax(0, 1fr) 360px; margin-bottom: 34px; }
