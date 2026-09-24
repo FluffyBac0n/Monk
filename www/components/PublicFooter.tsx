@@ -7,7 +7,7 @@ export function PublicFooter() {
       <div className="section-shell footer-compact">
         <nav className="footer-nav" aria-label="Footer navigation">
           <div><strong>Explore</strong><a href="/#hikers">Hiker app</a><a href="/trails/cyprus-e4">Cyprus E4 guide</a><a href="/#faq">Questions</a></div>
-          <div><strong>Partners</strong><a href="/portal?mode=register" {...disableHtmxNavigation}>List your property</a><a href="/portal?mode=signin" {...disableHtmxNavigation}>Host sign in</a><a href="/partnerships">Partnerships</a></div>
+          <div><strong>Partners</strong><a href="/portal?mode=register" {...disableHtmxNavigation}>List your property</a><a href="/portal?mode=signin" {...disableHtmxNavigation}>Host Portal</a><a href="/partnerships">Partnerships</a></div>
           <div><strong>Information</strong><a href="/get-involved">Get involved</a><a href="/privacy">Privacy</a><a href="/partner-terms">Partner policy</a></div>
         </nav>
         <p className="footer-legal">© {new Date().getFullYear()} EuroTrex. Apple and the Apple logo are trademarks of Apple Inc. Google Play and the Google Play logo are trademarks of Google LLC.</p>

@@ -51,7 +51,7 @@ export function PublicHeader() {
           <a href="/trails/cyprus-e4">Trail guide</a>
           <a href="/#hosts">For hosts</a>
           <a href="/get-involved">Get involved</a>
-          <a className="nav-host" href="/portal?mode=signin" {...disableHtmxNavigation}>Host sign in</a>
+          <a className="nav-host" href="/portal?mode=signin" {...disableHtmxNavigation}>Host Portal</a>
           <NotifyButton className="nav-primary">Notify me</NotifyButton>
         </nav>
         <LanguageControl />

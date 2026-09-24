@@ -193,7 +193,7 @@ export default function Home() {
               <div><dt>Pilot terms</dt><dd>Any fee or commission terms are confirmed before publication.</dd></div>
               <div><dt>Review timing</dt><dd>Manual during private testing; status appears in your portal.</dd></div>
             </dl>
-            <div className="host-cta-row"><p><strong>Ready to welcome hikers?</strong><span>Start a guided draft or manage an existing listing.</span></p><ActionLink href="/portal" className="host-portal-link">Open the host portal</ActionLink></div>
+            <div className="host-cta-row"><p><strong>Ready to welcome hikers?</strong><span>Start a guided draft or manage an existing listing.</span></p><ActionLink href="/portal" className="host-portal-link">Open Host Portal</ActionLink></div>
           </div>
         </section>
 
