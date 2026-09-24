@@ -93,7 +93,7 @@ export default function Home() {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
         <section className="hero">
           <div className="hero-media">
-            <Image className="hero-image" src="/cyprus-e4-forest.jpg" alt="The E4 long-distance trail through a Cyprus forest" fill priority sizes="(max-width: 760px) 100vw, 78vw" />
+            <Image className="hero-image" src="/zapalo-coast-hero.webp" alt="Zapalo Bay’s limestone cliffs and coastal trail above the Mediterranean in Cyprus" fill priority sizes="(max-width: 760px) 100vw, 78vw" />
           </div>
           <div className="hero-shade" />
           <div className="hero-inner">
