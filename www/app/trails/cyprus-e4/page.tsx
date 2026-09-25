@@ -1,4 +1,6 @@
+import Image from 'next/image';
 import type { Metadata } from 'next';
+import { CyprusTrailSlideshow } from '@/components/CyprusTrailSlideshow';
 import { PublicContent } from '@/components/PublicContent';
 import { PublicFooter } from '@/components/PublicFooter';
 import { PublicHeader } from '@/components/PublicHeader';
@@ -23,9 +25,10 @@ const serviceLabels: Record<string, string> = {
 
 export default function CyprusE4Overview() {
   const updated = new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(cyprusE4.dataUpdatedAt));
+  const featuredStages = [cyprusE4Stages[0], cyprusE4Stages[30], cyprusE4Stages[61], cyprusE4Stages[92], cyprusE4Stages[122]];
   const schema = {
     '@context': 'https://schema.org', '@type': 'Route', name: 'Cyprus E4', url: `${SITE_URL}/trails/cyprus-e4`,
-    description: 'A long-distance hiking route across Cyprus from Pafos Airport to Larnaka Airport.',
+    description: 'A long-distance hiking route across Cyprus from Pafos Airport to Larnaka Airport.', image: `${SITE_URL}/cyprus-e4-forest.jpg`,
   };
 
   return (
@@ -33,50 +36,107 @@ export default function CyprusE4Overview() {
       <a className="skip-link" href="#main-content">Skip to content</a>
       <PublicHeader />
       <PublicContent>
-      <main id="main-content" className="content-page" tabIndex={-1} {...publicHtmxNavigation}>
+      <main id="main-content" className="content-page" data-trail-guide="cyprus-e4" tabIndex={-1} {...publicHtmxNavigation}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
-        <header className="content-hero trail-guide-hero">
-          <div className="section-shell content-hero-inner">
-            <nav className="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><span>Cyprus E4</span></nav>
-            <p className="eyebrow light">Public trail guide</p>
-            <h1>Cyprus E4</h1>
-            <p>From Pafos Airport to Larnaka Airport across coast, forest and the Troodos mountains.</p>
-            <div className="hero-actions"><a className="button button-yellow" href="/trails/cyprus-e4/stages">Browse all stage points</a></div>
+        <header className="trail-guide-hero">
+          <div className="section-shell">
+            <div className="trail-guide-hero-grid">
+              <div className="trail-guide-intro">
+                <p className="eyebrow">Cyprus E4 trail guide</p>
+                <h1>The Cyprus E4, from coast to mountains.</h1>
+                <p className="trail-guide-lead">Follow 558 kilometres from Pafos to Larnaka through open coast, village country, pine forest and the Troodos highlands.</p>
+                <div className="trail-guide-actions">
+                  <a className="button button-primary fill-link" href="/trails/cyprus-e4/stages"><span>Explore {cyprusE4.stageCount} stage points</span></a>
+                  <a className="guide-inline-link" href="/#hikers">Plan with EuroTrex <span aria-hidden="true">→</span></a>
+                </div>
+                <p className="guide-freshness"><span aria-hidden="true" />Trail snapshot updated {updated}</p>
+              </div>
+              <CyprusTrailSlideshow />
+            </div>
+            <dl className="guide-stat-ribbon">
+              <div><dt>Route</dt><dd>{cyprusE4.distanceKm.toFixed(0)} km</dd></div>
+              <div><dt>Stage points</dt><dd>{cyprusE4.stageCount}</dd></div>
+              <div><dt>High point</dt><dd>{Math.round(cyprusE4.highPointM).toLocaleString('en-GB')} m</dd></div>
+              <div><dt>Direction</dt><dd>Pafos → Larnaka</dd></div>
+            </dl>
           </div>
         </header>
 
-        <section className="section-shell route-overview">
-          <dl className="route-stat-grid">
-            <div><dt>Total distance</dt><dd>{cyprusE4.distanceKm.toFixed(1)} km</dd></div>
-            <div><dt>Named stage points</dt><dd>{cyprusE4.stageCount}</dd></div>
-            <div><dt>Route high point</dt><dd>{Math.round(cyprusE4.highPointM).toLocaleString('en-GB')} m</dd></div>
-            <div><dt>Direction</dt><dd>Pafos ↔ Larnaka</dd></div>
-          </dl>
-          <div className="route-copy-grid">
-            <article><p className="eyebrow">What is published</p><h2>Practical facts before the app opens.</h2><p>Each stage-point page lists section and cumulative distance, ascent, descent, altitude and services recorded at that named point. This public guide is intentionally factual and indexable.</p></article>
-            <aside className="data-note"><strong>Trail data updated {updated}</strong><p>The current snapshot contains 23,107 route points. Conditions can change after publication, so confirm weather, closures, water and transport locally before walking.</p></aside>
-          </div>
+        <div className="trail-divider" aria-hidden="true" />
+
+        <section className="section-shell guide-landscape reveal">
+          <figure className="guide-coast-image">
+            <Image src="/zapalo-coast-hero.webp" alt="Zapalo Bay’s limestone cliffs and coastal trail above the Mediterranean in Cyprus" fill sizes="(max-width: 900px) 100vw, 55vw" />
+            <figcaption>Cyprus coast · Mediterranean light</figcaption>
+          </figure>
+          <article className="guide-landscape-copy">
+            <p className="eyebrow">One line across an island</p>
+            <h2>Every section changes the view.</h2>
+            <p>The E4 begins at Pafos Airport and reaches Larnaka Airport after a long crossing of Cyprus. Use the guide to understand distance, elevation and useful services, then shape the trail around your own pace.</p>
+            <ul className="guide-landscape-list" role="list">
+              <li><span aria-hidden="true">01</span><div><strong>Coastal ground</strong><small>Sea air, open horizons and exposed sections.</small></div></li>
+              <li><span aria-hidden="true">02</span><div><strong>Forest paths</strong><small>Shade, climbing terrain and quieter stretches.</small></div></li>
+              <li><span aria-hidden="true">03</span><div><strong>Troodos highlands</strong><small>The route rises to more than 1,700 metres.</small></div></li>
+            </ul>
+          </article>
         </section>
 
-        <section className="route-services">
-          <div className="section-shell">
-            <div className="section-heading"><div><p className="eyebrow">Recorded services</p><h2>Plan around what is known.</h2></div><p>Counts show named stage points where each service is recorded—not guaranteed opening or availability along the whole segment.</p></div>
-            <dl className="service-count-grid">
-              {serviceCounts.filter(([name]) => serviceLabels[name]).map(([name, count]) => <div key={name}><dt>{serviceLabels[name]}</dt><dd>{count}</dd></div>)}
+        <div className="trail-divider" aria-hidden="true" />
+
+        <section className="guide-services reveal">
+          <div className="section-shell guide-services-inner">
+            <div className="guide-services-heading">
+              <div><p className="eyebrow">Recorded along the route</p><h2>Plan around what is known.</h2></div>
+              <p>The current snapshot contains 23,107 route points. Service counts refer to named stage points, not guaranteed opening or availability across an entire section.</p>
+            </div>
+            <dl className="guide-service-list">
+              {serviceCounts.filter(([name]) => serviceLabels[name]).map(([name, count]) => <div key={name}><dt>{serviceLabels[name]}</dt><dd><span className="sr-only">{count}</span><span aria-hidden="true" data-count-up={count}>{count}</span></dd></div>)}
             </dl>
           </div>
         </section>
 
-        <section className="section-shell guide-split">
-          <article><p className="eyebrow">What to expect</p><h2>A long route, not one fixed itinerary.</h2><p>The catalog records named points rather than prescribing a daily schedule. Use segment distances and elevation to shape walking days that fit your experience, daylight, accommodation and water plan.</p><p>EuroTrex supports both directions. The public pages follow Pafos to Larnaka for consistency.</p></article>
-          <article className="safety-card"><p className="eyebrow">Safety baseline</p><h3>Check the present, not only the plan.</h3><ul><li>Confirm official access advice and weather before departure.</li><li>Carry enough water and do not assume a recorded service is open.</li><li>Download offline trail data before entering limited-coverage areas.</li><li>Share your plan and know the emergency number for Cyprus: 112.</li></ul></article>
+        <div className="trail-divider" aria-hidden="true" />
+
+        <section className="section-shell guide-journey reveal">
+          <div className="guide-section-heading"><div><p className="eyebrow">Five points across the island</p><h2>Follow the trail, one waypoint at a time.</h2></div><a className="guide-inline-link" href="/trails/cyprus-e4/stages">View all {cyprusE4.stageCount} points <span aria-hidden="true">→</span></a></div>
+          <ol className="guide-waypoint-list">
+            {featuredStages.map((stage, index) => (
+              <li key={stage.id}>
+                <a href={`/trails/cyprus-e4/stages/${stage.id}`}>
+                  <span className="guide-waypoint-dot" aria-hidden="true" />
+                  <small>{index === 0 ? 'Start' : index === featuredStages.length - 1 ? 'Finish' : `${stage.accumulatedDistanceKm?.toFixed(0)} km`}</small>
+                  <strong>{stage.name}</strong>
+                  <span>{stage.altitudeM?.toFixed(0)} m altitude</span>
+                </a>
+              </li>
+            ))}
+          </ol>
         </section>
 
-        <section className="section-shell stage-preview">
-          <div className="section-heading"><div><p className="eyebrow">Along the way</p><h2>Start with a named stage point.</h2></div><a className="simple-link" href="/trails/cyprus-e4/stages">View all {cyprusE4.stageCount} points <span aria-hidden="true">→</span></a></div>
-          <div className="stage-preview-grid">
-            {[cyprusE4Stages[0], cyprusE4Stages[30], cyprusE4Stages[61], cyprusE4Stages[92], cyprusE4Stages[122]].map((stage) => <a key={stage.id} href={`/trails/cyprus-e4/stages/${stage.id}`}><small>{stage.accumulatedDistanceKm?.toFixed(1)} km</small><strong>{stage.name}</strong><span>{stage.altitudeM?.toFixed(0)} m altitude <b aria-hidden="true">→</b></span></a>)}
-          </div>
+        <div className="trail-divider" aria-hidden="true" />
+
+        <section className="section-shell guide-essentials reveal">
+          <article className="guide-plan-copy">
+            <p className="eyebrow">Shape your own walk</p>
+            <h2>A route, not one fixed itinerary.</h2>
+            <p>Named points give you the building blocks. Compare distance and elevation, then create walking days around your experience, daylight, accommodation and water plan.</p>
+            <dl className="guide-planning-list">
+              <div><dt>Choose your rhythm</dt><dd>Link short or long sections instead of following a prescribed schedule.</dd></div>
+              <div><dt>Walk either way</dt><dd>EuroTrex supports both directions; the public guide follows Pafos to Larnaka for consistency.</dd></div>
+              <div><dt>Check live conditions</dt><dd>Use current local advice for weather, closures, water and transport before setting out.</dd></div>
+            </dl>
+          </article>
+          <aside className="guide-safety-panel">
+            <p className="eyebrow light">Before you walk</p>
+            <h2>Check the present, not only the plan.</h2>
+            <ul role="list">
+              <li><span>01</span>Confirm official access advice and weather.</li>
+              <li><span>02</span>Carry enough water for changing conditions.</li>
+              <li><span>03</span>Download trail data before limited coverage.</li>
+              <li><span>04</span>Share your route and expected finish.</li>
+            </ul>
+            <div className="guide-emergency"><small>Emergency in Cyprus</small><strong>112</strong></div>
+          </aside>
         </section>
       </main>
       </PublicContent>

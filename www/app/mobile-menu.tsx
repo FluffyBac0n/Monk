@@ -8,7 +8,10 @@ export default function MobileMenu() {
   const menuRef = useRef<HTMLDetailsElement>(null);
 
   function closeMenu() {
-    if (menuRef.current) menuRef.current.open = false;
+    if (menuRef.current) {
+      menuRef.current.open = false;
+      menuRef.current.querySelectorAll('details').forEach((details) => { details.open = false; });
+    }
   }
 
   return (
@@ -16,7 +19,7 @@ export default function MobileMenu() {
       <summary>Menu</summary>
       <nav aria-label="Mobile navigation">
         <a href="/#hikers" onClick={closeMenu}>For hikers</a>
-        <a href="/trails/cyprus-e4" onClick={closeMenu}>Trail guide</a>
+        <a href="/trails/cyprus-e4" onClick={closeMenu}>Explore trails</a>
         <a href="/#hosts" onClick={closeMenu}>For hosts</a>
         <a href="/get-involved" onClick={closeMenu}>Get involved</a>
         <a className="mobile-host" href="/portal?mode=signin" onClick={closeMenu} {...disableHtmxNavigation}>Host Portal</a>

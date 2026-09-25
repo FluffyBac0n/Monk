@@ -101,7 +101,7 @@ export default function Home() {
               <h1>Find your way<br />with EuroTrex.</h1>
               <p className="hero-copy">We simplify everything you need to explore Europe’s long-distance trails—making them accessible to beginners of all ages.</p>
               <div className="hero-actions">
-                <ActionLink href="/trails/cyprus-e4" className="button button-outline">Explore the Cyprus E4</ActionLink>
+                <ActionLink href="/trails/cyprus-e4" className="button button-outline">Explore the E4-Cyprus</ActionLink>
               </div>
             </div>
           </div>

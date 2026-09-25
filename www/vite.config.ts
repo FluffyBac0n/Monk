@@ -1,13 +1,29 @@
 import { sites } from '@openai/sites-vite-plugin';
+import path from 'node:path';
 import tailwindcss from '@tailwindcss/postcss';
 import vinext from 'vinext';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import hostingConfig from './.openai/hosting.json';
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   '00000000-0000-4000-8000-000000000000';
 
 const { d1, r2 } = hostingConfig;
+
+// HTMX owns the public <main> after an in-page route change. A React Fast
+// Refresh can otherwise reconcile against markup that HTMX has already
+// replaced, so component-source edits use a clean development reload.
+const htmxSafeRefresh: Plugin = {
+  name: 'eurotrex-htmx-safe-refresh',
+  handleHotUpdate({ file, server }) {
+    const relativeFile = path.relative(import.meta.dirname, file);
+    const isProjectTypeScript = !relativeFile.startsWith('..') && /\.(?:ts|tsx)$/.test(relativeFile);
+    if (!isProjectTypeScript) return;
+
+    server.ws.send({ type: 'full-reload' });
+    return [];
+  },
+};
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === 'seatbelt';
@@ -50,6 +66,7 @@ export default defineConfig(async () => {
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,
     plugins: [
+      htmxSafeRefresh,
       vinext(),
       sites(),
       cloudflare({

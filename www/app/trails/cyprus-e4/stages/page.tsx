@@ -17,8 +17,8 @@ export default function CyprusE4Stages() {
     <>
       <a className="skip-link" href="#main-content">Skip to content</a><PublicHeader />
       <PublicContent>
-      <main id="main-content" className="content-page" tabIndex={-1} {...publicHtmxNavigation}>
-        <header className="simple-page-header section-shell"><nav className="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/trails/cyprus-e4">Cyprus E4</a><span aria-hidden="true">/</span><span>Stage points</span></nav><p className="eyebrow">Cyprus E4</p><h1>Stage points.</h1><p>Browse the public trail snapshot from Pafos Airport to Larnaka Airport. Trail-section metrics describe the route into each point.</p></header>
+      <main id="main-content" className="content-page" data-trail-guide="cyprus-e4" tabIndex={-1} {...publicHtmxNavigation}>
+        <header className="simple-page-header section-shell"><p className="eyebrow">Cyprus E4</p><h1>Stage points.</h1><p>Browse the public trail snapshot from Pafos Airport to Larnaka Airport. Trail-section metrics describe the route into each point.</p></header>
         <div className="section-shell"><StageDirectory stages={cyprusE4Stages} /></div>
       </main>
       </PublicContent>

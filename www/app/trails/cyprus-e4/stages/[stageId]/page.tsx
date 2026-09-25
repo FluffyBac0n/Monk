@@ -43,10 +43,10 @@ export default async function CyprusE4StagePage({ params }: StagePageProps) {
     <>
       <a className="skip-link" href="#main-content">Skip to content</a><PublicHeader />
       <PublicContent>
-      <main id="main-content" className="content-page stage-page" tabIndex={-1} {...publicHtmxNavigation}>
+      <main id="main-content" className="content-page stage-page" data-trail-guide="cyprus-e4" tabIndex={-1} {...publicHtmxNavigation}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
         <header className="simple-page-header section-shell">
-          <nav className="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true">/</span><a href="/trails/cyprus-e4">Cyprus E4</a><span aria-hidden="true">/</span><a href="/trails/cyprus-e4/stages">Stage points</a><span aria-hidden="true">/</span><span>{stage.name}</span></nav>
+          <a className="stage-return-link" href="/trails/cyprus-e4/stages"><span aria-hidden="true">←</span> All stage points</a>
           <p className="eyebrow">Point {index + 1} of {cyprusE4Stages.length}</p><h1>{stage.name}</h1><p>{stage.accumulatedDistanceKm?.toFixed(1) ?? '—'} km from Pafos Airport on the published Cyprus E4 route.</p>
         </header>
         <section className="section-shell stage-detail-grid">
