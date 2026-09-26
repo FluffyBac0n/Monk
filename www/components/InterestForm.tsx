@@ -1,5 +1,3 @@
-'use client';
-
 import type { ReactNode } from 'react';
 
 type InterestFormProps = {
@@ -23,6 +21,7 @@ function RequiredLabel({ children }: { children: ReactNode }) {
 
 export function InterestForm({ kind, defaultInterest = 'volunteer', compact = false }: InterestFormProps) {
   const endpoint = `/api/interest?kind=${kind}${compact ? '&compact=true' : ''}`;
+  const feedbackId = `${kind}-interest-feedback${compact ? '-compact' : ''}`;
 
   return (
     <form
@@ -32,9 +31,12 @@ export function InterestForm({ kind, defaultInterest = 'volunteer', compact = fa
       className={`interest-form${compact ? ' compact' : ''}`}
       {...{
         'hx-post': endpoint,
-        'hx-swap': 'none',
+        'hx-target': `#${feedbackId}`,
+        'hx-swap': 'innerHTML',
+        'hx-select': 'unset',
         'hx-boost': 'false',
         'hx-push-url': 'false',
+        'hx-sync': 'this:replace',
         'hx-disabled-elt': 'find button[type="submit"]',
       }}
     >
@@ -63,7 +65,7 @@ export function InterestForm({ kind, defaultInterest = 'volunteer', compact = fa
       )}
       {kind === 'involved' && <label className="full"><RequiredLabel>Tell us a little more</RequiredLabel><textarea name="message" rows={5} maxLength={1500} required /></label>}
       {kind === 'involved' && <label className="check-label full"><input name="consent" value="yes" type="checkbox" required /><span>EuroTrex may use these details to reply and send relevant project updates. See the <a href="/privacy" target="_blank">privacy notice</a>. <span className="required-marker" aria-hidden="true">*</span></span></label>}
-      <div className="form-feedback full" aria-live="polite" />
+      <div id={feedbackId} className="form-feedback full" aria-live="polite" />
       <button type="submit" className="button button-yellow full">
         <span className="submit-idle">{kind === 'beta' ? 'Notify me' : 'Send my interest'}</span>
         <span className="submit-loading">Sending…</span>

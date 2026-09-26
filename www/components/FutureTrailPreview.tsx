@@ -26,7 +26,7 @@ export function FutureTrailPreview({
   return (
     <>
       <a className="skip-link" href="#main-content">Skip to content</a>
-      <PublicHeader />
+      <PublicHeader activeTrail={activeTrail} />
       <PublicContent>
         <main
           id="main-content"

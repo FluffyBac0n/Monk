@@ -1,7 +1,23 @@
 import type { Metadata } from 'next';
-import { NotifyDialog } from '@/components/NotifyDialog';
 import { SITE_URL } from '@/lib/site';
 import './globals.css';
+
+const publicRuntimeBootstrap = `(() => {
+  if (/^\\/(?:portal|admin)(?:\\/|$)/.test(window.location.pathname)) return;
+
+  window.addEventListener('popstate', (event) => {
+    if (!event.state || event.state.htmx !== true) return;
+    const handleHtmxPopState = window.__eurotrexHtmxPopState;
+    if (typeof handleHtmxPopState !== 'function') return;
+
+    event.stopImmediatePropagation();
+    handleHtmxPopState(event);
+  }, true);
+
+  const runtimeScript = document.createElement('script');
+  runtimeScript.src = '/public-runtime.js';
+  document.head.appendChild(runtimeScript);
+})();`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -32,5 +48,10 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en"><body>{children}<NotifyDialog /></body></html>;
+  return (
+    <html lang="en">
+      <head><script dangerouslySetInnerHTML={{ __html: publicRuntimeBootstrap }} /></head>
+      <body>{children}</body>
+    </html>
+  );
 }

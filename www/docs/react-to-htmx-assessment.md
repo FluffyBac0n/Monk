@@ -1,7 +1,11 @@
 # React-to-HTMX Architecture Assessment
 
-**Status:** Decision pending  
-**Recorded:** 25 September 2026  
+**Status:** Phase 1 implemented and verified
+
+**Recorded:** 25 September 2026
+
+**Updated:** 26 September 2026
+
 **Scope:** EuroTrex public website, Host Portal, and Admin Panel
 
 ## Executive recommendation
@@ -157,9 +161,45 @@ An HTMX-first public site with isolated React applications for the portal and ad
 
 A complete React removal is technically possible, but its cost and risk are not currently justified by the likely user-facing improvement.
 
+## Implementation record — 26 September 2026
+
+The recommended first phase has now been implemented.
+
+### Resulting architecture
+
+- Public pages remain complete server-rendered Vinext/React Server Component documents for direct links, search engines, metadata, and social previews.
+- Public navigation and form submissions use HTMX 2.0.10, served locally from `/public/vendor` rather than a third-party CDN.
+- The mobile menu, notification dialog, trail slideshow, service counters, stage filtering, focus management, and route-transition coordination use one framework-independent browser runtime in `/public/public-runtime.js`.
+- The Host Portal and Admin Panel remain React applications. The public runtime and HTMX are not loaded on `/portal` or `/admin`.
+- Public HTMX navigation swaps only `<main>`. The shared header, trail navigation, notification dialog, and footer remain stable around route changes.
+- Route changes synchronize the document title, description, robots directive, canonical URL, Open Graph tags, and Twitter metadata from the complete server response.
+- HTMX history caching is disabled so authenticated or stale page fragments are not persisted in session storage. Back and forward navigation use the live public page response, with a full-page reload as the safe fallback if restoration fails.
+- Development component updates force a clean reload after an HTMX-owned swap, preventing React Fast Refresh from reconciling stale public DOM.
+
+### Ownership boundary caveat
+
+Vinext's current App Router hydrates the root tree, even when the authored public components are server components. A tiny `PublicHydrationBoundary` client component therefore acts only as a readiness signal: HTMX is loaded after the initial framework hydration has completed, and an early history interceptor ensures that HTMX history entries do not also reach the React router.
+
+There is now no authored stateful React UI on the public site, and React does not update the HTMX-swapped `<main>` during normal public navigation. However, this is a pragmatic ownership boundary rather than literal removal of every React hydration instruction from the public bundle. Achieving that stricter definition would require replacing or separating the Vinext/App Router renderer, which remains outside the recommended scope.
+
+### Verification completed
+
+- ESLint, production compilation, browser-runtime syntax validation, and whitespace validation pass.
+- The generated sitemap was crawled locally: all 128 public URLs, including all 123 Cyprus E4 stage pages, returned successful complete documents with a `<main>`, title, and canonical URL.
+- Privacy, partner policy, future-trail previews, Portal, Admin, robots, public JavaScript, HTMX, and image assets were checked directly. The missing-stage path correctly returns 404, and non-indexable routes retain their robots directive.
+- Desktop browser tests covered HTMX route changes, rapid trail switching, direct links, back/forward restoration, metadata synchronization, active trail state, automatic/manual slideshow behavior, exact counter completion, stage filtering, hash navigation, dialog focus/reset behavior, and both public forms.
+- Mobile browser tests covered the compact navigation, section links, empty text selection, notification dialog focus restoration, trail-bar horizontal scrolling, future-trail switching, and viewport overflow.
+- Portal sign-in/create-account tabs and the Admin authentication gate were checked independently. Neither route loads the public runtime or HTMX.
+- The tested browser sessions completed without unhandled console errors.
+
+### Deferred work
+
+- Run a production smoke test after the next private deployment, because this change has intentionally not been published yet.
+- If a polished no-JavaScript form journey becomes a requirement, return a full confirmation page for ordinary form posts instead of the existing JSON API response.
+- Reassess a portal rewrite only after its authentication, authorization, real-time data, and workflow requirements are stable.
+
 ## References
 
 - [HTMX documentation](https://htmx.org/docs/)
 - [Firebase: Manage session cookies](https://firebase.google.com/docs/auth/admin/manage-cookies)
 - [Firebase: Get data with Cloud Firestore](https://firebase.google.com/docs/firestore/query-data/get-data)
-

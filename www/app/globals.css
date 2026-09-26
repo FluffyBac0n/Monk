@@ -299,7 +299,7 @@ h3 { color: var(--navy); font-size: 23px; letter-spacing: -.018em; line-height: 
 .submit-loading { display: none; }
 .interest-form.htmx-request .submit-idle { display: none; }
 .interest-form.htmx-request .submit-loading { display: inline; }
-.interest-form[data-submitted='true'] > :not(.form-feedback) { display: none; }
+.interest-form:has(.interest-success) > :not(.form-feedback) { display: none; }
 .beta-privacy { color: var(--muted); font-size: 10px; line-height: 1.5; margin: -3px 0 0; text-align: center; }
 .beta-privacy a { color: var(--blue); text-decoration: underline; text-underline-offset: 2px; }
 .honeypot { height: 0; left: -10000px; overflow: hidden; position: absolute; width: 1px; }
@@ -397,6 +397,9 @@ body:has(main[data-trail-guide='cyprus-e4']) .trail-switcher-item[data-trail-id=
 .trail-slideshow-dots button:hover, .trail-slideshow-dots button:focus-visible { background: rgba(255,255,255,.14); }
 .trail-slideshow-dots button span { background: rgba(255,255,255,.48); border-radius: 999px; height: 5px; transition: background-color .25s ease, transform .25s ease, width .25s ease; width: 5px; }
 .trail-slideshow-dots button[aria-current='true'] span { background: var(--gold); transform: scale(1.05); width: 14px; }
+.trail-slideshow-toggle { align-items: center; background: transparent; border: 0; border-left: 1px solid rgba(255,255,255,.18); color: rgba(255,255,255,.82); display: flex; font-size: 11px; font-weight: 900; height: 24px; justify-content: center; margin-left: 2px; padding: 0 7px 0 8px; width: 27px; }
+.trail-slideshow-toggle:hover, .trail-slideshow-toggle:focus-visible { color: var(--gold); }
+.trail-slideshow-toggle[aria-pressed='true'] { color: var(--gold); }
 .guide-stat-ribbon { backdrop-filter: blur(14px); background: rgba(255,255,255,.94); border: 1px solid rgba(48,62,78,.12); border-radius: 14px; box-shadow: 0 18px 44px rgba(38,53,68,.12); display: grid; grid-template-columns: repeat(4, 1fr); margin: -38px 0 0 auto; max-width: 900px; padding: 0; position: relative; z-index: 3; }
 .guide-stat-ribbon div { border-left: 1px solid var(--line); padding: 19px 22px; }
 .guide-stat-ribbon div:first-child { border-left: 0; }

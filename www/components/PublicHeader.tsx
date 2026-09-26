@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import MobileMenu from '@/app/mobile-menu';
-import { HtmxRuntime } from '@/components/HtmxRuntime';
-import { NotifyButton } from '@/components/NotifyDialog';
+import { NotifyButton, NotifyDialog } from '@/components/NotifyDialog';
+import { PublicHydrationBoundary } from '@/components/PublicHydrationBoundary';
 import { TrailGuideSwitcher } from '@/components/TrailGuideSwitcher';
 import { disableHtmxNavigation, publicHtmxNavigation } from '@/lib/htmx';
 
@@ -38,12 +38,12 @@ function LanguageControl() {
   );
 }
 
-export function PublicHeader() {
+export function PublicHeader({ activeTrail }: { activeTrail?: string }) {
   // Public navigation persists while HTMX swaps the page content.
   return (
     <>
-      <header className="site-header" {...publicHtmxNavigation}>
-        <HtmxRuntime />
+      <PublicHydrationBoundary />
+      <header className="site-header" data-runtime-owner="public" {...publicHtmxNavigation}>
         <div className="header-inner">
           <a className="brand" href="/" aria-label="EuroTrex home">
             <Image src="/eurotrex-wordmark.png" alt="EuroTrex" width={2172} height={724} priority />
@@ -61,7 +61,8 @@ export function PublicHeader() {
           <MobileMenu />
         </div>
       </header>
-      <TrailGuideSwitcher />
+      <TrailGuideSwitcher activeTrail={activeTrail} />
+      <NotifyDialog />
     </>
   );
 }

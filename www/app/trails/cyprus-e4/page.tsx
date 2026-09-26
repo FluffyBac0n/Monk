@@ -34,7 +34,7 @@ export default function CyprusE4Overview() {
   return (
     <>
       <a className="skip-link" href="#main-content">Skip to content</a>
-      <PublicHeader />
+      <PublicHeader activeTrail="cyprus-e4" />
       <PublicContent>
       <main id="main-content" className="content-page" data-trail-guide="cyprus-e4" tabIndex={-1} {...publicHtmxNavigation}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />

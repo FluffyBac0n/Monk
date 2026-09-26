@@ -1,29 +1,17 @@
-'use client';
-
-import { useRef } from 'react';
 import { NotifyButton } from '@/components/NotifyDialog';
 import { disableHtmxNavigation } from '@/lib/htmx';
 
 export default function MobileMenu() {
-  const menuRef = useRef<HTMLDetailsElement>(null);
-
-  function closeMenu() {
-    if (menuRef.current) {
-      menuRef.current.open = false;
-      menuRef.current.querySelectorAll('details').forEach((details) => { details.open = false; });
-    }
-  }
-
   return (
-    <details className="mobile-menu" ref={menuRef} suppressHydrationWarning>
+    <details className="mobile-menu" data-mobile-menu>
       <summary>Menu</summary>
       <nav aria-label="Mobile navigation">
-        <a href="/#hikers" onClick={closeMenu}>For hikers</a>
-        <a href="/trails/cyprus-e4" onClick={closeMenu}>Explore trails</a>
-        <a href="/#hosts" onClick={closeMenu}>For hosts</a>
-        <a href="/get-involved" onClick={closeMenu}>Get involved</a>
-        <a className="mobile-host" href="/portal?mode=signin" onClick={closeMenu} {...disableHtmxNavigation}>Host Portal</a>
-        <NotifyButton className="mobile-primary" onOpen={closeMenu}>Notify me</NotifyButton>
+        <a href="/#hikers">For hikers</a>
+        <a href="/trails/cyprus-e4">Explore trails</a>
+        <a href="/#hosts">For hosts</a>
+        <a href="/get-involved">Get involved</a>
+        <a className="mobile-host" href="/portal?mode=signin" {...disableHtmxNavigation}>Host Portal</a>
+        <NotifyButton className="mobile-primary">Notify me</NotifyButton>
       </nav>
     </details>
   );

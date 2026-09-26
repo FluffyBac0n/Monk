@@ -10,7 +10,7 @@ export function StageDirectory({ stages }: { stages: CyprusE4Stage[] }) {
       <p className="directory-count" data-stage-count role="status">Showing {stages.length} of {stages.length} stage points</p>
       <ol className="stage-list" role="list">
         {stages.map((stage, index) => (
-          <li key={stage.id} data-stage-search={`${stage.sequence} ${stage.name}`.toLocaleLowerCase()}>
+          <li key={stage.id} data-stage-search={`${stage.sequence} ${stage.name}`.toLowerCase()}>
             <a href={`/trails/cyprus-e4/stages/${stage.id}`}>
               <span className="stage-order">{String(index + 1).padStart(3, '0')}</span>
               <span className="stage-name"><strong>{stage.name}</strong><small>{stage.accumulatedDistanceKm?.toFixed(1) ?? '—'} km from Pafos</small></span>

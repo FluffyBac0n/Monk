@@ -68,6 +68,13 @@ export function CyprusTrailSlideshow() {
             ><span /></button>
           ))}
         </div>
+        <button
+          type="button"
+          className="trail-slideshow-toggle"
+          aria-label="Pause slideshow"
+          aria-pressed="false"
+          data-trail-slide-toggle
+        ><span aria-hidden="true">Ⅱ</span></button>
       </div>
       <span className="sr-only" aria-atomic="true" aria-live="polite" data-trail-slide-status />
     </figure>

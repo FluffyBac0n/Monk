@@ -10,9 +10,8 @@ const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
 
 const { d1, r2 } = hostingConfig;
 
-// HTMX owns the public <main> after an in-page route change. A React Fast
-// Refresh can otherwise reconcile against markup that HTMX has already
-// replaced, so component-source edits use a clean development reload.
+// Vinext still hydrates the public server-component tree. After HTMX replaces
+// <main>, a component edit must reload instead of reconciling stale dev DOM.
 const htmxSafeRefresh: Plugin = {
   name: 'eurotrex-htmx-safe-refresh',
   handleHotUpdate({ file, server }) {
