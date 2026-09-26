@@ -1,5 +1,10 @@
 import { publicHtmxNavigation } from '@/lib/htmx';
 
+const trailSwitcherNavigation = {
+  ...publicHtmxNavigation,
+  'hx-swap': 'outerHTML',
+} as const;
+
 const trailGuides = [
   { id: 'cyprus-e4', label: 'Cyprus - E4', href: '/trails/cyprus-e4' },
   { id: 'crete-e4', label: 'Crete - E4', href: '/trails/crete-e4', status: 'Coming soon' },
@@ -8,7 +13,7 @@ const trailGuides = [
 
 export function TrailGuideSwitcher() {
   return (
-    <div className="trail-switcher-bar" {...publicHtmxNavigation}>
+    <div className="trail-switcher-bar" {...trailSwitcherNavigation}>
       <nav className="section-shell trail-switcher" aria-label="Explore trails">
         <ul className="trail-switcher-list" role="list">
           {trailGuides.map((trail) => (

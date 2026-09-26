@@ -15,7 +15,7 @@ export default function MobileMenu() {
   }
 
   return (
-    <details className="mobile-menu" ref={menuRef}>
+    <details className="mobile-menu" ref={menuRef} suppressHydrationWarning>
       <summary>Menu</summary>
       <nav aria-label="Mobile navigation">
         <a href="/#hikers" onClick={closeMenu}>For hikers</a>

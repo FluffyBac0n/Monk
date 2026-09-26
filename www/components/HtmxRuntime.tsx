@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 
 type HtmxDetail = {
   boosted?: boolean;
@@ -12,6 +12,10 @@ type HtmxDetail = {
     boosted?: boolean;
     elt?: Element;
   };
+};
+
+type HtmxHistoryState = {
+  htmx?: boolean;
 };
 
 const routeHeadSelectors = [
@@ -58,7 +62,7 @@ function filterStageDirectory(input: HTMLInputElement) {
   }
 }
 
-function setTrailSlide(slideshow: HTMLElement, requestedIndex: number) {
+function setTrailSlide(slideshow: HTMLElement, requestedIndex: number, announce = true) {
   const panels = Array.from(slideshow.querySelectorAll<HTMLElement>('[data-trail-slide-panel]'));
   if (!panels.length) return;
 
@@ -77,20 +81,120 @@ function setTrailSlide(slideshow: HTMLElement, requestedIndex: number) {
   });
 
   const status = slideshow.querySelector<HTMLElement>('[data-trail-slide-status]');
-  if (status) {
+  if (status && announce) {
     const label = panels[nextIndex].dataset.trailSlideLabel;
     status.textContent = `Image ${nextIndex + 1} of ${panels.length}${label ? `: ${label}` : ''}`;
   }
 }
 
+function isHtmxHistoryState(state: unknown): state is HtmxHistoryState & { htmx: true } {
+  return typeof state === 'object' && state !== null && (state as HtmxHistoryState).htmx === true;
+}
+
+function bridgeHtmxHistory() {
+  // Next.js wraps the History API so every external URL change also triggers an
+  // App Router render. HTMX already owns public-page navigation, so letting both
+  // routers handle the same entry causes a brief double render between trails.
+  const frameworkPushState = window.history.pushState;
+  const frameworkReplaceState = window.history.replaceState;
+
+  const pushState: History['pushState'] = (data, unused, url) => {
+    if (isHtmxHistoryState(data)) {
+      return History.prototype.pushState.call(window.history, data, unused, url);
+    }
+    return frameworkPushState.call(window.history, data, unused, url);
+  };
+
+  const replaceState: History['replaceState'] = (data, unused, url) => {
+    if (isHtmxHistoryState(data)) {
+      return History.prototype.replaceState.call(window.history, data, unused, url);
+    }
+    return frameworkReplaceState.call(window.history, data, unused, url);
+  };
+
+  window.history.pushState = pushState;
+  window.history.replaceState = replaceState;
+
+  return () => {
+    if (window.history.pushState === pushState) window.history.pushState = frameworkPushState;
+    if (window.history.replaceState === replaceState) window.history.replaceState = frameworkReplaceState;
+  };
+}
+
 export function HtmxRuntime() {
+  useLayoutEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (!isHtmxHistoryState(event.state)) return;
+      const htmxPopState = window.onpopstate;
+      if (!htmxPopState) return;
+
+      // Register before Next.js installs its passive listener. On HTMX history
+      // entries this lets HTMX restore <main> without a competing React render.
+      event.stopImmediatePropagation();
+      htmxPopState.call(window, event);
+    };
+
+    window.addEventListener('popstate', handlePopState, true);
+    return () => window.removeEventListener('popstate', handlePopState, true);
+  }, []);
+
   useEffect(() => {
     if (!document.querySelector('#public-history')) return;
 
     let disposed = false;
     let processNotifyDialog: EventListener | undefined;
+    let restoreHistoryBridge: (() => void) | undefined;
     const countFrames = new Map<HTMLElement, number>();
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const slideshowTimers = new Map<HTMLElement, number>();
+    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let reduceMotion = motionPreference.matches;
+    const slideshowDelay = 6000;
+
+    const stopTrailSlideshow = (slideshow: HTMLElement) => {
+      const timer = slideshowTimers.get(slideshow);
+      if (timer !== undefined) window.clearTimeout(timer);
+      slideshowTimers.delete(slideshow);
+    };
+
+    const scheduleTrailSlideshow = (slideshow: HTMLElement) => {
+      stopTrailSlideshow(slideshow);
+      if (
+        reduceMotion
+        || document.hidden
+        || !slideshow.isConnected
+        || slideshow.matches(':hover')
+        || slideshow.contains(document.activeElement)
+      ) return;
+
+      const timer = window.setTimeout(() => {
+        slideshowTimers.delete(slideshow);
+        if (!slideshow.isConnected) return;
+        if (
+          reduceMotion
+          || document.hidden
+          || slideshow.matches(':hover')
+          || slideshow.contains(document.activeElement)
+        ) {
+          scheduleTrailSlideshow(slideshow);
+          return;
+        }
+        const currentIndex = Number(slideshow.dataset.activeSlide || 0);
+        setTrailSlide(slideshow, currentIndex + 1, false);
+        scheduleTrailSlideshow(slideshow);
+      }, slideshowDelay);
+      slideshowTimers.set(slideshow, timer);
+    };
+
+    const initializeTrailSlideshows = (root: ParentNode = document) => {
+      slideshowTimers.forEach((_timer, slideshow) => {
+        if (!slideshow.isConnected) stopTrailSlideshow(slideshow);
+      });
+
+      root.querySelectorAll<HTMLElement>('[data-trail-slideshow]').forEach((slideshow) => {
+        slideshow.dataset.trailSlideshowReady = 'true';
+        if (!slideshowTimers.has(slideshow)) scheduleTrailSlideshow(slideshow);
+      });
+    };
 
     const animateCount = (element: HTMLElement) => {
       const target = Number(element.dataset.countUp);
@@ -148,7 +252,7 @@ export function HtmxRuntime() {
       });
     };
 
-    const revealActiveTrail = (animate = false) => {
+    const revealActiveTrail = () => {
       const active = document.querySelector<HTMLElement>('.trail-switcher-item.active');
       const scroller = active?.closest<HTMLElement>('.trail-switcher');
       if (!active || !scroller) return;
@@ -158,7 +262,7 @@ export function HtmxRuntime() {
       if (activeBounds.left >= scrollerBounds.left && activeBounds.right <= scrollerBounds.right) return;
 
       active.scrollIntoView({
-        behavior: animate && !reduceMotion ? 'smooth' : 'auto',
+        behavior: 'auto',
         block: 'nearest',
         inline: 'center',
       });
@@ -196,13 +300,14 @@ export function HtmxRuntime() {
 
     const handleAfterSwap = () => {
       initializeCountUps(document);
+      initializeTrailSlideshows(document);
       syncTrailSwitcher();
+      revealActiveTrail();
     };
 
     const handleAfterSettle = (event: Event) => {
       const detail = (event as CustomEvent<HtmxDetail>).detail;
       if (!(detail?.boosted || detail?.requestConfig?.boosted)) return;
-      revealActiveTrail(true);
 
       const anchor = window.location.hash.slice(1);
       if (anchor) {
@@ -218,6 +323,7 @@ export function HtmxRuntime() {
       const detail = (event as CustomEvent<HtmxDetail>).detail;
       if (detail?.serverResponse) syncRouteHead(detail.serverResponse);
       initializeCountUps(document);
+      initializeTrailSlideshows(document);
       syncTrailSwitcher();
       revealActiveTrail();
       document.querySelector<HTMLElement>('main')?.focus({ preventScroll: true });
@@ -233,16 +339,59 @@ export function HtmxRuntime() {
     const handleClick = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      const control = target.closest<HTMLButtonElement>('[data-trail-slide-go], [data-trail-slide-next], [data-trail-slide-previous]');
+      const control = target.closest<HTMLButtonElement>('[data-trail-slide-go]');
       const slideshow = control?.closest<HTMLElement>('[data-trail-slideshow]');
       if (!control || !slideshow) return;
 
-      const currentIndex = Number(slideshow.dataset.activeSlide || 0);
-      if (control.dataset.trailSlideGo !== undefined) {
-        setTrailSlide(slideshow, Number(control.dataset.trailSlideGo));
-      } else {
-        setTrailSlide(slideshow, currentIndex + (control.hasAttribute('data-trail-slide-next') ? 1 : -1));
+      setTrailSlide(slideshow, Number(control.dataset.trailSlideGo));
+      scheduleTrailSlideshow(slideshow);
+    };
+
+    const handlePointerOver = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const slideshow = target.closest<HTMLElement>('[data-trail-slideshow]');
+      if (!slideshow || (event.relatedTarget instanceof Node && slideshow.contains(event.relatedTarget))) return;
+      stopTrailSlideshow(slideshow);
+    };
+
+    const handlePointerOut = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const slideshow = target.closest<HTMLElement>('[data-trail-slideshow]');
+      if (!slideshow || (event.relatedTarget instanceof Node && slideshow.contains(event.relatedTarget))) return;
+      scheduleTrailSlideshow(slideshow);
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      const target = event.target;
+      if (target instanceof Element) {
+        const slideshow = target.closest<HTMLElement>('[data-trail-slideshow]');
+        if (slideshow) stopTrailSlideshow(slideshow);
       }
+    };
+
+    const handleFocusOut = (event: FocusEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const slideshow = target.closest<HTMLElement>('[data-trail-slideshow]');
+      if (!slideshow || (event.relatedTarget instanceof Node && slideshow.contains(event.relatedTarget))) return;
+      scheduleTrailSlideshow(slideshow);
+    };
+
+    const handleVisibilityChange = () => {
+      document.querySelectorAll<HTMLElement>('[data-trail-slideshow-ready]').forEach((slideshow) => {
+        if (document.hidden) stopTrailSlideshow(slideshow);
+        else scheduleTrailSlideshow(slideshow);
+      });
+    };
+
+    const handleMotionPreferenceChange = (event: MediaQueryListEvent) => {
+      reduceMotion = event.matches;
+      document.querySelectorAll<HTMLElement>('[data-trail-slideshow-ready]').forEach((slideshow) => {
+        if (reduceMotion) stopTrailSlideshow(slideshow);
+        else scheduleTrailSlideshow(slideshow);
+      });
     };
 
     document.body.addEventListener('htmx:beforeSwap', handleBeforeSwap);
@@ -252,7 +401,14 @@ export function HtmxRuntime() {
     document.body.addEventListener('htmx:historyRestore', handleHistoryRestore);
     document.addEventListener('input', handleInput);
     document.addEventListener('click', handleClick);
+    document.addEventListener('pointerover', handlePointerOver);
+    document.addEventListener('pointerout', handlePointerOut);
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    motionPreference.addEventListener('change', handleMotionPreferenceChange);
     initializeCountUps(document);
+    initializeTrailSlideshows(document);
     syncTrailSwitcher();
     revealActiveTrail();
 
@@ -264,6 +420,7 @@ export function HtmxRuntime() {
         // History still works through live HTMX fetches when storage is unavailable.
       }
       htmx.config.historyCacheSize = 0;
+      restoreHistoryBridge = bridgeHtmxHistory();
       htmx.process(document.body);
 
       processNotifyDialog = () => {
@@ -283,9 +440,17 @@ export function HtmxRuntime() {
       document.body.removeEventListener('htmx:historyRestore', handleHistoryRestore);
       document.removeEventListener('input', handleInput);
       document.removeEventListener('click', handleClick);
+      document.removeEventListener('pointerover', handlePointerOver);
+      document.removeEventListener('pointerout', handlePointerOut);
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      motionPreference.removeEventListener('change', handleMotionPreferenceChange);
       countObserver?.disconnect();
       countFrames.forEach((frame) => window.cancelAnimationFrame(frame));
+      slideshowTimers.forEach((timer) => window.clearTimeout(timer));
       if (processNotifyDialog) document.removeEventListener('eurotrex:notify-form-ready', processNotifyDialog);
+      restoreHistoryBridge?.();
     };
   }, []);
 

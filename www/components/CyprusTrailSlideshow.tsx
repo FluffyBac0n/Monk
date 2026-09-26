@@ -19,15 +19,13 @@ const slides = [
     label: 'Hidden Beach',
     title: 'Cliff paths and quiet coves.',
   },
+  {
+    src: '/cyprus-e4-sunset.webp',
+    alt: 'The sun setting over the Mediterranean beside the pale coastal cliffs of Cyprus',
+    label: 'Zapalo sunset',
+    title: 'The coast, washed in gold.',
+  },
 ] as const;
-
-function ArrowIcon({ direction }: { direction: 'previous' | 'next' }) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d={direction === 'previous' ? 'm12.5 4.5-5.5 5.5 5.5 5.5' : 'm7.5 4.5 5.5 5.5-5.5 5.5'} />
-    </svg>
-  );
-}
 
 export function CyprusTrailSlideshow() {
   return (
@@ -59,7 +57,6 @@ export function CyprusTrailSlideshow() {
       <span className="trail-guide-cover-mark">E4 · Cyprus</span>
 
       <div className="trail-slideshow-controls" aria-label="Choose landscape" role="group">
-        <button type="button" aria-label="Previous image" data-trail-slide-previous><ArrowIcon direction="previous" /></button>
         <div className="trail-slideshow-dots">
           {slides.map((slide, index) => (
             <button
@@ -71,9 +68,8 @@ export function CyprusTrailSlideshow() {
             ><span /></button>
           ))}
         </div>
-        <button type="button" aria-label="Next image" data-trail-slide-next><ArrowIcon direction="next" /></button>
       </div>
-      <span className="sr-only" aria-live="polite" data-trail-slide-status>Image 1 of {slides.length}: {slides[0].label} — {slides[0].title}</span>
+      <span className="sr-only" aria-atomic="true" aria-live="polite" data-trail-slide-status />
     </figure>
   );
 }
