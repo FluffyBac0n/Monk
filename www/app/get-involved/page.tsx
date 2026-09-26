@@ -39,7 +39,7 @@ export default async function GetInvolved({ searchParams }: { searchParams: Prom
         <header className="get-involved-hero">
           <div className="section-shell get-involved-hero-grid">
             <div className="get-involved-hero-copy">
-              <p className="eyebrow">Get involved</p>
+              <p className="eyebrow">Join us</p>
               <h1>Make the trail more useful.</h1>
               <p>Local knowledge, careful field notes and thoughtful collaborations help EuroTrex turn a line on a map into a dependable journey.</p>
             </div>

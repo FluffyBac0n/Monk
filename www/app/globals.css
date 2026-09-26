@@ -418,15 +418,17 @@ body:has(main[data-trail-guide='cyprus-e4']) .trail-switcher-item[data-trail-id=
 .guide-landscape-list strong, .guide-landscape-list small { display: block; }
 .guide-landscape-list strong { color: var(--navy); font-size: 14px; }
 .guide-landscape-list small { color: var(--muted); line-height: 1.45; margin-top: 3px; }
-.guide-services { background: var(--sand); border-block: 1px solid var(--line); padding-block: 76px; }
-.guide-services-heading { align-items: end; display: grid; gap: 55px; grid-template-columns: minmax(0, 1fr) 390px; margin-bottom: 34px; }
-.guide-services-heading > p { color: var(--muted); font-size: 13px; line-height: 1.65; margin: 0; }
-.guide-service-list { border-block: 1px solid var(--line); display: grid; grid-template-columns: repeat(5, 1fr); margin: 0; }
-.guide-service-list div { border-left: 1px solid var(--line); border-top: 1px solid var(--line); display: flex; flex-direction: column; padding: 18px 20px; }
-.guide-service-list div:nth-child(-n+5) { border-top: 0; }
-.guide-service-list div:nth-child(5n+1) { border-left: 0; }
-.guide-service-list dd { color: var(--blue); font-size: clamp(23px, 2.8vw, 34px); font-variant-numeric: tabular-nums; font-weight: 900; letter-spacing: -.03em; margin: 0; order: -1; }
-.guide-service-list dt { color: var(--navy); font-size: 10px; font-weight: 800; margin-top: 5px; text-transform: capitalize; }
+.guide-map-section { background: var(--sand); }
+.guide-map-inner { align-items: center; display: grid; gap: clamp(50px, 8vw, 105px); grid-template-columns: minmax(340px, .9fr) minmax(0, 1.1fr); padding-block: 92px; }
+.guide-map-copy > p:not(.eyebrow) { color: var(--muted); line-height: 1.72; margin: 22px 0 0; }
+.guide-map-copy .guide-inline-link { margin-top: 25px; }
+.guide-map-frame { background: white; border: 1px solid rgba(48,62,78,.14); border-radius: 18px 18px 18px 76px; box-shadow: 0 24px 54px rgba(38,53,68,.13); margin: 0; overflow: hidden; }
+.guide-map-frame > img { display: block; height: auto; width: 100%; }
+.guide-map-caption { align-items: center; background: rgba(255,255,255,.96); color: var(--muted); display: grid; font-size: 11px; gap: 12px 24px; grid-template-columns: 1fr auto auto; padding: 15px 20px; }
+.guide-map-caption > span:nth-child(2) { color: var(--navy); font-weight: 800; }
+.guide-map-caption small { color: var(--muted); font-size: 9px; }
+.guide-map-legend { align-items: center; color: var(--navy); display: flex; font-weight: 850; gap: 10px; }
+.guide-map-legend i { background: var(--blue); border: 2px solid white; border-radius: 999px; box-shadow: 0 0 0 1px rgba(48,62,78,.16); display: block; height: 7px; width: 31px; }
 .guide-journey { padding-block: 88px 96px; }
 .guide-section-heading { align-items: end; display: grid; gap: 40px; grid-template-columns: minmax(0, 1fr) auto; margin-bottom: 44px; }
 .guide-waypoint-list { display: grid; grid-template-columns: repeat(5, 1fr); list-style: none; margin: 0; padding: 0; position: relative; }
@@ -787,11 +789,7 @@ td small { color: var(--muted); margin-top: 5px; }
   .guide-stat-ribbon { margin: -32px auto 0; max-width: calc(100% - 40px); }
   .guide-landscape { gap: 44px; grid-template-columns: 1fr; }
   .guide-coast-image { aspect-ratio: 16 / 9; }
-  .guide-services-heading { align-items: start; gap: 20px; grid-template-columns: 1fr; }
-  .guide-service-list { grid-template-columns: repeat(3, 1fr); }
-  .guide-service-list div:nth-child(n) { border-left: 1px solid var(--line); border-top: 1px solid var(--line); }
-  .guide-service-list div:nth-child(-n+3) { border-top: 0; }
-  .guide-service-list div:nth-child(3n+1) { border-left: 0; }
+  .guide-map-inner { gap: 44px; grid-template-columns: 1fr; }
   .guide-essentials { grid-template-columns: 1fr; }
   .stage-detail-grid { gap: 30px; grid-template-columns: 1fr; }
   .stage-aside { position: static; }
@@ -897,11 +895,10 @@ td small { color: var(--muted); margin-top: 5px; }
   .guide-stat-ribbon div:nth-child(odd) { border-left: 0; }
   .guide-landscape { padding-block: 60px; }
   .guide-coast-image { aspect-ratio: 4 / 3; border-radius: 16px 16px 52px 16px; }
-  .guide-services { padding-block: 58px; }
-  .guide-service-list { grid-template-columns: 1fr 1fr; }
-  .guide-service-list div:nth-child(n) { border-left: 1px solid var(--line); border-top: 1px solid var(--line); }
-  .guide-service-list div:nth-child(-n+2) { border-top: 0; }
-  .guide-service-list div:nth-child(odd) { border-left: 0; }
+  .guide-map-inner { padding-block: 60px; }
+  .guide-map-frame { border-radius: 16px 16px 16px 52px; }
+  .guide-map-caption { grid-template-columns: 1fr auto; padding: 14px 16px 17px; }
+  .guide-map-caption small { grid-column: 1 / -1; }
   .guide-journey { padding-block: 62px 70px; }
   .guide-section-heading { align-items: start; gap: 20px; grid-template-columns: 1fr; margin-bottom: 34px; }
   .guide-waypoint-list { display: block; padding-left: 38px; }
@@ -978,6 +975,8 @@ td small { color: var(--muted); margin-top: 5px; }
   .host-facts div:first-child { border-top: 0; }
   .guide-stat-ribbon div { padding: 15px 16px; }
   .guide-stat-ribbon dd { font-size: 19px; }
+  .guide-map-caption { align-items: start; grid-template-columns: 1fr; }
+  .guide-map-caption small { grid-column: auto; }
   .partnership-principles dl { grid-template-columns: 1fr; }
   .stage-list a { gap: 10px; grid-template-columns: 42px 1fr; }
   .stage-distance { grid-column: 2; }

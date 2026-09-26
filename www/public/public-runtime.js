@@ -17,7 +17,6 @@ function startPublicRuntime(htmx) {
     'meta[name^="twitter:"]',
     'link[rel="canonical"]',
   ];
-  const countFrames = new Map();
   const slideshowTimers = new Map();
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
   const slideshowDelay = 6000;
@@ -26,7 +25,6 @@ function startPublicRuntime(htmx) {
   let reduceMotion = motionPreference.matches;
   let bridgedPushState;
   let bridgedReplaceState;
-  let countObserver;
   let dialogOpener;
 
   function isHtmxHistoryState(state) {
@@ -154,7 +152,6 @@ function startPublicRuntime(htmx) {
       || slideshow.dataset.userPaused === 'true'
       || document.hidden
       || !slideshow.isConnected
-      || slideshow.matches(':hover')
       || slideshow.contains(document.activeElement)
     ) return;
 
@@ -166,7 +163,6 @@ function startPublicRuntime(htmx) {
         reduceMotion
         || slideshow.dataset.userPaused === 'true'
         || document.hidden
-        || slideshow.matches(':hover')
         || slideshow.contains(document.activeElement)
       ) {
         scheduleTrailSlideshow(slideshow);
@@ -205,66 +201,6 @@ function startPublicRuntime(htmx) {
     toggle.setAttribute('aria-label', paused ? 'Play slideshow' : 'Pause slideshow');
     const icon = toggle.querySelector('[aria-hidden="true"]');
     if (icon) icon.textContent = paused ? '▶' : 'Ⅱ';
-  }
-
-  function animateCount(element) {
-    const target = Number(element.dataset.countUp);
-    if (!Number.isFinite(target)) return;
-
-    const startedAt = performance.now();
-    const duration = 1050;
-
-    function step(now) {
-      if (!element.isConnected || reduceMotion) {
-        element.textContent = target.toLocaleString('en-GB');
-        countFrames.delete(element);
-        return;
-      }
-
-      const progress = Math.min((now - startedAt) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      element.textContent = Math.round(target * eased).toLocaleString('en-GB');
-
-      if (progress < 1) {
-        countFrames.set(element, window.requestAnimationFrame(step));
-      } else {
-        countFrames.delete(element);
-      }
-    }
-
-    countFrames.set(element, window.requestAnimationFrame(step));
-  }
-
-  function getCountObserver() {
-    if (reduceMotion || !('IntersectionObserver' in window)) return null;
-    if (countObserver) return countObserver;
-
-    countObserver = new IntersectionObserver((entries, observer) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        observer.unobserve(entry.target);
-        animateCount(entry.target);
-      }
-    }, { threshold: 0.35 });
-
-    return countObserver;
-  }
-
-  function initializeCountUps(root) {
-    root.querySelectorAll('[data-count-up]:not([data-count-up-ready])').forEach((element) => {
-      element.dataset.countUpReady = 'true';
-      const target = Number(element.dataset.countUp);
-      if (!Number.isFinite(target)) return;
-
-      const observer = getCountObserver();
-      if (!observer) {
-        element.textContent = target.toLocaleString('en-GB');
-        return;
-      }
-
-      element.textContent = '0';
-      observer.observe(element);
-    });
   }
 
   function syncTrailSwitcher() {
@@ -372,7 +308,6 @@ function startPublicRuntime(htmx) {
       syncRouteHead(detail.xhr.responseText);
     }
 
-    initializeCountUps(document);
     initializeTrailSlideshows(document);
     syncTrailSwitcher();
     revealActiveTrail();
@@ -413,7 +348,6 @@ function startPublicRuntime(htmx) {
 
   function handleHistoryRestore(event) {
     if (event.detail?.serverResponse) syncRouteHead(event.detail.serverResponse);
-    initializeCountUps(document);
     initializeTrailSlideshows(document);
     syncTrailSwitcher();
     revealActiveTrail();
@@ -473,22 +407,6 @@ function startPublicRuntime(htmx) {
     scheduleTrailSlideshow(slideshow);
   }
 
-  function handlePointerOver(event) {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
-    const slideshow = target.closest('[data-trail-slideshow]');
-    if (!slideshow || (event.relatedTarget instanceof Node && slideshow.contains(event.relatedTarget))) return;
-    stopTrailSlideshow(slideshow);
-  }
-
-  function handlePointerOut(event) {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
-    const slideshow = target.closest('[data-trail-slideshow]');
-    if (!slideshow || (event.relatedTarget instanceof Node && slideshow.contains(event.relatedTarget))) return;
-    scheduleTrailSlideshow(slideshow);
-  }
-
   function handleFocusIn(event) {
     const target = event.target;
     if (!(target instanceof Element)) return;
@@ -513,21 +431,6 @@ function startPublicRuntime(htmx) {
 
   function handleMotionPreferenceChange(event) {
     reduceMotion = event.matches;
-
-    if (reduceMotion) {
-      countObserver?.disconnect();
-      countObserver = undefined;
-      countFrames.forEach((frame, element) => {
-        window.cancelAnimationFrame(frame);
-        const target = Number(element.dataset.countUp);
-        if (Number.isFinite(target)) element.textContent = target.toLocaleString('en-GB');
-      });
-      countFrames.clear();
-      document.querySelectorAll('[data-count-up]').forEach((element) => {
-        const target = Number(element.dataset.countUp);
-        if (Number.isFinite(target)) element.textContent = target.toLocaleString('en-GB');
-      });
-    }
 
     document.querySelectorAll('[data-trail-slideshow-ready]').forEach((slideshow) => {
       syncSlideshowToggle(slideshow);
@@ -564,8 +467,6 @@ function startPublicRuntime(htmx) {
   document.addEventListener('click', prepareForPotentialNavigation, true);
   document.addEventListener('input', handleInput);
   document.addEventListener('click', handleDocumentClick);
-  document.addEventListener('pointerover', handlePointerOver);
-  document.addEventListener('pointerout', handlePointerOut);
   document.addEventListener('focusin', handleFocusIn);
   document.addEventListener('focusout', handleFocusOut);
   document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -581,7 +482,6 @@ function startPublicRuntime(htmx) {
   const notifyDialog = document.querySelector('[data-notify-dialog]');
   notifyDialog?.addEventListener('close', handleDialogClose);
 
-  initializeCountUps(document);
   initializeTrailSlideshows(document);
   syncTrailSwitcher();
   revealActiveTrail();

@@ -14,15 +14,6 @@ export const metadata: Metadata = {
   alternates: { canonical: '/trails/cyprus-e4' },
 };
 
-const serviceCounts = Object.entries(cyprusE4Stages.reduce<Record<string, number>>((counts, stage) => {
-  Object.entries(stage.services).forEach(([service, available]) => { if (available) counts[service] = (counts[service] || 0) + 1; });
-  return counts;
-}, {}));
-
-const serviceLabels: Record<string, string> = {
-  lodging: 'stays', tent: 'camping', food: 'food', grocery: 'groceries', drinkableWater: 'drinking water', toilets: 'toilets', medical: 'medical help', pharmacy: 'pharmacies', atm: 'ATMs', busStop: 'bus stops',
-};
-
 export default function CyprusE4Overview() {
   const updated = new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(cyprusE4.dataUpdatedAt));
   const featuredStages = [cyprusE4Stages[0], cyprusE4Stages[30], cyprusE4Stages[61], cyprusE4Stages[92], cyprusE4Stages[122]];
@@ -83,15 +74,28 @@ export default function CyprusE4Overview() {
 
         <div className="trail-divider" aria-hidden="true" />
 
-        <section className="guide-services reveal">
-          <div className="section-shell guide-services-inner">
-            <div className="guide-services-heading">
-              <div><p className="eyebrow">Recorded along the route</p><h2>Plan around what is known.</h2></div>
-              <p>The current snapshot contains 23,107 route points. Service counts refer to named stage points, not guaranteed opening or availability across an entire section.</p>
-            </div>
-            <dl className="guide-service-list">
-              {serviceCounts.filter(([name]) => serviceLabels[name]).map(([name, count]) => <div key={name}><dt>{serviceLabels[name]}</dt><dd><span className="sr-only">{count}</span><span aria-hidden="true" data-count-up={count}>{count}</span></dd></div>)}
-            </dl>
+        <section className="guide-map-section reveal" aria-labelledby="cyprus-e4-map-title">
+          <div className="section-shell guide-map-inner">
+            <article className="guide-map-copy">
+              <p className="eyebrow">Cyprus E4 map</p>
+              <h2 id="cyprus-e4-map-title">One trail across the island.</h2>
+              <p>Trace the route from Pafos Airport through Akamas, the Troodos Mountains and the eastern coast to Larnaka Airport.</p>
+              <a className="guide-inline-link" href="/trails/cyprus-e4/stages">Explore {cyprusE4.stageCount} stage points <span aria-hidden="true">→</span></a>
+            </article>
+            <figure className="guide-map-frame">
+              <Image
+                src="/cyprus-e4-map.webp"
+                alt="Map of Cyprus showing the E4 trail from Pafos Airport through the Troodos Mountains to Larnaka Airport"
+                width={2560}
+                height={1440}
+                sizes="(max-width: 900px) calc(100vw - 40px), 56vw"
+              />
+              <figcaption className="guide-map-caption">
+                <span className="guide-map-legend"><i aria-hidden="true" />Cyprus E4 · Pafos to Larnaka</span>
+                <span>{cyprusE4.distanceKm.toFixed(0)} km · {cyprusE4.stageCount} stage points</span>
+                <small>Mapbox · © OpenStreetMap</small>
+              </figcaption>
+            </figure>
           </div>
         </section>
 

@@ -201,7 +201,7 @@ export default function Home() {
 
         <section className="involved-section" id="involved" aria-labelledby="involved-title">
           <div className="section-shell">
-            <div className="section-heading"><div><p className="eyebrow">Get involved</p><h2 id="involved-title">Help the path reach farther.</h2></div><p>EuroTrex grows through local knowledge, useful partnerships and people who care for the trail.</p></div>
+            <div className="section-heading"><div><p className="eyebrow">Join us</p><h2 id="involved-title">Help the path reach farther.</h2></div><p>EuroTrex grows through local knowledge, useful partnerships and people who care for the trail.</p></div>
             <div className="involved-grid involved-mosaic">
               {involvement.map(({ label, title, copy, action, href, image, alt, featured }) => (
                 <article className={`reveal${featured ? ' involved-featured' : ''}`} key={title}><a className="involved-card-link" href={href}><div className="involved-image"><Image src={image} alt={alt} fill sizes={featured ? '(max-width: 820px) 100vw, 58vw' : '(max-width: 820px) 100vw, 36vw'} /></div><div className="involved-card-shade" /><div className="involved-card-body"><p className="eyebrow light">{label}</p><h3>{title}</h3><p>{copy}</p><span className="editorial-link">{action}<i aria-hidden="true" /></span></div></a></article>
