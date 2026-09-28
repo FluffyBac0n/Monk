@@ -10,17 +10,18 @@ control the portal after the Site access gate; they do not make the Site public.
 - Firebase Web app: `1:893185124081:web:87409fbc7f8e15966a6b50`
 - Email/password Authentication: enabled
 - Authorized Site domain: `eurotrex.andreasmic332452.chatgpt.site`
-- Firestore rules: public read-only trail content; authenticated owner writes;
+- Firestore rules: public read-only trail content; verified, approved owner writes;
   administrator review/publishing; default deny
 
 ## Test privately as an accommodation owner
 
 1. Open `https://eurotrex.andreasmic332452.chatgpt.site/portal` while signed in
    to the Site owner account.
-2. Choose **Create owner account** and use a test email you control.
-3. Add an accommodation, choose a real trail stage, accept the policy, and
+2. Select **Create account**, enter a test company name and email, and create the password. Confirm that the portal asks you to verify the email.
+3. After verification, confirm the portal shows **Your host account is under review**. In Firebase Console, find `ownerProfiles/{UID}` and change `accessStatus` from `pending` to `active`.
+4. Sign in again, add an accommodation, choose a real trail stage, accept the policy, and
    submit it.
-4. Confirm the dashboard shows **Under review**. Sign out and back in to verify
+5. Confirm the dashboard shows **Awaiting review**. Sign out and back in to verify
    the listing remains attached to the same owner.
 
 ## Bootstrap your administrator account
@@ -56,8 +57,8 @@ Site visibility and it does not use or print a real owner's password.
 - Replace the placeholder partner terms/privacy content with approved copy.
 - Decide who receives owner-support and review notifications.
 - Create named administrator accounts and remove all test accounts/documents.
-- Test registration, password reset, submission, approval, update, rejection,
-  removal, and the mobile-app result on iOS and Android.
+- Test invitation, email verification, password reset, submission, approval, update, rejection,
+  account review, removal, and the mobile-app result on iOS and Android.
 - Add the final App Store and Google Play URLs.
 - Confirm analytics, consent, accessibility, SEO metadata, and support contact.
 - Back up Firestore and document the incident/rollback procedure.

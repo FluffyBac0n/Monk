@@ -10,7 +10,7 @@ export default function MobileMenu() {
         <a href="/#hosts">For hosts</a>
         <a href="/trails/cyprus-e4">Explore trails</a>
         <a href="/get-involved">Join us</a>
-        <a className="mobile-host" href="/portal?mode=signin" {...disableHtmxNavigation}>Host Portal</a>
+        <a className="mobile-host" href="/portal" {...disableHtmxNavigation}>Host Portal</a>
         <NotifyButton className="mobile-primary">Notify me</NotifyButton>
       </nav>
     </details>

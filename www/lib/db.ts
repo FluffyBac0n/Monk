@@ -2,6 +2,8 @@ import { env } from 'cloudflare:workers';
 import {
   betaEmailIndex,
   interestCreatedAtIndex,
+  interestRateLimitExpiryIndex,
+  interestRateLimitsTable,
   interestSubmissionsTable,
 } from '@/db/schema';
 
@@ -21,6 +23,8 @@ export async function ensureInterestSchema() {
         db.prepare(interestSubmissionsTable),
         db.prepare(betaEmailIndex),
         db.prepare(interestCreatedAtIndex),
+        db.prepare(interestRateLimitsTable),
+        db.prepare(interestRateLimitExpiryIndex),
       ])
       .then(() => undefined)
       .catch((error) => {

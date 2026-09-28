@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   applicationName: 'EuroTrex',
   keywords: ['Cyprus E4', 'E4 trail app', 'Cyprus hiking', 'offline hiking maps', 'long-distance trails Europe', 'EuroTrex'],
   alternates: { canonical: '/' },
-  icons: { icon: '/eurotrex-app-icon.png', apple: '/eurotrex-app-icon.png' },
+  icons: { icon: '/favicon-48.png', apple: '/apple-touch-icon.png' },
   openGraph: {
     type: 'website',
     locale: 'en_CY',
@@ -37,20 +37,26 @@ export const metadata: Metadata = {
     siteName: 'EuroTrex',
     title: 'EuroTrex — Cyprus E4 trail app and route planner',
     description: 'Offline route guidance, flexible route planning and trail-side stays for the Cyprus E4.',
-    images: [{ url: '/og.png', width: 1672, height: 941, alt: 'EuroTrex guide to the Cyprus E4 trail' }],
+    images: [{ url: '/og.jpg', width: 1200, height: 675, alt: 'EuroTrex guide to the Cyprus E4 trail' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'EuroTrex — Cyprus E4 trail app',
     description: 'Plan and navigate the Cyprus E4 with offline guidance, flexible route planning and practical stays.',
-    images: ['/og.png'],
+    images: ['/og.jpg'],
   },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <head><script dangerouslySetInnerHTML={{ __html: publicRuntimeBootstrap }} /></head>
+      <head>
+        <meta
+          name="htmx-config"
+          content={JSON.stringify({ allowEval: false, allowScriptTags: false, includeIndicatorStyles: false })}
+        />
+        <script dangerouslySetInnerHTML={{ __html: publicRuntimeBootstrap }} />
+      </head>
       <body>{children}</body>
     </html>
   );

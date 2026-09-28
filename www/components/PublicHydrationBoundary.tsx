@@ -8,5 +8,5 @@ export function PublicHydrationBoundary() {
     document.dispatchEvent(new Event('eurotrex:public-react-hydrated'));
   }, []);
 
-  return <span data-public-hydration-boundary hidden />;
+  return null;
 }

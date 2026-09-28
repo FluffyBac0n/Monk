@@ -6,6 +6,7 @@ import {
   deleteAccommodationDraft,
   listStages,
   listTrails,
+  normalizeHttpUrl,
   saveAccommodationDraft,
   saveSubmission,
 } from '@/lib/accommodations';
@@ -42,7 +43,7 @@ function errorMessage(caught: unknown, fallback: string) {
 function validWebUrl(value: string) {
   try {
     const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:';
+    return (url.protocol === 'http:' || url.protocol === 'https:') && !url.username && !url.password;
   } catch {
     return false;
   }
@@ -88,7 +89,7 @@ function MobileAccommodationPreview({ form, stageName }: { form: AccommodationDr
   return (
     <section className="mobile-preview" aria-labelledby="mobile-preview-title">
       <div className="mobile-preview-heading">
-        <div><p className="eyebrow dark">MOBILE APP PREVIEW</p><h3 id="mobile-preview-title">How hikers will see it.</h3></div>
+        <div><p className="eyebrow">MOBILE APP PREVIEW</p><h3 id="mobile-preview-title">How hikers will see it.</h3></div>
         <span>Preview only</span>
       </div>
       <div className="mobile-preview-canvas">
@@ -199,7 +200,10 @@ export function AccommodationWizard({
     const missing = requirements[targetStep].find(([key]) => String(form[key]).trim() === '');
     if (missing) { setError(`${missing[1]} is required before continuing.`); focusField(missing[2]); return false; }
     if (targetStep === 2 && Number(form.distanceFromTrailKm) < 0) { setError('Distance from the trail cannot be negative.'); focusField('accommodation-distance'); return false; }
+    if (targetStep === 2 && Number(form.distanceFromTrailKm) > 1000) { setError('Distance from the trail must be 1,000 km or less.'); focusField('accommodation-distance'); return false; }
     if (targetStep === 2 && Boolean(form.latitude) !== Boolean(form.longitude)) { setError('Add both latitude and longitude, or leave both blank.'); focusField(form.latitude ? 'accommodation-longitude' : 'accommodation-latitude'); return false; }
+    if (targetStep === 2 && form.googleMapsUrl.trim() && !validWebUrl(form.googleMapsUrl.trim())) { setError('Enter a complete Google Maps link beginning with http:// or https://.'); focusField('accommodation-map-link'); return false; }
+    if (targetStep === 3 && !validWebUrl(form.website.trim())) { setError('Enter a complete booking website beginning with http:// or https://.'); focusField('accommodation-website'); return false; }
     if (targetStep === 3 && Number(form.priceMaxEur) < Number(form.priceMinEur)) { setError('Maximum price must be at least the minimum price.'); focusField('accommodation-price-max'); return false; }
     if (targetStep === 4 && !form.policyAgreement) { setError('Accept the partner listing policy before submitting.'); focusField('accommodation-policy'); return false; }
     setError('');
@@ -226,7 +230,7 @@ export function AccommodationWizard({
         trailId: form.trailId, trailName: selectedTrail?.name || form.trailName,
         stageId: form.stageId, stageName: selectedStage?.name || form.stageName, stageSequence: selectedStage?.sequence ?? form.stageSequence,
         name: form.name.trim(), type: form.type, village: form.village.trim(), address: form.address.trim(), description: form.description.trim(),
-        phone: form.phone.trim(), email: form.email.trim(), website: form.website.trim(), whatsapp: form.whatsapp.trim(), googleMapsUrl: form.googleMapsUrl.trim(),
+        phone: form.phone.trim(), email: form.email.trim(), website: normalizeHttpUrl(form.website, true), whatsapp: form.whatsapp.trim(), googleMapsUrl: normalizeHttpUrl(form.googleMapsUrl, false),
         priceMinEur: Number(form.priceMinEur), priceMaxEur: Number(form.priceMaxEur), distanceFromTrailKm: Number(form.distanceFromTrailKm),
         capacityPeople: form.capacityPeople === '' ? null : Number(form.capacityPeople), monthsOpen: form.monthsOpen.trim(),
         latitude: form.latitude === '' ? null : Number(form.latitude), longitude: form.longitude === '' ? null : Number(form.longitude), policyAgreement: form.policyAgreement,
@@ -247,7 +251,7 @@ export function AccommodationWizard({
 
   return (
     <section className="form-panel wizard-panel" aria-labelledby="wizard-title">
-      <div className="panel-heading"><div><p className="eyebrow dark">{sourceSubmission ? 'UPDATE LISTING' : 'PROPERTY DRAFT'}</p><h2 id="wizard-title" ref={headingRef} tabIndex={-1}>{sourceSubmission?.name || form.name || 'List your property'}</h2></div><button className="text-button" type="button" onClick={() => void close()}>Close</button></div>
+      <div className="panel-heading"><div><p className="eyebrow">{sourceSubmission ? 'UPDATE LISTING' : 'PROPERTY DRAFT'}</p><h2 id="wizard-title" ref={headingRef} tabIndex={-1}>{sourceSubmission?.name || form.name || 'List your property'}</h2></div><button className="text-button" type="button" onClick={() => void close()}>Close</button></div>
       {sourceSubmission && submissionHasPublishedVersion(sourceSubmission) && <p className="notice info">The live version remains available while this update is reviewed.</p>}
       <ol className="wizard-progress" aria-label="Listing progress">{stepLabels.map((label, index) => <li key={label} aria-current={step === index + 1 ? 'step' : undefined} className={step > index + 1 ? 'complete' : ''}><span>{step > index + 1 ? '✓' : index + 1}</span><strong>{label}</strong></li>)}</ol>
       <div className="wizard-status" aria-live="polite"><span>Step {step} of 4</span><span>{saveState === 'saving' ? 'Saving draft…' : saveState === 'saved' ? 'Draft saved' : saveState === 'error' ? 'Draft not saved' : 'Changes autosave'}</span></div>
@@ -255,31 +259,31 @@ export function AccommodationWizard({
       {error && <p className="notice error" role="alert">{error}</p>}
       <form className="wizard-form" onSubmit={submit}>
         {step === 1 && <fieldset><legend>Property details</legend><p>Start with the information hikers use to understand the accommodation.</p><div className="form-grid">
-          <label><RequiredLabel>Accommodation name</RequiredLabel><input id="accommodation-name" value={form.name} onChange={(event) => update('name', event.target.value)} required /></label>
+          <label><RequiredLabel>Accommodation name</RequiredLabel><input id="accommodation-name" maxLength={160} value={form.name} onChange={(event) => update('name', event.target.value)} required /></label>
           <label><RequiredLabel>Type</RequiredLabel><select value={form.type} onChange={(event) => update('type', event.target.value)} required>{lodgingTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
-          <label><RequiredLabel>Village or town</RequiredLabel><input id="accommodation-village" value={form.village} onChange={(event) => update('village', event.target.value)} required /></label>
-          <label><RequiredLabel>Street address</RequiredLabel><input id="accommodation-address" value={form.address} onChange={(event) => update('address', event.target.value)} required /></label>
+          <label><RequiredLabel>Village or town</RequiredLabel><input id="accommodation-village" maxLength={160} value={form.village} onChange={(event) => update('village', event.target.value)} required /></label>
+          <label><RequiredLabel>Street address</RequiredLabel><input id="accommodation-address" maxLength={300} value={form.address} onChange={(event) => update('address', event.target.value)} required /></label>
           <label className="full"><RequiredLabel>Description</RequiredLabel><textarea id="accommodation-description" rows={5} maxLength={800} value={form.description} onChange={(event) => update('description', event.target.value)} required /><small>{form.description.length}/800 characters</small></label>
         </div></fieldset>}
 
         {step === 2 && <fieldset><legend>Trail and stage point</legend><p>Connect the property to the named point hikers will recognise.</p><div className="form-grid">
           <label><RequiredLabel>Trail</RequiredLabel><select value={form.trailId} onChange={(event) => { setCatalogBusy(true); setCatalogError(''); setStages([]); update('trailId', event.target.value); update('stageId', ''); }} required>{trails.map((trail) => <option key={trail.id} value={trail.id}>{trail.name}</option>)}</select></label>
           <label><RequiredLabel>Nearest stage point</RequiredLabel><select id="accommodation-stage" value={form.stageId} disabled={catalogBusy || Boolean(catalogError)} onChange={(event) => update('stageId', event.target.value)} required><option value="">{catalogBusy ? 'Loading stage points…' : 'Select a stage point'}</option>{stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</select></label>
-          <label><RequiredLabel>Distance from trail (km)</RequiredLabel><input id="accommodation-distance" type="number" min="0" step="0.1" value={form.distanceFromTrailKm} onChange={(event) => update('distanceFromTrailKm', event.target.value)} required /></label>
-          <label>Google Maps link<input type="url" value={form.googleMapsUrl} onChange={(event) => update('googleMapsUrl', event.target.value)} placeholder="https://maps.google.com/…" /></label>
+          <label><RequiredLabel>Distance from trail (km)</RequiredLabel><input id="accommodation-distance" type="number" min="0" max="1000" step="0.1" value={form.distanceFromTrailKm} onChange={(event) => update('distanceFromTrailKm', event.target.value)} required /></label>
+          <label>Google Maps link<input id="accommodation-map-link" type="url" maxLength={1000} value={form.googleMapsUrl} onChange={(event) => update('googleMapsUrl', event.target.value)} placeholder="https://maps.google.com/…" /></label>
           <label>Latitude<input id="accommodation-latitude" type="number" min="-90" max="90" step="any" value={form.latitude} onChange={(event) => update('latitude', event.target.value)} /></label>
           <label>Longitude<input id="accommodation-longitude" type="number" min="-180" max="180" step="any" value={form.longitude} onChange={(event) => update('longitude', event.target.value)} /></label>
         </div></fieldset>}
 
         {step === 3 && <fieldset><legend>Contact, pricing and availability</legend><p>EuroTrex sends hikers to the host directly; it does not process bookings or payments.</p><div className="form-grid">
-          <label><RequiredLabel>Booking website</RequiredLabel><input id="accommodation-website" type="url" value={form.website} onChange={(event) => update('website', event.target.value)} placeholder="https://" required /></label>
-          <label><RequiredLabel>Public email</RequiredLabel><input id="accommodation-email" type="email" value={form.email} onChange={(event) => update('email', event.target.value)} required /></label>
-          <label><RequiredLabel>Public phone</RequiredLabel><input id="accommodation-phone" type="tel" value={form.phone} onChange={(event) => update('phone', event.target.value)} required /></label>
-          <label>WhatsApp number<input type="tel" value={form.whatsapp} onChange={(event) => update('whatsapp', event.target.value)} /></label>
-          <label><RequiredLabel>Minimum nightly price (€)</RequiredLabel><input id="accommodation-price-min" type="number" min="0" step="1" value={form.priceMinEur} onChange={(event) => update('priceMinEur', event.target.value)} required /></label>
-          <label><RequiredLabel>Maximum nightly price (€)</RequiredLabel><input id="accommodation-price-max" type="number" min="0" step="1" value={form.priceMaxEur} onChange={(event) => update('priceMaxEur', event.target.value)} required /></label>
-          <label>Maximum guests<input type="number" min="1" step="1" value={form.capacityPeople} onChange={(event) => update('capacityPeople', event.target.value)} /></label>
-          <label>Months open<input value={form.monthsOpen} onChange={(event) => update('monthsOpen', event.target.value)} placeholder="e.g. March–November or year-round" /></label>
+          <label><RequiredLabel>Booking website</RequiredLabel><input id="accommodation-website" type="url" maxLength={1000} value={form.website} onChange={(event) => update('website', event.target.value)} placeholder="https://" required /></label>
+          <label><RequiredLabel>Public email</RequiredLabel><input id="accommodation-email" type="email" maxLength={254} value={form.email} onChange={(event) => update('email', event.target.value)} required /></label>
+          <label><RequiredLabel>Public phone</RequiredLabel><input id="accommodation-phone" type="tel" maxLength={80} value={form.phone} onChange={(event) => update('phone', event.target.value)} required /></label>
+          <label>WhatsApp number<input type="tel" maxLength={80} value={form.whatsapp} onChange={(event) => update('whatsapp', event.target.value)} /></label>
+          <label><RequiredLabel>Minimum nightly price (€)</RequiredLabel><input id="accommodation-price-min" type="number" min="0" max="1000000" step="1" value={form.priceMinEur} onChange={(event) => update('priceMinEur', event.target.value)} required /></label>
+          <label><RequiredLabel>Maximum nightly price (€)</RequiredLabel><input id="accommodation-price-max" type="number" min="0" max="1000000" step="1" value={form.priceMaxEur} onChange={(event) => update('priceMaxEur', event.target.value)} required /></label>
+          <label>Maximum guests<input type="number" min="1" max="100000" step="1" value={form.capacityPeople} onChange={(event) => update('capacityPeople', event.target.value)} /></label>
+          <label>Months open<input maxLength={160} value={form.monthsOpen} onChange={(event) => update('monthsOpen', event.target.value)} placeholder="e.g. March–November or year-round" /></label>
         </div></fieldset>}
 
         {step === 4 && <fieldset><legend>Review and submit</legend><p>Preview the app card, then confirm the listing before it enters manual review.</p><MobileAccommodationPreview form={form} stageName={stages.find((row) => row.id === form.stageId)?.name || form.stageName} /><div className="review-summary">

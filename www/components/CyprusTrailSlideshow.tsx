@@ -1,26 +1,30 @@
-import Image from 'next/image';
+/* eslint-disable @next/next/no-img-element */
 
 const slides = [
   {
-    src: '/cyprus-e4-forest.jpg',
+    src: '/cyprus-e4-forest-960.webp',
+    srcSet: '/cyprus-e4-forest-640.webp 640w, /cyprus-e4-forest-960.webp 960w, /cyprus-e4-forest-1200.webp 1200w',
     alt: 'A narrow walking trail winding through a pine forest in Cyprus',
     label: 'Troodos highlands',
     title: 'Pine paths and mountain air.',
   },
   {
-    src: '/cyprus-e4-hermit.webp',
+    src: '/cyprus-e4-hermit-960.webp',
+    srcSet: '/cyprus-e4-hermit-640.webp 640w, /cyprus-e4-hermit-960.webp 960w, /cyprus-e4-hermit-1280.webp 1280w',
     alt: 'A cliffside rock opening framed by trees above turquoise Mediterranean water in Cyprus',
     label: 'The Hermit',
     title: 'Where stone meets the sea.',
   },
   {
-    src: '/cyprus-e4-hidden-beach.webp',
+    src: '/cyprus-e4-hidden-beach-960.webp',
+    srcSet: '/cyprus-e4-hidden-beach-640.webp 640w, /cyprus-e4-hidden-beach-960.webp 960w, /cyprus-e4-hidden-beach-1280.webp 1280w',
     alt: 'A secluded beach beneath pale coastal cliffs and blue Mediterranean water in Cyprus',
     label: 'Hidden Beach',
     title: 'Cliff paths and quiet coves.',
   },
   {
-    src: '/cyprus-e4-sunset.webp',
+    src: '/cyprus-e4-sunset-960.webp',
+    srcSet: '/cyprus-e4-sunset-640.webp 640w, /cyprus-e4-sunset-960.webp 960w, /cyprus-e4-sunset-1280.webp 1280w',
     alt: 'The sun setting over the Mediterranean beside the pale coastal cliffs of Cyprus',
     label: 'Zapalo sunset',
     title: 'The coast, washed in gold.',
@@ -48,7 +52,18 @@ export function CyprusTrailSlideshow() {
           key={slide.src}
           role="group"
         >
-          <Image src={slide.src} alt={slide.alt} fill priority={index === 0} sizes="(max-width: 900px) 100vw, 56vw" />
+          <img
+            {...(index === 0
+              ? { src: slide.src, srcSet: slide.srcSet, sizes: '(max-width: 900px) 100vw, 56vw' }
+              : {
+                  'data-trail-src': slide.src,
+                  'data-trail-srcset': slide.srcSet,
+                  'data-trail-sizes': '(max-width: 900px) 100vw, 56vw',
+                })}
+            alt={slide.alt}
+            decoding="async"
+            fetchPriority={index === 0 ? 'high' : 'auto'}
+          />
           <div className="trail-guide-cover-shade" aria-hidden="true" />
           <div className="trail-guide-slide-caption"><small>{slide.label}</small><strong>{slide.title}</strong></div>
         </div>

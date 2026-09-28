@@ -19,7 +19,7 @@ export default function CyprusE4Overview() {
   const featuredStages = [cyprusE4Stages[0], cyprusE4Stages[30], cyprusE4Stages[61], cyprusE4Stages[92], cyprusE4Stages[122]];
   const schema = {
     '@context': 'https://schema.org', '@type': 'Route', name: 'Cyprus E4', url: `${SITE_URL}/trails/cyprus-e4`,
-    description: 'A long-distance hiking route across Cyprus from Pafos Airport to Larnaka Airport.', image: `${SITE_URL}/cyprus-e4-forest.jpg`,
+    description: 'A long-distance hiking route across Cyprus from Pafos Airport to Larnaka Airport.', image: `${SITE_URL}/cyprus-e4-forest-1200.webp`,
   };
 
   return (
@@ -57,7 +57,7 @@ export default function CyprusE4Overview() {
 
         <section className="section-shell guide-landscape reveal">
           <figure className="guide-coast-image">
-            <Image src="/zapalo-coast-hero.webp" alt="Zapalo Bay’s limestone cliffs and coastal trail above the Mediterranean in Cyprus" fill sizes="(max-width: 900px) 100vw, 55vw" />
+            <Image src="/zapalo-coast-hero-1280.webp" alt="Zapalo Bay’s limestone cliffs and coastal trail above the Mediterranean in Cyprus" fill sizes="(max-width: 900px) 100vw, 55vw" />
             <figcaption>Cyprus coast · Mediterranean light</figcaption>
           </figure>
           <article className="guide-landscape-copy">

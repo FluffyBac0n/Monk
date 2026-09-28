@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { User } from 'firebase/auth';
 import { AccommodationWizard, emptyAccommodationForm, submissionToDraft } from '@/components/AccommodationWizard';
+import { AccountVerificationGate } from '@/components/AccountVerificationGate';
 import { AuthPanel } from '@/components/AuthPanel';
 import { PortalHeader } from '@/components/PortalHeader';
 import {
   deleteAccommodationDraft,
   deleteDraft as deleteSubmission,
-  userIsAdmin,
+  getOwnerAccess,
   watchOwnerDrafts,
-  watchOwnerPublishedLodgings,
+  watchPublishedLodgingsForSubmissions,
   watchOwnerSubmissions,
 } from '@/lib/accommodations';
 import type { AccommodationDraft, AccommodationDraftValues, AccommodationSubmission, PublishedLodging } from '@/lib/models';
@@ -29,11 +31,39 @@ function errorMessage(caught: unknown, fallback: string) {
 
 export default function OwnerPortal() {
   const { user, loading } = useAuthState();
+
+  if (loading) return <div className="loading-screen">Loading EuroTrex…</div>;
+  if (!user) return <main className="portal-page"><PortalHeader /><AuthPanel /></main>;
+  if (!user.emailVerified) return <AccountVerificationGate user={user} />;
+  return <OwnerAccessResolver key={user.uid} user={user} />;
+}
+
+function OwnerAccessResolver({ user }: { user: User }) {
+  const [access, setAccess] = useState<{ allowed: boolean; isAdmin: boolean; reason: string | null } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getOwnerAccess(user)
+      .then((result) => { if (active) setAccess(result); })
+      .catch(() => { if (active) setAccess({ allowed: false, isAdmin: false, reason: 'error' }); });
+    return () => { active = false; };
+  }, [user]);
+
+  if (access === null) return <div className="loading-screen">Checking host access…</div>;
+  if (!access.allowed) {
+    const disabled = access.reason === 'disabled';
+    const pending = access.reason === 'pending';
+    return <main className="portal-page"><PortalHeader user={user} /><section className="access-card"><span>{pending ? 'Request received' : 'Invitation-only workspace'}</span><h1>{pending ? 'Your host account is under review.' : disabled ? 'Host access is paused.' : 'Host invitation required.'}</h1><p>{pending ? 'Your email is verified and your company details have reached EuroTrex. We will activate the workspace after reviewing the request.' : disabled ? 'This host profile is currently disabled. Contact EuroTrex if you believe this is a mistake.' : 'This account is signed in and verified, but it does not have an active EuroTrex host invitation.'}</p>{pending ? <a className="button button-secondary" href="/">Back to EuroTrex</a> : <a className="button button-primary" href="/get-involved?interest=host">Contact EuroTrex</a>}</section></main>;
+  }
+
+  return <OwnerWorkspace user={user} canAccessAdmin={access.isAdmin} />;
+}
+
+function OwnerWorkspace({ user, canAccessAdmin }: { user: User; canAccessAdmin: boolean }) {
   const [submissions, setSubmissions] = useState<AccommodationSubmission[]>([]);
   const [published, setPublished] = useState<PublishedLodging[]>([]);
   const [drafts, setDrafts] = useState<AccommodationDraft[]>([]);
   const [editor, setEditor] = useState<EditorState | null>(null);
-  const [canAccessAdmin, setCanAccessAdmin] = useState(false);
   const [deletingId, setDeletingId] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -42,13 +72,16 @@ export default function OwnerPortal() {
   const confirmationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!user) return;
     const stopSubmissions = watchOwnerSubmissions(user.uid, setSubmissions, (caught) => setError(caught.message));
     const stopDrafts = watchOwnerDrafts(user.uid, setDrafts, (caught) => setError(caught.message));
-    const stopPublished = watchOwnerPublishedLodgings(user.uid, setPublished, (caught) => setError(caught.message));
-    userIsAdmin(user).then(setCanAccessAdmin).catch(() => setCanAccessAdmin(false));
-    return () => { stopSubmissions(); stopDrafts(); stopPublished(); };
+    return () => { stopSubmissions(); stopDrafts(); };
   }, [user]);
+
+  useEffect(() => watchPublishedLodgingsForSubmissions(
+    submissions,
+    setPublished,
+    (caught) => setError(caught.message),
+  ), [submissions]);
 
   useEffect(() => { if (confirmation) confirmationRef.current?.focus(); }, [confirmation]);
 
@@ -59,8 +92,7 @@ export default function OwnerPortal() {
   }), [published.length, submissions]);
 
   function publishedVersionFor(row: AccommodationSubmission) {
-    return published.find((live) => live.sourceSubmissionId === row.id
-      || (live.id === row.publishedLodgingId && live.trailId === row.publishedTrailId));
+    return published.find((live) => live.id === row.publishedLodgingId && live.trailId === row.publishedTrailId);
   }
 
   function rememberLauncher(target: EventTarget | null) {
@@ -68,7 +100,6 @@ export default function OwnerPortal() {
   }
 
   function startNew(target: EventTarget | null) {
-    if (!user) return;
     rememberLauncher(target);
     setEditor({ draftId: '', values: { ...emptyAccommodationForm, email: user.email || '' }, step: 1, source: null });
     setNotice(''); setConfirmation(''); setError('');
@@ -104,7 +135,7 @@ export default function OwnerPortal() {
   }
 
   async function removeListing(row: AccommodationSubmission) {
-    if (!user || !window.confirm(`Delete ${row.name}? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ${row.name}? This cannot be undone.`)) return;
     setDeletingId(row.id); setError(''); setNotice('');
     try { await deleteSubmission(user, row); setNotice('Accommodation deleted.'); }
     catch (caught) { setError(errorMessage(caught, 'The accommodation could not be deleted.')); }
@@ -112,22 +143,19 @@ export default function OwnerPortal() {
   }
 
   async function removeDraft(draft: AccommodationDraft) {
-    if (!user || !window.confirm(`Delete the draft for ${draft.values.name || 'this accommodation'}?`)) return;
+    if (!window.confirm(`Delete the draft for ${draft.values.name || 'this accommodation'}?`)) return;
     setDeletingId(draft.id); setError('');
     try { await deleteAccommodationDraft(user, draft.id); setNotice('Draft deleted.'); }
     catch (caught) { setError(errorMessage(caught, 'The draft could not be deleted.')); }
     finally { setDeletingId(''); }
   }
 
-  if (loading) return <div className="loading-screen">Loading EuroTrex…</div>;
-  if (!user) return <main className="portal-page"><PortalHeader /><AuthPanel onNotice={setNotice} onError={setError} /></main>;
-
   return (
     <main className="portal-page">
       <PortalHeader user={user} canAccessAdmin={canAccessAdmin} />
       <div className="dashboard-shell">
         <section className="dashboard-title">
-          <div><p className="eyebrow dark">OWNER WORKSPACE</p><h1>Your accommodation listings.</h1><p>Create a guided draft, submit it for review and keep every live listing accurate.</p></div>
+          <div><p className="eyebrow">OWNER WORKSPACE</p><h1>Your accommodation listings.</h1><p>Create a guided draft, submit it for review and keep every live listing accurate.</p></div>
           <button className="button button-primary" onClick={(event) => startNew(event.currentTarget)}>+ Add accommodation</button>
         </section>
 
@@ -137,16 +165,16 @@ export default function OwnerPortal() {
 
         {notice && <p className="notice success" role="status">{notice}</p>}
         {error && <p className="notice error" role="alert">{error}</p>}
-        {confirmation && <div className="submission-confirmation" role="status" tabIndex={-1} ref={confirmationRef}><span aria-hidden="true">✓</span><div><p className="eyebrow dark">SUBMISSION RECEIVED</p><h2>It’s with the EuroTrex team.</h2><p>{confirmation}</p><p>Review is manual during private testing. There is no guaranteed service window; you can return here at any time to see the current status.</p><button className="button button-primary" onClick={() => setConfirmation('')}>Return to listings</button></div></div>}
+        {confirmation && <div className="submission-confirmation" role="status" tabIndex={-1} ref={confirmationRef}><span aria-hidden="true">✓</span><div><p className="eyebrow">SUBMISSION RECEIVED</p><h2>It’s with the EuroTrex team.</h2><p>{confirmation}</p><p>Review is manual during private testing. There is no guaranteed service window; you can return here at any time to see the current status.</p><button className="button button-primary" onClick={() => setConfirmation('')}>Return to listings</button></div></div>}
 
         {editor && <AccommodationWizard key={`${editor.draftId}-${editor.source?.id || 'new'}`} user={user} initialValues={editor.values} initialStep={editor.step} initialDraftId={editor.draftId} sourceSubmission={editor.source} onClose={closeEditor} onSubmitted={submitted} />}
 
         {drafts.length > 0 && (
-          <section className="list-section draft-section"><div className="panel-heading"><div><p className="eyebrow dark">SAVED DRAFTS</p><h2>Continue where you stopped</h2></div><p>Drafts autosave as you work.</p></div><div className="listing-grid">{drafts.map((draft) => <article className="listing-card draft-card" key={draft.id}><div className="card-top"><span className="status">Draft · step {draft.currentStep} of 4</span><span>{draft.values.trailName}</span></div><h3>{draft.values.name || 'Untitled accommodation'}</h3><p>{draft.values.type}{draft.values.village ? ` · ${draft.values.village}` : ''}</p><div className="card-actions"><button className="button button-secondary" onClick={(event) => resumeDraft(draft, event.currentTarget)}>Continue draft</button><button className="text-button danger" disabled={deletingId === draft.id} onClick={() => void removeDraft(draft)}>{deletingId === draft.id ? 'Deleting…' : 'Delete'}</button></div></article>)}</div></section>
+          <section className="list-section draft-section"><div className="panel-heading"><div><p className="eyebrow">SAVED DRAFTS</p><h2>Continue where you stopped</h2></div><p>Drafts autosave as you work.</p></div><div className="listing-grid">{drafts.map((draft) => <article className="listing-card" key={draft.id}><div className="card-top"><span className="status">Draft · step {draft.currentStep} of 4</span><span>{draft.values.trailName}</span></div><h3>{draft.values.name || 'Untitled accommodation'}</h3><p>{draft.values.type}{draft.values.village ? ` · ${draft.values.village}` : ''}</p><div className="card-actions"><button className="button button-secondary" onClick={(event) => resumeDraft(draft, event.currentTarget)}>Continue draft</button><button className="text-button danger" disabled={deletingId === draft.id} onClick={() => void removeDraft(draft)}>{deletingId === draft.id ? 'Deleting…' : 'Delete'}</button></div></article>)}</div></section>
         )}
 
         <section className="list-section">
-          <div className="panel-heading"><div><p className="eyebrow dark">MY LISTINGS</p><h2>Listings and reviews</h2></div></div>
+          <div className="panel-heading"><div><p className="eyebrow">MY LISTINGS</p><h2>Listings and reviews</h2></div></div>
           {!submissions.length ? <div className="empty-state"><span>⌂</span><h3>No listings submitted yet.</h3><p>Create a draft at your pace. The EuroTrex team reviews it only after you submit.</p><button className="button button-primary" onClick={(event) => startNew(event.currentTarget)}>Add accommodation</button></div> : <div className="listing-grid">{submissions.map((row) => {
             const live = publishedVersionFor(row);
             const hasLiveVersion = Boolean(live) || submissionHasPublishedVersion(row);

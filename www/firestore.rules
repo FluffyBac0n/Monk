@@ -5,23 +5,47 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function hasVerifiedEmail() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email is string;
+    }
+
     function isAdmin() {
-      return signedIn() && (
+      return hasVerifiedEmail() && (
         request.auth.token.admin == true ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
 
-    function isOwner(ownerId) {
-      return signedIn() && request.auth.uid == ownerId;
+    function hasOwnerAccess(ownerId) {
+      let profile = get(/databases/$(database)/documents/ownerProfiles/$(ownerId));
+      return hasVerifiedEmail()
+        && request.auth.uid == ownerId
+        && exists(/databases/$(database)/documents/ownerProfiles/$(ownerId))
+        && profile.data.email is string
+        && profile.data.email == request.auth.token.email
+        && (!profile.data.keys().hasAny(['accessStatus']) || profile.data.accessStatus == 'active');
     }
 
     function validShortString(value, maximum) {
       return value is string && value.size() > 0 && value.size() <= maximum;
     }
 
+    function validString(value, maximum) {
+      return value is string && value.size() <= maximum;
+    }
+
     function validOptionalString(value, maximum) {
-      return value == null || (value is string && value.size() <= maximum);
+      return value == null || validString(value, maximum);
+    }
+
+    function validHttpUrl(value) {
+      return value is string && value.size() <= 1000 && value.matches('https?://.+');
+    }
+
+    function validOptionalHttpUrl(value) {
+      return value == null || value == '' || validHttpUrl(value);
     }
 
     function ownerCreateKeysOnly(data) {
@@ -68,29 +92,32 @@ service cloud.firestore {
         && validShortString(data.stageId, 160)
         && validShortString(data.stageName, 160)
         && data.stageSequence is number
+        && data.stageSequence >= 0
+        && data.stageSequence <= 100000
         && validShortString(data.name, 160)
         && data.type in ['Hotel', 'Guesthouse', 'Hostel', 'Apartment', 'Villa', 'Camping']
         && validShortString(data.village, 160)
         && validShortString(data.address, 300)
-        && data.description is string
-        && data.description.size() > 0
-        && data.description.size() <= 800
+        && validShortString(data.description, 800)
         && validShortString(data.phone, 80)
         && validShortString(data.email, 254)
-        && validShortString(data.website, 1000)
+        && validHttpUrl(data.website)
         && validOptionalString(data.whatsapp, 80)
-        && validOptionalString(data.googleMapsUrl, 1000)
+        && validOptionalHttpUrl(data.googleMapsUrl)
         && data.priceMinEur is number
         && data.priceMinEur >= 0
+        && data.priceMinEur <= 1000000
         && data.priceMaxEur is number
         && data.priceMaxEur >= data.priceMinEur
+        && data.priceMaxEur <= 1000000
         && data.distanceFromTrailKm is number
         && data.distanceFromTrailKm >= 0
-        && (data.capacityPeople == null || (data.capacityPeople is number && data.capacityPeople >= 1))
+        && data.distanceFromTrailKm <= 1000
+        && (data.capacityPeople == null || (data.capacityPeople is number && data.capacityPeople >= 1 && data.capacityPeople <= 100000))
         && validOptionalString(data.monthsOpen, 160)
         && (data.latitude == null || (data.latitude is number && data.latitude >= -90 && data.latitude <= 90))
         && (data.longitude == null || (data.longitude is number && data.longitude >= -180 && data.longitude <= 180))
-        && data.reviewNote is string
+        && validString(data.reviewNote, 1000)
         && data.createdAt is timestamp
         && data.updatedAt is timestamp
         && exists(/databases/$(database)/documents/trails/$(data.trailId)/stages/$(data.stageId));
@@ -98,10 +125,8 @@ service cloud.firestore {
 
     function hasPublishedVersion(data) {
       return data.keys().hasAll(['publishedLodgingId', 'publishedTrailId'])
-        && data.publishedLodgingId is string
-        && data.publishedLodgingId.size() > 0
-        && data.publishedTrailId is string
-        && data.publishedTrailId.size() > 0;
+        && validShortString(data.publishedLodgingId, 200)
+        && validShortString(data.publishedTrailId, 120);
     }
 
     function validOwnerTransition(beforeData, after) {
@@ -117,6 +142,52 @@ service cloud.firestore {
       );
     }
 
+    function draftValueKeysOnly(data) {
+      return data.keys().hasOnly([
+        'trailId', 'trailName', 'stageId', 'stageName', 'stageSequence',
+        'name', 'type', 'village', 'address', 'description', 'phone',
+        'email', 'website', 'whatsapp', 'googleMapsUrl', 'priceMinEur',
+        'priceMaxEur', 'distanceFromTrailKm', 'capacityPeople', 'monthsOpen',
+        'latitude', 'longitude', 'policyAgreement'
+      ]) && data.keys().hasAll([
+        'trailId', 'trailName', 'stageId', 'stageName', 'stageSequence',
+        'name', 'type', 'village', 'address', 'description', 'phone',
+        'email', 'website', 'whatsapp', 'googleMapsUrl', 'priceMinEur',
+        'priceMaxEur', 'distanceFromTrailKm', 'capacityPeople', 'monthsOpen',
+        'latitude', 'longitude', 'policyAgreement'
+      ]);
+    }
+
+    function validDraftValues(data) {
+      return data is map
+        && draftValueKeysOnly(data)
+        && validString(data.trailId, 120)
+        && validString(data.trailName, 160)
+        && validString(data.stageId, 160)
+        && validString(data.stageName, 160)
+        && data.stageSequence is number
+        && data.stageSequence >= 0
+        && data.stageSequence <= 100000
+        && validString(data.name, 160)
+        && data.type in ['Hotel', 'Guesthouse', 'Hostel', 'Apartment', 'Villa', 'Camping']
+        && validString(data.village, 160)
+        && validString(data.address, 300)
+        && validString(data.description, 800)
+        && validString(data.phone, 80)
+        && validString(data.email, 254)
+        && validString(data.website, 1000)
+        && validString(data.whatsapp, 80)
+        && validString(data.googleMapsUrl, 1000)
+        && validString(data.priceMinEur, 32)
+        && validString(data.priceMaxEur, 32)
+        && validString(data.distanceFromTrailKm, 32)
+        && validString(data.capacityPeople, 32)
+        && validString(data.monthsOpen, 160)
+        && validString(data.latitude, 32)
+        && validString(data.longitude, 32)
+        && data.policyAgreement is bool;
+    }
+
     match /trails/{trailId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -128,37 +199,33 @@ service cloud.firestore {
     }
 
     match /ownerProfiles/{ownerId} {
-      allow get: if isAdmin() || isOwner(ownerId);
-      allow list: if isAdmin();
-
-      allow create: if isOwner(ownerId)
-        && request.resource.data.keys().hasOnly(['email', 'businessName', 'createdAt', 'updatedAt'])
-        && request.resource.data.keys().hasAll(['email', 'businessName', 'createdAt', 'updatedAt'])
-        && request.resource.data.email == request.auth.token.email
-        && request.resource.data.email is string
-        && request.resource.data.businessName is string
-        && request.resource.data.businessName.size() <= 160
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
-
-      allow update: if isOwner(ownerId)
-        && request.resource.data.keys().hasOnly(['email', 'businessName', 'createdAt', 'updatedAt'])
-        && request.resource.data.email == request.auth.token.email
-        && request.resource.data.email is string
-        && request.resource.data.businessName is string
-        && request.resource.data.businessName.size() <= 160
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['businessName', 'updatedAt']);
-
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /accommodationSubmissions/{submissionId} {
-      allow read: if isAdmin() || (signedIn() && resource.data.ownerId == request.auth.uid);
+      allow get: if isAdmin() || (hasVerifiedEmail() && request.auth.uid == ownerId);
+      allow list, update, delete: if isAdmin();
 
       allow create: if isAdmin() || (
         signedIn()
+        && request.auth.uid == ownerId
+        && request.auth.token.email is string
+        && request.resource.data.keys().hasOnly([
+          'email', 'businessName', 'accessStatus', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'email', 'businessName', 'accessStatus', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.email == request.auth.token.email
+        && validShortString(request.resource.data.email, 254)
+        && validShortString(request.resource.data.businessName, 160)
+        && request.resource.data.accessStatus == 'pending'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+      );
+    }
+
+    match /accommodationSubmissions/{submissionId} {
+      allow read: if isAdmin() || (hasOwnerAccess(resource.data.ownerId) && resource.data.ownerId == request.auth.uid);
+
+      allow create: if isAdmin() || (
+        hasOwnerAccess(request.resource.data.ownerId)
         && ownerCreateKeysOnly(request.resource.data)
         && validOwnerSubmissionData(request.resource.data)
         && request.resource.data.status == 'pending'
@@ -168,7 +235,7 @@ service cloud.firestore {
       );
 
       allow update: if isAdmin() || (
-        signedIn()
+        hasOwnerAccess(resource.data.ownerId)
         && resource.data.ownerId == request.auth.uid
         && submissionResultKeysOnly(request.resource.data)
         && validOwnerSubmissionData(request.resource.data)
@@ -189,39 +256,35 @@ service cloud.firestore {
       );
 
       allow delete: if isAdmin() || (
-        signedIn()
+        hasOwnerAccess(resource.data.ownerId)
         && resource.data.ownerId == request.auth.uid
         && resource.data.status in ['draft', 'rejected', 'changes_requested']
       );
     }
 
     match /accommodationDrafts/{draftId} {
-      allow read: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow read: if hasOwnerAccess(resource.data.ownerId) && resource.data.ownerId == request.auth.uid;
 
-      allow create: if signedIn()
+      allow create: if hasOwnerAccess(request.resource.data.ownerId)
         && request.resource.data.keys().hasOnly([
+          'ownerId', 'ownerEmail', 'sourceSubmissionId', 'currentStep',
+          'values', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
           'ownerId', 'ownerEmail', 'sourceSubmissionId', 'currentStep',
           'values', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerEmail == request.auth.token.email
-        && request.resource.data.sourceSubmissionId is string
-        && request.resource.data.sourceSubmissionId.size() <= 200
+        && validString(request.resource.data.sourceSubmissionId, 200)
         && request.resource.data.currentStep is number
         && request.resource.data.currentStep >= 1
         && request.resource.data.currentStep <= 4
-        && request.resource.data.values is map
-        && request.resource.data.values.keys().hasOnly([
-          'trailId', 'trailName', 'stageId', 'stageName', 'stageSequence',
-          'name', 'type', 'village', 'address', 'description', 'phone',
-          'email', 'website', 'whatsapp', 'googleMapsUrl', 'priceMinEur',
-          'priceMaxEur', 'distanceFromTrailKm', 'capacityPeople', 'monthsOpen',
-          'latitude', 'longitude', 'policyAgreement'
-        ])
+        && validDraftValues(request.resource.data.values)
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
 
-      allow update: if signedIn()
+      allow update: if hasOwnerAccess(resource.data.ownerId)
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.keys().hasOnly([
           'ownerId', 'ownerEmail', 'sourceSubmissionId', 'currentStep',
@@ -229,36 +292,27 @@ service cloud.firestore {
         ])
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.ownerEmail == resource.data.ownerEmail
-        && request.resource.data.sourceSubmissionId is string
-        && request.resource.data.sourceSubmissionId.size() <= 200
+        && validString(request.resource.data.sourceSubmissionId, 200)
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.currentStep is number
         && request.resource.data.currentStep >= 1
         && request.resource.data.currentStep <= 4
-        && request.resource.data.values is map
-        && request.resource.data.values.keys().hasOnly([
-          'trailId', 'trailName', 'stageId', 'stageName', 'stageSequence',
-          'name', 'type', 'village', 'address', 'description', 'phone',
-          'email', 'website', 'whatsapp', 'googleMapsUrl', 'priceMinEur',
-          'priceMaxEur', 'distanceFromTrailKm', 'capacityPeople', 'monthsOpen',
-          'latitude', 'longitude', 'policyAgreement'
-        ])
+        && validDraftValues(request.resource.data.values)
         && request.resource.data.updatedAt == request.time
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'sourceSubmissionId', 'currentStep', 'values', 'updatedAt'
         ]);
 
-      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow delete: if hasOwnerAccess(resource.data.ownerId) && resource.data.ownerId == request.auth.uid;
     }
 
     match /admins/{adminId} {
-      allow get: if isAdmin() || (signedIn() && request.auth.uid == adminId);
+      allow get: if isAdmin() || (hasVerifiedEmail() && request.auth.uid == adminId);
       allow list, create, update, delete: if isAdmin();
     }
 
     match /accommodationAudit/{entryId} {
       allow read: if isAdmin();
-
       allow create: if isAdmin()
         && request.resource.data.keys().hasOnly([
           'submissionId', 'lodgingId', 'trailId', 'ownerId',
@@ -273,10 +327,13 @@ service cloud.firestore {
         && request.resource.data.actorId == request.auth.uid
         && request.resource.data.actorEmail == request.auth.token.email
         && request.resource.data.action in ['approved', 'changes_requested', 'rejected', 'removed']
-        && request.resource.data.note is string
-        && request.resource.data.note.size() <= 1000
+        && validString(request.resource.data.submissionId, 200)
+        && validString(request.resource.data.lodgingId, 200)
+        && validString(request.resource.data.trailId, 120)
+        && validString(request.resource.data.ownerId, 200)
+        && validString(request.resource.data.accommodationName, 160)
+        && validString(request.resource.data.note, 1000)
         && request.resource.data.createdAt == request.time;
-
       allow update, delete: if false;
     }
 

@@ -111,11 +111,47 @@ function startPublicRuntime(htmx) {
     }
   }
 
-  function setTrailSlide(slideshow, requestedIndex, announce) {
+  async function materializeTrailSlide(panel) {
+    const image = panel?.querySelector('img[data-trail-src], img[data-trail-srcset]');
+    if (!(image instanceof HTMLImageElement)) return;
+
+    const source = image.getAttribute('data-trail-src');
+    const sourceSet = image.getAttribute('data-trail-srcset');
+    const sizes = image.getAttribute('data-trail-sizes');
+    if (sourceSet) image.srcset = sourceSet;
+    if (sizes) image.sizes = sizes;
+    if (source) image.src = source;
+    image.removeAttribute('data-trail-src');
+    image.removeAttribute('data-trail-srcset');
+    image.removeAttribute('data-trail-sizes');
+
+    try {
+      await image.decode();
+    } catch {
+      // A failed decode must not freeze the carousel; the browser may still
+      // render a usable image or expose the descriptive alternative text.
+    }
+  }
+
+  function preloadNextTrailSlide(slideshow, activeIndex) {
     const panels = Array.from(slideshow.querySelectorAll('[data-trail-slide-panel]'));
-    if (!panels.length || !Number.isFinite(requestedIndex)) return;
+    if (panels.length < 2) return;
+    const nextPanel = panels[(activeIndex + 1) % panels.length];
+    const preload = () => { void materializeTrailSlide(nextPanel); };
+    if ('requestIdleCallback' in window) window.requestIdleCallback(preload, { timeout: 1500 });
+    else window.setTimeout(preload, 250);
+  }
+
+  async function setTrailSlide(slideshow, requestedIndex, announce) {
+    const panels = Array.from(slideshow.querySelectorAll('[data-trail-slide-panel]'));
+    if (!panels.length || !Number.isFinite(requestedIndex)) return false;
 
     const nextIndex = ((requestedIndex % panels.length) + panels.length) % panels.length;
+    const requestSequence = Number(slideshow.dataset.trailSlideRequest || 0) + 1;
+    slideshow.dataset.trailSlideRequest = String(requestSequence);
+    await materializeTrailSlide(panels[nextIndex]);
+    if (!slideshow.isConnected || Number(slideshow.dataset.trailSlideRequest) !== requestSequence) return false;
+
     slideshow.dataset.activeSlide = String(nextIndex);
 
     panels.forEach((panel, index) => {
@@ -137,6 +173,9 @@ function startPublicRuntime(htmx) {
       const label = panels[nextIndex].dataset.trailSlideLabel;
       status.textContent = `Image ${nextIndex + 1} of ${panels.length}${label ? `: ${label}` : ''}`;
     }
+
+    preloadNextTrailSlide(slideshow, nextIndex);
+    return true;
   }
 
   function stopTrailSlideshow(slideshow) {
@@ -170,8 +209,9 @@ function startPublicRuntime(htmx) {
       }
 
       const currentIndex = Number(slideshow.dataset.activeSlide || 0);
-      setTrailSlide(slideshow, currentIndex + 1, false);
-      scheduleTrailSlideshow(slideshow);
+      void setTrailSlide(slideshow, currentIndex + 1, false).then(() => {
+        scheduleTrailSlideshow(slideshow);
+      });
     }, slideshowDelay);
 
     slideshowTimers.set(slideshow, timer);
@@ -184,7 +224,7 @@ function startPublicRuntime(htmx) {
 
     root.querySelectorAll('[data-trail-slideshow]').forEach((slideshow) => {
       const currentIndex = Number(slideshow.dataset.activeSlide || 0);
-      setTrailSlide(slideshow, currentIndex, false);
+      void setTrailSlide(slideshow, currentIndex, false);
       syncSlideshowToggle(slideshow);
       slideshow.dataset.trailSlideshowReady = 'true';
       if (!slideshowTimers.has(slideshow)) scheduleTrailSlideshow(slideshow);
@@ -403,8 +443,10 @@ function startPublicRuntime(htmx) {
     const slideshow = control?.closest('[data-trail-slideshow]');
     if (!control || !slideshow) return;
 
-    setTrailSlide(slideshow, Number(control.dataset.trailSlideGo), true);
-    scheduleTrailSlideshow(slideshow);
+    stopTrailSlideshow(slideshow);
+    void setTrailSlide(slideshow, Number(control.dataset.trailSlideGo), true).then(() => {
+      scheduleTrailSlideshow(slideshow);
+    });
   }
 
   function handleFocusIn(event) {

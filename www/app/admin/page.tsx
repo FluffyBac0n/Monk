@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { User } from 'firebase/auth';
+import { AccountVerificationGate } from '@/components/AccountVerificationGate';
 import { AuthPanel } from '@/components/AuthPanel';
 import { PortalHeader } from '@/components/PortalHeader';
 import {
   approveSubmission,
+  normalizeHttpUrl,
   removePublishedLodging,
   removeSubmissionAccommodation,
   reviewSubmission,
@@ -20,9 +22,38 @@ import { useAuthState } from '@/lib/use-auth';
 
 type Tab = 'review' | 'all' | 'published' | 'audit';
 
+function safeExternalUrl(value: string) {
+  try { return normalizeHttpUrl(value, true); }
+  catch { return ''; }
+}
+
 export default function AdminDashboard() {
   const { user, loading } = useAuthState();
+
+  if (loading) return <div className="loading-screen">Loading EuroTrex…</div>;
+  if (!user) return <main className="portal-page"><PortalHeader admin /><AuthPanel admin /></main>;
+  if (!user.emailVerified) return <AccountVerificationGate user={user} admin />;
+  return <AdminAccessResolver key={user.uid} user={user} />;
+}
+
+function AdminAccessResolver({ user }: { user: User }) {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    userIsAdmin(user)
+      .then((result) => { if (active) setAuthorized(result); })
+      .catch(() => { if (active) setAuthorized(false); });
+    return () => { active = false; };
+  }, [user]);
+
+  if (authorized === null) return <div className="loading-screen">Checking admin access…</div>;
+  if (!authorized) return <main className="portal-page"><PortalHeader user={user} admin /><section className="access-card"><span>Restricted workspace</span><h1>Admin access required.</h1><p>Your account is signed in and verified but is not listed as a EuroTrex administrator.</p><a className="button button-primary" href="/portal">Go to owner portal</a></section></main>;
+
+  return <AdminSession user={user} />;
+}
+
+function AdminSession({ user }: { user: User }) {
   const [submissions, setSubmissions] = useState<AccommodationSubmission[]>([]);
   const [published, setPublished] = useState<PublishedLodging[]>([]);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
@@ -33,17 +64,11 @@ export default function AdminDashboard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!user) return;
-    userIsAdmin(user).then(setAuthorized).catch(() => setAuthorized(false));
-  }, [user]);
-
-  useEffect(() => {
-    if (!user || !authorized) return;
     const stopSubmissions = watchAllSubmissions(setSubmissions, (caught) => setError(caught.message));
     const stopPublished = watchAllPublishedLodgings(setPublished, (caught) => setError(caught.message));
     const stopAudit = watchAudit(setAudit, (caught) => setError(caught.message));
     return () => { stopSubmissions(); stopPublished(); stopAudit(); };
-  }, [user, authorized]);
+  }, [user]);
 
   const queue = submissions.filter((row) => ['pending', 'pending_update'].includes(row.status));
   const owners = new Set(submissions.map((row) => row.ownerId)).size;
@@ -53,12 +78,12 @@ export default function AdminDashboard() {
     const textMatch = !needle || [row.name, row.ownerEmail, row.village, row.stageName, row.trailName].join(' ').toLowerCase().includes(needle);
     return statusMatch && textMatch;
   }), [submissions, search, status]);
-  const publishedBySubmission = useMemo(() => new Map(published
-    .filter((row) => row.sourceSubmissionId)
-    .map((row) => [row.sourceSubmissionId as string, row])), [published]);
+  const managedSubmissionByPath = useMemo(() => new Map(submissions
+    .filter((row) => row.publishedLodgingId && row.publishedTrailId)
+    .map((row) => [`${row.publishedTrailId}/${row.publishedLodgingId}`, row])), [submissions]);
 
   function publishedVersionFor(row: AccommodationSubmission) {
-    return publishedBySubmission.get(row.id) || published.find((live) => live.id === row.publishedLodgingId && live.trailId === row.publishedTrailId);
+    return published.find((live) => live.id === row.publishedLodgingId && live.trailId === row.publishedTrailId);
   }
 
   async function act(id: string, action: () => Promise<void>) {
@@ -68,17 +93,12 @@ export default function AdminDashboard() {
     finally { setBusyId(''); }
   }
 
-  if (loading) return <div className="loading-screen">Loading EuroTrex…</div>;
-  if (!user) return <main className="portal-page"><PortalHeader admin /><AuthPanel /></main>;
-  if (authorized === null) return <div className="loading-screen">Checking admin access…</div>;
-  if (!authorized) return <main className="portal-page"><PortalHeader user={user} admin /><section className="access-card"><span>Restricted workspace</span><h1>Admin access required.</h1><p>Your account is signed in but is not listed as a EuroTrex administrator.</p><a className="button button-primary" href="/portal">Go to owner portal</a></section></main>;
-
   return (
-    <main className="portal-page admin-page">
+    <main className="portal-page">
       <PortalHeader user={user} admin />
       <div className="dashboard-shell wide">
         <section className="dashboard-title">
-          <div><p className="eyebrow dark">EUROTREX OPERATIONS</p><h1>Accommodation review.</h1><p>Verify ownership, protect trail quality and control every listing visible in the app.</p></div>
+          <div><p className="eyebrow">EUROTREX OPERATIONS</p><h1>Accommodation review.</h1><p>Verify ownership, protect trail quality and control every listing visible in the app.</p></div>
           <span className="admin-badge">Admin</span>
         </section>
         <section className="metric-grid">
@@ -113,14 +133,14 @@ export default function AdminDashboard() {
 
         {tab === 'published' && (
           <section>
-            <div className="panel-heading"><div><p className="eyebrow dark">APP INVENTORY</p><h2>Live listings by trail</h2></div><p>{published.length} entries</p></div>
-            <div className="table-wrap"><table><thead><tr><th>Accommodation</th><th>Trail & stage point</th><th>Owner/source</th><th>Control</th></tr></thead><tbody>{published.map((row) => <tr key={`${row.trailId}-${row.id}`}><td><strong>{row.name || 'Unnamed accommodation'}</strong><small>{row.type || 'Type not set'} · {row.village || 'Location not set'}</small></td><td><strong>{row.trailId}</strong><small>{row.stageName || row.stageId || 'Not linked'}</small></td><td>{row.ownerId ? 'Owner-managed' : 'Imported data'}<small>{row.sourceSubmissionId || row.id}</small></td><td><button className="text-button danger" disabled={busyId === row.id} onClick={() => { const note = window.prompt('Reason for removing this accommodation'); if (note) act(row.id, () => removePublishedLodging(user, row, note)); }}>Remove from app</button></td></tr>)}</tbody></table></div>
+            <div className="panel-heading"><div><p className="eyebrow">APP INVENTORY</p><h2>Live listings by trail</h2></div><p>{published.length} entries</p></div>
+            <div className="table-wrap"><table><thead><tr><th>Accommodation</th><th>Trail & stage point</th><th>Owner/source</th><th>Control</th></tr></thead><tbody>{published.map((row) => { const source = managedSubmissionByPath.get(`${row.trailId}/${row.id}`); return <tr key={`${row.trailId}-${row.id}`}><td><strong>{row.name || 'Unnamed accommodation'}</strong><small>{row.type || 'Type not set'} · {row.village || 'Location not set'}</small></td><td><strong>{row.trailId}</strong><small>{row.stageName || row.stageId || 'Not linked'}</small></td><td>{source ? 'Owner-managed' : 'Imported data'}<small>{source?.id || row.id}</small></td><td><button className="text-button danger" disabled={busyId === row.id} onClick={() => { const note = window.prompt('Reason for removing this accommodation'); if (note) act(row.id, () => removePublishedLodging(user, row, note, source)); }}>Remove from app</button></td></tr>; })}</tbody></table></div>
           </section>
         )}
 
         {tab === 'audit' && (
           <section>
-            <div className="panel-heading"><div><p className="eyebrow dark">ACCOUNTABILITY</p><h2>Accommodation audit log</h2></div><p>{audit.length} events</p></div>
+            <div className="panel-heading"><div><p className="eyebrow">ACCOUNTABILITY</p><h2>Accommodation audit log</h2></div><p>{audit.length} events</p></div>
             <div className="table-wrap"><table><thead><tr><th>Action</th><th>Accommodation</th><th>Administrator</th><th>Note</th><th>Time</th></tr></thead><tbody>{audit.map((row) => <tr key={row.id}><td><span className="status">{row.action || 'updated'}</span></td><td><strong>{row.accommodationName || row.lodgingId || 'Accommodation'}</strong><small>{row.trailId}</small></td><td>{row.actorEmail || 'Admin'}</td><td>{row.note || '—'}</td><td>{row.createdAt?.toDate?.().toLocaleString() || 'Pending'}</td></tr>)}</tbody></table></div>
           </section>
         )}
@@ -136,9 +156,10 @@ export default function AdminDashboard() {
 
 function ReviewCard({ row, live, busy, onAct, user }: { row: AccommodationSubmission; live?: PublishedLodging; busy: boolean; onAct: (action: () => Promise<void>) => void; user: User }) {
   const note = (title: string) => window.prompt(title) || '';
+  const website = safeExternalUrl(row.website);
   return (
     <article className="review-card">
-      <div className="review-main"><div className="card-top"><div className="status-row">{live && <span className="status status-approved">Live version</span>}<span className={`status status-${row.status}`}>{statusLabels[row.status]}</span></div><span>{row.trailName} · {row.stageName}</span></div>{live && row.status === 'pending_update' && <div className="listing-version-grid admin-version-grid"><section><span>LIVE IN THE APP</span><h3>{live.name || row.name}</h3><p>{live.type || row.type} · {live.village || row.village}<br />Nearest stage point: {live.stageName || row.stageName}</p></section><section><span>PROPOSED UPDATE</span><h3>{row.name}</h3><p>{row.type} · {row.village}<br />Nearest stage point: {row.stageName}</p></section></div>}<h2>{row.name}</h2><p>{row.type} · {row.village}</p><dl><div><dt>Owner</dt><dd>{row.ownerEmail}</dd></div><div><dt>Nightly price</dt><dd>€{row.priceMinEur ?? '—'}–€{row.priceMaxEur ?? '—'}</dd></div><div><dt>Trail distance</dt><dd>{row.distanceFromTrailKm ?? '—'} km</dd></div><div><dt>Contact</dt><dd>{row.phone}<br />{row.email}</dd></div><div><dt>Website</dt><dd><a href={row.website} target="_blank" rel="noreferrer">Open booking site ↗</a></dd></div><div><dt>Coordinates</dt><dd>{row.latitude ?? '—'}, {row.longitude ?? '—'}</dd></div></dl><p className="review-description">{row.description}</p></div>
+      <div className="review-main"><div className="card-top"><div className="status-row">{live && <span className="status status-approved">Live version</span>}<span className={`status status-${row.status}`}>{statusLabels[row.status]}</span></div><span>{row.trailName} · {row.stageName}</span></div>{live && row.status === 'pending_update' && <div className="listing-version-grid admin-version-grid"><section><span>LIVE IN THE APP</span><h3>{live.name || row.name}</h3><p>{live.type || row.type} · {live.village || row.village}<br />Nearest stage point: {live.stageName || row.stageName}</p></section><section><span>PROPOSED UPDATE</span><h3>{row.name}</h3><p>{row.type} · {row.village}<br />Nearest stage point: {row.stageName}</p></section></div>}<h2>{row.name}</h2><p>{row.type} · {row.village}</p><dl><div><dt>Owner</dt><dd>{row.ownerEmail}</dd></div><div><dt>Nightly price</dt><dd>€{row.priceMinEur ?? '—'}–€{row.priceMaxEur ?? '—'}</dd></div><div><dt>Trail distance</dt><dd>{row.distanceFromTrailKm ?? '—'} km</dd></div><div><dt>Contact</dt><dd>{row.phone}<br />{row.email}</dd></div><div><dt>Website</dt><dd>{website ? <a href={website} target="_blank" rel="noreferrer">Open booking site ↗</a> : 'Invalid URL'}</dd></div><div><dt>Coordinates</dt><dd>{row.latitude ?? '—'}, {row.longitude ?? '—'}</dd></div></dl><p className="review-description">{row.description}</p></div>
       <aside className="review-actions"><button className="button button-primary" disabled={busy} onClick={() => onAct(() => approveSubmission(user, row, 'Verified and approved'))}>Approve & publish</button><button className="button button-secondary" disabled={busy} onClick={() => { const value = note('What should the owner change?'); if (value) onAct(() => reviewSubmission(user, row, 'changes_requested', value)); }}>Request changes</button><button className="text-button danger" disabled={busy} onClick={() => { const value = note('Reason for rejection'); if (value) onAct(() => reviewSubmission(user, row, 'rejected', value)); }}>Reject</button></aside>
     </article>
   );

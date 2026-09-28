@@ -106,6 +106,27 @@ async function deleteUser(user) {
   );
 }
 
+async function verifyUserAndRefresh(user, accessToken) {
+  await requestJson(
+    'Trusted email verification',
+    `${identityRoot}/projects/${projectId}/accounts:update`,
+    {
+      method: 'POST',
+      headers: { authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ localId: user.localId, emailVerified: true }),
+    },
+  );
+  const refreshed = await requestJson(
+    'Verified user sign-in',
+    `${identityRoot}/accounts:signInWithPassword?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ email: user.email, password, returnSecureToken: true }),
+    },
+  );
+  Object.assign(user, refreshed);
+}
+
 async function firestoreCommit(idToken, writes) {
   return requestJson(
     'Firestore commit',
@@ -160,12 +181,36 @@ async function main() {
   const owner = await createUser(ownerEmail);
   const ownerProfilePath = `ownerProfiles/${owner.localId}`;
   cleanupDocuments.add(ownerProfilePath);
+
+  let selfActivationDenied = false;
+  try {
+    await firestoreCommit(owner.idToken, [{
+      update: {
+        name: documentName(ownerProfilePath),
+        fields: {
+          email: stringValue(ownerEmail),
+          businessName: stringValue('EuroTrex private smoke test'),
+          accessStatus: stringValue('active'),
+        },
+      },
+      updateTransforms: [
+        { fieldPath: 'createdAt', setToServerValue: 'REQUEST_TIME' },
+        { fieldPath: 'updatedAt', setToServerValue: 'REQUEST_TIME' },
+      ],
+      currentDocument: { exists: false },
+    }]);
+  } catch (error) {
+    selfActivationDenied = error.status === 403;
+  }
+  if (!selfActivationDenied) throw new Error('A new owner was unexpectedly able to create an active profile.');
+
   await firestoreCommit(owner.idToken, [{
     update: {
       name: documentName(ownerProfilePath),
       fields: {
         email: stringValue(ownerEmail),
         businessName: stringValue('EuroTrex private smoke test'),
+        accessStatus: stringValue('pending'),
       },
     },
     updateTransforms: [
@@ -175,9 +220,26 @@ async function main() {
     currentDocument: { exists: false },
   }]);
 
+  await verifyUserAndRefresh(owner, trustedAccessToken);
+
+  let ownerProfileUpdateDenied = false;
+  try {
+    await firestoreCommit(owner.idToken, [{
+      update: {
+        name: documentName(ownerProfilePath),
+        fields: { accessStatus: stringValue('active') },
+      },
+      updateMask: { fieldPaths: ['accessStatus'] },
+      currentDocument: { exists: true },
+    }]);
+  } catch (error) {
+    ownerProfileUpdateDenied = error.status === 403;
+  }
+  if (!ownerProfileUpdateDenied) throw new Error('An owner was unexpectedly able to activate their own profile.');
+
   const submissionPath = `accommodationSubmissions/${submissionId}`;
   cleanupDocuments.add(submissionPath);
-  await firestoreCommit(owner.idToken, [{
+  const submissionCreateWrite = {
     update: {
       name: documentName(submissionPath),
       fields: {
@@ -215,7 +277,35 @@ async function main() {
       { fieldPath: 'updatedAt', setToServerValue: 'REQUEST_TIME' },
     ],
     currentDocument: { exists: false },
-  }]);
+  };
+
+  let pendingSubmissionDenied = false;
+  try {
+    await firestoreCommit(owner.idToken, [submissionCreateWrite]);
+  } catch (error) {
+    pendingSubmissionDenied = error.status === 403;
+  }
+  if (!pendingSubmissionDenied) throw new Error('A pending owner was unexpectedly able to submit a listing.');
+
+  await requestJson(
+    'Trusted owner activation',
+    `${databaseRoot}/${ownerProfilePath}`,
+    {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${trustedAccessToken}` },
+      body: JSON.stringify({
+      fields: {
+        email: stringValue(ownerEmail),
+        businessName: stringValue('EuroTrex private smoke test'),
+        accessStatus: stringValue('active'),
+        createdAt: { timestampValue: new Date().toISOString() },
+        updatedAt: { timestampValue: new Date().toISOString() },
+      },
+      }),
+    },
+  );
+
+  await firestoreCommit(owner.idToken, [submissionCreateWrite]);
 
   const ownerQuery = await requestJson(
     'Owner submission query',
@@ -257,6 +347,7 @@ async function main() {
   if (!ownerApprovalDenied) throw new Error('An owner was unexpectedly able to self-approve.');
 
   const admin = await createUser(adminEmail);
+  await verifyUserAndRefresh(admin, trustedAccessToken);
   const adminPath = `admins/${admin.localId}`;
   cleanupDocuments.add(adminPath);
   await requestJson(
@@ -288,8 +379,6 @@ async function main() {
           stageId: stringValue(stageId),
           stageName: stringValue(stageName),
           name: stringValue('EuroTrex private smoke stay'),
-          sourceSubmissionId: stringValue(submissionId),
-          ownerId: stringValue(owner.localId),
           priceMinEur: numberValue(0),
         },
       },
@@ -348,17 +437,23 @@ async function main() {
   if (published.fields?.priceMinEur?.integerValue !== '0') {
     throw new Error('The published zero-price value was not preserved.');
   }
+  if (published.fields?.ownerId || published.fields?.sourceSubmissionId) {
+    throw new Error('The public lodging unexpectedly exposed an internal owner or submission identifier.');
+  }
 
   console.log(JSON.stringify({
     passed: true,
     checks: [
       'public trail and stage reads',
       'anonymous submission denial',
-      'owner registration and profile creation',
+      'owner request constrained to pending status',
+      'owner profile self-activation denial',
+      'pending owner submission denial',
+      'verified, trusted owner activation',
       'owner submission creation and filtered query',
       'owner self-approval denial',
       'administrator approval batch and audit write',
-      'public lodging read with zero-price preservation',
+      'public lodging read with zero-price preservation and no internal identifiers',
     ],
   }, null, 2));
 }

@@ -8,7 +8,7 @@ export function PortalHeader({ user, admin = false, canAccessAdmin = false }: { 
   return (
     <header className="portal-header">
       <a className="brand" href="/" aria-label="EuroTrex home">
-        <Image src="/eurotrex-wordmark.png" alt="EuroTrex" width={2172} height={724} priority />
+        <Image src="/eurotrex-wordmark-ui.webp" alt="EuroTrex" width={528} height={176} sizes="132px" />
       </a>
       <div className="portal-nav">
         {user && <span className="account-email">{user.email}</span>}

@@ -10,8 +10,6 @@
   --sand: #f4f2ec;
   --canvas: var(--sand);
   --gold: #f2c94c;
-  --signal: #f2c94c;
-  --white: #fff;
   --ink: #17201b;
   --muted: #5f6c73;
   --line: #d4dbdd;
@@ -84,6 +82,7 @@ h3 { color: var(--navy); font-size: 23px; letter-spacing: -.018em; line-height: 
 
 .hero { background: var(--navy); color: white; min-height: 500px; overflow: hidden; position: relative; }
 .hero-media { -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.32) 20%, rgba(0,0,0,.78) 40%, #000 58%); bottom: 0; mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.32) 20%, rgba(0,0,0,.78) 40%, #000 58%); max-width: 1240px; position: absolute; right: 0; top: 0; width: 78%; }
+.hero-media picture, .hero-media picture img { height: 100%; inset: 0; position: absolute; width: 100%; }
 .hero-image { object-fit: cover; object-position: 60% 82%; transform: none; }
 .hero-shade { background: linear-gradient(90deg, rgba(27,40,52,.98) 0%, rgba(32,47,61,.94) 24%, rgba(38,53,68,.78) 44%, rgba(38,53,68,.48) 62%, rgba(38,53,68,.2) 79%, rgba(38,53,68,.06) 92%, transparent 100%); inset: 0; pointer-events: none; position: absolute; }
 .hero-inner { align-items: center; display: flex; justify-content: space-between; margin: auto; min-height: 500px; padding: 50px 30px; position: relative; width: min(1240px, 100%); z-index: 1; }
@@ -168,8 +167,6 @@ h3 { color: var(--navy); font-size: 23px; letter-spacing: -.018em; line-height: 
 .phone-planner { left: 50%; top: 0; transform: translateX(-50%); width: 236px; z-index: 3; }
 .phone-elevation { right: 0; top: 92px; transform: rotate(5deg); z-index: 2; }
 .swipe-hint { display: none; }
-.inline-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 18px; }
-
 .hiker-launch-band { align-items: center; background: var(--navy); border: 1px solid rgba(45,93,211,.28); border-radius: 16px; box-shadow: 0 18px 45px rgba(38,53,68,.12); color: white; display: grid; gap: 24px; grid-area: launch; grid-template-columns: 78px minmax(220px, 1fr) auto; margin-top: 42px; padding: 22px 24px; }
 .app-icon { border-radius: 18px; box-shadow: 0 12px 28px rgba(0,0,0,.25); height: 78px; width: 78px; }
 .hiker-launch-copy .eyebrow { color: var(--gold); margin-bottom: 7px; }
@@ -290,9 +287,10 @@ h3 { color: var(--navy); font-size: 23px; letter-spacing: -.018em; line-height: 
 .interest-form input:not([type='checkbox']), .interest-form select, .interest-form textarea { background: #fbfcfa; border: 1px solid #c5ced1; border-radius: 9px; color: var(--ink); width: 100%; }
 .interest-form input:not([type='checkbox']), .interest-form select { height: 46px; line-height: 1.2; min-height: 46px; padding: 0 12px; }
 .interest-form textarea { min-height: 130px; padding: 11px 12px; resize: vertical; }
-.interest-form input[type='checkbox'] { min-height: 0; }
+.interest-form input[type='checkbox'] { accent-color: var(--blue); flex: 0 0 18px; height: 18px; margin: 1px 0 0; min-height: 0; width: 18px; }
 .interest-form .full { grid-column: 1 / -1; }
-.interest-form .check-label { color: var(--muted); font-size: 11px; }
+.interest-form .check-label { align-items: flex-start; color: var(--muted); display: flex; flex-direction: row; font-size: 11px; gap: 10px; line-height: 1.55; }
+.interest-form .check-label > span { font-size: 11px; line-height: 1.55; }
 .interest-form .button { border: 0; width: 100%; }
 .form-feedback:empty { display: none; }
 .form-feedback .interest-success { background: var(--sand); border-radius: 12px; padding: 18px; }
@@ -327,14 +325,12 @@ main[tabindex='-1']:focus { outline: none; }
 
 /* Public trail, involvement and partnership pages */
 .content-page { background: var(--sand); min-height: 70vh; }
-.content-hero { background: linear-gradient(105deg, rgba(38,53,68,.97), rgba(45,97,155,.88)), url('/cyprus-e4-forest.jpg') center 55% / cover; color: white; }
-.partnership-hero { background-image: linear-gradient(105deg, rgba(38,53,68,.97), rgba(45,97,155,.8)), url('/sponsors-path.webp'); }
+.content-hero { background: linear-gradient(105deg, rgba(38,53,68,.97), rgba(45,97,155,.88)), url('/cyprus-e4-forest-1200.webp') center 55% / cover; color: white; }
 .content-hero-inner { padding-block: 72px; }
 .content-hero h1, .simple-page-header h1 { font-size: clamp(42px, 6vw, 72px); }
 .content-hero h1 { color: white; }
 .content-hero-inner > p:not(.eyebrow) { color: rgba(255,255,255,.78); font-size: 18px; line-height: 1.6; max-width: 690px; }
 .breadcrumbs { align-items: center; color: var(--muted); display: flex; flex-wrap: wrap; font-size: 11px; font-weight: 750; gap: 8px; margin-bottom: 38px; }
-.back-home-link { align-items: center; display: inline-flex; gap: 4px; min-height: 44px; }
 .content-hero .breadcrumbs { color: rgba(255,255,255,.66); }
 .breadcrumbs a:hover { color: var(--blue); }
 .content-hero .breadcrumbs a:hover { color: white; }
@@ -381,6 +377,7 @@ body:has(main[data-trail-guide='cyprus-e4']) .trail-switcher-item[data-trail-id=
 .trail-guide-cover figcaption strong { font-size: 20px; margin-top: 5px; }
 .trail-guide-slideshow { isolation: isolate; margin-bottom: 38px; }
 .trail-guide-slide { inset: 0; opacity: 0; position: absolute; transform: scale(1.025); transition: opacity .62s ease, transform .9s cubic-bezier(.2,.75,.2,1), visibility 0s linear .62s; visibility: hidden; }
+.trail-guide-slide > img { height: 100%; inset: 0; object-fit: cover; position: absolute; width: 100%; }
 .trail-guide-slide.is-active { opacity: 1; transform: scale(1); transition-delay: 0s; visibility: visible; z-index: 2; }
 .trail-guide-slide:nth-child(1) img { object-position: 50% 55%; }
 .trail-guide-slide:nth-child(2) img { object-position: 54% 50%; }
@@ -533,6 +530,7 @@ body:has(main[data-trail-guide='cyprus-e4']) .trail-switcher-item[data-trail-id=
 .get-involved-hero-copy > p:last-child { color: var(--muted); font-size: clamp(16px, 1.55vw, 19px); line-height: 1.68; margin: 24px 0 0; max-width: 580px; }
 .get-involved-hero-image { aspect-ratio: 1.38 / 1; border-radius: 18px 82px 18px 18px; box-shadow: 0 28px 64px rgba(38,53,68,.16); margin: 0; min-height: 430px; overflow: hidden; position: relative; }
 .get-involved-hero-image img { object-fit: cover; object-position: 44% 50%; transition: transform .7s cubic-bezier(.2,.75,.2,1); }
+.partnerships-hero-image img { object-position: 52% 50%; }
 .get-involved-hero-image > div { background: linear-gradient(0deg, rgba(30,44,56,.62), transparent 45%); inset: 0; pointer-events: none; position: absolute; }
 .get-involved-hero-image figcaption { bottom: 20px; color: rgba(255,255,255,.9); font-size: 10px; font-weight: 850; left: 22px; letter-spacing: .08em; position: absolute; text-transform: uppercase; }
 .get-involved-page .involvement-options { gap: 32px; padding-block: 76px; }
@@ -569,7 +567,6 @@ body:has(main[data-trail-guide='cyprus-e4']) .trail-switcher-item[data-trail-id=
 .portal-header .brand { width: 145px; }
 .portal-nav { align-items: center; display: flex; gap: 12px; }
 .portal-nav a, .portal-nav button { align-items: center; background: transparent; border: 0; color: rgba(255,255,255,.82); display: inline-flex; font-size: 13px; font-weight: 800; min-height: 44px; padding-inline: 6px; }
-.portal-nav .portal-pill { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); border-radius: 10px; color: white; padding: 10px 13px; }
 .dashboard-shell { margin: auto; max-width: 1160px; padding: 64px clamp(18px, 4vw, 54px) 100px; }
 .dashboard-shell.wide { max-width: 1380px; }
 .dashboard-title { align-items: flex-end; display: flex; gap: 30px; justify-content: space-between; margin-bottom: 35px; }
@@ -584,8 +581,6 @@ body:has(main[data-trail-guide='cyprus-e4']) .trail-switcher-item[data-trail-id=
 .notice.success { background: #dff3e8; color: #17583a; }
 .notice.error { background: #fae3e4; color: #8c252d; }
 .notice.info { background: #e3eafa; color: #274d9c; }
-.notice.with-action { align-items: center; display: flex; gap: 16px; justify-content: space-between; }
-.notice.with-action .text-button { color: inherit; flex: 0 0 auto; }
 .form-panel, .list-section, .admin-guidance { background: white; border: 1px solid var(--line); border-radius: 20px; margin-top: 24px; padding: clamp(22px, 4vw, 38px); }
 .panel-heading { align-items: flex-start; display: flex; gap: 20px; justify-content: space-between; margin-bottom: 28px; }
 .panel-heading h2 { font-size: clamp(28px, 3vw, 42px); }
@@ -595,15 +590,14 @@ body:has(main[data-trail-guide='cyprus-e4']) .trail-switcher-item[data-trail-id=
 .form-grid label > span { color: var(--muted); font-size: 10px; font-weight: 600; }
 .form-grid label > .field-label { color: var(--navy); font-size: inherit; font-weight: inherit; }
 .form-grid label > small { color: var(--muted); font-size: 10px; font-weight: 600; text-align: right; }
-.form-grid input, .form-grid select, .form-grid textarea, .filters input, .filters select, .auth-form input { background: #fbfcfa; border: 1px solid #cbd2ce; border-radius: 10px; color: var(--ink); outline: none; padding: 13px 14px; width: 100%; }
+.form-grid input, .form-grid select, .form-grid textarea, .filters input, .filters select { background: #fbfcfa; border: 1px solid #cbd2ce; border-radius: 10px; color: var(--ink); outline: none; padding: 13px 14px; width: 100%; }
 .form-grid input:not([type='checkbox']), .form-grid select, .filters input, .filters select { height: 48px; line-height: 1.2; min-height: 48px; padding-block: 0; }
-.form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus, .filters input:focus, .filters select:focus, .auth-form input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(45,93,211,.13); }
+.form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus, .filters input:focus, .filters select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(45,93,211,.13); }
 .form-grid .full { grid-column: 1 / -1; }
 .form-grid textarea { resize: vertical; }
 .check-label { align-items: flex-start; flex-direction: row !important; font-weight: 500 !important; line-height: 1.55; }
 .check-label input { flex: 0 0 18px; margin-top: 2px; width: 18px; }
 .check-label a { color: var(--blue); text-decoration: underline; }
-.form-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .listing-grid { display: grid; gap: 14px; grid-template-columns: repeat(2, 1fr); }
 .listing-card { border: 1px solid var(--line); border-radius: 16px; padding: 23px; }
 .listing-card h3 { color: var(--navy); font-size: 22px; margin: 22px 0 8px; }
@@ -631,23 +625,21 @@ body:has(main[data-trail-guide='cyprus-e4']) .trail-switcher-item[data-trail-id=
 .empty-state > span { align-items: center; background: var(--pale-blue); border-radius: 50%; color: var(--blue); display: flex; font-size: 24px; height: 58px; justify-content: center; width: 58px; }
 .empty-state h3 { color: var(--navy); font-size: 22px; margin: 18px 0 8px; }
 .empty-state p { color: var(--muted); line-height: 1.55; max-width: 520px; }
-.auth-shell { align-items: center; display: grid; min-height: calc(100vh - 72px); padding: 50px 20px; }
 .auth-card { background: white; border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 22px 60px rgba(48,62,78,.09); margin: 60px auto; max-width: 510px; padding: clamp(26px, 5vw, 44px); width: calc(100% - 40px); }
 .auth-card h1 { font-size: 44px; }
 .auth-card > p:not(.eyebrow) { color: var(--muted); line-height: 1.6; }
 .auth-tabs { background: var(--sand); border-radius: 12px; display: grid; gap: 4px; grid-template-columns: 1fr 1fr; margin: 26px 0 20px; padding: 4px; }
 .auth-tabs button { background: transparent; border: 0; border-radius: 9px; color: var(--muted); font-weight: 800; min-height: 44px; padding: 10px; }
 .auth-tabs button.active { background: white; color: var(--navy); box-shadow: 0 2px 8px rgba(30,40,50,.08); }
-.auth-form { display: grid; gap: 15px; }
-.auth-form label { color: var(--navy); display: grid; font-size: 13px; font-weight: 800; gap: 7px; }
-.auth-form .button { margin-top: 6px; }
 .form-grid.single { grid-template-columns: 1fr; }
+.auth-reset-form { margin-top: 26px; }
 .form-message { border-radius: 9px; font-size: 13px; margin: 0; padding: 10px 12px; }
 .form-message.error { background: #fae3e4; color: #8c252d; }
 .form-message.success { background: #dff3e8; color: #17583a; }
 .reset-link { display: block; margin: 16px auto 0; }
+.auth-invitation-help { font-size: 12px; margin: 18px 0 0; text-align: center; }
+.auth-invitation-help a { color: var(--blue); font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 .account-email { color: rgba(255,255,255,.55); font-size: 12px; max-width: min(32vw, 240px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.auth-help { border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: 24px; padding-top: 20px; text-align: center; }
 .dashboard-tabs { border-bottom: 1px solid var(--line); display: flex; gap: 6px; margin: 34px 0 22px; overflow-x: auto; }
 .dashboard-tabs button { background: transparent; border: 0; border-bottom: 3px solid transparent; color: var(--muted); font-weight: 800; padding: 14px 16px; white-space: nowrap; }
 .dashboard-tabs button.active { border-color: var(--blue); color: var(--navy); }
@@ -935,8 +927,6 @@ td small { color: var(--muted); margin-top: 5px; }
   .review-card { grid-template-columns: 1fr; }
   .review-main dl { grid-template-columns: repeat(2, 1fr); }
   .admin-guidance > div { grid-template-columns: 1fr 1fr; }
-  .form-actions { flex-direction: column-reverse; }
-  .form-actions .button { width: 100%; }
   .wizard-progress strong { display: none; }
   .wizard-progress li { justify-content: center; }
   .review-summary { grid-template-columns: 1fr; }

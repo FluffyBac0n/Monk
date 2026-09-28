@@ -26,10 +26,15 @@ const htmxSafeRefresh: Plugin = {
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === 'seatbelt';
+const localVars: Record<string, string> = {};
+if (process.env.INTEREST_RATE_LIMIT_SECRET) {
+  localVars.INTEREST_RATE_LIMIT_SECRET = process.env.INTEREST_RATE_LIMIT_SECRET;
+}
 
 const localBindingConfig = {
   main: 'vinext/server/app-router-entry',
   compatibility_flags: ['nodejs_compat'],
+  vars: localVars,
   d1_databases: d1
     ? [
         {

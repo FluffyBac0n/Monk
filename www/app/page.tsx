@@ -9,7 +9,7 @@ import { SITE_URL } from '@/lib/site';
 
 const paths = [
   {
-    label: 'For hikers', title: 'Plan the trail', image: '/cyprus-e4-forest.jpg',
+    label: 'For hikers', title: 'Plan the trail', image: '/cyprus-e4-forest-960.webp',
     alt: 'A marked section of the E4 long-distance trail through a Cyprus forest',
     copy: 'Plan your route, carry it offline and find practical places to stay with the EuroTrex mobile app.',
     action: 'Explore the hiker app', href: '#hikers',
@@ -36,7 +36,7 @@ const appFeatures = [
 ];
 
 const hostSteps = [
-  { title: 'Create your account', copy: 'Register as an accommodation partner and tell us who you represent.', image: '/host-step-account-photo.webp', alt: 'A Cyprus guesthouse owner creating a host account on a laptop' },
+  { title: 'Activate your invitation', copy: 'Use the invitation sent after EuroTrex confirms who you represent.', image: '/host-step-account-photo.webp', alt: 'A Cyprus guesthouse owner activating a host invitation on a laptop' },
   { title: 'Add the essentials', copy: 'Share your location, nearest stage point, price range and reliable contact information.', image: '/host-step-details-photo.webp', alt: 'A Cyprus guesthouse owner checking trail-ready property details' },
   { title: 'Submit for verification', copy: 'We review owner authority, contact details and trail relevance before publication.', image: '/host-step-verified-photo.webp', alt: 'A hiker finding a verified trail-side guesthouse' },
 ];
@@ -75,7 +75,7 @@ export default function Home() {
   const structuredData = {
     '@context': 'https://schema.org',
     '@graph': [
-      { '@type': 'Organization', '@id': `${SITE_URL}/#organization`, name: 'EuroTrex', url: SITE_URL, logo: `${SITE_URL}/eurotrex-app-icon.png`, email: 'info@eurotrex.eu' },
+      { '@type': 'Organization', '@id': `${SITE_URL}/#organization`, name: 'EuroTrex', url: SITE_URL, logo: `${SITE_URL}/eurotrex-app-icon-ui.webp`, email: 'info@eurotrex.eu' },
       { '@type': 'WebSite', '@id': `${SITE_URL}/#website`, url: SITE_URL, name: 'EuroTrex', publisher: { '@id': `${SITE_URL}/#organization` }, inLanguage: 'en' },
       { '@type': 'WebPage', '@id': `${SITE_URL}/#webpage`, url: SITE_URL, name: 'EuroTrex — Cyprus E4 trail app and route planner', description: 'Plan and navigate the Cyprus E4 with offline maps, flexible route planning, elevation context and practical trail-side stays.', isPartOf: { '@id': `${SITE_URL}/#website` }, about: { '@id': `${SITE_URL}/#app` }, inLanguage: 'en' },
       { '@type': 'MobileApplication', '@id': `${SITE_URL}/#app`, name: 'EuroTrex', url: SITE_URL, operatingSystem: 'iOS, Android', applicationCategory: 'TravelApplication', description: 'Offline route guidance, flexible route planning, elevation context and trail-side accommodation for the Cyprus E4.', featureList: appFeatures.map(([feature]) => feature), screenshot: [`${SITE_URL}/app-stages.webp`, `${SITE_URL}/app-planner.webp`, `${SITE_URL}/app-elevation.webp`], ...(storeUrls.length ? { sameAs: storeUrls } : {}) },
@@ -93,7 +93,20 @@ export default function Home() {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
         <section className="hero">
           <div className="hero-media">
-            <Image className="hero-image" src="/zapalo-coast-hero.webp" alt="Zapalo Bay’s limestone cliffs and coastal trail above the Mediterranean in Cyprus" fill priority sizes="(max-width: 760px) 100vw, 78vw" />
+            <picture>
+              <source
+                srcSet="/zapalo-coast-hero-640.webp 640w, /zapalo-coast-hero-960.webp 960w, /zapalo-coast-hero-1280.webp 1280w, /zapalo-coast-hero-1920.webp 1920w"
+                sizes="(max-width: 760px) 100vw, 78vw"
+                type="image/webp"
+              />
+              <img
+                className="hero-image"
+                src="/zapalo-coast-hero-1280.webp"
+                alt="Zapalo Bay’s limestone cliffs and coastal trail above the Mediterranean in Cyprus"
+                decoding="async"
+                fetchPriority="high"
+              />
+            </picture>
           </div>
           <div className="hero-shade" />
           <div className="hero-inner">
@@ -156,7 +169,7 @@ export default function Home() {
               </ul>
             </div>
             <div className="hiker-launch-band" id="app-updates" aria-labelledby="download-title">
-              <Image className="app-icon" src="/eurotrex-app-icon.png" alt="EuroTrex app icon" width={1024} height={1024} />
+              <Image className="app-icon" src="/eurotrex-app-icon-ui.webp" alt="EuroTrex app icon" width={256} height={256} />
               <div className="hiker-launch-copy"><p className="eyebrow">The E4 in your pocket</p><h3 id="download-title">Be first on the trail.</h3><p>Get testing invitations and verified iPhone or Android store links when they are ready.</p></div>
               <div className="hiker-launch-actions" aria-label="EuroTrex app availability" role="group">
                 <div className="store-item">{appStoreUrl ? <a href={appStoreUrl} target="_blank" rel="noreferrer" aria-label="Download EuroTrex on the App Store"><Image src="/app-store-badge.svg" alt="Download on the App Store" width={180} height={60} /></a> : <span className="store-badge"><Image src="/app-store-badge.svg" alt="" aria-hidden="true" width={180} height={60} /></span>}</div>
@@ -202,7 +215,7 @@ export default function Home() {
         <section className="involved-section" id="involved" aria-labelledby="involved-title">
           <div className="section-shell">
             <div className="section-heading"><div><p className="eyebrow">Join us</p><h2 id="involved-title">Help the path reach farther.</h2></div><p>EuroTrex grows through local knowledge, useful partnerships and people who care for the trail.</p></div>
-            <div className="involved-grid involved-mosaic">
+            <div className="involved-grid">
               {involvement.map(({ label, title, copy, action, href, image, alt, featured }) => (
                 <article className={`reveal${featured ? ' involved-featured' : ''}`} key={title}><a className="involved-card-link" href={href}><div className="involved-image"><Image src={image} alt={alt} fill sizes={featured ? '(max-width: 820px) 100vw, 58vw' : '(max-width: 820px) 100vw, 36vw'} /></div><div className="involved-card-shade" /><div className="involved-card-body"><p className="eyebrow light">{label}</p><h3>{title}</h3><p>{copy}</p><span className="editorial-link">{action}<i aria-hidden="true" /></span></div></a></article>
               ))}

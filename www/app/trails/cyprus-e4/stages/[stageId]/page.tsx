@@ -43,14 +43,14 @@ export default async function CyprusE4StagePage({ params }: StagePageProps) {
     <>
       <a className="skip-link" href="#main-content">Skip to content</a><PublicHeader activeTrail="cyprus-e4" />
       <PublicContent>
-      <main id="main-content" className="content-page stage-page" data-trail-guide="cyprus-e4" tabIndex={-1} {...publicHtmxNavigation}>
+      <main id="main-content" className="content-page" data-trail-guide="cyprus-e4" tabIndex={-1} {...publicHtmxNavigation}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
         <header className="simple-page-header section-shell">
           <a className="stage-return-link" href="/trails/cyprus-e4/stages"><span aria-hidden="true">←</span> All stage points</a>
           <p className="eyebrow">Point {index + 1} of {cyprusE4Stages.length}</p><h1>{stage.name}</h1><p>{stage.accumulatedDistanceKm?.toFixed(1) ?? '—'} km from Pafos Airport on the published Cyprus E4 route.</p>
         </header>
         <section className="section-shell stage-detail-grid">
-          <div className="stage-main">
+          <div>
             <dl className="stage-metrics">
               <div><dt>Segment distance</dt><dd>{stage.segmentLengthKm?.toFixed(1) ?? '—'} km</dd></div><div><dt>Ascent</dt><dd>{stage.elevationUpM?.toFixed(0) ?? '—'} m</dd></div><div><dt>Descent</dt><dd>{stage.elevationDownM?.toFixed(0) ?? '—'} m</dd></div><div><dt>Altitude</dt><dd>{stage.altitudeM?.toFixed(0) ?? '—'} m</dd></div>
             </dl>

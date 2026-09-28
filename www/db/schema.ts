@@ -25,3 +25,16 @@ export const interestCreatedAtIndex = `
   CREATE INDEX IF NOT EXISTS interest_submissions_created_at_idx
   ON interest_submissions (created_at DESC)
 `;
+
+export const interestRateLimitsTable = `
+  CREATE TABLE IF NOT EXISTS interest_rate_limits (
+    bucket_key TEXT PRIMARY KEY NOT NULL,
+    request_count INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+  )
+`;
+
+export const interestRateLimitExpiryIndex = `
+  CREATE INDEX IF NOT EXISTS interest_rate_limits_expiry_idx
+  ON interest_rate_limits (expires_at)
+`;

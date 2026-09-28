@@ -43,10 +43,10 @@ export function PublicHeader({ activeTrail }: { activeTrail?: string }) {
   return (
     <>
       <PublicHydrationBoundary />
-      <header className="site-header" data-runtime-owner="public" {...publicHtmxNavigation}>
+      <header className="site-header" {...publicHtmxNavigation}>
         <div className="header-inner">
           <a className="brand" href="/" aria-label="EuroTrex home">
-            <Image src="/eurotrex-wordmark.png" alt="EuroTrex" width={2172} height={724} priority />
+            <Image src="/eurotrex-wordmark-ui.webp" alt="EuroTrex" width={528} height={176} sizes="132px" />
           </a>
           <span className="route-chip">E4 · Europe</span>
           <nav className="desktop-nav" aria-label="Primary navigation">
@@ -54,7 +54,7 @@ export function PublicHeader({ activeTrail }: { activeTrail?: string }) {
             <a href="/#hosts">For hosts</a>
             <a href="/trails/cyprus-e4">Explore trails</a>
             <a href="/get-involved">Join us</a>
-            <a className="nav-host" href="/portal?mode=signin" {...disableHtmxNavigation}>Host Portal</a>
+            <a className="nav-host" href="/portal" {...disableHtmxNavigation}>Host Portal</a>
             <NotifyButton className="nav-primary">Notify me</NotifyButton>
           </nav>
           <LanguageControl />

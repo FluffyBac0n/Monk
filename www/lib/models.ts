@@ -98,8 +98,6 @@ export type PublishedLodging = {
   distanceFromTrailKm?: number | null;
   capacityPeople?: number | null;
   monthsOpen?: string | null;
-  ownerId?: string;
-  sourceSubmissionId?: string;
 };
 
 export type AuditEntry = {
