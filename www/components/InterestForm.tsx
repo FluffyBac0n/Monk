@@ -4,6 +4,8 @@ type InterestFormProps = {
   kind: 'beta' | 'involved';
   defaultInterest?: string;
   compact?: boolean;
+  defaultMessage?: string;
+  trail?: string;
 };
 
 const interestOptions = [
@@ -13,13 +15,14 @@ const interestOptions = [
   ['sponsor', 'Sponsorship and partnerships'],
   ['host', 'Accommodation hosting'],
   ['other', 'Something else'],
+  ['report', 'Report a trail information issue'],
 ];
 
 function RequiredLabel({ children }: { children: ReactNode }) {
   return <span className="field-label">{children} <span className="required-marker" aria-hidden="true">*</span></span>;
 }
 
-export function InterestForm({ kind, defaultInterest = 'volunteer', compact = false }: InterestFormProps) {
+export function InterestForm({ kind, defaultInterest = 'volunteer', compact = false, defaultMessage = '', trail = 'all' }: InterestFormProps) {
   const endpoint = `/api/interest?kind=${kind}${compact ? '&compact=true' : ''}`;
   const feedbackId = `${kind}-interest-feedback${compact ? '-compact' : ''}`;
 
@@ -41,6 +44,7 @@ export function InterestForm({ kind, defaultInterest = 'volunteer', compact = fa
       }}
     >
       <div className="honeypot" aria-hidden="true"><label>Website<input name="website" tabIndex={-1} autoComplete="off" /></label></div>
+      {kind === 'beta' && <input type="hidden" name="trail" value={trail} data-notify-trail />}
       {kind === 'involved' && (
         <>
           <label><RequiredLabel>Your name</RequiredLabel><input name="name" autoComplete="name" maxLength={120} required /></label>
@@ -63,14 +67,14 @@ export function InterestForm({ kind, defaultInterest = 'volunteer', compact = fa
           </select>
         </label>
       )}
-      {kind === 'involved' && <label className="full"><RequiredLabel>Tell us a little more</RequiredLabel><textarea name="message" rows={5} maxLength={1500} required /></label>}
-      {kind === 'involved' && <label className="check-label full"><input name="consent" value="yes" type="checkbox" required /><span>EuroTrex may use these details to reply and send relevant project updates. See the <a href="/privacy" target="_blank">privacy notice</a>. <span className="required-marker" aria-hidden="true">*</span></span></label>}
+      {kind === 'involved' && <label className="full"><RequiredLabel>Tell us a little more</RequiredLabel><textarea name="message" rows={5} maxLength={1500} defaultValue={defaultMessage} required /></label>}
+      {kind === 'involved' && <><p className="form-privacy full">We use these details to respond to your enquiry. Read our <a href="/privacy" target="_blank" rel="noopener">privacy notice</a>.</p><label className="check-label full"><input name="consent" value="yes" type="checkbox" /><span>Also email me occasional EuroTrex project updates. This is optional.</span></label></>}
       <div id={feedbackId} className="form-feedback full" aria-live="polite" />
       <button type="submit" className="button button-yellow full">
         <span className="submit-idle">{kind === 'beta' ? 'Notify me' : 'Send my interest'}</span>
         <span className="submit-loading">Sending…</span>
       </button>
-      {kind === 'beta' && <p className="beta-privacy full">We’ll only use your email for EuroTrex app updates. Read our <a href="/privacy" target="_blank">privacy notice</a>.</p>}
+      {kind === 'beta' && <p className="beta-privacy full"><span>We’ll use your email for the selected EuroTrex trail and app updates.</span><span>Read our <a href="/privacy" target="_blank" rel="noopener">privacy notice</a>.</span></p>}
     </form>
   );
 }

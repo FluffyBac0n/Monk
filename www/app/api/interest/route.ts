@@ -2,7 +2,8 @@ import { env } from 'cloudflare:workers';
 import { NextResponse } from 'next/server';
 import { database, ensureInterestSchema } from '@/lib/db';
 
-const interests = new Set(['volunteer', 'collaborate', 'field-walks', 'sponsor', 'host', 'other']);
+const interests = new Set(['volunteer', 'collaborate', 'field-walks', 'sponsor', 'host', 'other', 'report']);
+const trailScopes = new Set(['all', 'cyprus-e4', 'crete-e4', 'peloponnese-e4']);
 const platforms = new Set(['ios', 'android', 'both', 'not-sure']);
 const acceptedMediaTypes = new Set(['application/json', 'application/x-www-form-urlencoded']);
 const maximumBodyBytes = 16 * 1024;
@@ -176,17 +177,18 @@ export async function POST(request: Request) {
     const message = field(body.message, 1500);
     const sourcePath = requestPath(request);
     const consent = body.consent === true || body.consent === 'yes';
+    const trail = field(body.trail, 40) || 'all';
 
     if (!kind || !validEmail(email)) {
       const error = 'Enter a valid email address.';
       return response(isHtmx, { ok: false, error }, 400, kind, error, compact);
     }
-    if (kind === 'beta' && !platforms.has(platform)) {
+    if (kind === 'beta' && (!platforms.has(platform) || !trailScopes.has(trail))) {
       const error = 'Choose your preferred mobile platform.';
       return response(isHtmx, { ok: false, error }, 400, kind, error, compact);
     }
-    if (kind === 'involved' && (!name || !interests.has(interest) || !message || !consent)) {
-      const error = 'Complete your name, interest and message, then accept the privacy notice.';
+    if (kind === 'involved' && (!name || !interests.has(interest) || !message)) {
+      const error = 'Complete your name, interest and message.';
       return response(isHtmx, { ok: false, error }, 400, kind, error, compact);
     }
 
@@ -196,20 +198,25 @@ export async function POST(request: Request) {
     const createdAt = new Date().toISOString();
 
     if (kind === 'beta') {
-      await db.prepare(`
+      await db.batch([db.prepare(`
         INSERT OR IGNORE INTO interest_submissions
           (id, kind, name, email, email_normalized, organization, platform, interest, message, source_path, status, created_at)
         VALUES (?, 'beta', ?, ?, ?, '', ?, '', '', ?, 'new', ?)
-      `).bind(id, '', email, normalizedEmail, platform, sourcePath, createdAt).run();
-      const confirmation = 'You’re on the notification list. We’ll email you when testing invitations or official store links are ready.';
+      `).bind(id, '', email, normalizedEmail, platform, sourcePath, createdAt),
+      db.prepare(`INSERT INTO interest_preferences (submission_id, scope, updates_opt_in, platform, updated_at)
+        SELECT id, ?, 1, ?, ? FROM interest_submissions WHERE kind = 'beta' AND email_normalized = ?
+        ON CONFLICT(submission_id, scope) DO UPDATE SET platform = excluded.platform, updated_at = excluded.updated_at, updates_opt_in = 1
+      `).bind(trail, platform, createdAt, normalizedEmail)]);
+      const confirmation = trail === 'all' ? 'You’re on the notification list. We’ll email you when testing invitations or official store links are ready.' : 'Your trail preference is saved. We’ll email you when there is news about this guide or its availability in the app.';
       return response(isHtmx, { ok: true }, 200, kind, confirmation, compact);
     }
 
-    await db.prepare(`
+    await db.batch([db.prepare(`
       INSERT INTO interest_submissions
         (id, kind, name, email, email_normalized, organization, platform, interest, message, source_path, status, created_at)
       VALUES (?, 'involved', ?, ?, ?, ?, '', ?, ?, ?, 'new', ?)
-    `).bind(id, name, email, normalizedEmail, organization, interest, message, sourcePath, createdAt).run();
+    `).bind(id, name, email, normalizedEmail, organization, interest, message, sourcePath, createdAt),
+    db.prepare('INSERT INTO interest_preferences (submission_id, scope, updates_opt_in, platform, updated_at) VALUES (?, ?, ?, ?, ?)').bind(id, 'project', consent ? 1 : 0, '', createdAt)]);
     return response(isHtmx, { ok: true }, 201, kind, 'Thank you. Your message is with the EuroTrex team.', compact);
   } catch (caught) {
     if (caught instanceof RequestError) {

@@ -12,11 +12,12 @@ export type CyprusE4Stage = {
   elevationDownM: number | null;
   altitudeM: number | null;
   services: Record<string, boolean>;
+  location: { latitude: number; longitude: number } | null;
 };
 
 export const cyprusE4 = {
   "id": "cyprus-e4",
-  "name": "Cyprus E4",
+  "name": "Cyprus-E4",
   "country": "Cyprus",
   "distanceKm": 558.091042780747,
   "stageCount": 123,
@@ -49,6 +50,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.710992,
+      "longitude": 32.4823083
     }
   },
   {
@@ -73,6 +78,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.7385196,
+      "longitude": 32.48515
     }
   },
   {
@@ -97,6 +106,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.7550511,
+      "longitude": 32.5066542
     }
   },
   {
@@ -121,6 +134,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.7957313,
+      "longitude": 32.5262394
     }
   },
   {
@@ -145,6 +162,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.8075721,
+      "longitude": 32.5272033
     }
   },
   {
@@ -169,6 +190,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.8150241,
+      "longitude": 32.524904
     }
   },
   {
@@ -193,7 +218,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
-    }
+    },
+    "location": null
   },
   {
     "id": "116-tsada",
@@ -217,6 +243,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.8383328,
+      "longitude": 32.4796053
     }
   },
   {
@@ -241,6 +271,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.8558548,
+      "longitude": 32.4542696
     }
   },
   {
@@ -265,6 +299,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.870783,
+      "longitude": 32.4362774
     }
   },
   {
@@ -289,6 +327,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.8843991,
+      "longitude": 32.3852153
     }
   },
   {
@@ -313,7 +355,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
-    }
+    },
+    "location": null
   },
   {
     "id": "111-pafos-zoo",
@@ -337,6 +380,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": true,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.8940942,
+      "longitude": 32.342976
     }
   },
   {
@@ -361,6 +408,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9016804,
+      "longitude": 32.3328149
     }
   },
   {
@@ -385,6 +436,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9105417,
+      "longitude": 32.3329904
     }
   },
   {
@@ -409,6 +464,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9194812,
+      "longitude": 32.3373954
     }
   },
   {
@@ -433,7 +492,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
-    }
+    },
+    "location": null
   },
   {
     "id": "106-akamas-water-fountain",
@@ -457,6 +517,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0122446,
+      "longitude": 32.3070479
     }
   },
   {
@@ -481,6 +545,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0886373,
+      "longitude": 32.3002732
     }
   },
   {
@@ -505,6 +573,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 35.0574398,
+      "longitude": 32.3441258
     }
   },
   {
@@ -529,6 +601,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0477784,
+      "longitude": 32.3309065
     }
   },
   {
@@ -553,6 +629,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0588913,
+      "longitude": 32.3262383
     }
   },
   {
@@ -577,7 +657,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
-    }
+    },
+    "location": null
   },
   {
     "id": "100-smigies-picnic-site",
@@ -601,6 +682,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0236253,
+      "longitude": 32.3283944
     }
   },
   {
@@ -625,6 +710,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9721032,
+      "longitude": 32.3742416
     }
   },
   {
@@ -649,6 +738,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9666387,
+      "longitude": 32.384963
     }
   },
   {
@@ -673,6 +766,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.962974,
+      "longitude": 32.3970904
     }
   },
   {
@@ -697,6 +794,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9555276,
+      "longitude": 32.4198903
     }
   },
   {
@@ -721,6 +822,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9645943,
+      "longitude": 32.4224294
     }
   },
   {
@@ -745,6 +850,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9896226,
+      "longitude": 32.4305939
     }
   },
   {
@@ -769,6 +878,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9986631,
+      "longitude": 32.4355025
     }
   },
   {
@@ -793,6 +906,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9928311,
+      "longitude": 32.4410243
     }
   },
   {
@@ -817,6 +934,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0025823,
+      "longitude": 32.4708233
     }
   },
   {
@@ -841,6 +962,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9994612,
+      "longitude": 32.4722461
     }
   },
   {
@@ -865,6 +990,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0120256,
+      "longitude": 32.4769938
     }
   },
   {
@@ -889,6 +1018,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.993852,
+      "longitude": 32.5108645
     }
   },
   {
@@ -913,6 +1046,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9892928,
+      "longitude": 32.5239539
     }
   },
   {
@@ -937,7 +1074,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
-    }
+    },
+    "location": null
   },
   {
     "id": "85-junction-spring",
@@ -961,6 +1099,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0032675,
+      "longitude": 32.5587879
     }
   },
   {
@@ -985,6 +1127,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0251416,
+      "longitude": 32.6302596
     }
   },
   {
@@ -1009,6 +1155,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9965235,
+      "longitude": 32.6777621
     }
   },
   {
@@ -1033,7 +1183,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
-    }
+    },
+    "location": null
   },
   {
     "id": "81-kykkos-monastery",
@@ -1057,6 +1208,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9768564,
+      "longitude": 32.7427373
     }
   },
   {
@@ -1081,6 +1236,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9616742,
+      "longitude": 32.7488003
     }
   },
   {
@@ -1105,6 +1264,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9469512,
+      "longitude": 32.7733352
     }
   },
   {
@@ -1129,6 +1292,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9517208,
+      "longitude": 32.7874089
     }
   },
   {
@@ -1153,6 +1320,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9285756,
+      "longitude": 32.7839697
     }
   },
   {
@@ -1177,7 +1348,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
-    }
+    },
+    "location": null
   },
   {
     "id": "75-agios-georgios-kapourallis",
@@ -1201,7 +1373,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
-    }
+    },
+    "location": null
   },
   {
     "id": "74-kampoi-tou-kalogyrou",
@@ -1225,6 +1398,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9274557,
+      "longitude": 32.8311653
     }
   },
   {
@@ -1249,6 +1426,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9183591,
+      "longitude": 32.8358597
     }
   },
   {
@@ -1273,6 +1454,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9021939,
+      "longitude": 32.8661937
     }
   },
   {
@@ -1297,7 +1482,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
-    }
+    },
+    "location": null
   },
   {
     "id": "70-troodos",
@@ -1321,6 +1507,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.922763,
+      "longitude": 32.8803341
     }
   },
   {
@@ -1345,6 +1535,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9478419,
+      "longitude": 32.9269875
     }
   },
   {
@@ -1369,6 +1563,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9534269,
+      "longitude": 32.9452322
     }
   },
   {
@@ -1393,7 +1591,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
-    }
+    },
+    "location": null
   },
   {
     "id": "66-spilia",
@@ -1417,6 +1616,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9668588,
+      "longitude": 32.961658
     }
   },
   {
@@ -1441,6 +1644,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9690481,
+      "longitude": 33.0005017
     }
   },
   {
@@ -1465,6 +1672,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9661775,
+      "longitude": 33.0060264
     }
   },
   {
@@ -1489,7 +1700,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
-    }
+    },
+    "location": null
   },
   {
     "id": "62-stavros-agiasmati-church",
@@ -1513,6 +1725,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.979264,
+      "longitude": 33.046216
     }
   },
   {
@@ -1537,7 +1753,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
-    }
+    },
+    "location": null
   },
   {
     "id": "60-agios-epifanios",
@@ -1561,6 +1778,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9963104,
+      "longitude": 33.1192559
     }
   },
   {
@@ -1585,6 +1806,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9942676,
+      "longitude": 33.1597984
     }
   },
   {
@@ -1609,7 +1834,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
-    }
+    },
+    "location": null
   },
   {
     "id": "57-fikardou-gourri",
@@ -1633,6 +1859,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9605859,
+      "longitude": 33.1705302
     }
   },
   {
@@ -1657,6 +1887,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.949737,
+      "longitude": 33.1755435
     }
   },
   {
@@ -1681,6 +1915,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9416102,
+      "longitude": 33.1882649
     }
   },
   {
@@ -1705,6 +1943,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9201583,
+      "longitude": 33.1975081
     }
   },
   {
@@ -1729,7 +1971,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
-    }
+    },
+    "location": null
   },
   {
     "id": "52-lithrodontas",
@@ -1753,6 +1996,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9466207,
+      "longitude": 33.2930464
     }
   },
   {
@@ -1777,6 +2024,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9159532,
+      "longitude": 33.362019
     }
   },
   {
@@ -1801,6 +2052,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9219328,
+      "longitude": 33.3965679
     }
   },
   {
@@ -1825,7 +2080,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
-    }
+    },
+    "location": null
   },
   {
     "id": "48-stavrovouni-monastery",
@@ -1849,6 +2105,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.8869682,
+      "longitude": 33.4357584
     }
   },
   {
@@ -1873,6 +2133,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.898334,
+      "longitude": 33.4245094
     }
   },
   {
@@ -1897,6 +2161,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9182364,
+      "longitude": 33.4490325
     }
   },
   {
@@ -1921,6 +2189,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9074254,
+      "longitude": 33.4803905
     }
   },
   {
@@ -1945,6 +2217,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.894397,
+      "longitude": 33.5143903
     }
   },
   {
@@ -1969,6 +2245,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9272413,
+      "longitude": 33.5368345
     }
   },
   {
@@ -1993,6 +2273,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9783889,
+      "longitude": 33.5208722
     }
   },
   {
@@ -2017,6 +2301,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9989085,
+      "longitude": 33.5294842
     }
   },
   {
@@ -2041,6 +2329,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 35.010248,
+      "longitude": 33.5719253
     }
   },
   {
@@ -2065,7 +2357,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
-    }
+    },
+    "location": null
   },
   {
     "id": "38-iera-moni-panagias-rodon-to-amaranton",
@@ -2089,6 +2382,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0310545,
+      "longitude": 33.6104752
     }
   },
   {
@@ -2113,6 +2410,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 35.0285178,
+      "longitude": 33.6126784
     }
   },
   {
@@ -2137,6 +2438,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0139854,
+      "longitude": 33.6273143
     }
   },
   {
@@ -2161,6 +2466,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0141235,
+      "longitude": 33.6377057
     }
   },
   {
@@ -2185,7 +2494,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
-    }
+    },
+    "location": null
   },
   {
     "id": "33-pyla-n",
@@ -2209,6 +2519,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 35.0141511,
+      "longitude": 33.6939502
     }
   },
   {
@@ -2233,6 +2547,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.009016,
+      "longitude": 33.7153302
     }
   },
   {
@@ -2257,6 +2575,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 35.0163279,
+      "longitude": 33.7371226
     }
   },
   {
@@ -2281,6 +2603,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 35.0151539,
+      "longitude": 33.775788
     }
   },
   {
@@ -2305,7 +2631,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": true,
       "busStop": true
-    }
+    },
+    "location": null
   },
   {
     "id": "28-church-of-st-george-of-agkonas",
@@ -2329,6 +2656,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0082915,
+      "longitude": 33.7997232
     }
   },
   {
@@ -2353,6 +2684,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.981234,
+      "longitude": 33.8490429
     }
   },
   {
@@ -2377,6 +2712,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9973828,
+      "longitude": 33.8882601
     }
   },
   {
@@ -2401,6 +2740,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 35.0059705,
+      "longitude": 33.954644
     }
   },
   {
@@ -2425,6 +2768,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.011644,
+      "longitude": 33.9658148
     }
   },
   {
@@ -2449,6 +2796,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9974108,
+      "longitude": 34.0000786
     }
   },
   {
@@ -2473,6 +2824,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 35.0021948,
+      "longitude": 34.0297889
     }
   },
   {
@@ -2497,6 +2852,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9853021,
+      "longitude": 34.0670285
     }
   },
   {
@@ -2521,6 +2880,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9769208,
+      "longitude": 34.0722039
     }
   },
   {
@@ -2545,6 +2908,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9703053,
+      "longitude": 34.0757045
     }
   },
   {
@@ -2569,6 +2936,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9721648,
+      "longitude": 34.0454078
     }
   },
   {
@@ -2593,6 +2964,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9816396,
+      "longitude": 34.0006819
     }
   },
   {
@@ -2617,6 +2992,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9809671,
+      "longitude": 33.9279872
     }
   },
   {
@@ -2641,6 +3020,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9773838,
+      "longitude": 33.8504787
     }
   },
   {
@@ -2665,6 +3048,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9653821,
+      "longitude": 33.8337265
     }
   },
   {
@@ -2689,6 +3076,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 35.0069643,
+      "longitude": 33.7825008
     }
   },
   {
@@ -2713,6 +3104,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9828563,
+      "longitude": 33.7403821
     }
   },
   {
@@ -2737,6 +3132,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9796266,
+      "longitude": 33.7013712
     }
   },
   {
@@ -2761,6 +3160,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 35.0104391,
+      "longitude": 33.6914186
     }
   },
   {
@@ -2785,6 +3188,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.98869,
+      "longitude": 33.6530965
     }
   },
   {
@@ -2809,6 +3216,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": false
+    },
+    "location": {
+      "latitude": 34.9799247,
+      "longitude": 33.6463108
     }
   },
   {
@@ -2833,6 +3244,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9759295,
+      "longitude": 33.6231287
     }
   },
   {
@@ -2857,7 +3272,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
-    }
+    },
+    "location": null
   },
   {
     "id": "5-rizoelia-park",
@@ -2881,7 +3297,8 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": true,
       "busStop": true
-    }
+    },
+    "location": null
   },
   {
     "id": "4-larnaka",
@@ -2905,6 +3322,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": true,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.9119198,
+      "longitude": 33.5963993
     }
   },
   {
@@ -2929,6 +3350,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.8857178,
+      "longitude": 33.6090798
     }
   },
   {
@@ -2953,6 +3378,10 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": false,
       "atm": false,
       "busStop": true
+    },
+    "location": {
+      "latitude": 34.8807276,
+      "longitude": 33.6169821
     }
   },
   {
@@ -2977,9 +3406,2319 @@ export const cyprusE4Stages: CyprusE4Stage[] = [
       "pharmacy": true,
       "atm": true,
       "busStop": true
-    }
+    },
+    "location": null
   }
 ];
+
+export const recordedStays = [
+  {
+    "id": "123-pafos-airport-timi-picnic-site",
+    "stageId": "123-pafos-airport",
+    "name": "Timi Picnic Site",
+    "type": "Picnic site",
+    "village": "Timi",
+    "priceMinEur": 0,
+    "priceMaxEur": 0,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/rextyQ1nn68xRjrj8"
+  },
+  {
+    "id": "123-pafos-airport-louis-phaethon-beach",
+    "stageId": "123-pafos-airport",
+    "name": "Louis Phaethon Beach",
+    "type": "Hotel",
+    "village": "Geroskipou",
+    "priceMinEur": 137,
+    "priceMaxEur": 379,
+    "distanceFromTrailKm": 2.5,
+    "website": "https://louisphaethonbeach.com/",
+    "mapUrl": "https://maps.app.goo.gl/styaW99D8TWTMxGX9"
+  },
+  {
+    "id": "123-pafos-airport-pandream-hotel-apartments",
+    "stageId": "123-pafos-airport",
+    "name": "Pandream Hotel Apartments",
+    "type": "Hotel",
+    "village": "Geroskipou",
+    "priceMinEur": 59,
+    "priceMaxEur": 145,
+    "distanceFromTrailKm": 4,
+    "website": "http://www.pandream.com/",
+    "mapUrl": "https://maps.app.goo.gl/wHEvKVA7mUPpMq9FA"
+  },
+  {
+    "id": "123-pafos-airport-cosy-flat-with-panoramc-view-15-mins-from-airport",
+    "stageId": "123-pafos-airport",
+    "name": "Cosy flat with panoramc view, 15 mins from airport",
+    "type": "Apartment",
+    "village": "Geroskipou",
+    "priceMinEur": 48,
+    "priceMaxEur": 116,
+    "distanceFromTrailKm": 3.8,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/9ZNmvZCm9FK3WeJ18"
+  },
+  {
+    "id": "123-pafos-airport-bryeva-holiday-apartments",
+    "stageId": "123-pafos-airport",
+    "name": "Bryeva Holiday Apartments",
+    "type": "Apartment",
+    "village": "Kato Paphos",
+    "priceMinEur": 40,
+    "priceMaxEur": 100,
+    "distanceFromTrailKm": 4.3,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/px5EFKYMZaTJb8vw7"
+  },
+  {
+    "id": "123-pafos-airport-veronica-hotel",
+    "stageId": "123-pafos-airport",
+    "name": "Veronica Hotel",
+    "type": "Hotel",
+    "village": "Kato Paphos",
+    "priceMinEur": 63,
+    "priceMaxEur": 93,
+    "distanceFromTrailKm": 4.2,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/TCTuzfEohThaKntMA"
+  },
+  {
+    "id": "123-pafos-airport-seashell-apartments",
+    "stageId": "123-pafos-airport",
+    "name": "Seashell apartments",
+    "type": "Apartment",
+    "village": "Kato Paphos",
+    "priceMinEur": 55,
+    "priceMaxEur": 128,
+    "distanceFromTrailKm": 4,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/HfmbiuN5iYkZqkMo8"
+  },
+  {
+    "id": "123-pafos-airport-constantinou-bros-pioneer-beach-hotel",
+    "stageId": "123-pafos-airport",
+    "name": "Constantinou Bros Pioneer Beach Hotel",
+    "type": "Hotel",
+    "village": "Geroskipou",
+    "priceMinEur": 110,
+    "priceMaxEur": 224,
+    "distanceFromTrailKm": 2.5,
+    "website": "https://www.pioneer-cbh.com/",
+    "mapUrl": "https://maps.app.goo.gl/3PXSWLy5ficKw9oG9"
+  },
+  {
+    "id": "123-pafos-airport-asimina-suites-hotel",
+    "stageId": "123-pafos-airport",
+    "name": "Asimina Suites Hotel",
+    "type": "Hotel",
+    "village": "Geroskipou",
+    "priceMinEur": 311,
+    "priceMaxEur": 380,
+    "distanceFromTrailKm": 2.6,
+    "website": "https://www.asimina-cbh.com/",
+    "mapUrl": "https://maps.app.goo.gl/QEifSYgcuU9hPHu66"
+  },
+  {
+    "id": "123-pafos-airport-aquamare-beach-hotel-and-spa",
+    "stageId": "123-pafos-airport",
+    "name": "Aquamare Beach Hotel and Spa",
+    "type": "Hotel",
+    "village": "Pafos",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "123-pafos-airport-the-ivi-mare",
+    "stageId": "123-pafos-airport",
+    "name": "The Ivi Mare",
+    "type": "Hotel",
+    "village": "Pafos",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "123-pafos-airport-777-stars",
+    "stageId": "123-pafos-airport",
+    "name": "777 Stars",
+    "type": "Hostel",
+    "village": "Kato Paphos",
+    "priceMinEur": 26,
+    "priceMaxEur": 29,
+    "distanceFromTrailKm": 4.3,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/xVMX8HKdnh7Teck27"
+  },
+  {
+    "id": "123-pafos-airport-777-beach-guesthouse",
+    "stageId": "123-pafos-airport",
+    "name": "777 Beach Guesthouse",
+    "type": "Hostel",
+    "village": "Kato Paphos",
+    "priceMinEur": 24,
+    "priceMaxEur": 24,
+    "distanceFromTrailKm": 5.9,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/AqfuQWEWFrNedpR99"
+  },
+  {
+    "id": "123-pafos-airport-bee-hostel",
+    "stageId": "123-pafos-airport",
+    "name": "Bee Hostel",
+    "type": "Hostel",
+    "village": "Paphos",
+    "priceMinEur": 25,
+    "priceMaxEur": 25,
+    "distanceFromTrailKm": 7.9,
+    "website": "https://www.bee-hostel.com/",
+    "mapUrl": "https://maps.app.goo.gl/DHGK3jsHNs6gYPwH6"
+  },
+  {
+    "id": "120-episkopi-pafou-mulberry-tree-cottage",
+    "stageId": "120-episkopi-pafou",
+    "name": "Mulberry Tree Cottage",
+    "type": "Guesthouse",
+    "village": "Episkopi Pafou",
+    "priceMinEur": 108,
+    "priceMaxEur": 117,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/8cVLLiTUVCj3JSjM7"
+  },
+  {
+    "id": "120-episkopi-pafou-piskopos-house",
+    "stageId": "120-episkopi-pafou",
+    "name": "Piskopos house",
+    "type": "Guesthouse",
+    "village": "Episkopi Pafou",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.3,
+    "website": "https://www.facebook.com/PiskoposTraditionalResorts/?ref=page_internal",
+    "mapUrl": "https://maps.app.goo.gl/PFsvV6Bg3BsmmfG56"
+  },
+  {
+    "id": "120-episkopi-pafou-episkopi-heights",
+    "stageId": "120-episkopi-pafou",
+    "name": "Episkopi Heights",
+    "type": null,
+    "village": "Episkopi Pafou",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.3,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/xeaZQYdzpa81V54Y7"
+  },
+  {
+    "id": "120-episkopi-pafou-sermar-villa",
+    "stageId": "120-episkopi-pafou",
+    "name": "Sermar Villa",
+    "type": "Guesthouse",
+    "village": "Episkopi Pafou",
+    "priceMinEur": 153,
+    "priceMaxEur": 350,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/XR41qKw5znG9e3qD8"
+  },
+  {
+    "id": "120-episkopi-pafou-mythos-house",
+    "stageId": "120-episkopi-pafou",
+    "name": "Mythos House",
+    "type": "Guesthouse",
+    "village": "Episkopi Pafou",
+    "priceMinEur": 170,
+    "priceMaxEur": 205,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/m3oZh8pX43HdjY16A"
+  },
+  {
+    "id": "120-episkopi-pafou-androniki-house",
+    "stageId": "120-episkopi-pafou",
+    "name": "Androniki house",
+    "type": null,
+    "village": "Episkopi Pafou",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.3,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/rkyzm3gwyLvq8nA57"
+  },
+  {
+    "id": "119-ezousa-picnic-site-ezousa-picnic-site",
+    "stageId": "119-ezousa-picnic-site",
+    "name": "Ezousa picnic site (Μύλος του Ποιητή)",
+    "type": "Picnic site",
+    "village": "Episkopi Pafou",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.91,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/yaJndCgiScpZbDaH8"
+  },
+  {
+    "id": "117-minthis-minthis-resort",
+    "stageId": "117-minthis",
+    "name": "Minthis Resort",
+    "type": "Hotel",
+    "village": "Tsada",
+    "priceMinEur": 250,
+    "priceMaxEur": 400,
+    "distanceFromTrailKm": 0,
+    "website": "https://www.minthisresort.com/",
+    "mapUrl": "https://maps.app.goo.gl/REBrN6Dw3cz5RCy7A"
+  },
+  {
+    "id": "116-tsada-arma-resort-2-bed-cosy-aprtment",
+    "stageId": "116-tsada",
+    "name": "ARMA resort, 2 bed cosy aprtment",
+    "type": "Apartment",
+    "village": "Tsada",
+    "priceMinEur": 86,
+    "priceMaxEur": 104,
+    "distanceFromTrailKm": 0.45,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/tMhqEDcdPtP8bKCUA"
+  },
+  {
+    "id": "116-tsada-katerinas-sweet-place-studio-1",
+    "stageId": "116-tsada",
+    "name": "Katerinas sweet place studio 1",
+    "type": null,
+    "village": "Tsada",
+    "priceMinEur": 73,
+    "priceMaxEur": 73,
+    "distanceFromTrailKm": 0.55,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/xhmf4JtUcjNvKZ126"
+  },
+  {
+    "id": "116-tsada-katerinas-sweet-place-studio-2",
+    "stageId": "116-tsada",
+    "name": "Katerinas sweet place studio 2",
+    "type": null,
+    "village": "Tsada",
+    "priceMinEur": 73,
+    "priceMaxEur": 73,
+    "distanceFromTrailKm": 0.55,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/xhmf4JtUcjNvKZ127"
+  },
+  {
+    "id": "116-tsada-demelida-villa",
+    "stageId": "116-tsada",
+    "name": "Demelida Villa",
+    "type": "Guesthouse",
+    "village": "Tsada",
+    "priceMinEur": 112,
+    "priceMaxEur": 168,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/Cc1Ec4uUQ7LBbpvx9"
+  },
+  {
+    "id": "116-tsada-to-agrotiko-traditional-houses",
+    "stageId": "116-tsada",
+    "name": "To agrotiko Traditional Houses",
+    "type": "Guesthouse",
+    "village": "Kallepeia",
+    "priceMinEur": 60,
+    "priceMaxEur": 60,
+    "distanceFromTrailKm": 2.5,
+    "website": "https://www.agrotikohouse.com/",
+    "mapUrl": "https://maps.app.goo.gl/dPkBCh4i8EPhfxDU6"
+  },
+  {
+    "id": "116-tsada-narkissos-villa",
+    "stageId": "116-tsada",
+    "name": "Narkissos Villa",
+    "type": null,
+    "village": "Kallepeia",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 2.5,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "116-tsada-callopes-suites",
+    "stageId": "116-tsada",
+    "name": "Callopes Suites",
+    "type": "Apartment",
+    "village": "Kallepeia",
+    "priceMinEur": 108,
+    "priceMaxEur": 126,
+    "distanceFromTrailKm": 2.5,
+    "website": "https://calopessuites.cy/",
+    "mapUrl": "https://maps.app.goo.gl/KY6c66fc8KY5amWk8"
+  },
+  {
+    "id": "115-koili-the-small-castle-77",
+    "stageId": "115-koili",
+    "name": "The small castle 77",
+    "type": "Guesthouse",
+    "village": "Koili",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.6,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/Zqr6GxV1W4sAt8Cq7"
+  },
+  {
+    "id": "115-koili-daniel-s-hotel-apartments",
+    "stageId": "115-koili",
+    "name": "Daniel's Hotel Apartments",
+    "type": "Apartment",
+    "village": "Koili",
+    "priceMinEur": 65,
+    "priceMaxEur": 118,
+    "distanceFromTrailKm": 0,
+    "website": "https://www.facebook.com/profile.php?id=100090528445935",
+    "mapUrl": "https://maps.app.goo.gl/PAzDQMoybPKJn9xb6"
+  },
+  {
+    "id": "114-baths-of-adonis-picnic-site",
+    "stageId": "114-baths-of-adonis",
+    "name": "Picnic site",
+    "type": "Picnic site",
+    "village": "Koili",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.4,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/Yobe9F6yBCUNjyeTA"
+  },
+  {
+    "id": "114-baths-of-adonis-glamping-adonis-1-bedroom-house",
+    "stageId": "114-baths-of-adonis",
+    "name": "Glamping Adonis 1 Bedroom House",
+    "type": "Guesthouse",
+    "village": "Koili",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.45,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/hoSjPZr1NXioFhoV9"
+  },
+  {
+    "id": "114-baths-of-adonis-glamping-adonis",
+    "stageId": "114-baths-of-adonis",
+    "name": "Glamping Adonis",
+    "type": "Guesthouse",
+    "village": "Koili",
+    "priceMinEur": 60,
+    "priceMaxEur": 75,
+    "distanceFromTrailKm": 0.35,
+    "website": "https://www.instagram.com/glamping_adonis_?igsh=ZDlpYWdvczgwaXRm",
+    "mapUrl": "https://maps.app.goo.gl/t2bNNkmEXRrWTz198"
+  },
+  {
+    "id": "114-baths-of-adonis-adonis-palace-hotel",
+    "stageId": "114-baths-of-adonis",
+    "name": "Adonis Palace Hotel",
+    "type": "Hotel",
+    "village": "Koili",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.35,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/5HPg5M2b83FQpJi47"
+  },
+  {
+    "id": "114-baths-of-adonis-red-stone-islanders",
+    "stageId": "114-baths-of-adonis",
+    "name": "Red Stone Islanders",
+    "type": "Campsite",
+    "village": "Koili",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 1.8,
+    "website": "https://www.facebook.com/redstoneislanders",
+    "mapUrl": "https://maps.app.goo.gl/4potsF9Ri4jfVa9JA"
+  },
+  {
+    "id": "114-baths-of-adonis-house-on-the-hill-b-b",
+    "stageId": "114-baths-of-adonis",
+    "name": "House on the Hill B&B",
+    "type": "Bed & Breakfast",
+    "village": "Pegeia",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/sFVCSviCm4BMJEUJA"
+  },
+  {
+    "id": "114-baths-of-adonis-green-bus-unique-private",
+    "stageId": "114-baths-of-adonis",
+    "name": "Green Bus unique & private",
+    "type": "Guesthouse",
+    "village": "Akoursos",
+    "priceMinEur": 113,
+    "priceMaxEur": 113,
+    "distanceFromTrailKm": 1.5,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/pqb92KcqvAixxo9QA"
+  },
+  {
+    "id": "113-pegeia-many",
+    "stageId": "113-pegeia",
+    "name": "MANY",
+    "type": null,
+    "village": "Coral Bay",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "113-pegeia-pearl-deluxe",
+    "stageId": "113-pegeia",
+    "name": "Pearl deluxe",
+    "type": "Apartment",
+    "village": "Pegeia",
+    "priceMinEur": 63,
+    "priceMaxEur": 80,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/RFibti8F2x3P1moF6"
+  },
+  {
+    "id": "113-pegeia-sunset-apartment",
+    "stageId": "113-pegeia",
+    "name": "Sunset apartment",
+    "type": "Apartment",
+    "village": "Pegeia",
+    "priceMinEur": 84,
+    "priceMaxEur": 104,
+    "distanceFromTrailKm": 0.075,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/eRXk57YjNz1FKpfbA"
+  },
+  {
+    "id": "113-pegeia-apartment-in-beautiful-village-with-pool-balcony-hillside-and-sea-views",
+    "stageId": "113-pegeia",
+    "name": "Apartment in Beautiful Village with pool, balcony hillside and sea views",
+    "type": "Apartment",
+    "village": "Pegeia",
+    "priceMinEur": 72,
+    "priceMaxEur": 120,
+    "distanceFromTrailKm": 1.4,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/Toe4yCfngEwpHTC98"
+  },
+  {
+    "id": "113-pegeia-christina-hilltop-c",
+    "stageId": "113-pegeia",
+    "name": "Christina Hilltop C",
+    "type": "Apartment",
+    "village": "Pegeia",
+    "priceMinEur": 75,
+    "priceMaxEur": 75,
+    "distanceFromTrailKm": 0.95,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/38qytexGSbzxTxMA8"
+  },
+  {
+    "id": "113-pegeia-green-oasis-penthouse",
+    "stageId": "113-pegeia",
+    "name": "Green Oasis penthouse",
+    "type": "Apartment",
+    "village": "Pegeia",
+    "priceMinEur": 79,
+    "priceMaxEur": 117,
+    "distanceFromTrailKm": 0.55,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/FWstNJugumcUVoyv7"
+  },
+  {
+    "id": "110-agios-georgios-pegeias-west-end-hotel",
+    "stageId": "110-agios-georgios-pegeias",
+    "name": "West End Hotel",
+    "type": "Hotel",
+    "village": "Agios Georgios Pegeias",
+    "priceMinEur": 45,
+    "priceMaxEur": 45,
+    "distanceFromTrailKm": 1.4,
+    "website": "https://sawestend.com/",
+    "mapUrl": "https://maps.app.goo.gl/KuTkqtHQJKFkT5kw7"
+  },
+  {
+    "id": "108-avakas-gorge-picnic-site",
+    "stageId": "108-avakas-gorge",
+    "name": "Picnic Site",
+    "type": "Picnic site",
+    "village": null,
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/ZRN3wNWQSpUZFptc9"
+  },
+  {
+    "id": "107-lara-beach-picnic-site",
+    "stageId": "107-lara-beach",
+    "name": "Picnic Site",
+    "type": "Picnic site",
+    "village": null,
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.55,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/QVk82c3aW9mRA4Wf7"
+  },
+  {
+    "id": "105-fontana-amorosa-lodging-49",
+    "stageId": "105-fontana-amorosa",
+    "name": null,
+    "type": null,
+    "village": "Neo Chorio",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/kvZNNP3dCUQX7zXJ6"
+  },
+  {
+    "id": "104-baths-of-aphrodite-aphrodite-family-eco-camping",
+    "stageId": "104-baths-of-aphrodite",
+    "name": "Aphrodite Family Eco camping",
+    "type": "Campsite",
+    "village": "Baths of Aphrodite",
+    "priceMinEur": 14,
+    "priceMaxEur": 54,
+    "distanceFromTrailKm": 0,
+    "website": "https://www.aphroditecamping.com/",
+    "mapUrl": "https://maps.app.goo.gl/i3GvnJffDhPotBt89"
+  },
+  {
+    "id": "104-baths-of-aphrodite-aphrodite-beach-hotel",
+    "stageId": "104-baths-of-aphrodite",
+    "name": "Aphrodite Beach Hotel",
+    "type": "Hotel",
+    "village": "Polis Chrysochous",
+    "priceMinEur": 96,
+    "priceMaxEur": 180,
+    "distanceFromTrailKm": 0.75,
+    "website": "https://aphrodite-beachhotel.com/",
+    "mapUrl": "https://maps.app.goo.gl/x1S3jMQpu2r44n578"
+  },
+  {
+    "id": "100-smigies-picnic-site-picnic-site",
+    "stageId": "100-smigies-picnic-site",
+    "name": "Picnic site",
+    "type": "Picnic site",
+    "village": null,
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.4,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/Z8WtjWtfGE21QLTZA"
+  },
+  {
+    "id": "97-drouseia-ineia-palates-hotel",
+    "stageId": "97-drouseia-ineia",
+    "name": "Palates Hotel",
+    "type": "Hotel",
+    "village": "Drouseia",
+    "priceMinEur": 86,
+    "priceMaxEur": 130,
+    "distanceFromTrailKm": 0.16,
+    "website": "https://www.droushiahotelpalates.com/",
+    "mapUrl": "https://maps.app.goo.gl/XE5dFJ6jq5EwLmsw9"
+  },
+  {
+    "id": "97-drouseia-ineia-droshia-traditional-homes",
+    "stageId": "97-drouseia-ineia",
+    "name": "Droshia traditional homes",
+    "type": "Apartment",
+    "village": "Drouseia",
+    "priceMinEur": 95,
+    "priceMaxEur": 95,
+    "distanceFromTrailKm": 0,
+    "website": "https://droshiatraditionalhomes.com/",
+    "mapUrl": "https://maps.app.goo.gl/U1FeWsGpwnyL8vAC8"
+  },
+  {
+    "id": "97-drouseia-ineia-christos-apartments",
+    "stageId": "97-drouseia-ineia",
+    "name": "Christos Apartments",
+    "type": "Apartment",
+    "village": "Drouseia",
+    "priceMinEur": 60,
+    "priceMaxEur": 80,
+    "distanceFromTrailKm": 0.35,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/9dZYbK7YWtuss3wC7"
+  },
+  {
+    "id": "97-drouseia-ineia-droushia-heights-hotel",
+    "stageId": "97-drouseia-ineia",
+    "name": "Droushia Heights Hotel",
+    "type": "Hotel",
+    "village": "Drouseia",
+    "priceMinEur": 69,
+    "priceMaxEur": 198,
+    "distanceFromTrailKm": 0.12,
+    "website": "https://www.droushiaheights.com/",
+    "mapUrl": "https://maps.app.goo.gl/DrQSeJZTdwssWGTe9"
+  },
+  {
+    "id": "97-drouseia-ineia-droushia-holiday-apartments",
+    "stageId": "97-drouseia-ineia",
+    "name": "Droushia Holiday Apartments",
+    "type": "Apartment",
+    "village": "Drouseia",
+    "priceMinEur": 60,
+    "priceMaxEur": 180,
+    "distanceFromTrailKm": 0,
+    "website": "https://www.facebook.com/droushiaunits/",
+    "mapUrl": "https://maps.app.goo.gl/6zW3rjo4YmE4m8y9A"
+  },
+  {
+    "id": "96-kritou-terra-retreat-kritou-terra-no2-petite-paradise",
+    "stageId": "96-kritou-terra",
+    "name": "Retreat Kritou Terra No2 Petite Paradise",
+    "type": "Guesthouse",
+    "village": "Kritou Terra",
+    "priceMinEur": 70,
+    "priceMaxEur": 350,
+    "distanceFromTrailKm": 0.4,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/7fMocDiF711pbkW16"
+  },
+  {
+    "id": "95-terra-lodging-59",
+    "stageId": "95-terra",
+    "name": null,
+    "type": null,
+    "village": null,
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "94-chrysochous-fountain-lodging-60",
+    "stageId": "94-chrysochous-fountain",
+    "name": null,
+    "type": null,
+    "village": null,
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "93-chrysochous-lodging-61",
+    "stageId": "93-chrysochous",
+    "name": null,
+    "type": null,
+    "village": null,
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "92-goudi-elpidas-stone-houses",
+    "stageId": "92-goudi",
+    "name": "Elpidas Stone Houses",
+    "type": "Apartment",
+    "village": "Goudi",
+    "priceMinEur": 85,
+    "priceMaxEur": 115,
+    "distanceFromTrailKm": 0,
+    "website": "https://www.elpidashouse.com/",
+    "mapUrl": "https://maps.app.goo.gl/HgviNVAe3Mjt8EgB6"
+  },
+  {
+    "id": "92-goudi-leonidas-village-houses",
+    "stageId": "92-goudi",
+    "name": "Leonidas Village Houses",
+    "type": "Apartment",
+    "village": "Goudi",
+    "priceMinEur": 65,
+    "priceMaxEur": 95,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/7SvjaUwBjTahA5Z78"
+  },
+  {
+    "id": "92-goudi-pervolaris-cottages",
+    "stageId": "92-goudi",
+    "name": "Pervolaris Cottages",
+    "type": "Agrotourism",
+    "village": "Goudi",
+    "priceMinEur": 73,
+    "priceMaxEur": 82,
+    "distanceFromTrailKm": 0.55,
+    "website": "https://www.facebook.com/pervolariscottages/",
+    "mapUrl": "https://maps.app.goo.gl/yQSeWMm4nH28e8tLA"
+  },
+  {
+    "id": "92-goudi-venetia-stone-villa",
+    "stageId": "92-goudi",
+    "name": "Venetia Stone Villa",
+    "type": "Guesthouse",
+    "village": "Goudi",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.35,
+    "website": "https://www.facebook.com/venetiastonevilla/",
+    "mapUrl": "https://maps.app.goo.gl/N6vDtzhce7k2UFFc9"
+  },
+  {
+    "id": "90-steni-steni-traditional-studio-apartment",
+    "stageId": "90-steni",
+    "name": "Steni Traditional Studio Apartment",
+    "type": "Apartment",
+    "village": "Steni",
+    "priceMinEur": 88,
+    "priceMaxEur": 110,
+    "distanceFromTrailKm": 0.4,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/KrHV9rw684MRDUnk9"
+  },
+  {
+    "id": "90-steni-potamos-guest-house",
+    "stageId": "90-steni",
+    "name": "Potamos Guest House",
+    "type": "Guesthouse",
+    "village": "Steni",
+    "priceMinEur": 89,
+    "priceMaxEur": 89,
+    "distanceFromTrailKm": 0.14,
+    "website": "https://potamos.net/",
+    "mapUrl": "https://maps.app.goo.gl/Uc2hnh92siLnNBPW7"
+  },
+  {
+    "id": "88-lysos-marmaras-guest-house-and-training-centre",
+    "stageId": "88-lysos",
+    "name": "Marmaras - Guest House and Training Centre",
+    "type": "Agrotourism",
+    "village": "Lysos",
+    "priceMinEur": 90,
+    "priceMaxEur": 100,
+    "distanceFromTrailKm": 0.21,
+    "website": "https://marmaras-lysos.com/",
+    "mapUrl": "https://maps.app.goo.gl/NRgLqzJHhkGmqZnHA"
+  },
+  {
+    "id": "88-lysos-villa-anthitsa",
+    "stageId": "88-lysos",
+    "name": "Villa Anthitsa",
+    "type": "Guesthouse",
+    "village": "Lysos",
+    "priceMinEur": 100,
+    "priceMaxEur": 187,
+    "distanceFromTrailKm": 0.14,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/KpHmGAqVx34Go4kHA"
+  },
+  {
+    "id": "88-lysos-villa-lefkas",
+    "stageId": "88-lysos",
+    "name": "Villa Lefkas",
+    "type": "Guesthouse",
+    "village": "Lysos",
+    "priceMinEur": 100,
+    "priceMaxEur": 360,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/PyxxvpCsT5EvaeM6A"
+  },
+  {
+    "id": "88-lysos-pardisos-hills",
+    "stageId": "88-lysos",
+    "name": "Pardisos Hills",
+    "type": "Hotel",
+    "village": "Lysos",
+    "priceMinEur": 133,
+    "priceMaxEur": 133,
+    "distanceFromTrailKm": 1.2,
+    "website": "https://paradisoshills.com/",
+    "mapUrl": "https://maps.app.goo.gl/8Lt6Hn2PwArgpTi67"
+  },
+  {
+    "id": "84-stavros-tis-psokas-rest-houses-forest-department",
+    "stageId": "84-stavros-tis-psokas",
+    "name": "Rest Houses Forest Department",
+    "type": "Municipal",
+    "village": "Stavros tis Psokas",
+    "priceMinEur": 14,
+    "priceMaxEur": 14,
+    "distanceFromTrailKm": 0,
+    "website": "https://www.moa.gov.cy/moa/fd/fd.nsf/fd55_gr/fd55_gr?OpenDocument",
+    "mapUrl": "https://maps.app.goo.gl/7se2kTGbDpjGurub8"
+  },
+  {
+    "id": "84-stavros-tis-psokas-stavros-tis-psokas-campsite",
+    "stageId": "84-stavros-tis-psokas",
+    "name": "Stavros tis Psokas Campsite",
+    "type": "Campsite",
+    "village": "Stavros tis Psokas",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/Kgyo7jYvi8qfe6Lr7"
+  },
+  {
+    "id": "83-tripylos-fire-look-out-lodging-74",
+    "stageId": "83-tripylos-fire-look-out",
+    "name": null,
+    "type": null,
+    "village": null,
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "81-kykkos-monastery-kykkos-monastery",
+    "stageId": "81-kykkos-monastery",
+    "name": "Kykkos Monastery",
+    "type": "Religious",
+    "village": "Tsakkistra",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.7,
+    "website": "https://monikykkou.org.cy/",
+    "mapUrl": "https://maps.app.goo.gl/UAdunG739t6FGXLc9"
+  },
+  {
+    "id": "79-komijii-picnic-area-picnic-site",
+    "stageId": "79-komijii-picnic-area",
+    "name": "Picnic site",
+    "type": "Picnic site",
+    "village": null,
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": "https://www.exodos.com.cy/el-gr/excursions/excursion-areas/troodos/troodos-komititzi/",
+    "mapUrl": "https://maps.app.goo.gl/tjgGCKoDaKg5reuj6"
+  },
+  {
+    "id": "77-kaminaria-the-love-holiday-house",
+    "stageId": "77-kaminaria",
+    "name": "The Love Holiday house",
+    "type": "Guesthouse",
+    "village": "Treis Elies",
+    "priceMinEur": 99,
+    "priceMaxEur": 105,
+    "distanceFromTrailKm": 1.9,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/GhZ2DYKndLKtJnsN9"
+  },
+  {
+    "id": "77-kaminaria-love-holiday-suite-1",
+    "stageId": "77-kaminaria",
+    "name": "Love Holiday Suite 1",
+    "type": "Guesthouse",
+    "village": "Tries Elies",
+    "priceMinEur": 95,
+    "priceMaxEur": 95,
+    "distanceFromTrailKm": 1.9,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/FhN14eXggQqPSvgi6"
+  },
+  {
+    "id": "77-kaminaria-bosco-paradiso-campground",
+    "stageId": "77-kaminaria",
+    "name": "Bosco Paradiso Campground",
+    "type": "Campsite",
+    "village": "Treis Elies",
+    "priceMinEur": 106,
+    "priceMaxEur": 130,
+    "distanceFromTrailKm": 4.3,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/SFGa6fc21vvkYMya6"
+  },
+  {
+    "id": "77-kaminaria-casa-oliva",
+    "stageId": "77-kaminaria",
+    "name": "Casa Oliva",
+    "type": "Guesthouse",
+    "village": "Treis Elies",
+    "priceMinEur": 185,
+    "priceMaxEur": 185,
+    "distanceFromTrailKm": 2.2,
+    "website": "https://casaoliva.cy/",
+    "mapUrl": "https://maps.app.goo.gl/4HMj6im5AQ13iV7D9"
+  },
+  {
+    "id": "75-agios-georgios-kapourallis-satori-hut",
+    "stageId": "75-agios-georgios-kapourallis",
+    "name": "Satori Hut",
+    "type": "Hostel",
+    "village": "Agios Demetrios",
+    "priceMinEur": 75,
+    "priceMaxEur": 75,
+    "distanceFromTrailKm": 2.3,
+    "website": "https://www.facebook.com/Satorimountainhut/",
+    "mapUrl": "https://maps.app.goo.gl/4NXe73Zbhfscn34r8"
+  },
+  {
+    "id": "74-kampoi-tou-kalogyrou-ecoglamping",
+    "stageId": "74-kampoi-tou-kalogyrou",
+    "name": "ECOGLAMPING",
+    "type": "Campsite",
+    "village": "Paliomylos",
+    "priceMinEur": 90,
+    "priceMaxEur": 90,
+    "distanceFromTrailKm": 2.2,
+    "website": "https://ecoglamping.cy/",
+    "mapUrl": "https://maps.app.goo.gl/fCU1ktTnE6UkThoT6"
+  },
+  {
+    "id": "74-kampoi-tou-kalogyrou-kampoi-tou-kalogirou-campsite",
+    "stageId": "74-kampoi-tou-kalogyrou",
+    "name": "Kampoi tou Kalogirou campsite",
+    "type": "Campsite",
+    "village": "Kampoi tou Kalogyrou",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/ywdbeJYMNd5CKBmR8"
+  },
+  {
+    "id": "73-trooditissa-monastery-xerokolimpos-picnic-site",
+    "stageId": "73-trooditissa-monastery",
+    "name": "Xerokolimpos picnic site",
+    "type": "Picnic site",
+    "village": "Foini",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 2.6,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/nwvyxKNrusggT6vS6"
+  },
+  {
+    "id": "72-pano-platres-lodging-85",
+    "stageId": "72-pano-platres",
+    "name": "Κατασκήνωση Ομοσπονδίας Συνδέσμων Γονέων και Κηδεμόνων",
+    "type": "Campsite",
+    "village": "Pano Platres",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.85,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/57t1DWV3f8qTguBu8"
+  },
+  {
+    "id": "72-pano-platres-kalithea-inn",
+    "stageId": "72-pano-platres",
+    "name": "Kalithea Inn",
+    "type": "Hotel",
+    "village": "Pano Platres",
+    "priceMinEur": 95,
+    "priceMaxEur": 133,
+    "distanceFromTrailKm": 2.5,
+    "website": "https://kallitheainn.com/",
+    "mapUrl": "https://maps.app.goo.gl/2XwdoNd23MjB7So98"
+  },
+  {
+    "id": "72-pano-platres-petit-palais-platres-boutique-hotel",
+    "stageId": "72-pano-platres",
+    "name": "Petit Palais Platres Boutique hotel",
+    "type": "Hotel",
+    "village": "Pano Platres",
+    "priceMinEur": 75,
+    "priceMaxEur": 140,
+    "distanceFromTrailKm": 2.4,
+    "website": "https://www.petitpalais.com.cy/",
+    "mapUrl": "https://maps.app.goo.gl/kEmMDx14Q2ypQkqs8"
+  },
+  {
+    "id": "72-pano-platres-butterfly-home",
+    "stageId": "72-pano-platres",
+    "name": "Butterfly Home",
+    "type": "Guesthouse",
+    "village": "Pano Platres",
+    "priceMinEur": 84,
+    "priceMaxEur": 84,
+    "distanceFromTrailKm": 3.7,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/vKH8oGF4zaA6MkKp6"
+  },
+  {
+    "id": "72-pano-platres-lodging-89",
+    "stageId": "72-pano-platres",
+    "name": "Εξοχικά Διαμερίσματα ΠΑΣΥΔΗ Πλατρών",
+    "type": "Apartment",
+    "village": "Pano Platres",
+    "priceMinEur": 35,
+    "priceMaxEur": 40,
+    "distanceFromTrailKm": 3.1,
+    "website": "https://www.pasydy.org/",
+    "mapUrl": "https://maps.app.goo.gl/RwjxRPC39U2kH4w4A"
+  },
+  {
+    "id": "72-pano-platres-forest-park-hotel",
+    "stageId": "72-pano-platres",
+    "name": "Forest Park Hotel",
+    "type": "Hotel",
+    "village": "Pano Platres",
+    "priceMinEur": 85,
+    "priceMaxEur": 134,
+    "distanceFromTrailKm": 3.1,
+    "website": "https://forestparkhotel.com.cy/",
+    "mapUrl": "https://maps.app.goo.gl/m9HeYQbP4Fx1V8t86"
+  },
+  {
+    "id": "72-pano-platres-lodging-91",
+    "stageId": "72-pano-platres",
+    "name": "Κατασκήνωση Μεγάλου Βασιλείου",
+    "type": "Campsite",
+    "village": "Pano Platres",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 3,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/zm9R3WP1RT2B9WN98"
+  },
+  {
+    "id": "72-pano-platres-new-helvetia-hotel",
+    "stageId": "72-pano-platres",
+    "name": "New Helvetia Hotel",
+    "type": "Hotel",
+    "village": "Pano Platres",
+    "priceMinEur": 120,
+    "priceMaxEur": 140,
+    "distanceFromTrailKm": 1.5,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/vd3N2gEbEQtKRoPBA"
+  },
+  {
+    "id": "72-pano-platres-spring-hotel",
+    "stageId": "72-pano-platres",
+    "name": "Spring Hotel",
+    "type": "Hotel",
+    "village": "Pano Platres",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 1.5,
+    "website": "http://www.spring-hotel.net/",
+    "mapUrl": "https://maps.app.goo.gl/sS3S1daxuLQBgSNi7"
+  },
+  {
+    "id": "72-pano-platres-pendeli-resort",
+    "stageId": "72-pano-platres",
+    "name": "Pendeli Resort",
+    "type": "Hotel",
+    "village": "Pano Platres",
+    "priceMinEur": 165,
+    "priceMaxEur": 195,
+    "distanceFromTrailKm": 2.5,
+    "website": "https://www.pendeliresort.com/",
+    "mapUrl": "https://maps.app.goo.gl/AeoCRJPVaoHWVJbg9"
+  },
+  {
+    "id": "72-pano-platres-edelweiss-hotel",
+    "stageId": "72-pano-platres",
+    "name": "Edelweiss Hotel",
+    "type": "Hotel",
+    "village": "Pano Platres",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 2.5,
+    "website": "https://housity.net/hotel/edelweiss/?tag=chiprehotel.top",
+    "mapUrl": "https://maps.app.goo.gl/ABe38psYP9K1uv3h8"
+  },
+  {
+    "id": "72-pano-platres-minerva-hotel",
+    "stageId": "72-pano-platres",
+    "name": "Minerva Hotel",
+    "type": "Hotel",
+    "village": "Pano Platres",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 2.5,
+    "website": "https://www.pylon-ac.org/index.html#now-showing",
+    "mapUrl": "https://maps.app.goo.gl/qbgejqBG5Npyauqs7"
+  },
+  {
+    "id": "72-pano-platres-semiramis-hotel",
+    "stageId": "72-pano-platres",
+    "name": "Semiramis Hotel",
+    "type": "Hotel",
+    "village": "Pano Platres",
+    "priceMinEur": 119,
+    "priceMaxEur": 189,
+    "distanceFromTrailKm": 2.5,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/goGUZw8M1zonW9oU8"
+  },
+  {
+    "id": "70-troodos-troodos-hotel-and-spa",
+    "stageId": "70-troodos",
+    "name": "Troodos Hotel and Spa",
+    "type": "Hotel",
+    "village": "Troodos",
+    "priceMinEur": 69,
+    "priceMaxEur": 99,
+    "distanceFromTrailKm": 0,
+    "website": "https://www.troodoshotel.com/",
+    "mapUrl": "https://maps.app.goo.gl/ZymPr8LUDEzufPzS9"
+  },
+  {
+    "id": "70-troodos-jubilee-hotel",
+    "stageId": "70-troodos",
+    "name": "Jubilee Hotel",
+    "type": "Hotel",
+    "village": "Troodos",
+    "priceMinEur": 81,
+    "priceMaxEur": 144,
+    "distanceFromTrailKm": 0.4,
+    "website": "https://jubileehotel.com/",
+    "mapUrl": "https://maps.app.goo.gl/fzhTSGpCk8MDKLFS7"
+  },
+  {
+    "id": "70-troodos-troodos-campsite",
+    "stageId": "70-troodos",
+    "name": "Troodos Campsite",
+    "type": "Campsite",
+    "village": "Troodos",
+    "priceMinEur": 5,
+    "priceMaxEur": 5,
+    "distanceFromTrailKm": 0,
+    "website": "https://mytroodos.com/camping-picnic/",
+    "mapUrl": "https://maps.app.goo.gl/tKSzpDxjaNr2tja18"
+  },
+  {
+    "id": "70-troodos-kambos-tou-livadeiou",
+    "stageId": "70-troodos",
+    "name": "Kambos tou Livadeiou",
+    "type": "Picnic site",
+    "village": "Troodos",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/AWxpJakNZmTEim849"
+  },
+  {
+    "id": "70-troodos-livadi-tou-ppasia",
+    "stageId": "70-troodos",
+    "name": "Livadi tou Ppasia",
+    "type": "Picnic site",
+    "village": "Troodos",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.5,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/dpUBFpCuFfMuCWqv5"
+  },
+  {
+    "id": "69-platania-karvounas-platania-camping-site",
+    "stageId": "69-platania-karvounas",
+    "name": "Platania camping site",
+    "type": "Campsite",
+    "village": "Platania",
+    "priceMinEur": 5,
+    "priceMaxEur": 5,
+    "distanceFromTrailKm": 0.4,
+    "website": "https://mytroodos.com/camping-picnic/",
+    "mapUrl": "https://maps.app.goo.gl/P7hs63iignnp335Q6"
+  },
+  {
+    "id": "69-platania-karvounas-rifugio-retreat",
+    "stageId": "69-platania-karvounas",
+    "name": "Rifugio retreat",
+    "type": "Bed & Breakfast",
+    "village": "Kakopetria",
+    "priceMinEur": 70,
+    "priceMaxEur": 80,
+    "distanceFromTrailKm": 3.4,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/rdvPQ1FqKwYhkMzGA"
+  },
+  {
+    "id": "69-platania-karvounas-chalet-karvounas",
+    "stageId": "69-platania-karvounas",
+    "name": "Chalet Karvounas",
+    "type": null,
+    "village": "Karvounas",
+    "priceMinEur": 175,
+    "priceMaxEur": 175,
+    "distanceFromTrailKm": 1.5,
+    "website": "https://www.chaletkarvounas.com/",
+    "mapUrl": "https://maps.app.goo.gl/3p3j5NybXLZgVAvWA"
+  },
+  {
+    "id": "68-kiperounta-outskirts-livadia-hotel",
+    "stageId": "68-kiperounta-outskirts",
+    "name": "Livadia Hotel",
+    "type": "Hotel",
+    "village": "Kiperounta outskirts",
+    "priceMinEur": 55,
+    "priceMaxEur": 75,
+    "distanceFromTrailKm": 0.85,
+    "website": "http://www.livadiahotelcyprus.com/",
+    "mapUrl": "https://maps.app.goo.gl/8t6barqKozewPKig7"
+  },
+  {
+    "id": "68-kiperounta-outskirts-kiperounta-heights",
+    "stageId": "68-kiperounta-outskirts",
+    "name": "Kiperounta Heights",
+    "type": null,
+    "village": "Kiperounta outskirts",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/ueLMeJB4KxS1GDxL7"
+  },
+  {
+    "id": "68-kiperounta-outskirts-milea-mansion-kiperounta",
+    "stageId": "68-kiperounta-outskirts",
+    "name": "Milea Mansion Kiperounta",
+    "type": "Guesthouse",
+    "village": "Kiperounta outskirts",
+    "priceMinEur": 99,
+    "priceMaxEur": 122,
+    "distanceFromTrailKm": 0.8,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/uw4iukep7vR8xL7P6"
+  },
+  {
+    "id": "68-kiperounta-outskirts-kiperounta-retreat",
+    "stageId": "68-kiperounta-outskirts",
+    "name": "Kiperounta Retreat",
+    "type": "Guesthouse",
+    "village": "Kiperounta outskirts",
+    "priceMinEur": 112,
+    "priceMaxEur": 161,
+    "distanceFromTrailKm": 1.6,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/S4nBtYd169KNiePj6"
+  },
+  {
+    "id": "68-kiperounta-outskirts-villa-callione",
+    "stageId": "68-kiperounta-outskirts",
+    "name": "Villa Callione",
+    "type": null,
+    "village": "Kiperounta outskirts",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "67-adventure-mountain-park-adventure-mountain-park",
+    "stageId": "67-adventure-mountain-park",
+    "name": "Adventure Mountain Park",
+    "type": "Campsite",
+    "village": "Kiperounta",
+    "priceMinEur": 8,
+    "priceMaxEur": 15,
+    "distanceFromTrailKm": 0.25,
+    "website": "https://www.adventuremountainpark.com/",
+    "mapUrl": "https://maps.app.goo.gl/E5NtU2EiPbktZ2ABA"
+  },
+  {
+    "id": "66-spilia-h-spilia-tou-thoukidide",
+    "stageId": "66-spilia",
+    "name": "H spilia tou thoukidide",
+    "type": "Guesthouse",
+    "village": "Spilia",
+    "priceMinEur": 113,
+    "priceMaxEur": 113,
+    "distanceFromTrailKm": 0.9,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/PADFJ61bd1MDmrsp8"
+  },
+  {
+    "id": "66-spilia-floras-house",
+    "stageId": "66-spilia",
+    "name": "Floras House",
+    "type": "Guesthouse",
+    "village": "Spilia",
+    "priceMinEur": 130,
+    "priceMaxEur": 130,
+    "distanceFromTrailKm": 0.85,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/uy7cJVnyhPAxVniM7"
+  },
+  {
+    "id": "66-spilia-ricky-chalet",
+    "stageId": "66-spilia",
+    "name": "Ricky Chalet",
+    "type": "Guesthouse",
+    "village": "Spilia",
+    "priceMinEur": 138,
+    "priceMaxEur": 175,
+    "distanceFromTrailKm": 1.5,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/enHrMwyxTEB5y2w17"
+  },
+  {
+    "id": "65-saranti-madari-hills-health-retrear-villa-tours",
+    "stageId": "65-saranti",
+    "name": "Madari Hills Health Retrear (Villa & Tours)",
+    "type": "Hotel",
+    "village": "Saranti",
+    "priceMinEur": 230,
+    "priceMaxEur": 230,
+    "distanceFromTrailKm": 0,
+    "website": "https://madarihills.com/",
+    "mapUrl": "https://maps.app.goo.gl/wZfNsNUXPWYgUTUg6"
+  },
+  {
+    "id": "65-saranti-ioannis-ylation-mountain-view",
+    "stageId": "65-saranti",
+    "name": "Ioannis Ylation Mountain View",
+    "type": "Guesthouse",
+    "village": "Saranti",
+    "priceMinEur": 123,
+    "priceMaxEur": 139,
+    "distanceFromTrailKm": 0.45,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/xkbtEeGPXHmTy3SQ9"
+  },
+  {
+    "id": "64-monastery-panagia-tou-araka-monastery-virgin-mary-of-araka",
+    "stageId": "64-monastery-panagia-tou-araka",
+    "name": "Monastery Virgin Mary of Araka",
+    "type": "Religious",
+    "village": "Monastery Panagia tou Araka",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": "https://immorfou.org.cy/%CE%B9%CE%B5%CF%81%CE%AC-%CE%BC%CE%BF%CE%BD%CE%AE-%CF%80%CE%B1%CE%BD%CE%B1%CE%B3%CE%AF%CE%B1%CF%82-%CF%84%CE%BF%CF%85-%CE%AC%CF%81%CE%B1%CE%BA%CE%B1-%CF%83%CF%84%CE%B1-%CE%BB%CE%B1%CE%B3%CE%BF%CF%85/",
+    "mapUrl": "https://maps.app.goo.gl/zb2myE3xnQVd8T667"
+  },
+  {
+    "id": "62-stavros-agiasmati-church-lodging-118",
+    "stageId": "62-stavros-agiasmati-church",
+    "name": null,
+    "type": null,
+    "village": "Stavros Agiasmati Church",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "61-gefyri-tis-panagias-picnic-site-picnic-site",
+    "stageId": "61-gefyri-tis-panagias-picnic-site",
+    "name": "Picnic site",
+    "type": "Picnic site",
+    "village": "Gefyri tis Panagias picnic site",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/JrS9HCdQ8aRcgCJ48"
+  },
+  {
+    "id": "60-agios-epifanios-mountain-retreat",
+    "stageId": "60-agios-epifanios",
+    "name": "Mountain Retreat",
+    "type": "Guesthouse",
+    "village": "Agios Epifanios",
+    "priceMinEur": 563,
+    "priceMaxEur": 660,
+    "distanceFromTrailKm": 0.45,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/eW1t1ZPNsj6kVioS8"
+  },
+  {
+    "id": "58-kalo-xorio-orinis-picnic-site-picnic-site",
+    "stageId": "58-kalo-xorio-orinis-picnic-site",
+    "name": "Picnic site",
+    "type": "Picnic site",
+    "village": "Kalo Xorio Orinis picnic site",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/RKfxowEoF9moHdvG7"
+  },
+  {
+    "id": "57-fikardou-gourri-fikardou-almond-park",
+    "stageId": "57-fikardou-gourri",
+    "name": "Fikardou Almond Park",
+    "type": "Guesthouse",
+    "village": "Fikardou",
+    "priceMinEur": 220,
+    "priceMaxEur": 230,
+    "distanceFromTrailKm": 0.2,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/kdcQHth9nDQwWrze6"
+  },
+  {
+    "id": "57-fikardou-gourri-fikardou-chalets",
+    "stageId": "57-fikardou-gourri",
+    "name": "Fikardou Chalets",
+    "type": "Guesthouse",
+    "village": "Fikardou",
+    "priceMinEur": 140,
+    "priceMaxEur": 180,
+    "distanceFromTrailKm": 0.2,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/N8QEpneKrbbahiBU9"
+  },
+  {
+    "id": "57-fikardou-gourri-pine-forest-house",
+    "stageId": "57-fikardou-gourri",
+    "name": "Pine Forest House",
+    "type": "Guesthouse",
+    "village": "Gourri",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 1.7,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/qqhWkUbKsKzo7nTp8"
+  },
+  {
+    "id": "57-fikardou-gourri-2br-log-house",
+    "stageId": "57-fikardou-gourri",
+    "name": "2br log house",
+    "type": "Guesthouse",
+    "village": "Gourri",
+    "priceMinEur": 191,
+    "priceMaxEur": 225,
+    "distanceFromTrailKm": 2.3,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/M9Bukt1UGLQ4hTeK8"
+  },
+  {
+    "id": "57-fikardou-gourri-traditional-villa-standard-villa",
+    "stageId": "57-fikardou-gourri",
+    "name": "Traditional Villa - Standard Villa",
+    "type": null,
+    "village": "Gourii",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "57-fikardou-gourri-gourri-luxury-house-holiday-home",
+    "stageId": "57-fikardou-gourri",
+    "name": "Gourri luxury house - Holiday Home",
+    "type": "Guesthouse",
+    "village": "Gourri",
+    "priceMinEur": 95,
+    "priceMaxEur": 95,
+    "distanceFromTrailKm": 2.1,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/eNNxKqjc5PNnC8xq5"
+  },
+  {
+    "id": "57-fikardou-gourri-guesthouse-aresti",
+    "stageId": "57-fikardou-gourri",
+    "name": "Guesthouse Aresti",
+    "type": null,
+    "village": "Gourri",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "57-fikardou-gourri-guesthouse-miltiades-and-vasiliou",
+    "stageId": "57-fikardou-gourri",
+    "name": "Guesthouse Miltiades and Vasiliou",
+    "type": null,
+    "village": null,
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "56-lazanias-hatzikyprianou-museum-studio",
+    "stageId": "56-lazanias",
+    "name": "Hatzikyprianou Museum Studio",
+    "type": "Guesthouse",
+    "village": "Lazanias",
+    "priceMinEur": 99,
+    "priceMaxEur": 99,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/9WiHneEJt5zAv3ox8"
+  },
+  {
+    "id": "56-lazanias-myrianthis-heritage-studio",
+    "stageId": "56-lazanias",
+    "name": "Myrianthis Heritage Studio",
+    "type": "Hotel",
+    "village": "Lazanias",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/h76a9hYxTjNXr5LW7"
+  },
+  {
+    "id": "55-machairas-monastery-machairas-monastery",
+    "stageId": "55-machairas-monastery",
+    "name": "Machairas Monastery",
+    "type": "Religious",
+    "village": "Machairas",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": "https://machairas.cy/",
+    "mapUrl": "https://maps.app.goo.gl/ggKbFxBfK9fSwyVk6"
+  },
+  {
+    "id": "54-kionia-picnic-area-picnic-site",
+    "stageId": "54-kionia-picnic-area",
+    "name": "Picnic site",
+    "type": "Picnic site",
+    "village": "Kionia",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/fcM9bstoiJdHvfuu7"
+  },
+  {
+    "id": "53-prophet-ilias-monastery-picnic-site",
+    "stageId": "53-prophet-ilias-monastery",
+    "name": "Picnic site",
+    "type": "Picnic site",
+    "village": "Lithrodontas",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/4QAohamjLJ93xG288"
+  },
+  {
+    "id": "52-lithrodontas-to-spiti-sto-xorko",
+    "stageId": "52-lithrodontas",
+    "name": "To spiti sto xorko",
+    "type": "Bed & Breakfast",
+    "village": "Lithrodontas",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.55,
+    "website": "https://www.facebook.com/tospitistoxorko/?locale=el_GR",
+    "mapUrl": "https://maps.app.goo.gl/Piw4DuYcpFHNtzr97"
+  },
+  {
+    "id": "51-delikipos-community-park",
+    "stageId": "51-delikipos",
+    "name": "Community Park",
+    "type": "Picnic site",
+    "village": "Delikipos",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/qapq5aAZrMMemeQ26"
+  },
+  {
+    "id": "50-kornos-cosmopolis-multi-venue",
+    "stageId": "50-kornos",
+    "name": "Cosmopolis Multi-venue",
+    "type": "Hotel",
+    "village": "Kornos",
+    "priceMinEur": 65,
+    "priceMaxEur": 65,
+    "distanceFromTrailKm": 0.6,
+    "website": "https://cosmopoliscy.com/",
+    "mapUrl": "https://maps.app.goo.gl/4B7DMFabxNa2Rapa7"
+  },
+  {
+    "id": "50-kornos-pet-friendly",
+    "stageId": "50-kornos",
+    "name": "Μακρυνάρι Pet friendly",
+    "type": "Apartment",
+    "village": "Kornos",
+    "priceMinEur": 293,
+    "priceMaxEur": 302,
+    "distanceFromTrailKm": 1.9,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/XiqALQsPtwCSnpsw5"
+  },
+  {
+    "id": "50-kornos-npet-friendly",
+    "stageId": "50-kornos",
+    "name": "Μακρυνάρι /npet friendly/",
+    "type": null,
+    "village": "Kornos",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "50-kornos-villa",
+    "stageId": "50-kornos",
+    "name": "Μακρυνάρι villa",
+    "type": null,
+    "village": "Kornos",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "49-kornos-picnic-site-picnic-site",
+    "stageId": "49-kornos-picnic-site",
+    "name": "Picnic site",
+    "type": "Picnic site",
+    "village": "Kornos",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.9,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/2LhRo8d3E6VYCWUEA"
+  },
+  {
+    "id": "48-stavrovouni-monastery-stavrovouni-monastery",
+    "stageId": "48-stavrovouni-monastery",
+    "name": "Stavrovouni Monastery",
+    "type": "Religious",
+    "village": "Pyrga",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/d6qZfQdYXFbQr2fk8"
+  },
+  {
+    "id": "47-holy-monastery-agia-varvara-agia-varvarva-monastery",
+    "stageId": "47-holy-monastery-agia-varvara",
+    "name": "Agia Varvarva Monastery",
+    "type": "Religious",
+    "village": "Pyrga",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/dpMYZtchYiECw7vX6"
+  },
+  {
+    "id": "46-pyrga-the-blue-house",
+    "stageId": "46-pyrga",
+    "name": "The Blue House",
+    "type": null,
+    "village": "Pyrga",
+    "priceMinEur": 648,
+    "priceMaxEur": 648,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "46-pyrga-lodging-145",
+    "stageId": "46-pyrga",
+    "name": "Αέναη",
+    "type": null,
+    "village": "Pyrga",
+    "priceMinEur": 646,
+    "priceMaxEur": 646,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "44-klavdia-lodging-146",
+    "stageId": "44-klavdia",
+    "name": null,
+    "type": null,
+    "village": "Klavdia",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "43-kalo-chorio-larnakas-lodging-147",
+    "stageId": "43-kalo-chorio-larnakas",
+    "name": null,
+    "type": null,
+    "village": "Kalo Chorio Larnakas",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "40-avdellero-centrally-located-studio-with-mountain-and-sea-views",
+    "stageId": "40-avdellero",
+    "name": "Centrally located studio with Mountain and Sea views",
+    "type": "Apartment",
+    "village": "Avdellero",
+    "priceMinEur": 88,
+    "priceMaxEur": 88,
+    "distanceFromTrailKm": 0.3,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/Uhp4mp7yMTesFpGo6"
+  },
+  {
+    "id": "38-iera-moni-panagias-rodon-to-amaranton-lodging-149",
+    "stageId": "38-iera-moni-panagias-rodon-to-amaranton",
+    "name": null,
+    "type": "Religious",
+    "village": "Troulloi",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0.22,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/wgaLgQn7F7TBicJY8"
+  },
+  {
+    "id": "37-troulloi-lodging-150",
+    "stageId": "37-troulloi",
+    "name": null,
+    "type": null,
+    "village": null,
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "35-monastery-st-george-mavrovouniou-lodging-151",
+    "stageId": "35-monastery-st-george-mavrovouniou",
+    "name": null,
+    "type": "Religious",
+    "village": "Troulloi",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/NoTkt2BoZ3nCP2BS7"
+  },
+  {
+    "id": "34-aspromoutti-forest-lodging-152",
+    "stageId": "34-aspromoutti-forest",
+    "name": null,
+    "type": null,
+    "village": "Aspromoutti Forest",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "33-pyla-n-oceania-bay-penthouse",
+    "stageId": "33-pyla-n",
+    "name": "Oceania Bay Penthouse",
+    "type": "Apartment",
+    "village": "Pyla",
+    "priceMinEur": 85,
+    "priceMaxEur": 90,
+    "distanceFromTrailKm": 0,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/dxNEXmuxXmPZbxgk9"
+  },
+  {
+    "id": "33-pyla-n-sunny-pula-escape-with-pool-tennis",
+    "stageId": "33-pyla-n",
+    "name": "Sunny Pula Escape with Pool tennis",
+    "type": "Apartment",
+    "village": "Pyla",
+    "priceMinEur": 93,
+    "priceMaxEur": 102,
+    "distanceFromTrailKm": 0.45,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/faxG8uXkDDkce2T59"
+  },
+  {
+    "id": "27-xylofagou-n-lodging-155",
+    "stageId": "27-xylofagou-n",
+    "name": null,
+    "type": null,
+    "village": "Xylofagou N",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "26-liopetri-andrea-s-house-two-bedroom-house",
+    "stageId": "26-liopetri",
+    "name": "Andrea's House - Two bedroom House",
+    "type": "Guesthouse",
+    "village": "Liopetri",
+    "priceMinEur": 137,
+    "priceMaxEur": 230,
+    "distanceFromTrailKm": 2.2,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/e6WfYf8mBYGv2Go17"
+  },
+  {
+    "id": "25-sotira-lodging-157",
+    "stageId": "25-sotira",
+    "name": null,
+    "type": null,
+    "village": "Sotira",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "23-agia-napa-n-hotel-napa-suites",
+    "stageId": "23-agia-napa-n",
+    "name": "Hotel Napa Suites",
+    "type": "Hotel",
+    "village": "Agia Napa",
+    "priceMinEur": 156,
+    "priceMaxEur": 240,
+    "distanceFromTrailKm": 0,
+    "website": "https://napasuites.com/?partner=5155&utm_source=google&utm_medium=gmb&utm_campaign=web_link",
+    "mapUrl": "https://maps.app.goo.gl/qhsPXLJKpwpUTzzQ7"
+  },
+  {
+    "id": "23-agia-napa-n-paloma-hotel-apartments",
+    "stageId": "23-agia-napa-n",
+    "name": "Paloma Hotel Apartments",
+    "type": "Hotel",
+    "village": "Agia Napa",
+    "priceMinEur": 50,
+    "priceMaxEur": 117,
+    "distanceFromTrailKm": 0.2,
+    "website": "https://palomahotelapartments.cyprus-hotel.top/en/",
+    "mapUrl": "https://maps.app.goo.gl/2wRteVATMYB1jxgF8"
+  },
+  {
+    "id": "23-agia-napa-n-sunny-blue-hotel",
+    "stageId": "23-agia-napa-n",
+    "name": "Sunny Blue Hotel",
+    "type": "Hotel",
+    "village": "Agia Napa",
+    "priceMinEur": 68,
+    "priceMaxEur": 216,
+    "distanceFromTrailKm": 0.35,
+    "website": "https://www.sunnybluehotel.com/",
+    "mapUrl": "https://maps.app.goo.gl/CTWnPMtMWY8oBX6x7"
+  },
+  {
+    "id": "23-agia-napa-n-cristabelle-hotel",
+    "stageId": "23-agia-napa-n",
+    "name": "Cristabelle Hotel",
+    "type": "Hotel",
+    "village": "Agia Napa",
+    "priceMinEur": 65,
+    "priceMaxEur": 115,
+    "distanceFromTrailKm": 0.45,
+    "website": "https://christabellehotel.com/",
+    "mapUrl": "https://maps.app.goo.gl/yz5QhLVW8RhQKGdD9"
+  },
+  {
+    "id": "23-agia-napa-n-pandelis-hostel",
+    "stageId": "23-agia-napa-n",
+    "name": "Pandelis Hostel",
+    "type": null,
+    "village": "Agia Napa",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "23-agia-napa-n-fania-bliss-hostel",
+    "stageId": "23-agia-napa-n",
+    "name": "Fania Bliss Hostel",
+    "type": null,
+    "village": "Agia Napa",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "23-agia-napa-n-senator-hotel",
+    "stageId": "23-agia-napa-n",
+    "name": "Senator Hotel",
+    "type": "Hotel",
+    "village": "Agia Napa",
+    "priceMinEur": 56,
+    "priceMaxEur": 116,
+    "distanceFromTrailKm": 0.9,
+    "website": "https://senatorhotelapts.com/",
+    "mapUrl": "https://maps.app.goo.gl/jDPEiptB4mzfB2A46"
+  },
+  {
+    "id": "23-agia-napa-n-tsokkos-maria-hotel-apts",
+    "stageId": "23-agia-napa-n",
+    "name": "Tsokkos Maria Hotel Apts",
+    "type": null,
+    "village": "Agia Napa",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "23-agia-napa-n-tsokkos-holidays-hotel-apts",
+    "stageId": "23-agia-napa-n",
+    "name": "Tsokkos Holidays Hotel Apts",
+    "type": "Hotel",
+    "village": "Agia Napa",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": 1.3,
+    "website": "https://www.tsokkos.com/",
+    "mapUrl": "https://maps.app.goo.gl/3RkDVugKDeTRthrD8"
+  },
+  {
+    "id": "23-agia-napa-n-river-view-boutique-apts",
+    "stageId": "23-agia-napa-n",
+    "name": "River View Boutique Apts",
+    "type": "Hotel",
+    "village": "Agia Napa",
+    "priceMinEur": 51,
+    "priceMaxEur": 165,
+    "distanceFromTrailKm": 0.65,
+    "website": "https://www.riverviewboutiques.com/",
+    "mapUrl": "https://maps.app.goo.gl/egLcDgFNky66awPv8"
+  },
+  {
+    "id": "23-agia-napa-n-one-love-one-world-ayia-napa-square-hostel",
+    "stageId": "23-agia-napa-n",
+    "name": "One Love One World Ayia Napa Square Hostel",
+    "type": "Hostel",
+    "village": "Agia Napa",
+    "priceMinEur": 22,
+    "priceMaxEur": 50,
+    "distanceFromTrailKm": 0.5,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/Lz7Cn6Zq3Ktz5U3EA"
+  },
+  {
+    "id": "23-agia-napa-n-house-of-nissus",
+    "stageId": "23-agia-napa-n",
+    "name": "House of Nissus",
+    "type": "Hostel",
+    "village": "Agia Napa",
+    "priceMinEur": 20,
+    "priceMaxEur": 36,
+    "distanceFromTrailKm": 2,
+    "website": "https://houseofnissus.com/",
+    "mapUrl": "https://maps.app.goo.gl/9YacvzWBWSnBhdJRA"
+  },
+  {
+    "id": "23-agia-napa-n-simos-magic-apts-1",
+    "stageId": "23-agia-napa-n",
+    "name": "Simos Magic Apts 1",
+    "type": "Hotel",
+    "village": "Agia Napa",
+    "priceMinEur": 35,
+    "priceMaxEur": 115,
+    "distanceFromTrailKm": 1,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/dVGUfnqC1CtY4K5ZA"
+  },
+  {
+    "id": "23-agia-napa-n-more-from-osm",
+    "stageId": "23-agia-napa-n",
+    "name": "more from OSM",
+    "type": null,
+    "village": "Agia Napa",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "21-konnos-beach-protaras-sweet-memories-hotel-apts",
+    "stageId": "21-konnos-beach-protaras",
+    "name": "Sweet Memories Hotel Apts",
+    "type": "Hotel",
+    "village": "Paralimni",
+    "priceMinEur": 41,
+    "priceMaxEur": 180,
+    "distanceFromTrailKm": 2.7,
+    "website": "https://traveleto.com/hotel/cy/sweet-memories.html",
+    "mapUrl": "https://maps.app.goo.gl/YcJLNhqZS5tRaiKU8"
+  },
+  {
+    "id": "20-agioi-anargiroi-picnic-area-lodging-173",
+    "stageId": "20-agioi-anargiroi-picnic-area",
+    "name": null,
+    "type": null,
+    "village": null,
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "19-cape-gkreko-lodging-174",
+    "stageId": "19-cape-gkreko",
+    "name": null,
+    "type": null,
+    "village": "Cape Gkreko",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "18-limnara-beach-lodging-175",
+    "stageId": "18-limnara-beach",
+    "name": null,
+    "type": null,
+    "village": "Limnara Beach",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "17-agia-napa-s-simos-magic-beach-hotel-apts",
+    "stageId": "17-agia-napa-s",
+    "name": "Simos Magic Beach Hotel Apts",
+    "type": "Hotel",
+    "village": "Agia Napa",
+    "priceMinEur": 80,
+    "priceMaxEur": 280,
+    "distanceFromTrailKm": 0,
+    "website": "https://traveleto.com/hotel/cy/simos-magic-apartments-2.html",
+    "mapUrl": "https://maps.app.goo.gl/xrAWPbkfKqifVHmx7"
+  },
+  {
+    "id": "17-agia-napa-s-lodging-177",
+    "stageId": "17-agia-napa-s",
+    "name": null,
+    "type": null,
+    "village": "Agia Napa",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "17-agia-napa-s-lodging-178",
+    "stageId": "17-agia-napa-s",
+    "name": null,
+    "type": null,
+    "village": "Agia Napa",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "17-agia-napa-s-lodging-179",
+    "stageId": "17-agia-napa-s",
+    "name": null,
+    "type": null,
+    "village": "Agia Napa",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "11-cto-beach-tsialis-hotel-apartments",
+    "stageId": "11-cto-beach",
+    "name": "Tsialis Hotel Apartments",
+    "type": "Hotel",
+    "village": "Pyla",
+    "priceMinEur": 60,
+    "priceMaxEur": 120,
+    "distanceFromTrailKm": 1.1,
+    "website": "https://www.tsialishotel.com/",
+    "mapUrl": "https://maps.app.goo.gl/ZdZ4uGxeAjMDYep17"
+  },
+  {
+    "id": "11-cto-beach-mariandi-hotel",
+    "stageId": "11-cto-beach",
+    "name": "Mariandi Hotel",
+    "type": "Hotel",
+    "village": "Pyla",
+    "priceMinEur": 60,
+    "priceMaxEur": 120,
+    "distanceFromTrailKm": 1.6,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/2ZvmJeNJHUFnKt8p9"
+  },
+  {
+    "id": "11-cto-beach-lysithea-hotel-apts",
+    "stageId": "11-cto-beach",
+    "name": "Lysithea Hotel Apts",
+    "type": "Hotel",
+    "village": "CTO Beach",
+    "priceMinEur": 65,
+    "priceMaxEur": 85,
+    "distanceFromTrailKm": 0.2,
+    "website": "https://hotelscheck-in.com/lysithea-hotel-/",
+    "mapUrl": "https://maps.app.goo.gl/wgTLt33jfVo4CPYX9"
+  },
+  {
+    "id": "10-pyla-s-lodging-183",
+    "stageId": "10-pyla-s",
+    "name": null,
+    "type": null,
+    "village": "Pyla",
+    "priceMinEur": null,
+    "priceMaxEur": null,
+    "distanceFromTrailKm": null,
+    "website": null,
+    "mapUrl": null
+  },
+  {
+    "id": "9-oroklini-antonis-g-hotels-apartments",
+    "stageId": "9-oroklini",
+    "name": "Antonis G Hotels Apartments",
+    "type": "Hotel",
+    "village": "Oroklini",
+    "priceMinEur": 72,
+    "priceMaxEur": 90,
+    "distanceFromTrailKm": 0,
+    "website": "https://antonisghotelapts.com/",
+    "mapUrl": "https://maps.app.goo.gl/o5kpPvUMEYGFNJqo9"
+  },
+  {
+    "id": "5-rizoelia-park-villa-thermopilon",
+    "stageId": "5-rizoelia-park",
+    "name": "Villa Thermopilon",
+    "type": "Hotel",
+    "village": "Aradippou",
+    "priceMinEur": 75,
+    "priceMaxEur": 105,
+    "distanceFromTrailKm": 1.3,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/YB36Fh5YCuimrjmi9"
+  },
+  {
+    "id": "4-larnaka-tranquil-paradise",
+    "stageId": "4-larnaka",
+    "name": "Tranquil Paradise",
+    "type": "Apartment",
+    "village": "Larnaka (Kamares)",
+    "priceMinEur": 53,
+    "priceMaxEur": 53,
+    "distanceFromTrailKm": 0.9,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/D4dLF7EhzLCuZ1a98"
+  },
+  {
+    "id": "1-larnaka-airport-atalanta-rooms",
+    "stageId": "1-larnaka-airport",
+    "name": "Atalanta Rooms",
+    "type": "Apartment",
+    "village": "Laranca city (McKenzie Beach)",
+    "priceMinEur": 55,
+    "priceMaxEur": 70,
+    "distanceFromTrailKm": 2.5,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/GYKTRMN3YXXNvEGn7"
+  },
+  {
+    "id": "1-larnaka-airport-carisa-rooms-for-holidays",
+    "stageId": "1-larnaka-airport",
+    "name": "Carisa rooms for holidays",
+    "type": "Apartment",
+    "village": "Laranca city (McKenzie Beach)",
+    "priceMinEur": 27,
+    "priceMaxEur": 42,
+    "distanceFromTrailKm": 3.1,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/t7nA8z8SiVcygJoT7"
+  },
+  {
+    "id": "1-larnaka-airport-mackenzie-2rooms-first-line-beach",
+    "stageId": "1-larnaka-airport",
+    "name": "Mackenzie 2rooms first line beach",
+    "type": "Apartment",
+    "village": "Laranca city (McKenzie Beach)",
+    "priceMinEur": 35,
+    "priceMaxEur": 50,
+    "distanceFromTrailKm": 2.7,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/KqnMktJr5PMyVJEf6"
+  },
+  {
+    "id": "1-larnaka-airport-le-mat-hostel",
+    "stageId": "1-larnaka-airport",
+    "name": "Le Mat Hostel",
+    "type": "Hostel",
+    "village": "Laranca city",
+    "priceMinEur": 28,
+    "priceMaxEur": 38,
+    "distanceFromTrailKm": 4.1,
+    "website": "https://stayinlarnaca.com/hostel/",
+    "mapUrl": "https://maps.app.goo.gl/UtYjAxVjhV3YFhyr7"
+  },
+  {
+    "id": "1-larnaka-airport-la-veranda-de-larnaca-hotel",
+    "stageId": "1-larnaka-airport",
+    "name": "La Veranda de Larnaca Hotel",
+    "type": "Hotel",
+    "village": "Laranca city (McKenzie Beach)",
+    "priceMinEur": 73,
+    "priceMaxEur": 141,
+    "distanceFromTrailKm": 2.5,
+    "website": "https://www.laverandadelarnacahotel.com/",
+    "mapUrl": "https://maps.app.goo.gl/xLAD9r7jfBrxZtnUA"
+  },
+  {
+    "id": "1-larnaka-airport-universe-house",
+    "stageId": "1-larnaka-airport",
+    "name": "Universe House",
+    "type": "Guesthouse",
+    "village": "Dromolaxia",
+    "priceMinEur": 128,
+    "priceMaxEur": 128,
+    "distanceFromTrailKm": 1,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/ain9VqfhwBVgpMUh8"
+  },
+  {
+    "id": "1-larnaka-airport-vasilis-house",
+    "stageId": "1-larnaka-airport",
+    "name": "Vasilis House",
+    "type": "Guesthouse",
+    "village": "Dromolaxia",
+    "priceMinEur": 37,
+    "priceMaxEur": 37,
+    "distanceFromTrailKm": 3,
+    "website": null,
+    "mapUrl": "https://maps.app.goo.gl/qmaga7ptUiUvzg8W8"
+  }
+];
+
+export const routeLocator = {"bounds":{"minLat":34.7107765,"maxLat":35.0888349,"minLng":32.2740918,"maxLng":34.0766693},"path":"M92.4,189.9 L91.9,190.0 L91.3,189.6 L91.0,188.5 L90.1,186.8 L89.1,186.0 L88.5,185.9 L88.0,185.0 L87.2,183.7 L86.2,182.9 L85.3,181.9 L86.2,181.2 L87.5,180.2 L88.6,179.8 L89.4,179.2 L90.5,178.3 L92.0,178.2 L93.0,178.2 L93.5,177.9 L93.4,177.3 L93.1,176.7 L94.0,175.8 L96.5,174.8 L98.2,173.0 L101.3,168.9 L102.0,167.6 L102.1,166.3 L102.6,165.0 L103.5,164.0 L103.7,162.3 L104.8,160.9 L105.8,160.4 L106.4,159.0 L106.9,157.9 L106.6,156.7 L106.3,156.3 L105.1,156.2 L105.5,155.3 L105.6,154.5 L105.5,154.0 L105.4,153.5 L105.6,152.8 L105.8,152.3 L105.9,151.2 L105.8,149.9 L105.8,149.3 L105.8,148.7 L105.9,148.5 L105.8,147.9 L105.6,147.5 L105.1,147.2 L105.2,146.9 L105.1,146.2 L105.0,145.3 L104.6,144.5 L103.6,143.8 L103.5,143.9 L103.8,144.7 L103.6,145.0 L102.8,144.3 L101.8,146.0 L101.4,145.6 L100.6,145.3 L100.2,145.4 L98.9,145.3 L97.8,144.4 L97.3,142.5 L97.0,140.9 L96.1,140.1 L95.7,139.9 L95.1,139.6 L94.8,139.1 L94.3,138.1 L93.5,138.0 L92.9,137.9 L92.2,136.9 L91.6,136.1 L91.5,135.1 L91.6,134.4 L92.1,132.8 L92.0,132.4 L91.3,132.5 L90.7,132.3 L89.9,132.3 L90.1,132.0 L89.4,131.8 L89.9,131.4 L90.2,130.9 L89.9,129.3 L90.2,128.6 L90.4,127.6 L90.4,126.9 L90.7,126.4 L90.9,125.8 L90.9,125.2 L90.5,124.8 L89.9,124.5 L89.1,125.1 L88.0,125.0 L87.7,125.6 L88.1,126.3 L88.3,127.2 L88.3,128.2 L87.9,128.5 L87.5,128.6 L87.3,128.3 L87.3,129.2 L87.2,129.8 L86.8,130.3 L86.3,130.2 L85.8,129.7 L84.5,128.8 L83.0,127.5 L83.0,126.7 L82.4,126.7 L81.8,126.3 L80.9,125.8 L80.5,125.1 L80.2,124.6 L79.5,123.5 L79.4,123.1 L79.7,122.7 L79.0,122.4 L78.3,123.4 L77.7,124.0 L78.1,123.3 L77.6,123.1 L76.8,123.5 L75.9,123.7 L74.8,124.2 L74.1,124.5 L73.2,124.6 L72.4,124.9 L71.9,125.0 L71.6,124.3 L70.8,124.8 L69.3,125.9 L68.3,126.5 L67.6,126.1 L68.3,125.4 L68.9,124.2 L67.1,121.8 L67.2,121.0 L66.8,119.7 L65.6,119.8 L65.0,119.3 L65.4,118.8 L65.8,118.0 L66.3,117.6 L66.4,116.6 L65.2,116.8 L64.1,117.0 L63.5,116.7 L63.2,116.5 L63.6,115.5 L63.8,115.2 L64.1,115.5 L64.1,114.9 L64.0,114.5 L64.0,113.3 L63.9,112.0 L63.8,111.8 L62.4,112.0 L60.1,111.2 L59.2,110.4 L59.5,109.7 L58.6,109.5 L57.5,110.1 L56.8,110.4 L55.9,110.7 L54.5,111.5 L53.5,111.6 L52.5,111.5 L51.9,112.4 L50.9,112.5 L49.7,112.2 L48.9,111.2 L47.6,109.2 L47.6,107.2 L47.8,106.6 L48.2,106.5 L47.9,105.9 L47.7,105.7 L47.5,104.5 L47.7,103.2 L48.5,102.3 L48.9,101.6 L47.9,102.0 L46.2,101.9 L46.0,100.1 L45.7,99.1 L45.0,98.1 L44.2,96.9 L44.2,95.8 L44.4,93.0 L43.9,91.0 L44.1,90.2 L43.2,89.0 L42.7,86.9 L42.6,83.2 L41.7,81.0 L41.9,80.3 L41.9,79.0 L42.0,77.6 L42.2,76.0 L42.7,75.8 L42.5,74.0 L42.7,71.3 L42.5,70.0 L42.4,69.1 L41.8,67.1 L41.7,66.6 L41.0,64.9 L40.3,63.4 L39.5,61.8 L39.3,61.9 L37.9,59.3 L37.6,58.0 L37.1,58.0 L35.4,57.1 L32.4,53.4 L31.2,50.0 L30.5,47.4 L30.1,43.1 L31.5,41.0 L32.8,39.2 L33.4,38.2 L33.1,37.2 L33.3,36.4 L32.3,35.8 L31.2,35.5 L32.0,34.8 L34.5,33.9 L35.8,33.4 L37.5,30.9 L37.9,31.2 L38.3,30.4 L39.0,32.2 L40.4,33.7 L41.3,34.6 L43.1,36.1 L44.1,37.0 L44.3,37.8 L46.5,38.4 L47.3,39.3 L47.9,40.1 L48.9,41.3 L49.9,41.9 L50.4,42.7 L51.0,43.3 L51.5,43.6 L51.7,43.8 L51.9,43.9 L51.9,44.2 L52.4,45.1 L52.0,45.6 L52.1,45.8 L50.7,46.7 L49.0,46.7 L48.1,46.9 L46.5,47.2 L45.7,46.3 L45.3,45.1 L45.5,44.1 L45.7,43.1 L45.6,42.5 L45.0,41.8 L43.7,42.0 L42.8,43.1 L43.6,44.4 L44.1,45.4 L44.7,46.4 L44.5,47.2 L44.7,48.4 L44.7,49.1 L44.6,50.5 L44.8,51.4 L45.4,51.9 L45.8,52.6 L45.9,53.4 L46.0,54.1 L46.0,54.5 L46.0,55.0 L46.0,55.9 L46.1,56.4 L46.1,56.8 L46.4,57.8 L46.5,58.5 L46.7,59.0 L47.0,59.2 L47.6,60.0 L48.0,60.6 L48.4,62.0 L48.7,63.0 L48.9,63.2 L49.3,63.3 L49.3,63.6 L49.5,64.3 L49.5,65.1 L49.8,65.9 L49.9,66.5 L50.1,66.9 L50.2,67.2 L50.4,67.5 L50.1,67.8 L50.9,69.0 L51.1,69.7 L51.1,70.4 L51.6,71.3 L51.9,72.2 L52.2,73.0 L52.8,73.7 L53.2,74.5 L54.1,75.2 L54.8,76.0 L56.3,77.0 L57.6,77.6 L58.7,78.1 L60.1,79.5 L60.6,80.9 L61.3,81.4 L61.8,81.6 L62.2,81.4 L62.9,81.5 L63.6,81.8 L64.1,81.9 L63.8,81.1 L64.4,80.8 L65.0,81.2 L65.8,82.3 L66.6,83.3 L67.1,83.3 L67.9,83.3 L68.8,83.7 L70.9,84.0 L72.0,84.6 L72.3,84.3 L72.5,83.5 L73.1,84.2 L73.3,85.3 L73.7,86.4 L73.9,86.1 L74.2,85.1 L74.0,83.5 L74.4,82.6 L74.7,80.9 L74.6,80.6 L74.7,79.4 L76.1,77.9 L76.4,77.8 L77.1,75.9 L77.4,75.1 L77.6,73.8 L77.1,72.6 L76.6,71.6 L77.1,71.3 L77.3,69.6 L77.6,69.1 L77.9,69.4 L78.2,69.6 L78.4,69.3 L78.4,68.6 L78.4,68.3 L78.1,68.5 L78.6,68.0 L78.9,68.9 L79.6,69.6 L79.9,70.6 L80.6,70.8 L81.5,70.6 L82.0,69.6 L82.8,68.8 L83.8,68.2 L84.5,67.8 L85.5,67.8 L86.0,67.5 L86.8,66.8 L87.5,66.7 L88.3,66.7 L89.2,66.5 L89.3,67.5 L89.6,67.7 L89.6,67.1 L89.8,66.2 L90.2,65.6 L90.6,65.3 L90.8,64.5 L90.4,64.2 L90.6,64.1 L90.7,64.0 L90.8,63.9 L90.6,63.4 L90.7,62.6 L91.1,62.5 L91.5,63.4 L91.5,62.6 L92.1,61.6 L92.3,61.0 L93.1,61.3 L93.5,61.8 L93.8,62.0 L94.4,62.2 L95.0,62.3 L96.0,62.7 L96.3,64.2 L97.0,65.9 L97.0,66.8 L97.6,67.6 L98.3,69.2 L98.7,71.0 L99.5,71.5 L100.1,70.7 L101.1,70.2 L101.2,70.9 L101.1,72.4 L101.9,72.8 L102.8,72.4 L104.2,72.1 L105.4,72.1 L106.0,71.7 L106.2,71.3 L106.6,70.8 L107.1,69.0 L107.0,68.2 L107.6,68.0 L108.5,67.7 L109.4,67.1 L109.6,65.5 L110.5,65.8 L111.1,66.4 L111.3,67.5 L111.4,68.5 L111.7,69.4 L111.7,70.6 L111.6,72.0 L111.9,73.3 L112.6,72.9 L112.8,72.1 L113.3,71.8 L113.5,71.0 L113.3,69.3 L114.2,69.0 L115.3,68.2 L115.4,66.6 L115.5,65.9 L115.9,66.6 L116.4,65.9 L116.8,65.6 L116.4,66.9 L116.6,67.9 L116.6,69.1 L116.8,69.6 L116.6,70.7 L115.9,71.2 L115.1,72.3 L115.6,73.3 L116.7,73.6 L117.4,72.2 L117.7,71.1 L118.2,70.7 L119.0,70.4 L119.5,69.6 L119.9,69.2 L120.4,68.3 L121.2,68.3 L122.0,67.7 L122.6,67.3 L123.3,66.1 L124.9,66.1 L125.6,65.9 L126.4,65.6 L127.4,65.6 L128.2,65.1 L129.0,64.3 L129.6,63.1 L130.7,61.7 L132.1,60.5 L132.7,59.4 L134.2,59.0 L136.3,57.2 L136.7,57.0 L136.9,57.3 L137.0,57.5 L137.1,57.5 L136.9,57.7 L136.9,58.4 L137.0,58.8 L137.0,58.1 L137.4,58.2 L137.9,58.0 L137.9,57.6 L137.7,57.3 L138.1,57.1 L138.3,57.3 L138.6,56.5 L138.9,55.4 L139.4,56.1 L140.0,56.4 L140.5,55.1 L141.7,54.3 L142.3,54.7 L143.3,55.0 L144.9,56.5 L145.3,57.5 L145.4,58.8 L146.1,60.9 L146.6,62.3 L147.4,63.0 L148.9,62.9 L149.8,64.5 L150.2,66.1 L151.2,67.0 L150.9,68.8 L151.8,69.5 L152.5,69.9 L152.3,71.1 L152.2,71.7 L152.6,71.8 L153.2,71.4 L153.2,70.9 L153.7,70.6 L153.8,69.7 L154.1,70.9 L153.9,71.8 L152.9,73.4 L153.0,74.2 L153.1,76.7 L152.5,78.2 L151.4,78.4 L150.8,80.0 L150.3,80.6 L150.5,81.8 L151.3,81.6 L152.3,83.0 L153.3,83.6 L153.7,85.1 L153.2,85.6 L153.7,86.5 L154.2,87.3 L154.6,88.0 L154.5,88.8 L154.6,89.2 L154.9,90.2 L155.3,91.1 L155.2,92.1 L155.8,92.9 L155.9,94.3 L156.3,95.6 L155.6,96.0 L155.7,96.2 L156.3,96.7 L157.0,97.1 L157.8,97.5 L158.4,96.5 L158.7,96.4 L158.9,97.3 L158.7,97.1 L158.9,95.5 L160.0,94.6 L160.8,93.8 L161.0,93.5 L161.3,92.4 L161.7,91.9 L162.5,91.6 L162.8,91.2 L163.3,90.8 L163.2,90.4 L162.5,90.0 L162.2,89.8 L162.7,89.7 L163.1,89.2 L163.6,88.8 L163.8,88.0 L164.2,88.5 L164.7,88.9 L165.3,88.8 L165.0,88.5 L165.3,87.7 L165.0,87.3 L165.2,86.7 L165.7,86.3 L166.5,86.0 L166.6,85.1 L165.6,84.9 L164.8,84.7 L164.2,84.9 L164.3,83.2 L165.7,83.2 L166.9,83.0 L168.2,82.7 L167.4,81.2 L166.2,81.2 L166.1,81.0 L167.4,79.5 L168.6,79.6 L169.3,79.0 L169.9,78.3 L170.7,77.2 L171.3,78.0 L171.6,78.5 L171.2,79.1 L171.6,79.6 L171.8,80.0 L172.4,80.1 L171.9,80.6 L172.0,81.3 L172.4,81.8 L172.4,82.7 L171.7,82.7 L171.3,83.0 L171.9,83.3 L172.2,83.9 L173.0,84.2 L173.4,84.9 L173.9,85.5 L173.9,86.2 L174.2,86.5 L174.3,86.9 L174.5,87.4 L175.2,88.2 L175.5,88.7 L176.0,89.5 L176.3,90.4 L176.5,90.9 L176.7,91.6 L176.7,92.1 L177.1,93.0 L177.9,93.0 L178.4,92.6 L178.5,91.7 L179.0,90.7 L180.2,89.5 L180.7,88.6 L180.6,88.0 L181.3,86.9 L181.5,86.1 L181.6,84.9 L181.6,84.3 L181.9,84.7 L181.8,85.5 L182.0,86.5 L182.1,87.1 L182.3,87.5 L183.4,88.0 L184.0,87.9 L183.8,88.4 L183.3,88.8 L182.9,88.9 L182.6,88.8 L182.4,89.0 L182.6,89.4 L182.2,89.4 L182.0,89.5 L182.1,89.8 L182.4,90.2 L182.8,90.4 L182.7,91.0 L182.9,91.9 L183.3,92.6 L183.2,92.9 L182.8,93.0 L182.5,93.1 L182.6,93.7 L182.7,93.8 L182.5,94.3 L182.4,94.7 L182.7,95.3 L182.8,95.6 L182.8,96.4 L182.8,97.0 L182.8,97.6 L182.7,98.3 L182.7,98.7 L182.5,99.8 L182.5,100.3 L183.1,100.4 L182.9,100.9 L182.9,101.3 L183.9,101.9 L185.0,101.7 L185.6,101.6 L185.5,102.0 L185.3,102.1 L185.0,102.7 L184.3,102.6 L183.6,102.9 L183.3,103.6 L182.9,103.7 L183.1,104.3 L183.6,104.5 L184.0,103.9 L184.9,103.7 L185.9,104.3 L186.3,105.0 L186.9,105.8 L187.6,104.9 L187.9,104.7 L188.3,104.3 L188.8,104.2 L189.4,104.0 L189.4,104.9 L189.8,105.8 L190.1,105.9 L190.7,105.4 L190.8,104.4 L190.9,103.8 L191.4,103.7 L191.5,103.0 L191.9,101.7 L192.1,101.6 L192.3,101.8 L192.6,102.1 L192.8,101.8 L193.6,102.7 L193.4,102.8 L193.6,102.9 L194.1,103.0 L194.3,102.7 L194.3,102.2 L195.0,102.0 L195.7,102.2 L196.2,101.8 L196.3,100.9 L196.5,100.2 L196.6,99.4 L196.6,98.4 L197.1,98.3 L197.5,98.4 L197.8,98.5 L198.0,98.5 L198.3,98.5 L198.6,99.3 L199.0,100.5 L198.2,101.8 L198.9,102.2 L199.4,102.7 L200.4,101.8 L201.9,102.0 L201.8,102.4 L201.9,103.6 L202.9,103.9 L203.6,104.3 L203.6,104.7 L204.1,105.8 L204.5,106.5 L204.7,107.5 L204.9,108.4 L205.4,108.5 L205.6,108.8 L205.9,109.1 L206.1,109.3 L206.2,108.1 L206.6,108.7 L207.2,109.1 L207.7,109.3 L208.3,109.3 L208.6,108.9 L208.4,108.5 L208.3,108.0 L208.1,107.6 L207.9,107.1 L207.9,106.6 L208.0,106.1 L208.2,105.8 L208.2,105.1 L208.3,104.5 L208.6,103.7 L208.7,104.9 L209.4,105.8 L209.6,106.6 L210.3,105.9 L210.8,105.5 L211.1,105.9 L211.0,106.7 L211.6,106.9 L211.7,106.3 L212.3,105.9 L212.8,105.7 L213.4,105.3 L213.8,104.9 L214.2,105.6 L214.8,106.2 L215.8,106.5 L216.7,106.0 L216.3,105.9 L215.9,106.1 L215.6,105.5 L214.9,104.6 L214.4,104.1 L213.3,103.6 L212.6,103.2 L211.9,102.5 L211.7,101.8 L211.9,101.2 L211.8,101.0 L211.7,100.7 L211.7,100.0 L212.1,99.7 L212.2,99.4 L211.9,98.2 L212.9,96.5 L213.7,96.5 L214.4,94.8 L214.7,93.5 L215.5,92.3 L216.3,91.4 L216.7,91.5 L217.3,90.7 L217.7,89.9 L217.8,89.1 L218.4,89.0 L218.6,88.2 L218.9,87.8 L219.1,87.1 L219.1,86.3 L219.5,85.7 L219.8,85.8 L219.6,86.3 L219.7,86.9 L219.6,87.4 L220.0,88.2 L220.2,88.7 L220.6,89.0 L221.1,89.2 L221.0,89.0 L221.0,88.8 L221.7,89.0 L221.8,89.8 L222.4,89.9 L222.7,89.1 L223.1,88.6 L224.1,89.2 L224.5,89.9 L224.7,90.1 L225.8,89.6 L226.3,90.2 L226.5,89.8 L226.8,89.7 L227.0,89.9 L226.9,89.3 L227.3,88.8 L227.8,88.1 L228.6,88.1 L229.1,88.1 L228.9,87.4 L228.9,86.9 L229.1,86.2 L229.6,86.1 L230.0,86.3 L230.4,86.9 L231.1,87.3 L231.4,87.0 L231.8,87.1 L232.3,86.8 L233.0,86.8 L233.5,87.0 L233.8,86.3 L233.7,85.7 L234.2,85.7 L234.6,85.9 L235.1,86.0 L235.5,86.2 L236.2,86.3 L236.4,86.1 L236.4,85.9 L236.3,85.4 L236.1,85.1 L235.9,84.9 L235.9,84.2 L235.7,83.6 L235.6,83.2 L235.9,83.0 L236.0,82.2 L236.1,82.0 L236.0,81.5 L236.2,81.4 L236.8,81.5 L237.1,81.3 L237.5,81.5 L237.8,81.6 L238.2,81.6 L238.5,81.9 L238.7,81.6 L239.1,81.8 L239.1,82.6 L239.3,83.1 L239.7,82.9 L239.9,82.9 L240.5,83.5 L240.7,83.4 L240.9,83.0 L241.5,83.0 L242.0,83.3 L242.4,83.6 L242.6,83.2 L243.0,82.9 L243.5,82.6 L243.8,82.4 L244.1,82.5 L244.3,82.3 L244.5,82.3 L244.7,82.1 L244.9,82.0 L245.1,81.5 L246.9,80.6 L247.5,80.6 L247.4,80.7 L247.8,81.1 L249.3,81.9 L249.9,82.9 L250.4,83.2 L250.6,83.7 L250.8,83.8 L251.0,84.3 L251.0,84.6 L251.7,84.2 L252.0,83.5 L252.5,83.0 L252.9,83.2 L253.3,83.9 L253.8,84.0 L254.1,84.1 L254.6,83.5 L254.7,82.9 L254.7,82.5 L254.7,82.1 L255.0,82.0 L255.6,81.2 L256.1,80.4 L256.5,80.0 L256.9,79.6 L257.1,79.1 L257.4,78.7 L257.8,78.8 L258.6,78.8 L259.4,78.3 L259.8,77.6 L260.5,77.6 L260.5,77.3 L260.4,76.5 L260.6,76.2 L261.0,76.3 L261.2,76.4 L261.3,75.9 L261.4,75.1 L261.8,74.8 L261.4,74.0 L261.8,73.1 L262.0,72.2 L262.5,71.8 L262.9,71.6 L263.5,72.0 L263.7,71.6 L263.6,71.0 L264.2,71.0 L264.7,70.9 L265.3,71.0 L265.8,71.3 L266.1,72.1 L266.2,72.9 L266.6,72.3 L266.6,71.9 L267.1,72.6 L267.0,72.9 L267.8,72.2 L268.7,70.7 L268.8,69.8 L268.9,69.0 L268.9,67.9 L270.0,66.2 L270.6,64.0 L272.5,61.2 L272.5,60.8 L272.9,62.2 L273.4,62.8 L273.6,63.5 L274.4,63.7 L274.4,64.3 L275.0,64.2 L275.3,64.4 L275.8,64.3 L276.4,64.1 L276.7,64.0 L277.0,64.3 L277.6,64.2 L278.1,64.0 L278.6,64.4 L279.0,65.5 L279.0,66.0 L279.0,66.4 L279.1,66.8 L279.1,67.2 L279.1,67.5 L279.2,68.1 L279.7,69.0 L280.0,68.9 L280.2,68.6 L280.7,68.0 L281.3,67.9 L281.8,67.9 L281.9,68.5 L282.3,68.4 L282.6,68.7 L282.8,68.8 L283.4,69.7 L283.5,69.6 L284.0,69.4 L285.1,69.1 L286.2,69.0 L287.5,69.6 L288.0,69.6 L288.9,69.7 L288.9,70.7 L289.2,70.2 L289.4,69.4 L289.9,69.0 L290.4,68.1 L291.0,67.2 L291.9,68.4 L292.8,69.3 L293.2,70.1 L293.4,70.8 L294.0,70.9 L294.4,70.4 L295.4,70.0 L295.6,70.2 L295.5,72.2 L295.7,73.7 L296.0,73.7 L296.3,74.1 L296.7,74.4 L297.1,74.9 L297.4,75.1 L297.9,74.9 L298.1,74.4 L298.4,73.7 L298.9,73.8 L299.0,75.4 L298.2,78.3 L298.7,79.9 L298.4,82.0 L298.2,83.1 L298.5,83.9 L298.7,84.6 L298.5,85.4 L298.8,85.2 L299.0,85.8 L299.2,86.2 L298.9,86.2 L298.9,86.5 L299.0,86.8 L299.2,87.3 L299.3,87.9 L299.3,88.0 L299.3,88.1 L299.3,88.1 L299.2,88.2 L299.1,88.3 L299.0,88.6 L299.2,88.6 L299.1,88.8 L299.2,88.9 L299.5,89.0 L300.0,88.8 L300.0,89.0 L299.9,89.1 L299.7,89.2 L299.7,89.3 L299.9,89.7 L300.0,89.7 L300.0,89.8 L300.1,89.8 L300.0,89.9 L300.1,90.0 L300.2,90.2 L300.5,90.4 L300.5,90.3 L300.6,90.4 L300.7,90.3 L300.9,90.3 L301.2,90.4 L301.6,90.7 L301.8,90.7 L301.9,90.9 L302.1,91.1 L302.3,91.3 L302.4,91.3 L302.7,91.1 L302.9,91.6 L303.0,91.9 L303.0,91.9 L303.1,92.0 L303.2,92.2 L303.3,92.1 L303.3,92.3 L303.4,92.3 L303.5,92.3 L303.6,92.3 L304.0,92.2 L304.1,92.7 L304.4,93.2 L304.9,93.1 L305.2,93.5 L305.7,93.6 L305.8,93.6 L304.8,94.1 L304.0,95.5 L304.2,96.3 L304.5,96.9 L304.5,97.2 L304.6,97.3 L304.5,97.4 L304.5,97.4 L304.3,97.5 L304.1,97.7 L303.9,98.2 L304.2,99.0 L304.4,99.9 L304.6,100.4 L305.0,100.7 L305.6,100.6 L306.0,100.2 L306.5,100.1 L307.0,100.4 L306.5,100.4 L306.6,100.9 L306.5,101.6 L306.7,101.1 L306.8,101.0 L307.0,101.6 L307.3,101.9 L307.4,102.3 L307.7,102.7 L308.1,102.9 L308.3,103.3 L308.5,103.9 L309.0,104.5 L309.3,104.7 L309.7,104.3 L310.8,104.1 L311.1,104.2 L311.8,103.7 L312.4,102.9 L313.0,102.3 L313.6,101.8 L313.9,101.0 L314.3,100.3 L314.5,99.5 L314.8,98.7 L315.3,98.2 L316.1,98.0 L316.6,98.0 L317.7,97.0 L318.6,96.6 L319.1,95.9 L319.6,95.9 L319.8,95.6 L320.3,96.0 L320.7,95.9 L321.2,95.6 L320.9,96.5 L320.6,96.7 L320.3,96.6 L319.9,96.8 L319.9,97.2 L320.1,97.5 L320.3,97.9 L320.1,98.3 L320.4,98.2 L320.8,98.8 L321.1,98.7 L321.3,98.6 L321.3,98.7 L321.5,98.9 L322.0,98.7 L322.6,98.4 L322.7,98.6 L323.0,98.8 L323.8,99.3 L324.5,99.0 L324.6,99.2 L325.1,99.1 L325.8,99.2 L326.1,99.4 L326.6,99.4 L327.0,99.3 L327.3,98.9 L327.9,98.3 L328.1,97.8 L328.3,97.4 L329.1,96.7 L329.8,96.4 L330.4,96.0 L331.3,96.1 L332.0,95.0 L332.4,94.2 L332.9,93.5 L333.6,93.0 L334.5,91.8 L335.1,90.5 L335.6,90.9 L336.3,92.5 L336.7,93.8 L336.7,95.7 L336.8,96.9 L337.4,98.2 L338.1,99.2 L338.3,101.0 L339.0,101.1 L339.5,100.7 L340.4,100.9 L341.0,100.7 L342.2,100.5 L341.7,100.9 L341.7,101.6 L342.0,101.8 L342.2,103.1 L342.7,104.1 L343.2,104.1 L343.6,103.4 L344.7,103.6 L345.3,104.4 L345.8,105.1 L346.5,104.8 L346.6,103.9 L346.5,103.3 L347.6,102.9 L349.0,103.0 L349.7,102.0 L350.3,102.2 L350.8,101.9 L351.2,102.0 L351.8,102.0 L352.1,102.0 L352.2,101.3 L352.8,101.4 L355.4,103.0 L356.6,103.5 L356.4,104.5 L356.4,105.1 L356.8,105.7 L357.3,105.7 L359.6,104.6 L361.8,104.6 L363.7,103.9 L364.7,102.5 L365.5,101.5 L366.3,100.5 L366.9,101.4 L367.5,102.4 L367.9,103.5 L368.5,104.7 L368.7,106.5 L369.6,108.4 L370.1,109.2 L370.0,110.3 L369.8,111.2 L369.2,111.5 L368.6,111.7 L368.7,112.8 L369.3,113.8 L369.9,114.2 L370.8,114.2 L371.6,115.1 L371.9,115.4 L372.0,115.2 L372.8,114.6 L373.1,114.8 L373.4,115.0 L373.8,115.2 L374.0,115.6 L374.0,116.2 L374.5,116.4 L374.8,116.4 L375.1,116.3 L375.5,116.5 L375.9,116.7 L376.2,116.9 L376.5,117.0 L376.8,116.9 L377.0,116.5 L377.3,116.5 L377.4,116.2 L377.7,115.6 L378.3,115.3 L377.7,115.1 L377.4,114.7 L377.2,114.1 L377.0,113.7 L376.8,113.2 L376.3,113.0 L376.1,112.5 L375.8,112.5 L375.6,112.0 L375.2,111.6 L373.6,109.9 L372.7,108.8 L373.7,108.4 L374.6,108.1 L375.6,108.3 L376.0,107.6 L377.2,106.9 L377.6,106.8 L378.4,106.8 L379.5,107.7 L381.3,106.8 L381.9,105.2 L381.5,103.1 L382.3,102.0 L383.6,102.1 L384.4,102.1 L385.4,102.3 L385.7,102.8 L386.3,103.1 L387.1,103.4 L387.5,103.0 L387.9,103.7 L388.5,104.1 L389.2,104.0 L389.3,104.5 L389.5,104.9 L389.9,104.8 L390.4,106.0 L391.5,106.8 L392.2,106.7 L393.0,107.7 L394.3,108.2 L394.7,109.3 L395.2,109.7 L395.9,110.3 L396.8,110.5 L397.3,110.7 L398.1,111.1 L398.6,111.1 L399.5,111.2 L400.9,111.6 L401.6,112.3 L402.3,112.9 L403.2,112.6 L404.2,112.3 L405.8,112.3 L406.8,112.5 L407.3,112.2 L407.5,111.6 L407.3,110.7 L407.4,108.2 L407.1,105.9 L407.2,104.1 L407.8,101.7 L408.1,99.6 L408.0,98.0 L407.8,97.2 L407.0,96.5 L406.0,94.6 L404.5,93.5 L402.2,89.9 L400.5,88.5 L399.2,88.0 L397.8,86.5 L399.1,86.3 L400.6,86.2 L402.8,85.2 L401.3,83.6 L401.1,82.5 L401.7,81.6 L403.4,79.8 L405.4,80.1 L405.5,77.8 L402.5,76.0 L401.9,74.9 L402.7,74.4 L403.3,73.3 L403.1,72.2 L402.9,70.7 L403.2,69.9 L403.7,69.3 L404.3,68.3 L404.6,67.3 L405.0,67.4 L405.5,68.0 L405.9,68.1 L406.6,68.1 L407.5,68.6 L409.0,68.9 L409.8,69.3 L411.1,69.7 L411.7,70.1 L412.9,70.6 L414.7,69.9 L416.4,69.3 L416.5,67.1 L417.1,66.1 L417.5,65.6 L418.3,64.4 L418.2,63.6 L418.4,63.2 L419.3,63.4 L420.7,62.0 L422.1,61.3 L422.8,60.6 L423.4,59.7 L424.2,58.5 L424.6,57.3 L425.5,56.7 L426.4,56.1 L427.9,55.7 L428.8,55.7 L429.6,55.1 L430.6,54.3 L431.1,54.0 L431.8,53.8 L431.6,54.5 L430.9,55.8 L430.8,57.8 L430.7,58.5 L430.8,60.5 L432.3,61.5 L432.5,62.7 L433.6,62.9 L433.9,61.9 L434.4,61.5 L435.8,61.9 L437.0,62.1 L438.1,61.9 L438.9,61.6 L439.9,63.1 L440.5,63.9 L441.7,64.8 L442.4,65.5 L443.3,64.4 L443.7,63.5 L444.2,62.5 L444.8,61.9 L444.8,62.6 L445.2,63.1 L446.1,62.8 L446.9,63.3 L447.3,63.0 L447.6,63.6 L448.5,64.3 L448.2,65.1 L448.9,65.9 L449.3,66.6 L450.8,66.6 L451.4,65.4 L452.3,64.8 L453.2,64.2 L454.1,63.1 L454.7,62.8 L454.9,61.9 L455.9,61.7 L456.7,62.2 L458.2,62.7 L459.5,62.8 L460.0,62.8 L461.4,63.6 L463.4,63.8 L464.7,63.6 L465.7,62.7 L467.4,62.3 L468.0,60.6 L469.7,60.6 L470.4,60.0 L471.5,60.5 L472.7,60.7 L474.9,60.6 L476.2,60.6 L478.2,61.1 L481.1,61.7 L482.0,65.6 L485.3,64.9 L489.5,63.8 L493.2,65.4 L497.0,65.2 L498.7,68.1 L500.9,73.7 L502.0,76.1 L502.8,77.1 L504.0,76.8 L505.0,76.7 L507.0,76.4 L508.3,76.1 L508.4,75.6 L509.6,77.6 L509.8,76.6 L510.2,75.8 L510.2,75.2 L510.4,75.0 L510.9,74.7 L510.5,73.3 L511.2,72.4 L511.9,71.0 L514.8,68.2 L516.3,69.0 L519.6,68.1 L525.0,67.1 L527.7,67.1 L528.1,67.1 L528.3,67.1 L528.5,67.1 L528.9,67.0 L529.3,66.8 L529.8,66.8 L530.3,66.8 L531.0,67.1 L532.2,67.2 L532.6,66.9 L532.9,66.5 L533.2,66.3 L533.3,65.8 L533.4,65.2 L533.5,64.6 L533.6,64.2 L533.9,63.6 L534.3,63.5 L534.6,63.3 L535.0,63.2 L535.3,62.9 L535.8,62.8 L536.2,62.7 L536.5,62.7 L536.8,62.6 L537.3,62.5 L537.2,63.0 L537.4,63.3 L537.5,63.6 L537.6,64.0 L537.7,64.5 L537.8,64.9 L537.6,65.1 L537.4,65.3 L537.2,65.5 L537.0,65.7 L536.8,66.0 L537.2,66.3 L537.7,66.3 L538.2,66.5 L538.8,66.6 L539.4,66.7 L539.9,67.2 L540.1,67.2 L540.6,67.0 L541.0,66.7 L541.3,66.7 L541.9,66.9 L542.1,66.9 L542.5,66.9 L542.7,66.9 L543.0,66.8 L543.3,66.8 L543.6,66.6 L544.1,66.4 L544.6,66.2 L545.1,66.0 L545.4,65.8 L545.6,65.5 L545.9,65.5 L546.2,65.7 L546.2,66.0 L546.1,66.3 L546.3,66.2 L546.6,66.5 L546.7,66.7 L546.8,67.3 L547.0,68.2 L547.0,68.6 L547.1,68.8 L547.2,69.5 L547.4,70.3 L547.5,70.2 L547.9,69.7 L549.6,69.5 L550.0,68.1 L550.9,67.8 L552.5,68.4 L553.6,68.0 L554.8,67.4 L556.1,66.6 L556.8,66.2 L557.0,66.0 L557.4,66.3 L557.2,67.0 L557.8,67.9 L558.5,67.2 L559.7,66.4 L560.3,67.3 L561.0,68.3 L561.1,68.6 L561.5,69.0 L562.2,69.8 L562.5,70.5 L563.2,70.5 L563.9,70.8 L565.1,71.6 L566.4,73.2 L567.0,73.7 L567.3,73.6 L567.0,74.0 L567.2,74.3 L567.3,74.4 L567.6,74.3 L567.8,74.4 L567.9,74.9 L568.0,75.0 L568.0,75.3 L568.0,75.5 L568.1,75.6 L568.1,75.6 L568.1,75.7 L568.2,75.7 L568.1,75.8 L568.0,75.8 L567.9,75.6 L567.9,75.7 L568.0,75.8 L567.9,75.8 L568.0,76.0 L568.0,76.2 L568.0,76.4 L568.0,76.6 L568.1,76.8 L568.3,76.9 L568.4,77.1 L568.6,77.2 L568.7,77.4 L568.8,77.6 L568.7,77.8 L569.2,77.9 L569.7,78.0 L569.8,78.1 L569.9,78.3 L569.8,78.4 L569.9,78.5 L569.9,78.8 L569.8,79.0 L569.8,79.2 L569.7,79.4 L569.6,79.5 L569.5,79.6 L569.6,79.9 L569.7,80.1 L569.7,80.2 L569.7,80.5 L569.7,80.9 L569.8,81.2 L569.9,81.4 L570.0,81.7 L569.9,81.9 L569.7,82.0 L569.6,82.2 L569.4,82.4 L569.3,82.4 L569.2,82.5 L569.1,82.6 L569.0,82.7 L568.8,82.8 L568.7,82.9 L568.6,83.0 L568.4,83.1 L568.2,83.3 L567.9,83.3 L567.7,83.5 L567.6,83.7 L567.5,83.9 L567.3,84.0 L567.1,84.0 L566.9,84.2 L566.7,84.2 L566.5,84.1 L566.4,84.0 L566.3,83.9 L566.2,83.8 L566.1,83.6 L566.1,83.4 L565.9,83.2 L565.8,83.1 L565.7,83.0 L565.6,82.9 L565.6,82.8 L565.5,82.7 L565.3,82.5 L564.6,81.8 L564.4,81.7 L564.3,81.6 L564.2,81.5 L563.9,81.3 L563.3,80.8 L562.9,81.0 L562.6,80.7 L562.2,80.3 L561.0,79.6 L560.7,79.6 L560.6,79.4 L560.5,79.3 L560.0,79.1 L558.7,79.0 L557.9,79.0 L557.4,78.8 L556.5,78.5 L555.8,78.0 L555.0,77.2 L554.3,76.8 L553.7,76.5 L552.8,75.9 L552.2,74.8 L551.5,74.5 L551.3,74.2 L550.7,73.8 L549.6,73.5 L548.4,72.9 L547.9,72.7 L547.8,73.5 L547.9,74.1 L547.9,74.7 L547.4,74.7 L547.7,75.2 L547.8,75.4 L547.6,75.5 L547.3,75.4 L547.1,75.3 L546.8,75.2 L546.6,75.0 L546.4,74.9 L546.2,74.8 L546.0,74.7 L545.8,74.6 L545.6,74.6 L545.4,74.6 L545.1,74.5 L544.9,74.3 L544.6,74.2 L544.5,74.1 L544.4,74.1 L544.2,73.9 L544.0,73.8 L543.9,73.8 L543.7,73.7 L543.6,73.7 L543.3,73.7 L543.0,73.8 L542.8,73.8 L542.6,73.9 L542.4,73.9 L542.3,73.9 L542.2,73.8 L541.7,74.1 L541.4,74.1 L541.3,73.7 L541.1,73.4 L540.9,73.0 L540.6,73.3 L540.1,73.3 L539.6,73.2 L539.3,73.2 L539.0,73.0 L538.6,72.8 L538.6,72.6 L538.5,72.4 L538.3,72.4 L537.9,72.5 L537.7,72.2 L536.9,72.4 L536.4,72.9 L536.3,73.2 L536.0,73.4 L535.5,73.5 L535.1,73.0 L534.7,72.7 L534.4,73.1 L534.1,73.4 L534.1,73.9 L534.1,74.4 L533.6,74.7 L533.3,73.8 L533.3,73.3 L533.0,72.7 L532.5,72.8 L531.9,73.0 L531.1,73.7 L530.2,74.2 L529.9,74.4 L529.1,74.8 L528.7,75.2 L527.0,75.7 L525.5,75.7 L524.3,76.1 L523.1,76.6 L520.8,77.4 L519.2,78.0 L517.6,77.8 L516.0,77.7 L515.5,77.7 L515.5,77.8 L515.3,78.0 L515.4,78.3 L515.7,78.5 L515.3,78.8 L514.6,78.9 L512.3,78.9 L510.7,78.6 L510.0,78.5 L509.4,77.8 L509.3,76.6 L508.4,75.7 L507.9,76.3 L505.5,76.6 L504.9,76.7 L503.9,76.8 L502.5,77.1 L502.1,77.1 L501.6,77.1 L501.5,77.2 L501.6,77.5 L500.7,78.4 L499.2,79.5 L498.1,80.7 L496.9,82.7 L495.1,82.6 L493.3,81.5 L491.3,80.0 L488.9,79.1 L486.3,78.2 L483.4,77.3 L481.9,76.5 L481.2,76.4 L479.7,75.9 L479.0,75.8 L478.2,75.7 L477.3,75.5 L476.2,75.6 L473.7,75.0 L471.8,75.2 L469.6,75.2 L469.1,74.5 L467.9,74.5 L466.8,74.8 L465.1,75.3 L463.6,74.8 L462.7,74.3 L460.3,75.9 L457.4,76.2 L456.4,74.9 L454.3,75.3 L454.4,74.1 L454.6,72.5 L454.9,70.4 L454.8,68.5 L454.8,66.4 L454.7,65.4 L454.8,63.6 L454.6,62.7 L453.9,63.4 L453.0,64.3 L452.0,64.8 L451.3,65.6 L450.3,67.5 L448.5,69.1 L448.1,70.3 L447.1,69.8 L445.0,71.1 L443.9,72.2 L443.2,72.3 L442.5,72.6 L442.2,73.4 L441.8,74.2 L441.6,75.1 L441.1,76.0 L440.9,76.8 L440.4,76.3 L439.9,76.5 L439.1,77.4 L438.4,78.2 L436.9,78.6 L435.4,78.3 L434.2,77.7 L433.9,78.2 L433.3,78.8 L432.1,78.6 L430.8,79.2 L429.8,79.2 L428.9,79.6 L428.1,81.1 L427.7,82.8 L425.3,83.2 L423.0,82.8 L422.5,83.3 L421.8,83.8 L419.6,84.2 L417.7,83.7 L417.1,83.6 L416.9,84.1 L416.6,85.3 L417.1,86.7 L418.3,88.4 L419.3,88.9 L419.1,89.7 L419.7,90.0 L419.8,91.0 L418.4,91.8 L419.1,92.7 L419.3,93.5 L419.1,94.3 L419.2,94.3 L419.5,93.8 L419.9,93.5 L420.7,93.1 L419.9,95.5 L420.0,98.0 L421.3,98.5 L422.2,100.1 L422.3,101.0 L422.3,102.6 L422.7,104.0 L422.9,104.5 L423.3,105.6 L424.5,105.2 L425.5,105.0 L426.2,104.9 L426.6,105.0 L427.0,106.0 L427.4,106.7 L427.6,107.5 L427.0,108.8 L427.5,109.9 L427.7,111.3 L427.3,113.5 L428.1,114.3 L429.0,114.8 L429.6,115.6 L429.9,116.2 L430.2,117.2 L431.1,117.7 L431.5,117.5 L432.4,118.4 L431.6,119.4 L430.9,119.6 L428.5,119.6 L428.2,119.8 L428.2,120.3 L429.0,121.1 L429.4,121.6"};
 
 export function getCyprusE4Stage(id: string) {
   return cyprusE4Stages.find((stage) => stage.id === id);

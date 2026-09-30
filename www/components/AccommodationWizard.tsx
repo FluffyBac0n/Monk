@@ -1,7 +1,7 @@
 'use client';
 
 import type { User } from 'firebase/auth';
-import { FormEvent, type ReactNode, useEffect, useRef, useState } from 'react';
+import { FormEvent, type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import {
   deleteAccommodationDraft,
   listStages,
@@ -12,6 +12,7 @@ import {
 } from '@/lib/accommodations';
 import type { AccommodationDraftValues, AccommodationSubmission, StageOption, TrailOption } from '@/lib/models';
 import { submissionHasPublishedVersion } from '@/lib/models';
+import { trailDisplayName } from '@/lib/trail-names';
 
 const lodgingTypes = ['Hotel', 'Guesthouse', 'Hostel', 'Apartment', 'Villa', 'Camping'];
 const stepLabels = ['Property details', 'Trail and stage point', 'Contact and pricing', 'Review and submit'];
@@ -21,7 +22,7 @@ function RequiredLabel({ children }: { children: ReactNode }) {
 }
 
 export const emptyAccommodationForm: AccommodationDraftValues = {
-  trailId: 'cyprus-e4', trailName: 'E4 — Cyprus', stageId: '', stageName: '', stageSequence: 0,
+  trailId: 'cyprus-e4', trailName: 'Cyprus-E4', stageId: '', stageName: '', stageSequence: 0,
   name: '', type: 'Hotel', village: '', address: '', description: '', phone: '', email: '', website: '', whatsapp: '', googleMapsUrl: '',
   priceMinEur: '', priceMaxEur: '', distanceFromTrailKm: '', capacityPeople: '', monthsOpen: '', latitude: '', longitude: '', policyAgreement: false,
 };
@@ -49,7 +50,8 @@ function validWebUrl(value: string) {
   }
 }
 
-function MobileAccommodationPreview({ form, stageName }: { form: AccommodationDraftValues; stageName: string }) {
+export function MobileAccommodationPreview({ form, stageName }: { form: AccommodationDraftValues; stageName: string }) {
+  const titleId = useId();
   const latitude = Number(form.latitude);
   const longitude = Number(form.longitude);
   const hasCoordinates = form.latitude.trim() !== '' && form.longitude.trim() !== ''
@@ -87,13 +89,13 @@ function MobileAccommodationPreview({ form, stageName }: { form: AccommodationDr
   ];
 
   return (
-    <section className="mobile-preview" aria-labelledby="mobile-preview-title">
+    <section className="mobile-preview" aria-labelledby={titleId}>
       <div className="mobile-preview-heading">
-        <div><p className="eyebrow">MOBILE APP PREVIEW</p><h3 id="mobile-preview-title">How hikers will see it.</h3></div>
+        <div><p className="eyebrow">MOBILE APP PREVIEW</p><h3 id={titleId}>How hikers will see it.</h3></div>
         <span>Preview only</span>
       </div>
       <div className="mobile-preview-canvas">
-        <div className="mobile-preview-context"><span>ACCOMMODATION</span><strong>{form.trailName || 'Trail'} · {stageName || 'Stage point'}</strong></div>
+        <div className="mobile-preview-context"><span>ACCOMMODATION</span><strong>{trailDisplayName(form.trailId, form.trailName)} · {stageName || 'Stage point'}</strong></div>
         <article className="mobile-accommodation-card">
           <header className="mobile-card-header">
             <span className={`mobile-type-marker ${form.type === 'Camping' ? 'camping' : ''}`} aria-hidden="true">{markerIcon[form.type] || '⌂'}</span>
@@ -129,7 +131,7 @@ export function AccommodationWizard({
   const [form, setForm] = useState(initialValues);
   const [step, setStep] = useState(Math.min(4, Math.max(1, initialStep)));
   const [draftId, setDraftId] = useState(initialDraftId);
-  const [trails, setTrails] = useState<TrailOption[]>([{ id: 'cyprus-e4', name: 'E4 — Cyprus' }]);
+  const [trails, setTrails] = useState<TrailOption[]>([{ id: 'cyprus-e4', name: 'Cyprus-E4' }]);
   const [stages, setStages] = useState<StageOption[]>([]);
   const [catalogBusy, setCatalogBusy] = useState(true);
   const [catalogError, setCatalogError] = useState('');
@@ -267,8 +269,8 @@ export function AccommodationWizard({
         </div></fieldset>}
 
         {step === 2 && <fieldset><legend>Trail and stage point</legend><p>Connect the property to the named point hikers will recognise.</p><div className="form-grid">
-          <label><RequiredLabel>Trail</RequiredLabel><select value={form.trailId} onChange={(event) => { setCatalogBusy(true); setCatalogError(''); setStages([]); update('trailId', event.target.value); update('stageId', ''); }} required>{trails.map((trail) => <option key={trail.id} value={trail.id}>{trail.name}</option>)}</select></label>
-          <label><RequiredLabel>Nearest stage point</RequiredLabel><select id="accommodation-stage" value={form.stageId} disabled={catalogBusy || Boolean(catalogError)} onChange={(event) => update('stageId', event.target.value)} required><option value="">{catalogBusy ? 'Loading stage points…' : 'Select a stage point'}</option>{stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</select></label>
+          <label><RequiredLabel>Trail</RequiredLabel><select value={form.trailId} onChange={(event) => { setCatalogBusy(true); setCatalogError(''); setStages([]); update('trailId', event.target.value); update('trailName', trailDisplayName(event.target.value, trails.find((trail) => trail.id === event.target.value)?.name)); update('stageId', ''); update('stageName', ''); update('stageSequence', 0); }} required>{trails.map((trail) => <option key={trail.id} value={trail.id}>{trail.name}</option>)}</select></label>
+          <label><RequiredLabel>Nearest stage point</RequiredLabel><select id="accommodation-stage" value={form.stageId} disabled={catalogBusy || Boolean(catalogError)} onChange={(event) => { const selected = stages.find((stage) => stage.id === event.target.value); update('stageId', event.target.value); update('stageName', selected?.name || ''); update('stageSequence', selected?.sequence ?? 0); }} required><option value="">{catalogBusy ? 'Loading stage points…' : 'Select a stage point'}</option>{stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}</select></label>
           <label><RequiredLabel>Distance from trail (km)</RequiredLabel><input id="accommodation-distance" type="number" min="0" max="1000" step="0.1" value={form.distanceFromTrailKm} onChange={(event) => update('distanceFromTrailKm', event.target.value)} required /></label>
           <label>Google Maps link<input id="accommodation-map-link" type="url" maxLength={1000} value={form.googleMapsUrl} onChange={(event) => update('googleMapsUrl', event.target.value)} placeholder="https://maps.google.com/…" /></label>
           <label>Latitude<input id="accommodation-latitude" type="number" min="-90" max="90" step="any" value={form.latitude} onChange={(event) => update('latitude', event.target.value)} /></label>
@@ -288,7 +290,7 @@ export function AccommodationWizard({
 
         {step === 4 && <fieldset><legend>Review and submit</legend><p>Preview the app card, then confirm the listing before it enters manual review.</p><MobileAccommodationPreview form={form} stageName={stages.find((row) => row.id === form.stageId)?.name || form.stageName} /><div className="review-summary">
           <section><span>Listing context</span><h3>{form.trailName || 'Trail'} · {stages.find((row) => row.id === form.stageId)?.name || form.stageName}</h3><p>{form.distanceFromTrailKm} km from the trail. This stage point links the listing to the correct place in the app.</p></section>
-          <section className="full"><span>What verified means</span><p>EuroTrex reviews the representative’s authority, contact details and trail relevance before publication. It is not an endorsement or booking guarantee. Pilot fee or commission terms, if any, are confirmed before publication. Review is manual during private testing and has no guaranteed service window.</p></section>
+          <section className="full"><span>What verified means</span><p>EuroTrex reviews the representative’s authority, contact details and trail relevance before publication. It is not an endorsement or booking guarantee. Pilot fee or commission terms, if any, are confirmed before publication. Review normally takes 1–3 days.</p></section>
         </div><label className="check-label policy-check"><input id="accommodation-policy" type="checkbox" checked={form.policyAgreement} onChange={(event) => update('policyAgreement', event.target.checked)} required /><span>I confirm that I represent this accommodation, the information is accurate, and I accept the <a href="/partner-terms" target="_blank">partner listing policy</a>. <span className="required-marker" aria-hidden="true">*</span></span></label></fieldset>}
 
         <div className="wizard-actions"><button type="button" className="text-button" disabled={saveState === 'saving'} onClick={() => void persistDraft()}>{saveState === 'saving' ? 'Saving…' : 'Save draft'}</button><div>{step > 1 && <button type="button" className="button button-secondary" onClick={() => setStep((value) => value - 1)}>Back</button>}{step < 4 ? <button type="button" className="button button-primary" onClick={() => void nextStep()}>Continue</button> : <button className="button button-primary" disabled={busy || catalogBusy || Boolean(catalogError)}>{busy ? 'Submitting…' : sourceSubmission ? 'Submit update' : 'Submit for review'}</button>}</div></div>

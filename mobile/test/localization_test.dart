@@ -170,8 +170,8 @@ void main() {
       'Kofinanziert von der Europäischen Union',
     );
     expect(german.t('Republic of Cyprus'), 'Republik Zypern');
-    expect(german.t('E4 - Crete'), 'E4 - Crete');
-    expect(german.t('E4 - Peloponnese'), 'E4 - Peloponnese');
+    expect(german.t('Crete-E4'), 'Crete-E4');
+    expect(german.t('Peloponnese-E4'), 'Peloponnese-E4');
     expect(german.t('OFFLINE TRAIL'), 'OFFLINE-WANDERWEG');
     expect(german.t('Offline access'), 'Offline-Zugriff');
     expect(german.t('Offline map'), 'Offline-Karte');
@@ -296,8 +296,8 @@ void main() {
       'Cofinanciado por la Unión Europea',
     );
     expect(spanish.t('Republic of Cyprus'), 'República de Chipre');
-    expect(spanish.t('E4 - Crete'), 'E4 - Crete');
-    expect(spanish.t('E4 - Peloponnese'), 'E4 - Peloponnese');
+    expect(spanish.t('Crete-E4'), 'Crete-E4');
+    expect(spanish.t('Peloponnese-E4'), 'Peloponnese-E4');
     expect(spanish.t('Offline access'), 'Acceso sin conexión');
     expect(spanish.t('Offline map'), 'Mapa sin conexión');
     expect(spanish.t('Map unavailable'), 'Mapa no disponible');

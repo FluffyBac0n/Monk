@@ -338,7 +338,7 @@ class _OfflineAccessSetting extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            l10n.t('E4 - Cyprus'),
+            l10n.t('Cyprus-E4'),
             style: Theme.of(
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),

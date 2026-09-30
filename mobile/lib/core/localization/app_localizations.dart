@@ -110,8 +110,8 @@ const _englishTerminology = <String, String>{
   'Stage information is stored on this device.':
       'Stage-point information is stored on this device.',
   'Back to stages': 'Back to stage points',
-  'Download E4 - Cyprus to browse its stages without a connection.':
-      'Download E4 - Cyprus to browse its stage points without a connection.',
+  'Download Cyprus-E4 to browse its stages without a connection.':
+      'Download Cyprus-E4 to browse its stage points without a connection.',
   'Places to stay near this stage': 'Places to stay near this stage point',
   'No accommodation is listed for this stage.':
       'No stays are listed for this stage point.',
@@ -172,8 +172,8 @@ const _translations = <String, Map<String, String>>{
     'No email app is available. Opening the EUROTREX website contact form instead.':
         'Keine E-Mail-App verfügbar. Stattdessen wird das Kontaktformular auf der EUROTREX-Website geöffnet.',
     'Version': 'Version',
-    'E4 - Crete': 'E4 - Crete',
-    'E4 - Peloponnese': 'E4 - Peloponnese',
+    'Crete-E4': 'Crete-E4',
+    'Peloponnese-E4': 'Peloponnese-E4',
     'Settings': 'Einstellungen',
     'Reverse': 'Umkehren',
     'GPS': 'GPS',
@@ -225,7 +225,7 @@ const _translations = <String, Map<String, String>>{
     'Walk from Pafos to Larnaka': 'Von Pafos nach Larnaka wandern',
     'Walk from Larnaka to Pafos': 'Von Larnaka nach Pafos wandern',
     'CYPRUS · LONG DISTANCE TRAIL': 'ZYPERN · FERNWANDERWEG',
-    'E4 - Cyprus': 'E4 - Cyprus',
+    'Cyprus-E4': 'Cyprus-E4',
     'Pafos Airport': 'Flughafen Pafos',
     'Larnaka Airport': 'Flughafen Larnaka',
     'Distance': 'Entfernung',
@@ -507,7 +507,7 @@ const _translations = <String, Map<String, String>>{
     'No services recorded for this stage.':
         'Für diese Etappe sind keine Angebote erfasst.',
     'Trail position': 'Position auf dem Weg',
-    'Following E4 - Cyprus': 'Auf dem E4 - Zypern',
+    'Following Cyprus-E4': 'Auf dem E4 - Zypern',
     'Route guidance will be available with the offline map.':
         'Die Routenführung wird mit der Offline-Karte verfügbar sein.',
     'Available offline': 'Offline verfügbar',
@@ -520,7 +520,7 @@ const _translations = <String, Map<String, String>>{
     'Take the trail offline': 'Weg offline verfügbar machen',
     'Could not download the trail':
         'Der Weg konnte nicht heruntergeladen werden',
-    'Download E4 - Cyprus to browse its stages without a connection.':
+    'Download Cyprus-E4 to browse its stages without a connection.':
         'E4 - Zypern herunterladen, um Etappen ohne Verbindung anzusehen.',
     'Download trail': 'Weg herunterladen',
     'Lodging': 'Unterkunft',
@@ -689,10 +689,10 @@ const _translations = <String, Map<String, String>>{
         'Die Offline-Karte konnte nicht heruntergeladen werden. Prüfe deine Verbindung und versuche es erneut.',
     'The offline map could not be removed.':
         'Die Offline-Karte konnte nicht entfernt werden.',
-    'The detailed E4 - Cyprus map is stored on this device.':
+    'The detailed Cyprus-E4 map is stored on this device.':
         'Die detaillierte Karte des E4 - Zypern ist auf diesem Gerät gespeichert.',
     'Please try the download again.': 'Bitte versuche den Download erneut.',
-    'Downloads a detailed corridor around the complete E4 - Cyprus for use without a connection.':
+    'Downloads a detailed corridor around the complete Cyprus-E4 for use without a connection.':
         'Lädt einen detaillierten Korridor entlang des gesamten E4 - Zypern für die Offline-Nutzung herunter.',
     'Download the route data first.': 'Lade zuerst die Routendaten herunter.',
     'The route, stages and elevation will remain offline. Only the offline map will be removed.':
@@ -767,8 +767,8 @@ const _translations = <String, Map<String, String>>{
     'No email app is available. Opening the EUROTREX website contact form instead.':
         'No hay ninguna aplicación de correo disponible. Se abrirá el formulario de contacto del sitio web de EUROTREX.',
     'Version': 'Versión',
-    'E4 - Crete': 'E4 - Crete',
-    'E4 - Peloponnese': 'E4 - Peloponnese',
+    'Crete-E4': 'Crete-E4',
+    'Peloponnese-E4': 'Peloponnese-E4',
     'Settings': 'Ajustes',
     'Reverse': 'Invertir',
     'GPS': 'GPS',
@@ -820,7 +820,7 @@ const _translations = <String, Map<String, String>>{
     'Walk from Pafos to Larnaka': 'Caminar de Pafos a Larnaka',
     'Walk from Larnaka to Pafos': 'Caminar de Larnaka a Pafos',
     'CYPRUS · LONG DISTANCE TRAIL': 'CHIPRE · SENDERO DE GRAN RECORRIDO',
-    'E4 - Cyprus': 'E4 - Cyprus',
+    'Cyprus-E4': 'Cyprus-E4',
     'Pafos Airport': 'Aeropuerto de Pafos',
     'Larnaka Airport': 'Aeropuerto de Larnaka',
     'Distance': 'Distancia',
@@ -1103,7 +1103,7 @@ const _translations = <String, Map<String, String>>{
     'No services recorded for this stage.':
         'No hay servicios registrados para esta etapa.',
     'Trail position': 'Posición en la ruta',
-    'Following E4 - Cyprus': 'Siguiendo la E4 - Chipre',
+    'Following Cyprus-E4': 'Siguiendo la E4 - Chipre',
     'Route guidance will be available with the offline map.':
         'La navegación estará disponible con el mapa sin conexión.',
     'Available offline': 'Disponible sin conexión',
@@ -1115,7 +1115,7 @@ const _translations = <String, Map<String, String>>{
     'Back to stages': 'Volver a las etapas',
     'Take the trail offline': 'Guardar la ruta sin conexión',
     'Could not download the trail': 'No se pudo descargar la ruta',
-    'Download E4 - Cyprus to browse its stages without a connection.':
+    'Download Cyprus-E4 to browse its stages without a connection.':
         'Descarga E4 - Chipre para ver sus etapas sin conexión.',
     'Download trail': 'Descargar ruta',
     'Lodging': 'Alojamiento',
@@ -1282,10 +1282,10 @@ const _translations = <String, Map<String, String>>{
         'No se pudo descargar el mapa sin conexión. Comprueba tu conexión e inténtalo de nuevo.',
     'The offline map could not be removed.':
         'No se pudo eliminar el mapa sin conexión.',
-    'The detailed E4 - Cyprus map is stored on this device.':
+    'The detailed Cyprus-E4 map is stored on this device.':
         'El mapa detallado de la E4 - Chipre está guardado en este dispositivo.',
     'Please try the download again.': 'Vuelve a intentar la descarga.',
-    'Downloads a detailed corridor around the complete E4 - Cyprus for use without a connection.':
+    'Downloads a detailed corridor around the complete Cyprus-E4 for use without a connection.':
         'Descarga un corredor detallado de toda la E4 - Chipre para usarlo sin conexión.',
     'Download the route data first.': 'Descarga primero los datos de la ruta.',
     'The route, stages and elevation will remain offline. Only the offline map will be removed.':

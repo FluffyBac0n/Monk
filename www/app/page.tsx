@@ -36,8 +36,8 @@ const appFeatures = [
 ];
 
 const hostSteps = [
-  { title: 'Activate your invitation', copy: 'Use the invitation sent after EuroTrex confirms who you represent.', image: '/host-step-account-photo.webp', alt: 'A Cyprus guesthouse owner activating a host invitation on a laptop' },
-  { title: 'Add the essentials', copy: 'Share your location, nearest stage point, price range and reliable contact information.', image: '/host-step-details-photo.webp', alt: 'A Cyprus guesthouse owner checking trail-ready property details' },
+  { title: 'Create your host account', copy: 'Add your company details and verify your email. We review your request before activating host access.', image: '/host-step-account-photo.webp', alt: 'A guesthouse owner creating a host account on a laptop' },
+  { title: 'Prepare your listing', copy: 'Once approved, add your location, nearest stage point, prices and contact details. Save a draft and preview the app card.', image: '/host-step-details-photo.webp', alt: 'A guesthouse owner checking property details' },
   { title: 'Submit for verification', copy: 'We review owner authority, contact details and trail relevance before publication.', image: '/host-step-verified-photo.webp', alt: 'A hiker finding a verified trail-side guesthouse' },
 ];
 
@@ -49,9 +49,9 @@ const involvement = [
 ];
 
 const faqs = [
-  ['Which trail does EuroTrex currently cover?', 'EuroTrex is starting with the 558 km Cyprus E4, from Pafos Airport to Larnaka Airport. The current dataset includes 123 named stage points.'],
-  ['Can I use the app without mobile coverage?', 'Yes. EuroTrex is designed around downloaded route geometry and stage information, so essential trail context remains available when reception is limited.'],
-  ['Do I need to be an experienced long-distance hiker?', 'No. Flexible planning, elevation context and nearby stays are designed to make the trail more approachable for both first-time and experienced long-distance hikers.'],
+  ['Which trail does EuroTrex currently cover?', 'EuroTrex is starting with the 558 km Cyprus-E4, from Pafos Airport to Larnaka Airport. The current dataset includes 123 named stage points.'],
+  ['Can I use the app without mobile coverage?', 'The private-test app supports downloaded route and stage information. Prepare your downloads while connected and check them before setting off. Live services and external booking pages still need a connection.'],
+  ['Do I need to be an experienced long-distance hiker?', 'You can start with a short section suited to your fitness and experience. EuroTrex helps you compare distance, elevation and recorded stays; conditions and remoteness still matter when choosing a walk.'],
   ['When will the iPhone and Android apps be available?', 'The iPhone and Android apps are in preparation. Ask to be notified and EuroTrex will email you when testing invitations or verified store links are ready.'],
   ['What does a verified accommodation mean?', 'EuroTrex reviews the owner’s authority, contact details and relevance to the trail. Verification is not an endorsement or a booking guarantee; hikers still book directly with each host.'],
 ];
@@ -75,10 +75,10 @@ export default function Home() {
   const structuredData = {
     '@context': 'https://schema.org',
     '@graph': [
-      { '@type': 'Organization', '@id': `${SITE_URL}/#organization`, name: 'EuroTrex', url: SITE_URL, logo: `${SITE_URL}/eurotrex-app-icon-ui.webp`, email: 'info@eurotrex.eu' },
+      { '@type': 'Organization', '@id': `${SITE_URL}/#organization`, name: 'EuroTrex', legalName: 'EuroTrex Ltd', url: SITE_URL, logo: `${SITE_URL}/eurotrex-wordmark-ui.webp`, email: 'info@eurotrex.eu' },
       { '@type': 'WebSite', '@id': `${SITE_URL}/#website`, url: SITE_URL, name: 'EuroTrex', publisher: { '@id': `${SITE_URL}/#organization` }, inLanguage: 'en' },
-      { '@type': 'WebPage', '@id': `${SITE_URL}/#webpage`, url: SITE_URL, name: 'EuroTrex — Cyprus E4 trail app and route planner', description: 'Plan and navigate the Cyprus E4 with offline maps, flexible route planning, elevation context and practical trail-side stays.', isPartOf: { '@id': `${SITE_URL}/#website` }, about: { '@id': `${SITE_URL}/#app` }, inLanguage: 'en' },
-      { '@type': 'MobileApplication', '@id': `${SITE_URL}/#app`, name: 'EuroTrex', url: SITE_URL, operatingSystem: 'iOS, Android', applicationCategory: 'TravelApplication', description: 'Offline route guidance, flexible route planning, elevation context and trail-side accommodation for the Cyprus E4.', featureList: appFeatures.map(([feature]) => feature), screenshot: [`${SITE_URL}/app-stages.webp`, `${SITE_URL}/app-planner.webp`, `${SITE_URL}/app-elevation.webp`], ...(storeUrls.length ? { sameAs: storeUrls } : {}) },
+      { '@type': 'WebPage', '@id': `${SITE_URL}/#webpage`, url: SITE_URL, name: 'EuroTrex — Cyprus-E4 trail app and route planner', description: 'Plan and navigate the Cyprus-E4 with offline maps, flexible route planning, elevation context and practical trail-side stays.', isPartOf: { '@id': `${SITE_URL}/#website` }, about: { '@id': `${SITE_URL}/#app` }, inLanguage: 'en' },
+      { '@type': 'MobileApplication', '@id': `${SITE_URL}/#app`, name: 'EuroTrex', url: SITE_URL, operatingSystem: 'iOS, Android', applicationCategory: 'TravelApplication', description: 'Offline route guidance, flexible route planning, elevation context and trail-side accommodation for the Cyprus-E4.', featureList: appFeatures.map(([feature]) => feature), screenshot: [`${SITE_URL}/app-stages.webp`, `${SITE_URL}/app-planner.webp`, `${SITE_URL}/app-elevation.webp`], ...(storeUrls.length ? { sameAs: storeUrls } : {}) },
       { '@type': 'FAQPage', '@id': `${SITE_URL}/#faq`, mainEntity: faqs.map(([question, answer]) => ({ '@type': 'Question', name: question, acceptedAnswer: { '@type': 'Answer', text: answer } })) },
     ],
   };
@@ -112,9 +112,9 @@ export default function Home() {
           <div className="hero-inner">
             <div className="hero-content">
               <h1>Find your way<br />with EuroTrex.</h1>
-              <p className="hero-copy">We simplify everything you need to explore Europe’s long-distance trails—making them accessible to beginners of all ages.</p>
+              <p className="hero-copy">Discover long-distance trails, plan walking days, and find places to stay—starting with Cyprus-E4.</p>
               <div className="hero-actions">
-                <ActionLink href="/trails/cyprus-e4" className="button button-outline">Explore the E4-Cyprus</ActionLink>
+                <ActionLink href="/trails/cyprus-e4" className="button button-outline">Explore the Cyprus-E4</ActionLink>
               </div>
             </div>
           </div>
@@ -123,7 +123,7 @@ export default function Home() {
         <section className="manifesto-section" aria-labelledby="manifesto-title">
           <div className="section-shell manifesto-layout">
             <blockquote className="manifesto-quote"><p className="eyebrow">The EuroTrex manifesto</p><h2 id="manifesto-title">“When you start to walk on the way, the way appears.”</h2></blockquote>
-            <div className="manifesto-copy"><p>You don’t need to be an expert, the fastest, or the strongest to go far.</p><p>What matters is the sense of adventure, the joy of wandering, the curiosity to see what lies beyond the next hill, and the need to reconnect with nature.</p><p className="manifesto-signoff"><strong>Start walking. Plan less. Discover more.</strong><span>Slowly. Deeply. One step at a time.</span></p></div>
+            <div className="manifesto-copy"><p>You don’t need to be the fastest or the strongest. Bring your curiosity, choose a walk that suits you, and reconnect with nature.</p><p className="manifesto-signoff"><strong>Start walking. Plan with confidence. Discover more.</strong><span>Slowly. Deeply. One step at a time.</span></p></div>
           </div>
         </section>
 
@@ -157,8 +157,8 @@ export default function Home() {
             </div>
             <div className="app-gallery-wrap reveal">
               <div className="app-gallery" aria-label="Screenshots from the EuroTrex iPhone app" role="region" tabIndex={0}>
-                <figure className="phone-shot phone-planner"><Image src="/app-planner.webp" alt="EuroTrex iPhone route planner showing the Cyprus E4 on a map" width={720} height={1565} sizes="(max-width: 760px) 72vw, 250px" /><figcaption>Shape your trip</figcaption></figure>
-                <figure className="phone-shot phone-stages"><Image src="/app-stages.webp" alt="EuroTrex iPhone app showing Cyprus E4 stage points" width={720} height={1565} sizes="(max-width: 760px) 72vw, 230px" /><figcaption>Browse stage points</figcaption></figure>
+                <figure className="phone-shot phone-planner"><Image src="/app-planner.webp" alt="EuroTrex iPhone route planner showing the Cyprus-E4 on a map" width={720} height={1565} sizes="(max-width: 760px) 72vw, 250px" /><figcaption>Shape your trip</figcaption></figure>
+                <figure className="phone-shot phone-stages"><Image src="/app-stages.webp" alt="EuroTrex iPhone app showing Cyprus-E4 stage points" width={720} height={1565} sizes="(max-width: 760px) 72vw, 230px" /><figcaption>Browse stage points</figcaption></figure>
                 <figure className="phone-shot phone-elevation"><Image src="/app-elevation.webp" alt="EuroTrex iPhone app showing an E4 elevation profile" width={720} height={1565} sizes="(max-width: 760px) 72vw, 230px" /><figcaption>Read the terrain</figcaption></figure>
               </div>
               <p className="swipe-hint">Swipe to explore the app <span aria-hidden="true">→</span></p>
@@ -170,7 +170,7 @@ export default function Home() {
             </div>
             <div className="hiker-launch-band" id="app-updates" aria-labelledby="download-title">
               <Image className="app-icon" src="/eurotrex-app-icon-ui.webp" alt="EuroTrex app icon" width={256} height={256} />
-              <div className="hiker-launch-copy"><p className="eyebrow">The E4 in your pocket</p><h3 id="download-title">Be first on the trail.</h3><p>Get testing invitations and verified iPhone or Android store links when they are ready.</p></div>
+              <div className="hiker-launch-copy"><p className="eyebrow">EuroTrex in your pocket</p><h3 id="download-title">Be first on the trail.</h3><p>Currently in private testing. Get testing invitations and launch updates for iPhone and Android.</p></div>
               <div className="hiker-launch-actions" aria-label="EuroTrex app availability" role="group">
                 <div className="store-item">{appStoreUrl ? <a href={appStoreUrl} target="_blank" rel="noreferrer" aria-label="Download EuroTrex on the App Store"><Image src="/app-store-badge.svg" alt="Download on the App Store" width={180} height={60} /></a> : <span className="store-badge"><Image src="/app-store-badge.svg" alt="" aria-hidden="true" width={180} height={60} /></span>}</div>
                 <div className="store-item store-item-google">{playStoreUrl ? <a href={playStoreUrl} target="_blank" rel="noreferrer" aria-label="Get EuroTrex on Google Play"><Image src="/google-play-badge.png" alt="Get it on Google Play" width={194} height={75} /></a> : <span className="store-badge"><Image src="/google-play-badge.png" alt="" aria-hidden="true" width={194} height={75} /></span>}</div>
@@ -186,7 +186,7 @@ export default function Home() {
           <div className="section-shell project-layout">
             <div className="project-copy">
               <div className="project-kicker"><div className="project-badge" aria-hidden="true"><small>European</small><strong>E4</strong><small>Cyprus</small></div><p className="eyebrow">Current trail</p></div>
-              <h2 id="project-title">From Pafos to Larnaka, one stage point at a time.</h2><p>The first EuroTrex guide follows the Cyprus E4 across coast, forest and the Troodos mountains. Public stage-point pages expose practical facts now; the app adds flexible planning and offline navigation.</p><a className="simple-link" href="/trails/cyprus-e4">Open the Cyprus E4 guide <span aria-hidden="true">→</span></a>
+              <h2 id="project-title">From Pafos to Larnaka, one stage point at a time.</h2><p>The first EuroTrex guide follows the Cyprus-E4 across coast, forest and the Troodos mountains. Explore distances, elevation and recorded services here; plan walking days and download the route in the private-test app.</p><a className="simple-link" href="/trails/cyprus-e4">Open the Cyprus-E4 guide <span aria-hidden="true">→</span></a>
             </div>
             <dl className="project-facts"><div><dt>Distance</dt><dd>{cyprusE4.distanceKm.toFixed(1)} km</dd></div><div><dt>Stage points</dt><dd>{cyprusE4.stageCount}</dd></div><div><dt>High point</dt><dd>{Math.round(cyprusE4.highPointM).toLocaleString('en-GB')} m</dd></div><div><dt>Trail data updated</dt><dd>{updated}</dd></div></dl>
           </div>
@@ -204,9 +204,9 @@ export default function Home() {
               <div><dt>Eligibility</dt><dd>Authorised accommodation representatives near a named stage point.</dd></div>
               <div><dt>Booking model</dt><dd>Direct with the host; EuroTrex does not process guest payments.</dd></div>
               <div><dt>Pilot terms</dt><dd>Any fee or commission terms are confirmed before publication.</dd></div>
-              <div><dt>Review timing</dt><dd>Manual during private testing; status appears in your portal.</dd></div>
+              <div><dt>Review timing</dt><dd>Account and listing reviews normally take 1–3 days. Check your portal for status.</dd></div>
             </dl>
-            <div className="host-cta-row"><p><strong>Ready to welcome hikers?</strong><span>Start a guided draft or manage an existing listing.</span></p><ActionLink href="/portal" className="host-portal-link">Open Host Portal</ActionLink></div>
+            <div className="host-cta-row"><p><strong>Ready to welcome hikers?</strong><span>Create an account to request access, or manage your existing listings.</span></p><ActionLink href="/portal" className="host-portal-link">Open Host Portal</ActionLink></div>
           </div>
         </section>
 

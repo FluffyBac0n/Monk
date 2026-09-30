@@ -26,6 +26,18 @@ export const interestCreatedAtIndex = `
   ON interest_submissions (created_at DESC)
 `;
 
+// Separate preferences keep existing enquiries intact and allow multiple trail subscriptions.
+export const interestPreferencesTable = `
+  CREATE TABLE IF NOT EXISTS interest_preferences (
+    submission_id TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    updates_opt_in INTEGER NOT NULL DEFAULT 0 CHECK (updates_opt_in IN (0, 1)),
+    platform TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (submission_id, scope)
+  )
+`;
+
 export const interestRateLimitsTable = `
   CREATE TABLE IF NOT EXISTS interest_rate_limits (
     bucket_key TEXT PRIMARY KEY NOT NULL,

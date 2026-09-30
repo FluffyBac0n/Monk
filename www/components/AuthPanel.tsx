@@ -138,7 +138,7 @@ export function AuthPanel({ admin = false }: AuthPanelProps = {}) {
   const introduction = admin
     ? 'Sign in with your authorised EuroTrex administrator account.'
     : mode === 'register'
-      ? 'Add your company details, verify your email and we will review your request before host access is activated.'
+      ? 'Add your company details and verify your email. Host access is reviewed within 1–3 days; property listings are reviewed separately after submission.'
       : mode === 'reset'
         ? 'Enter your account email and we will send you a secure reset link.'
         : 'Sign in to manage your accommodation listings and saved drafts.';
@@ -176,7 +176,7 @@ export function AuthPanel({ admin = false }: AuthPanelProps = {}) {
 
       {mode === 'signin' && <button type="button" className="text-button reset-link" disabled={busy} onClick={openReset}>Forgot your password?</button>}
       {mode === 'reset' && <button type="button" className="text-button reset-link" disabled={busy} onClick={() => switchAccountMode('signin')}>Back to sign in</button>}
-      {!admin && mode === 'signin' && <p className="auth-invitation-help">Want to list a stay? <a href="/portal?mode=register" onClick={(event) => { event.preventDefault(); switchAccountMode('register'); }}>Ask about a host invitation</a>.</p>}
+      {!admin && mode === 'signin' && <p className="auth-invitation-help">Want to list a stay? <a href="/portal?mode=register" onClick={(event) => { event.preventDefault(); switchAccountMode('register'); }}>Create your host account</a>.</p>}
     </section>
   );
 }

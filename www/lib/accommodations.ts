@@ -1,6 +1,7 @@
 'use client';
 
 import type { User } from 'firebase/auth';
+import { trailDisplayName } from '@/lib/trail-names';
 import {
   collection,
   collectionGroup,
@@ -161,8 +162,8 @@ export function watchAllSubmissions(
 
 export async function listTrails(): Promise<TrailOption[]> {
   const snapshot = await getDocs(collection(db, 'trails'));
-  const rows = snapshot.docs.map((row) => ({ id: row.id, name: String(row.data().name || row.id) }));
-  return rows.length ? rows : [{ id: 'cyprus-e4', name: 'E4 — Cyprus' }];
+  const rows = snapshot.docs.map((row) => ({ id: row.id, name: trailDisplayName(row.id, String(row.data().name || row.id)) }));
+  return rows.length ? rows : [{ id: 'cyprus-e4', name: 'Cyprus-E4' }];
 }
 
 export async function listStages(trailId: string): Promise<StageOption[]> {

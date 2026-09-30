@@ -1520,7 +1520,7 @@ class _TrailAppBar extends StatelessWidget {
         children: [
           Flexible(
             child: Text(
-              l10n.t('E4 - Cyprus'),
+              l10n.t('Cyprus-E4'),
               key: const ValueKey('trail-compact-title'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -3446,7 +3446,7 @@ class DetourDetailScreen extends ConsumerWidget {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
             Text(
-              '${l10n.t('E4 - Cyprus').toUpperCase()} · ${l10n.t('Detour').toUpperCase()}',
+              '${l10n.t('Cyprus-E4').toUpperCase()} · ${l10n.t('Detour').toUpperCase()}',
               style: const TextStyle(
                 fontSize: 9,
                 color: Colors.white60,
@@ -3977,7 +3977,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
             Text(
-              '${l10n.t('E4 - Cyprus').toUpperCase()} · ${(endpointLabel ?? l10n.stage(stage.sequence)).toUpperCase()} · ${index + 1}/${widget.stages.length}',
+              '${l10n.t('Cyprus-E4').toUpperCase()} · ${(endpointLabel ?? l10n.stage(stage.sequence)).toUpperCase()} · ${index + 1}/${widget.stages.length}',
               style: const TextStyle(
                 fontSize: 9,
                 color: Colors.white60,
@@ -6523,7 +6523,7 @@ class _EmptyState extends ConsumerWidget {
               l10n.t(
                 downloadFailed
                     ? 'Check your connection and try again.'
-                    : 'Download E4 - Cyprus to browse its stages without a connection.',
+                    : 'Download Cyprus-E4 to browse its stages without a connection.',
               ),
               textAlign: TextAlign.center,
             ),

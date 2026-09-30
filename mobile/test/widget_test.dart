@@ -79,7 +79,7 @@ void main() {
     );
     expect(find.byKey(const ValueKey('stages-expanded-title')), findsNothing);
     expect(find.byKey(const ValueKey('trail-compact-title')), findsOneWidget);
-    expect(find.text('E4 - Cyprus'), findsOneWidget);
+    expect(find.text('Cyprus-E4'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('stages-header-watermark-fade-cyprus-e4')),
       findsNothing,
@@ -598,7 +598,7 @@ void main() {
     },
   );
 
-  testWidgets('shows landing trail cards and opens E4 - Cyprus', (
+  testWidgets('shows landing trail cards and opens Cyprus-E4', (
     tester,
   ) async {
     final lodgingRepository = _TrailPreloadLodgingRepository();
@@ -643,7 +643,7 @@ void main() {
       find.text('Choose a trail to view its stages and maps.'),
       findsNothing,
     );
-    expect(find.text('E4 - Cyprus'), findsOneWidget);
+    expect(find.text('Cyprus-E4'), findsOneWidget);
     final cyprusCard = find.byKey(const ValueKey('explore-cyprus-e4'));
     final exploreButton = find.byKey(
       const ValueKey('explore-trail-button-cyprus-e4'),
@@ -1042,8 +1042,8 @@ void main() {
     await tester.pumpAndSettle();
 
     const upcomingTrails = {
-      'crete-e4': 'E4 - Crete',
-      'peloponnese-e4': 'E4 - Peloponnese',
+      'crete-e4': 'Crete-E4',
+      'peloponnese-e4': 'Peloponnese-E4',
     };
     for (final trail in upcomingTrails.entries) {
       final card = find.byKey(ValueKey('coming-soon-${trail.key}'));

@@ -28,7 +28,7 @@ function LanguageControl() {
         <div aria-label="Planned website languages" role="list">
           {languages.map(([flag, name, code], index) => (
             <div aria-current={index === 0 ? 'true' : undefined} className={`language-option${index === 0 ? ' current' : ''}`} key={code} role="listitem">
-              <span aria-hidden="true">{flag}</span><strong>{name}</strong><small>{code}</small>
+              <span aria-hidden="true">{flag}</span><strong>{name}</strong><small>{index === 0 ? code : 'Soon'}</small>
             </div>
           ))}
         </div>
@@ -48,17 +48,18 @@ export function PublicHeader({ activeTrail }: { activeTrail?: string }) {
           <a className="brand" href="/" aria-label="EuroTrex home">
             <Image src="/eurotrex-wordmark-ui.webp" alt="EuroTrex" width={528} height={176} sizes="132px" />
           </a>
-          <span className="route-chip">E4 · Europe</span>
           <nav className="desktop-nav" aria-label="Primary navigation">
-            <a href="/#hikers">For hikers</a>
-            <a href="/#hosts">For hosts</a>
-            <a href="/trails/cyprus-e4">Explore trails</a>
-            <a href="/get-involved">Join us</a>
-            <a className="nav-host" href="/portal" {...disableHtmxNavigation}>Host Portal</a>
-            <NotifyButton className="nav-primary">Notify me</NotifyButton>
+            <a href="/#hikers">For Hikers</a>
+            <a href="/#hosts">For Hosts</a>
+            <a href="/trails/cyprus-e4">Explore Trails</a>
+            <a href="/get-involved">Join Us</a>
           </nav>
-          <LanguageControl />
-          <MobileMenu />
+          <div className="header-actions">
+            <a className="header-portal-button desktop-header-action" href="/portal" {...disableHtmxNavigation}>Host Portal</a>
+            <NotifyButton className="header-portal-button desktop-header-action">Notify Me</NotifyButton>
+            <LanguageControl />
+            <MobileMenu />
+          </div>
         </div>
       </header>
       <TrailGuideSwitcher activeTrail={activeTrail} />

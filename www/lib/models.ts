@@ -118,7 +118,7 @@ export const statusLabels: Record<SubmissionStatus, string> = {
   pending: 'Awaiting review',
   pending_update: 'Update awaiting review',
   changes_requested: 'Changes requested',
-  approved: 'Live version',
+  approved: 'Published',
   rejected: 'Not approved',
   removed: 'Removed',
 };

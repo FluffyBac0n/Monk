@@ -100,6 +100,15 @@ class AboutScreen extends ConsumerWidget {
             const _AboutHero(),
             const SizedBox(height: 14),
             _AboutCard(
+              icon: Icons.people_outline_rounded,
+              title: 'EuroTrex Ltd',
+              child: const Text(
+                'Pavlos Christofides · Andreas Michaelides',
+                style: TextStyle(color: EurotrexPalette.navy, height: 1.45),
+              ),
+            ),
+            const SizedBox(height: 14),
+            _AboutCard(
               icon: Icons.explore_rounded,
               title: l10n.t('Our mission'),
               child: Column(

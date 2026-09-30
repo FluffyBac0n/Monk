@@ -8,7 +8,7 @@ import { publicHtmxNavigation } from '@/lib/htmx';
 
 export const metadata: Metadata = {
   title: 'Partnerships and sponsorship',
-  description: 'Partner with EuroTrex to support practical, responsible access to the Cyprus E4 and future European long-distance trails.',
+  description: 'Partner with EuroTrex to support practical, responsible access to the Cyprus-E4 and future European long-distance trails.',
   alternates: { canonical: '/partnerships' },
   openGraph: {
     type: 'website',
@@ -35,8 +35,8 @@ export default function Partnerships() {
           <div className="section-shell get-involved-hero-grid">
             <div className="get-involved-hero-copy">
               <p className="eyebrow">For sponsors and collaborators</p>
-              <h1>Support the path, not the noise.</h1>
-              <p>Useful partnerships can improve route information, field verification, accessibility and the practical experience around Europe’s long-distance trails.</p>
+              <h1>Help turn trail knowledge into better journeys.</h1>
+              <p>Contribute equipment, local expertise or support for field visits and route-data improvements. We agree the scope, recognition and reporting with each partner before work begins.</p>
             </div>
             <figure className="get-involved-hero-image partnerships-hero-image">
               <Image src="/sponsors-path.webp" alt="A hiker preparing beside a marked Cyprus trail" fill priority sizes="(max-width: 900px) 100vw, 54vw" />
@@ -51,7 +51,7 @@ export default function Partnerships() {
           <dl><div><dt>Trail data</dt><dd>Support field checks, route updates and practical information.</dd></div><div><dt>Access</dt><dd>Help more people prepare well and walk responsibly.</dd></div><div><dt>Local value</dt><dd>Strengthen connections with communities and trail-side services.</dd></div><div><dt>Responsible gear</dt><dd>Provide relevant equipment or expertise with clear disclosure.</dd></div></dl>
         </section>
         <div className="trail-divider" aria-hidden="true" />
-        <section className="form-page-section"><div className="section-shell form-page-grid"><div><p className="eyebrow">Partnership enquiry</p><h2>Tell us what you can bring to the route.</h2><p>Share the organisation, proposed contribution and intended outcome. EuroTrex reviews fit, usefulness and transparency before discussing any activation.</p></div><InterestForm kind="involved" defaultInterest="sponsor" /></div></section>
+        <section className="form-page-section"><div className="section-shell form-page-grid"><div><p className="eyebrow">Partnership enquiry</p><h2>Tell us what you can bring to the route.</h2><p>Share your organisation, proposed contribution, location and intended outcome. We review the proposal and reply by email about fit and next steps. No audience reach, advertising placement or partnership acceptance is guaranteed.</p></div><InterestForm kind="involved" defaultInterest="sponsor" /></div></section>
       </main>
       </PublicContent>
       <PublicFooter />

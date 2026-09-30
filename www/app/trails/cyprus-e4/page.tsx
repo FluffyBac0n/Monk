@@ -9,8 +9,8 @@ import { publicHtmxNavigation } from '@/lib/htmx';
 import { SITE_URL } from '@/lib/site';
 
 export const metadata: Metadata = {
-  title: 'Cyprus E4 trail guide',
-  description: 'Explore the 558 km Cyprus E4 from Pafos to Larnaka, with 123 named stage points, elevation and recorded services.',
+  title: 'Cyprus-E4 trail guide',
+  description: 'Explore the 558 km Cyprus-E4 from Pafos to Larnaka, with 123 named stage points, elevation and recorded services.',
   alternates: { canonical: '/trails/cyprus-e4' },
 };
 
@@ -18,7 +18,7 @@ export default function CyprusE4Overview() {
   const updated = new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(cyprusE4.dataUpdatedAt));
   const featuredStages = [cyprusE4Stages[0], cyprusE4Stages[30], cyprusE4Stages[61], cyprusE4Stages[92], cyprusE4Stages[122]];
   const schema = {
-    '@context': 'https://schema.org', '@type': 'Route', name: 'Cyprus E4', url: `${SITE_URL}/trails/cyprus-e4`,
+    '@context': 'https://schema.org', '@type': 'Route', name: 'Cyprus-E4', url: `${SITE_URL}/trails/cyprus-e4`,
     description: 'A long-distance hiking route across Cyprus from Pafos Airport to Larnaka Airport.', image: `${SITE_URL}/cyprus-e4-forest-1200.webp`,
   };
 
@@ -33,12 +33,12 @@ export default function CyprusE4Overview() {
           <div className="section-shell">
             <div className="trail-guide-hero-grid">
               <div className="trail-guide-intro">
-                <p className="eyebrow">Cyprus E4 trail guide</p>
-                <h1>The Cyprus E4, from coast to mountains.</h1>
+                <p className="eyebrow">Cyprus-E4 trail guide</p>
+                <h1>The Cyprus-E4, from coast to mountains.</h1>
                 <p className="trail-guide-lead">Follow 558 kilometres from Pafos to Larnaka through open coast, village country, pine forest and the Troodos highlands.</p>
                 <div className="trail-guide-actions">
                   <a className="button button-primary fill-link" href="/trails/cyprus-e4/stages"><span>Explore {cyprusE4.stageCount} stage points</span></a>
-                  <a className="guide-inline-link" href="/#hikers">Plan with EuroTrex <span aria-hidden="true">→</span></a>
+                  <a className="guide-inline-link" href="/#hikers">Discover the app <span aria-hidden="true">→</span></a>
                 </div>
                 <p className="guide-freshness"><span aria-hidden="true" />Trail snapshot updated {updated}</p>
               </div>
@@ -77,7 +77,7 @@ export default function CyprusE4Overview() {
         <section className="guide-map-section reveal" aria-labelledby="cyprus-e4-map-title">
           <div className="section-shell guide-map-inner">
             <article className="guide-map-copy">
-              <p className="eyebrow">Cyprus E4 map</p>
+              <p className="eyebrow">Cyprus-E4 map</p>
               <h2 id="cyprus-e4-map-title">One trail across the island.</h2>
               <p>Trace the route from Pafos Airport through Akamas, the Troodos Mountains and the eastern coast to Larnaka Airport.</p>
               <a className="guide-inline-link" href="/trails/cyprus-e4/stages">Explore {cyprusE4.stageCount} stage points <span aria-hidden="true">→</span></a>
@@ -91,7 +91,7 @@ export default function CyprusE4Overview() {
                 sizes="(max-width: 900px) calc(100vw - 40px), 56vw"
               />
               <figcaption className="guide-map-caption">
-                <span className="guide-map-legend"><i aria-hidden="true" />Cyprus E4 · Pafos to Larnaka</span>
+                <span className="guide-map-legend"><i aria-hidden="true" />Cyprus-E4 · Pafos to Larnaka</span>
                 <span>{cyprusE4.distanceKm.toFixed(0)} km · {cyprusE4.stageCount} stage points</span>
                 <small>Mapbox · © OpenStreetMap</small>
               </figcaption>

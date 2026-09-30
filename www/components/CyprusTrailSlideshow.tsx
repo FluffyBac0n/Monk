@@ -37,7 +37,7 @@ export function CyprusTrailSlideshow() {
       className="trail-guide-cover trail-guide-slideshow"
       data-active-slide="0"
       data-trail-slideshow
-      aria-label="Cyprus E4 landscapes"
+      aria-label="Cyprus-E4 landscapes"
       aria-roledescription="carousel"
       role="region"
     >
@@ -69,7 +69,7 @@ export function CyprusTrailSlideshow() {
         </div>
       ))}
 
-      <span className="trail-guide-cover-mark">E4 · Cyprus</span>
+      <span className="trail-guide-cover-mark">Cyprus-E4</span>
 
       <div className="trail-slideshow-controls" aria-label="Choose landscape" role="group">
         <div className="trail-slideshow-dots">

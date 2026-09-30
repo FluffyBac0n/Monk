@@ -5,15 +5,17 @@ import { InterestForm } from '@/components/InterestForm';
 type NotifyButtonProps = {
   children?: ReactNode;
   className?: string;
+  trail?: string;
 };
 
-export function NotifyButton({ children = 'Notify me', className = '' }: NotifyButtonProps) {
+export function NotifyButton({ children = 'Notify me', className = '', trail = 'all' }: NotifyButtonProps) {
   return (
     <button
       type="button"
       aria-controls="notify-dialog"
       aria-haspopup="dialog"
       data-notify-trigger
+      data-notify-scope={trail}
       className={`notify-trigger fill-link ${className}`.trim()}
     >
       <span>{children}</span>
@@ -39,6 +41,7 @@ export function NotifyDialog() {
           </div>
         </div>
         <p className="notify-dialog-intro">Tell us where to reach you and we’ll share testing invitations and official store links when they are available.</p>
+        <p className="notify-scope" data-notify-scope-label>EuroTrex app updates</p>
         <InterestForm kind="beta" compact />
       </div>
     </dialog>

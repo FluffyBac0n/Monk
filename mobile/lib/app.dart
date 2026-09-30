@@ -31,9 +31,9 @@ class EuroTrexApp extends ConsumerWidget {
       ],
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF277653),
+          seedColor: EurotrexPalette.blue,
           brightness: Brightness.light,
-        ),
+        ).copyWith(primary: EurotrexPalette.blue, onPrimary: Colors.white),
         scaffoldBackgroundColor: const Color(0xFFF4F2EC),
         useMaterial3: true,
         cardTheme: const CardThemeData(margin: EdgeInsets.zero),
@@ -55,7 +55,7 @@ class EuroTrexApp extends ConsumerWidget {
       themeMode: ThemeMode.light,
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF8CC7A1),
+          seedColor: EurotrexPalette.blue,
           brightness: Brightness.dark,
         ),
         useMaterial3: true,

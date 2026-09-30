@@ -206,7 +206,7 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
             Text(
-              '${l10n.t('E4 - Cyprus').toUpperCase()} · ${l10n.routeDirection(direction.isReversed ? l10n.larnakaAirport : l10n.pafosAirport, direction.isReversed ? l10n.pafosAirport : l10n.larnakaAirport).toUpperCase()}',
+              '${l10n.t('Cyprus-E4').toUpperCase()} · ${l10n.routeDirection(direction.isReversed ? l10n.larnakaAirport : l10n.pafosAirport, direction.isReversed ? l10n.pafosAirport : l10n.larnakaAirport).toUpperCase()}',
               style: const TextStyle(
                 fontSize: 9,
                 color: Colors.white60,

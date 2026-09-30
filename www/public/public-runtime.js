@@ -299,6 +299,12 @@ function startPublicRuntime(htmx) {
     dialogOpener = mobileMenu?.querySelector(':scope > summary') || trigger;
     closeMobileMenus();
     resetNotifyForm(dialog);
+    const scope = trigger.dataset.notifyScope || 'all';
+    const names = { 'cyprus-e4': 'Cyprus-E4', 'crete-e4': 'Crete-E4', 'peloponnese-e4': 'Peloponnese-E4' };
+    const field = dialog.querySelector('[data-notify-trail]');
+    if (field) field.value = names[scope] ? scope : 'all';
+    const label = dialog.querySelector('[data-notify-scope-label]');
+    if (label) label.textContent = names[scope] ? `${names[scope]} guide and app updates` : 'EuroTrex app updates';
     document.documentElement.classList.add('modal-open');
     dialog.showModal();
   }
@@ -486,7 +492,7 @@ function startPublicRuntime(htmx) {
     if (!(target instanceof Element)) return;
 
     const activeTrail = target.closest('.trail-switcher-item[aria-current="true"]');
-    if (activeTrail) {
+    if (activeTrail && new URL(activeTrail.href, window.location.href).pathname === window.location.pathname) {
       event.preventDefault();
       event.stopImmediatePropagation();
       return;

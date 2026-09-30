@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { isLocalHttpPreview } from '@/lib/local-preview';
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -27,9 +28,17 @@ const securityHeaders = [
   ['X-Frame-Options', 'DENY'],
 ] as const;
 
-export function proxy() {
+export function proxy(request: NextRequest) {
   const response = NextResponse.next();
-  securityHeaders.forEach(([name, value]) => response.headers.set(name, value));
+  const localHttp = isLocalHttpPreview(request.url);
+  securityHeaders.forEach(([name, value]) => {
+    // Safari upgrades localhost assets too. Our local server has no TLS;
+    // keep every other protection and retain HTTPS enforcement elsewhere.
+    if (localHttp && name === 'Strict-Transport-Security') return;
+    response.headers.set(name, localHttp && name === 'Content-Security-Policy'
+      ? value.replace('; upgrade-insecure-requests', '')
+      : value);
+  });
   return response;
 }
 

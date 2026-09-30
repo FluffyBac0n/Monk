@@ -23,7 +23,7 @@ class TrailSummary {
 const availableTrails = [
   TrailSummary(
     id: 'cyprus-e4',
-    name: 'E4 - Cyprus',
+    name: 'Cyprus-E4',
     description:
         'A long-distance journey linking the coast, forests and Troodos mountain.',
     distanceKm: 558,

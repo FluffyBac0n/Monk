@@ -169,12 +169,12 @@ class TrailsScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 const _ComingSoonTrailCard(
                   trailId: 'crete-e4',
-                  trailName: 'E4 - Crete',
+                  trailName: 'Crete-E4',
                 ),
                 const SizedBox(height: 10),
                 const _ComingSoonTrailCard(
                   trailId: 'peloponnese-e4',
-                  trailName: 'E4 - Peloponnese',
+                  trailName: 'Peloponnese-E4',
                 ),
               ],
             ),

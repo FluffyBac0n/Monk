@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { NotifyButton } from '@/components/NotifyDialog';
 import { PublicContent } from '@/components/PublicContent';
 import { PublicFooter } from '@/components/PublicFooter';
 import { PublicHeader } from '@/components/PublicHeader';
@@ -22,6 +23,9 @@ export function FutureTrailPreview({
   imageAlt,
 }: FutureTrailPreviewProps) {
   const headingId = `${activeTrail}-preview-title`;
+  const photo = activeTrail === 'crete-e4'
+    ? { place: 'Samaria Gorge, Crete', author: 'Robert Linsdell', source: 'https://commons.wikimedia.org/wiki/File:Samaria_Gorge,_Crete_(150857)_(9450576425).jpg', license: '2.0' }
+    : { place: 'Taygetos mountains, Peloponnese', author: 'Herbert Ortner', source: 'https://commons.wikimedia.org/wiki/File:Taygetos_Ilias_1.jpg', license: '3.0' };
 
   return (
     <>
@@ -45,18 +49,16 @@ export function FutureTrailPreview({
                 <div className="future-trail-status" role="note" aria-label={`${trailName} guide status`}>
                   <span aria-hidden="true" />
                   <div>
-                    <strong>Verification in progress</strong>
-                    <p>Route data, stage points, services and current trail conditions are being checked before this guide goes live.</p>
+                    <strong>Planned guide · Not yet available</strong>
+                    <p>Route details and services will be published after review. There is no confirmed release date yet; this preview is not a navigation guide.</p>
                   </div>
                 </div>
 
                 <div className="future-trail-actions">
                   <a className="button button-primary fill-link" href="/trails/cyprus-e4">
-                    <span>Explore the live Cyprus E4 guide</span>
+                    <span>Explore the live Cyprus-E4 guide</span>
                   </a>
-                  <a className="guide-inline-link" href="/#app-updates">
-                    Get trail updates <span aria-hidden="true">→</span>
-                  </a>
+                  <NotifyButton className="button button-secondary" trail={activeTrail}>Notify me about {trailName}</NotifyButton>
                 </div>
               </div>
 
@@ -70,9 +72,9 @@ export function FutureTrailPreview({
                 />
                 <div className="future-trail-image-shade" aria-hidden="true" />
                 <figcaption>
-                  <small>Visual placeholder</small>
-                  <strong>{trailName}</strong>
-                  <span>Not verified trail imagery</span>
+                  <small>Destination landscape · Not a verified route view</small>
+                  <strong>{photo.place}</strong>
+                  <span>Photo: <a href={photo.source}>{photo.author}</a> · <a href={`https://creativecommons.org/licenses/by/${photo.license}/`}>CC BY {photo.license}</a> · Resized and cropped for display</span>
                 </figcaption>
               </figure>
             </div>

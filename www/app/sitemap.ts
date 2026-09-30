@@ -10,5 +10,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...cyprusE4Stages.map((stage) => ({ url: `${SITE_URL}/trails/cyprus-e4/stages/${stage.id}`, changeFrequency: 'monthly' as const, priority: .7 })),
     { url: `${SITE_URL}/get-involved`, changeFrequency: 'monthly', priority: .65 },
     { url: `${SITE_URL}/partnerships`, changeFrequency: 'monthly', priority: .65 },
+    { url: `${SITE_URL}/about`, changeFrequency: 'monthly', priority: .6 },
+    { url: `${SITE_URL}/help`, changeFrequency: 'monthly', priority: .6 },
   ];
 }

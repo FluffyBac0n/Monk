@@ -16,6 +16,7 @@ const stages = source.stages.map((stage) => ({
   elevationDownM: stage.elevationDownM,
   altitudeM: stage.altitudeM,
   services: stage.services,
+  location: source.routeMarkers.find((marker) => marker.stageId === stage.id)?.location ?? null,
 }));
 
 const payload = `// Generated from outputs/import-preview.json by scripts/generate-trail-data.mjs.
@@ -32,11 +33,12 @@ export type CyprusE4Stage = {
   elevationDownM: number | null;
   altitudeM: number | null;
   services: Record<string, boolean>;
+  location: { latitude: number; longitude: number } | null;
 };
 
 export const cyprusE4 = ${JSON.stringify({
   id: source.trail.id,
-  name: source.trail.name,
+  name: 'Cyprus-E4',
   country: source.trail.country,
   distanceKm: source.trail.totalDistanceKm,
   stageCount: source.trail.stageCount,
@@ -47,6 +49,26 @@ export const cyprusE4 = ${JSON.stringify({
 }, null, 2)} as const;
 
 export const cyprusE4Stages: CyprusE4Stage[] = ${JSON.stringify(stages, null, 2)};
+
+export const recordedStays = ${JSON.stringify(source.lodgings.map((stay) => ({
+  id: stay.id, stageId: stay.stageId, name: stay.name, type: stay.type, village: stay.village,
+  priceMinEur: stay.priceMinEur, priceMaxEur: stay.priceMaxEur,
+  distanceFromTrailKm: stay.distanceFromTrailKm,
+  website: stay.contact?.website ?? null, mapUrl: stay.contact?.googleMapsUrl ?? null,
+})), null, 2)};
+
+export const routeLocator = ${JSON.stringify((() => {
+  const points = source.routeChunks.flatMap((chunk) => {
+    const rows = [];
+    for (let i = 0; i < chunk.points.length; i += source.routeMetadata.pointStride * 12) {
+      rows.push([chunk.points[i], chunk.points[i + 1]]);
+    }
+    return rows;
+  });
+  const { minLat, maxLat, minLng, maxLng } = source.routeMetadata.bounds;
+  const project = (lat, lng) => [30 + (lng - minLng) / (maxLng - minLng) * 540, 190 - (lat - minLat) / (maxLat - minLat) * 160];
+  return { bounds: source.routeMetadata.bounds, path: points.map(([lat, lng], i) => `${i ? 'L' : 'M'}${project(lat, lng).map((v) => v.toFixed(1)).join(',')}`).join(' ') };
+})())};
 
 export function getCyprusE4Stage(id: string) {
   return cyprusE4Stages.find((stage) => stage.id === id);

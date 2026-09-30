@@ -7,9 +7,9 @@ const trailSwitcherNavigation = {
 } as const;
 
 const trailGuides = [
-  { id: 'cyprus-e4', label: 'Cyprus - E4', href: '/trails/cyprus-e4' },
-  { id: 'crete-e4', label: 'Crete - E4', href: '/trails/crete-e4', status: 'Coming soon' },
-  { id: 'peloponnese-e4', label: 'Peloponnese - E4', href: '/trails/peloponnese-e4', status: 'Coming soon' },
+  { id: 'cyprus-e4', label: 'Cyprus-E4', href: '/trails/cyprus-e4' },
+  { id: 'crete-e4', label: 'Crete-E4', href: '/trails/crete-e4', status: 'Coming soon' },
+  { id: 'peloponnese-e4', label: 'Peloponnese-E4', href: '/trails/peloponnese-e4', status: 'Coming soon' },
 ] as const;
 
 export function TrailGuideSwitcher({ activeTrail }: { activeTrail?: string }) {

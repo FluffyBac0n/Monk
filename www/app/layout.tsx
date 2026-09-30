@@ -22,12 +22,12 @@ const publicRuntimeBootstrap = `(() => {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'EuroTrex — Cyprus E4 trail app and route planner',
+    default: 'EuroTrex — Cyprus-E4 trail app and route planner',
     template: '%s · EuroTrex',
   },
-  description: 'Plan and navigate the Cyprus E4 with offline route guidance, flexible route planning, elevation context and practical trail-side stays.',
+  description: 'Plan and navigate the Cyprus-E4 with offline route guidance, flexible route planning, elevation context and practical trail-side stays.',
   applicationName: 'EuroTrex',
-  keywords: ['Cyprus E4', 'E4 trail app', 'Cyprus hiking', 'offline hiking maps', 'long-distance trails Europe', 'EuroTrex'],
+  keywords: ['Cyprus-E4', 'E4 trail app', 'Cyprus hiking', 'offline hiking maps', 'long-distance trails Europe', 'EuroTrex'],
   alternates: { canonical: '/' },
   icons: { icon: '/favicon-48.png', apple: '/apple-touch-icon.png' },
   openGraph: {
@@ -35,14 +35,14 @@ export const metadata: Metadata = {
     locale: 'en_CY',
     url: '/',
     siteName: 'EuroTrex',
-    title: 'EuroTrex — Cyprus E4 trail app and route planner',
-    description: 'Offline route guidance, flexible route planning and trail-side stays for the Cyprus E4.',
-    images: [{ url: '/og.jpg', width: 1200, height: 675, alt: 'EuroTrex guide to the Cyprus E4 trail' }],
+    title: 'EuroTrex — Cyprus-E4 trail app and route planner',
+    description: 'Offline route guidance, flexible route planning and trail-side stays for the Cyprus-E4.',
+    images: [{ url: '/og.jpg', width: 1200, height: 675, alt: 'EuroTrex guide to the Cyprus-E4 trail' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'EuroTrex — Cyprus E4 trail app',
-    description: 'Plan and navigate the Cyprus E4 with offline guidance, flexible route planning and practical stays.',
+    title: 'EuroTrex — Cyprus-E4 trail app',
+    description: 'Plan and navigate the Cyprus-E4 with offline guidance, flexible route planning and practical stays.',
     images: ['/og.jpg'],
   },
 };
