@@ -161,7 +161,6 @@ export default function Home() {
                 <figure className="phone-shot phone-stages"><Image src="/app-stages.webp" alt="EuroTrex iPhone app showing Cyprus-E4 stage points" width={720} height={1565} sizes="(max-width: 760px) 72vw, 230px" /><figcaption>Browse stage points</figcaption></figure>
                 <figure className="phone-shot phone-elevation"><Image src="/app-elevation.webp" alt="EuroTrex iPhone app showing an E4 elevation profile" width={720} height={1565} sizes="(max-width: 760px) 72vw, 230px" /><figcaption>Read the terrain</figcaption></figure>
               </div>
-              <p className="swipe-hint">Swipe to explore the app <span aria-hidden="true">→</span></p>
             </div>
             <div className="hiker-features reveal">
               <ul className="feature-list">
