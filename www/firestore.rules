@@ -198,6 +198,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Administrators query published lodgings across all trails.
+    match /{path=**}/lodgings/{lodgingId} {
+      allow read: if isAdmin();
+    }
+
     match /ownerProfiles/{ownerId} {
       allow get: if isAdmin() || (hasVerifiedEmail() && request.auth.uid == ownerId);
       allow list, update, delete: if isAdmin();

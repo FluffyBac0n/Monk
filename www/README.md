@@ -34,13 +34,17 @@ Create a document at `admins/{firebaseAuthUid}` for each administrator, or issue
 
 Host account requests are created through the portal with `accessStatus: "pending"`. Review each request in Firebase Console or another trusted server process, confirm the company and email, then set `accessStatus` to `active`. The profile email must exactly match the verified Authentication email. Set `accessStatus` to `disabled` to revoke portal access without deleting the account or its audit history.
 
-Deploy the included rules after reviewing them alongside the project's existing production rules:
+Deploy the included rules and captured indexes after reviewing them alongside the project's existing production configuration:
 
 ```sh
-firebase deploy --only firestore:rules --project eurotrex
+firebase deploy --only firestore:rules,firestore:indexes --project eurotrex
 ```
 
 Do not replace broader production rules blindly; merge if the mobile app relies on additional collections.
+
+For a fresh project, local backups and guarded recovery, follow
+[Firestore deployment and backup](docs/firestore-deployment-and-backup.md).
+Live documents and credentials must remain outside Git.
 
 ## Private testing and release
 

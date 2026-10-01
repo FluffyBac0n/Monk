@@ -1,0 +1,21 @@
+{
+  "description": "Observed settings, not a Firebase CLI deployment file. See docs/firestore-deployment-and-backup.md.",
+  "capturedOn": "2026-10-01",
+  "sourceProject": "eurotrex",
+  "databaseId": "(default)",
+  "locationId": "eur3",
+  "type": "FIRESTORE_NATIVE",
+  "databaseEdition": "STANDARD",
+  "concurrencyMode": "PESSIMISTIC",
+  "realtimeUpdatesMode": "REALTIME_UPDATES_MODE_ENABLED",
+  "appEngineIntegrationMode": "DISABLED",
+  "pointInTimeRecoveryEnablement": "POINT_IN_TIME_RECOVERY_DISABLED",
+  "deleteProtectionState": "DELETE_PROTECTION_DISABLED",
+  "backupSchedules": [
+    {
+      "dailyRecurrence": {},
+      "retention": "8467200s",
+      "retentionDays": 98
+    }
+  ]
+}

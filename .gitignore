@@ -8,6 +8,7 @@ service-account*.json
 firebase-service-account*.json
 outputs/
 emulator-data/
+private-backups/
 node_modules/
 .firebase-config/
 .pnpm-store/
