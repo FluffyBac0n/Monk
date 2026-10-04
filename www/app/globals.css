@@ -490,31 +490,46 @@ body:has(main[data-trail-guide='cyprus-e4']) .trail-switcher-item[data-trail-id=
 .stage-pagination a:last-child { text-align: right; }
 .stage-pagination small { color: var(--muted); font-size: 10px; margin-bottom: 6px; text-transform: uppercase; }
 .stage-pagination strong { color: var(--blue); }
-.involvement-options { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); padding-bottom: 72px; }
-.involvement-options article { background: white; border: 1px solid var(--line); border-radius: 13px; padding: 27px; }
-.involvement-options h2 { font-size: 29px; }
-.involvement-options p, .partnership-principles p, .form-page-grid > div > p { color: var(--muted); line-height: 1.7; }
-.form-page-section { background: var(--pale-blue); padding-block: 72px; }
-.form-page-grid { align-items: start; display: grid; gap: 70px; grid-template-columns: .8fr 1.2fr; }
+.form-page-section { background: var(--sand); padding-block: 36px 64px; }
+.form-page-grid { align-items: start; border-top: 1px solid var(--line); display: grid; gap: clamp(40px, 7vw, 80px); grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); padding-top: 36px; }
+.form-page-grid h2 { font-size: 28px; }
+.form-page-grid > div > p { color: var(--muted); font-size: 15px; line-height: 1.6; margin: 12px 0 24px; }
 .form-page-grid .simple-link { margin-top: 15px; }
-.get-involved-hero { background: var(--sand); overflow: hidden; padding-block: 42px 74px; }
-.get-involved-hero-grid { align-items: center; display: grid; gap: clamp(48px, 7vw, 92px); grid-template-columns: minmax(0, .86fr) minmax(460px, 1.14fr); }
-.get-involved-hero-copy h1 { color: var(--navy); font-size: clamp(48px, 5.3vw, 72px); max-width: 620px; }
-.get-involved-hero-copy > p:last-child { color: var(--muted); font-size: clamp(16px, 1.55vw, 19px); line-height: 1.68; margin: 24px 0 0; max-width: 580px; }
-.get-involved-hero-image { aspect-ratio: 1.38 / 1; border-radius: 18px 82px 18px 18px; box-shadow: 0 28px 64px rgba(38,53,68,.16); margin: 0; min-height: 430px; overflow: hidden; position: relative; }
-.get-involved-hero-image img { object-fit: cover; object-position: 44% 50%; transition: transform .7s cubic-bezier(.2,.75,.2,1); }
+.get-involved-hero { background: var(--sand); padding-block: 42px 0; }
+.get-involved-hero-grid { align-items: center; display: grid; gap: clamp(32px, 6vw, 72px); grid-template-columns: minmax(0, 1fr) minmax(0, .75fr); }
+.get-involved-hero-copy h1 { color: var(--navy); font-size: clamp(38px, 4.3vw, 54px); max-width: 620px; }
+.get-involved-hero-copy > p:not(.eyebrow) { color: var(--muted); font-size: 17px; line-height: 1.6; margin: 18px 0 0; max-width: 530px; }
+.get-involved-hero-image { aspect-ratio: 16 / 9; border-radius: 14px; margin: 0 0 0 auto; max-width: 440px; overflow: hidden; position: relative; width: 100%; }
+.get-involved-hero-image img { object-fit: cover; object-position: 44% 50%; }
 .partnerships-hero-image img { object-position: 52% 50%; }
-.get-involved-hero-image > div { background: linear-gradient(0deg, rgba(30,44,56,.62), transparent 45%); inset: 0; pointer-events: none; position: absolute; }
-.get-involved-hero-image figcaption { bottom: 20px; color: rgba(255,255,255,.9); font-size: 10px; font-weight: 850; left: 22px; letter-spacing: .08em; position: absolute; text-transform: uppercase; }
-.get-involved-page .involvement-options { gap: 32px; padding-block: 76px; }
-.get-involved-page .involvement-options article { background: transparent; border: 0; border-radius: 0; padding: 0; }
-.get-involved-page .form-page-section { background: var(--sand); padding-block: 76px 84px; }
-.get-involved-page .interest-form { box-shadow: 0 22px 52px rgba(38,53,68,.08); }
-.partnership-principles { display: grid; gap: 70px; grid-template-columns: .8fr 1.2fr; padding-block: 72px; }
-.partnership-principles dl { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; margin: 0; }
-.partnership-principles dl div { background: white; border: 1px solid var(--line); border-radius: 11px; padding: 21px; }
-.partnership-principles dt { color: var(--navy); font-weight: 850; }
-.partnership-principles dd { color: var(--muted); font-size: 13px; line-height: 1.55; margin: 7px 0 0; }
+.partnership-enquiry-link { margin-top: 22px; }
+.partnership-enquiry-link::before { background: var(--navy); }
+.participation-options { margin-top: 24px; }
+.participation-options > a { align-items: center; border-top: 1px solid var(--line); display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) auto; min-height: 90px; padding: 18px 0; }
+.participation-options > a:last-child { border-bottom: 1px solid var(--line); }
+.participation-options h3 { font-size: 21px; margin: 0 0 6px; }
+.participation-options p { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0; }
+.participation-options > a > span { color: var(--blue); font-size: 12px; font-weight: 750; }
+.participation-options > a[aria-current='true'] h3 { color: var(--blue); }
+.participation-options > a[aria-current='true'] > span { color: var(--navy); }
+.participation-options > a:hover h3 { color: var(--blue); }
+.form-page-grid > div > .participation-note, .form-page-grid > div > .enquiry-note { color: var(--muted); font-size: 12px; line-height: 1.55; margin: 16px 0 0; }
+.enquiry-panel { scroll-margin-top: 80px; }
+.get-involved-page .interest-form { border-radius: 12px; padding: 24px; }
+.partnership-principles dl { margin: 24px 0 0; }
+.partnership-principles dl div { border-top: 1px solid var(--line); display: grid; gap: 16px; grid-template-columns: minmax(0, .8fr) minmax(0, 1fr); padding: 18px 0; }
+.partnership-principles dl div:last-child { border-bottom: 1px solid var(--line); }
+.partnership-principles dt { color: var(--navy); font-size: 15px; font-weight: 750; }
+.partnership-principles dd { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0; }
+@media (max-width: 600px) {
+  .get-involved-hero-grid { gap: 22px; grid-template-columns: 1fr; }
+  .get-involved-hero-image { aspect-ratio: 2.8 / 1; margin: 0; max-width: none; }
+  .get-involved-hero-image img { object-position: 44% 28%; }
+  .partnerships-hero-image img { object-position: 52% 50%; }
+  .get-involved-page .interest-form { padding: 20px; }
+  .participation-options > a { min-height: 82px; padding-block: 14px; }
+  .partnership-principles dl div { gap: 6px; grid-template-columns: 1fr; padding-block: 14px; }
+}
 
 @keyframes reveal-up { from { opacity: .2; transform: translateY(34px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes screen-drift { 0%, 100% { translate: 0 0; } 50% { translate: 0 -7px; } }
@@ -733,10 +748,7 @@ td small { color: var(--muted); margin-top: 5px; }
   .desktop-nav { display: none; }
   .language-menu { margin-left: auto; }
   .mobile-menu { display: block; margin-left: 10px; }
-  .form-page-grid, .partnership-principles { grid-template-columns: 1fr; }
-  .get-involved-hero-grid { gap: 34px; grid-template-columns: 1fr; }
-  .get-involved-hero-copy { max-width: 760px; }
-  .get-involved-hero-image { aspect-ratio: 16 / 9; min-height: 0; }
+  .form-page-grid { grid-template-columns: 1fr; }
   .trail-guide-hero-grid { gap: 30px; grid-template-columns: 1fr; }
   .trail-guide-intro { max-width: 760px; padding-block: 20px 8px; }
   .trail-guide-cover { aspect-ratio: 16 / 9; min-height: 0; }
@@ -813,11 +825,11 @@ td small { color: var(--muted); margin-top: 5px; }
   .trail-switcher { scroll-snap-type: x proximity; }
   .trail-switcher-item strong { font-size: 11px; }
   .trail-switcher-item.preview small { font-size: 7px; padding: 4px 5px; }
-  .get-involved-hero { padding-block: 36px 56px; }
-  .get-involved-hero-copy h1 { font-size: clamp(41px, 13vw, 58px); }
-  .get-involved-hero-image { aspect-ratio: 4 / 3; border-radius: 16px 54px 16px 16px; }
-  .get-involved-page .involvement-options { gap: 24px; padding-block: 58px; }
-  .get-involved-page .form-page-section { padding-block: 58px 68px; }
+  .get-involved-hero { padding-top: 30px; }
+  .get-involved-hero-copy h1 { font-size: 38px; }
+  .get-involved-hero-copy > p:not(.eyebrow) { font-size: 16px; }
+  .form-page-section { padding-block: 28px 44px; }
+  .form-page-grid { gap: 32px; padding-top: 28px; }
   .trail-guide-hero { padding-block: 22px 48px; }
   .trail-guide-intro { padding: 10px 0 18px; }
   .trail-guide-intro h1 { font-size: clamp(41px, 13vw, 58px); }
@@ -864,8 +876,6 @@ td small { color: var(--muted); margin-top: 5px; }
   .stage-metrics { grid-template-columns: 1fr 1fr; }
   .stage-metrics div:nth-child(3) { border-left: 0; padding-left: 0; }
   .stage-metrics div:nth-child(n+3) { border-top: 1px solid var(--line); padding-top: 17px; }
-  .involvement-options { grid-template-columns: 1fr; }
-  .partnership-principles dl { grid-template-columns: 1fr 1fr; }
   .footer-compact { gap: 12px; grid-template-columns: 1fr; padding-block: 16px; }
   .footer-nav { grid-column: auto; grid-template-columns: repeat(3, minmax(0,1fr)); }
   .footer-nav div:last-child { grid-column: auto; }
@@ -915,7 +925,6 @@ td small { color: var(--muted); margin-top: 5px; }
   .guide-stat-ribbon dd { font-size: 19px; }
   .guide-map-caption { align-items: start; grid-template-columns: 1fr; }
   .guide-map-caption small { grid-column: auto; }
-  .partnership-principles dl { grid-template-columns: 1fr; }
   .stage-list a { gap: 10px; grid-template-columns: 42px 1fr; }
   .stage-distance { grid-column: 2; }
   .stage-pagination { grid-template-columns: 1fr; }
@@ -934,7 +943,6 @@ td small { color: var(--muted); margin-top: 5px; }
   .path-card:hover, .involved-grid article:hover { box-shadow: 0 20px 44px rgba(38,53,68,.12); transform: translateY(-4px); }
   .path-card:hover .path-image, .involved-grid article:hover .involved-image img { transform: scale(1.04); }
   .host-moment:hover .host-step-image img { transform: scale(1.035); }
-  .get-involved-hero-image:hover img { transform: scale(1.035); }
   .trail-guide-cover:hover img, .guide-coast-image:hover img, .future-trail-image:hover img { transform: scale(1.035); }
   .path-card:hover .path-card-shade { background: linear-gradient(0deg, rgba(31,57,87,.94) 0%, rgba(33,63,98,.64) 48%, rgba(35,58,80,.08) 84%); }
   .involved-grid article:hover .involved-image img { filter: saturate(1) contrast(1.04); }

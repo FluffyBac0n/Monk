@@ -111,6 +111,19 @@ function startPublicRuntime(htmx) {
     }
   }
 
+  function syncParticipationChoices() {
+    const interest = document.querySelector('#interest-form select[name="interest"]');
+    if (!(interest instanceof HTMLSelectElement)) return;
+
+    document.querySelectorAll('[data-interest-choice]').forEach((choice) => {
+      const selected = choice.dataset.interestChoice === interest.value;
+      if (selected) choice.setAttribute('aria-current', 'true');
+      else choice.removeAttribute('aria-current');
+      const label = choice.querySelector('[data-interest-choice-label]');
+      if (label) label.textContent = selected ? 'Selected' : 'Choose →';
+    });
+  }
+
   async function materializeTrailSlide(panel) {
     const image = panel?.querySelector('img[data-trail-src], img[data-trail-srcset]');
     if (!(image instanceof HTMLImageElement)) return;
@@ -356,6 +369,7 @@ function startPublicRuntime(htmx) {
 
     initializeTrailSlideshows(document);
     syncTrailSwitcher();
+    syncParticipationChoices();
     revealActiveTrail();
   }
 
@@ -396,6 +410,7 @@ function startPublicRuntime(htmx) {
     if (event.detail?.serverResponse) syncRouteHead(event.detail.serverResponse);
     initializeTrailSlideshows(document);
     syncTrailSwitcher();
+    syncParticipationChoices();
     revealActiveTrail();
     document.querySelector('main')?.focus({ preventScroll: true });
   }
@@ -411,11 +426,32 @@ function startPublicRuntime(htmx) {
     }
   }
 
+  function handleChange(event) {
+    const target = event.target;
+    if (target instanceof HTMLSelectElement && target.matches('#interest-form select[name="interest"]')) {
+      syncParticipationChoices();
+    }
+  }
+
   function handleDocumentClick(event) {
     const target = event.target;
     if (!(target instanceof Element)) return;
 
     if (target.closest('.mobile-menu nav a, .mobile-menu nav button')) closeMobileMenus();
+
+    const participationChoice = target.closest('[data-interest-choice]');
+    if (participationChoice && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+      const panel = document.getElementById('interest-form');
+      const interest = panel?.querySelector('select[name="interest"]');
+      if (interest instanceof HTMLSelectElement) {
+        event.preventDefault();
+        interest.value = participationChoice.dataset.interestChoice;
+        interest.dispatchEvent(new Event('change', { bubbles: true }));
+        panel.querySelector('input[name="name"]')?.focus({ preventScroll: true });
+        panel.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' });
+        return;
+      }
+    }
 
     const notifyTrigger = target.closest('[data-notify-trigger]');
     if (notifyTrigger instanceof HTMLElement) {
@@ -514,6 +550,7 @@ function startPublicRuntime(htmx) {
   window.addEventListener('pageshow', ensureHtmxHistoryBridge);
   document.addEventListener('click', prepareForPotentialNavigation, true);
   document.addEventListener('input', handleInput);
+  document.addEventListener('change', handleChange);
   document.addEventListener('click', handleDocumentClick);
   document.addEventListener('focusin', handleFocusIn);
   document.addEventListener('focusout', handleFocusOut);
@@ -532,6 +569,7 @@ function startPublicRuntime(htmx) {
 
   initializeTrailSlideshows(document);
   syncTrailSwitcher();
+  syncParticipationChoices();
   revealActiveTrail();
 }
 

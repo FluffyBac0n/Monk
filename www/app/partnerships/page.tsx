@@ -34,24 +34,32 @@ export default function Partnerships() {
         <header className="get-involved-hero">
           <div className="section-shell get-involved-hero-grid">
             <div className="get-involved-hero-copy">
-              <p className="eyebrow">For sponsors and collaborators</p>
-              <h1>Help turn trail knowledge into better journeys.</h1>
-              <p>Contribute equipment, local expertise or support for field visits and route-data improvements. We agree the scope, recognition and reporting with each partner before work begins.</p>
+              <p className="eyebrow">Partnerships</p>
+              <h1>Support the trail.</h1>
+              <p>Bring equipment, expertise or funding to field checks, better trail information and stronger local connections.</p>
+              <a className="button button-primary fill-link partnership-enquiry-link" href="#partnership-enquiry"><span>Discuss a partnership</span></a>
             </div>
             <figure className="get-involved-hero-image partnerships-hero-image">
-              <Image src="/sponsors-path.webp" alt="A hiker preparing beside a marked Cyprus trail" fill priority sizes="(max-width: 900px) 100vw, 54vw" />
-              <div aria-hidden="true" />
-              <figcaption>Trail support · Responsible access</figcaption>
+              <Image src="/sponsors-path.webp" alt="A hiker preparing beside a marked Cyprus trail" fill priority sizes="(max-width: 600px) calc(100vw - 40px), (max-width: 900px) 36vw, 440px" />
             </figure>
           </div>
         </header>
-        <div className="trail-divider" aria-hidden="true" />
-        <section className="section-shell partnership-principles">
-          <div><p className="eyebrow">A considered fit</p><h2>Partnerships should help hikers.</h2><p>EuroTrex is looking for support that makes long-distance walking clearer, safer and more welcoming—without turning the trail into an advertising surface.</p></div>
-          <dl><div><dt>Trail data</dt><dd>Support field checks, route updates and practical information.</dd></div><div><dt>Access</dt><dd>Help more people prepare well and walk responsibly.</dd></div><div><dt>Local value</dt><dd>Strengthen connections with communities and trail-side services.</dd></div><div><dt>Responsible gear</dt><dd>Provide relevant equipment or expertise with clear disclosure.</dd></div></dl>
+        <section className="form-page-section" aria-labelledby="partnership-support-title">
+          <div className="section-shell form-page-grid">
+            <div className="partnership-principles">
+              <h2 id="partnership-support-title">Where you can help.</h2>
+              <dl><div><dt>Trail information</dt><dd>Field checks, route updates and practical details.</dd></div><div><dt>Access</dt><dd>Help hikers prepare well and walk responsibly.</dd></div><div><dt>Local communities</dt><dd>Connect hikers with people and services along the trail.</dd></div><div><dt>Equipment & expertise</dt><dd>Useful gear and knowledge for work in the field.</dd></div></dl>
+              <p>We agree the contribution, recognition and reporting together before work begins.</p>
+              <a className="simple-link" href="/partner-terms">Read our partner policy <span aria-hidden="true">→</span></a>
+            </div>
+            <div id="partnership-enquiry" className="enquiry-panel">
+              <h2>Let’s work together.</h2>
+              <p>Tell us about your organisation, what you can contribute and where you would like to help.</p>
+              <InterestForm kind="involved" defaultInterest="sponsor" partnership />
+              <p className="enquiry-note">We reply by email. Partnership acceptance, audience reach and advertising placement are not guaranteed.</p>
+            </div>
+          </div>
         </section>
-        <div className="trail-divider" aria-hidden="true" />
-        <section className="form-page-section"><div className="section-shell form-page-grid"><div><p className="eyebrow">Partnership enquiry</p><h2>Tell us what you can bring to the route.</h2><p>Share your organisation, proposed contribution, location and intended outcome. We review the proposal and reply by email about fit and next steps. No audience reach, advertising placement or partnership acceptance is guaranteed.</p></div><InterestForm kind="involved" defaultInterest="sponsor" /></div></section>
       </main>
       </PublicContent>
       <PublicFooter />

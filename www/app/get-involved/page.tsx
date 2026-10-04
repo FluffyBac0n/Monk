@@ -4,7 +4,7 @@ import { InterestForm } from '@/components/InterestForm';
 import { PublicContent } from '@/components/PublicContent';
 import { PublicFooter } from '@/components/PublicFooter';
 import { PublicHeader } from '@/components/PublicHeader';
-import { publicHtmxNavigation } from '@/lib/htmx';
+import { disableHtmxNavigation, publicHtmxNavigation } from '@/lib/htmx';
 import { getCyprusE4Stage } from '@/lib/cyprus-e4-data';
 
 export const metadata: Metadata = {
@@ -27,6 +27,11 @@ export const metadata: Metadata = {
 };
 
 const validInterests = new Set(['volunteer', 'collaborate', 'field-walks', 'sponsor', 'host', 'other', 'report']);
+const participation = [
+  { interest: 'volunteer', title: 'Volunteer', copy: 'Check trail details and share your local knowledge.' },
+  { interest: 'collaborate', title: 'Collaborate', copy: 'Connect your community or organisation with the project.' },
+  { interest: 'field-walks', title: 'Walk with us', copy: 'Register your interest in future field walks.' },
+];
 
 export default async function GetInvolved({ searchParams }: { searchParams: Promise<{ interest?: string; point?: string }> }) {
   const { interest, point } = await searchParams;
@@ -42,25 +47,37 @@ export default async function GetInvolved({ searchParams }: { searchParams: Prom
         <header className="get-involved-hero">
           <div className="section-shell get-involved-hero-grid">
             <div className="get-involved-hero-copy">
-              <h1>Make the trail more useful.</h1>
-              <p>Local knowledge, careful field notes and thoughtful collaborations help EuroTrex turn a line on a map into a dependable journey.</p>
+              <p className="eyebrow">Join us</p>
+              <h1>Make a difference<br />on the trail.</h1>
+              <p>Share what you know, lend a hand or walk with us. Help make Cyprus-E4 more useful for everyone.</p>
             </div>
             <figure className="get-involved-hero-image">
-              <Image src="/involved-volunteer.webp" alt="A volunteer recording and refreshing a trail waymark" fill priority sizes="(max-width: 900px) 100vw, 54vw" />
-              <div aria-hidden="true" />
-              <figcaption>Field checks · Local knowledge</figcaption>
+              <Image src="/involved-volunteer.webp" alt="A volunteer recording and refreshing a trail waymark" fill priority sizes="(max-width: 600px) calc(100vw - 40px), (max-width: 900px) 36vw, 440px" />
             </figure>
           </div>
         </header>
-        <div className="trail-divider" aria-hidden="true" />
-        <section className="section-shell involvement-options">
-          <article><h2>Volunteer</h2><p>Help check trail information, services and practical details. Tell us where you are based and what you know well.</p></article>
-          <article><h2>Collaborate</h2><p>Connect a community, public body, trail organisation or responsible-tourism initiative with the project.</p></article>
-          <article><h2>Walk with us</h2><p>Express interest in future field walks and tell us where you can take part. This is not an event booking; dates and places are confirmed separately.</p></article>
-        </section>
-        <div className="trail-divider" aria-hidden="true" />
-        <section className="form-page-section">
-          <div className="section-shell form-page-grid"><div><h2>{stage ? `Report an issue at ${stage.name}.` : 'Start one useful conversation.'}</h2><p>We review enquiries manually and reply by email if we can take the next step together. There is no guaranteed response time during private testing. Project updates are a separate, optional choice.</p></div><InterestForm kind="involved" defaultInterest={defaultInterest} defaultMessage={defaultMessage} /></div>
+        <section className="form-page-section" aria-labelledby="participation-title">
+          <div className="section-shell form-page-grid">
+            <div>
+              <h2 id="participation-title">Ways to help.</h2>
+              <nav className="participation-options" aria-label="Choose how to take part">
+                {participation.map(({ interest: value, title, copy }) => (
+                  <a key={value} href={`/get-involved?interest=${value}#interest-form`} data-interest-choice={value} aria-controls="interest-form" aria-current={defaultInterest === value ? 'true' : undefined} {...disableHtmxNavigation}>
+                    <div><h3>{title}</h3><p>{copy}</p></div>
+                    <span data-interest-choice-label>{defaultInterest === value ? 'Selected' : 'Choose →'}</span>
+                  </a>
+                ))}
+              </nav>
+              <p className="participation-note">Field-walk dates and places are confirmed separately.</p>
+              <a className="simple-link" href="/partnerships">Looking to sponsor the project? <span aria-hidden="true">→</span></a>
+            </div>
+            <div id="interest-form" className="enquiry-panel">
+              <h2>{stage ? `Report an issue at ${stage.name}.` : 'Let’s hear from you.'}</h2>
+              <p>Tell us where you are based and how you would like to help. We review enquiries and reply by email.</p>
+              <InterestForm kind="involved" defaultInterest={defaultInterest} defaultMessage={defaultMessage} />
+              <p className="enquiry-note">Response times vary during private testing.</p>
+            </div>
+          </div>
         </section>
       </main>
       </PublicContent>
