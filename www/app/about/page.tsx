@@ -5,13 +5,13 @@ import { InformationPage } from '@/components/InformationPage';
 export const metadata: Metadata = { title: 'About Us', description: 'One project connecting trail information, trip planning and accommodation, starting with Cyprus-E4.', alternates: { canonical: '/about' } };
 
 export default function About() {
-  return <InformationPage title="THE TEAM" titleClassName="section-title">
+  return <InformationPage title="THE TEAM" titleClassName="section-title" introduction="Two friends, one shared purpose: to bring people closer to nature, one trail at a time.">
     <section className="team-grid" aria-label="The EuroTrex team">
-      {[{ name: 'Petros Christofides', photo: '/team-petros-christofides.webp', alt: 'Petros Christofides overlooking the Cyprus coastline' }, { name: 'Andreas Michaelides', photo: '/team-andreas-michaelides.webp', alt: 'Andreas Michaelides with his dog on a coastal walk in Cyprus' }].map(({ name, photo, alt }) => (
+      {[{ name: 'Petros Christofides', photo: '/team-petros-christofides.webp', alt: 'Petros Christofides overlooking the Cyprus coastline', biography: 'Petros stepped away from a career in actuarial work to embrace life outdoors. An experienced long-distance hiker, he has walked thousands of kilometres across some of Europe’s best-known trails. His first-hand knowledge and vision shape the foundations of EuroTrex.' }, { name: 'Andreas Michaelides', photo: '/team-andreas-michaelides.webp', alt: 'Andreas Michaelides with his dog on a coastal walk in Cyprus', biography: 'Andreas is a software engineer with 15 years of experience and a love of nature and photography. He brings the technical expertise that turns their shared vision into practical tools, helping more people discover and explore long-distance trails.' }].map(({ name, photo, alt, biography }) => (
         <article className="team-member" key={name}>
           <Image className="team-photo" src={photo} alt={alt} width={960} height={720} sizes="(max-width: 760px) calc(100vw - 40px), 444px" />
           <h2>{name}</h2>
-          <p>Biography to follow.</p>
+          <p>{biography}</p>
         </article>
       ))}
     </section>

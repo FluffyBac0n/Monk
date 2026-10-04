@@ -986,7 +986,7 @@ td small { color: var(--muted); margin-top: 5px; }
 .team-grid { display: grid; gap: 32px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .team-photo { aspect-ratio: 4 / 3; border: 1px solid var(--line); border-radius: 16px 54px 16px 16px; display: block; height: auto; object-fit: cover; width: 100%; }
 .information-content .team-member h2 { font-size: 24px; margin: 20px 0 8px; }
-.information-content .team-member p { margin: 0; }
+.information-content .team-member p { margin: 0; text-align: justify; }
 .help-sections { display: flex; gap: 12px; flex-wrap: wrap; padding-bottom: 24px; }
 .help-sections a { color: var(--blue); border: 1px solid var(--line); font-size: 14px; padding: 12px 16px; border-radius: var(--radius-control); }
 .information-content summary { cursor: pointer; min-height: 48px; padding: 14px 0; color: var(--navy); font-weight: 700; }
