@@ -36,6 +36,17 @@ try {
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM interest_submissions WHERE email_normalized=? AND kind='beta'").get(email).n, 1);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM interest_preferences p JOIN interest_submissions s ON p.submission_id=s.id WHERE s.email_normalized=? AND s.kind='beta'").get(email).n, 2);
   assert.equal((await post({ email, platform: 'ios', trail: 'unknown' }, { kind: 'beta' })).status, 400);
+  assert.equal((await post({ email, platform: 'invalid' }, { kind: 'beta' })).status, 400);
+  const emailOnly = await fetch(`${origin}/api/interest?kind=beta&compact=true`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Origin: origin, 'HX-Request': 'true' },
+    body: new URLSearchParams({ email, trail: 'all' }),
+  });
+  assert.equal(emailOnly.headers.get('X-EuroTrex-Interest-Success'), 'true', 'Email-only HTMX signup succeeds');
+  assert.ok((await emailOnly.text()).includes('You’re on the notification list'));
+  assert.equal(db.prepare("SELECT p.platform FROM interest_preferences p JOIN interest_submissions s ON p.submission_id=s.id WHERE s.email_normalized=? AND p.scope='all'").get(email).platform, 'not-sure');
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM interest_submissions WHERE email_normalized=? AND kind='beta'").get(email).n, 1, 'Email-only signup is deduplicated');
+  assert.equal((await post({ email: 'invalid' }, { kind: 'beta' })).status, 400);
   assert.equal((await post({ ...enquiry, email: 'invalid' })).status, 400);
   assert.equal((await post(enquiry, { origin: 'https://unrelated.example' })).status, 403);
   const htmx = await post({ ...enquiry, email: 'invalid' }, { headers: { 'HX-Request': 'true' } });
@@ -43,7 +54,7 @@ try {
   assert.ok(htmx.text.includes('role="alert"'));
   const report = await (await fetch(`${origin}/get-involved?interest=report&point=123-pafos-airport`)).text();
   assert.ok(report.includes('Stage point: Pafos Airport'));
-  console.log('PASS: 10 routes; report context; optional consent persistence; scoped subscriptions/deduplication; validation; same-origin rejection; HTMX errors.');
+  console.log('PASS: 10 routes; report context; optional consent persistence; email-only HTMX signup; scoped subscriptions/deduplication; validation; same-origin rejection; HTMX errors.');
 } finally {
   db.prepare('DELETE FROM interest_preferences WHERE submission_id IN (SELECT id FROM interest_submissions WHERE email_normalized=?)').run(email);
   db.prepare('DELETE FROM interest_submissions WHERE email_normalized=?').run(email);

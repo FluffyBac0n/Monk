@@ -53,6 +53,7 @@ export function PublicHeader({ activeTrail }: { activeTrail?: string }) {
             <a href="/#hosts">For Hosts</a>
             <a href="/trails/cyprus-e4">Explore Trails</a>
             <a href="/get-involved">Join Us</a>
+            <a href="/about">About Us</a>
           </nav>
           <div className="header-actions">
             <a className="header-portal-button desktop-header-action" href="/portal" {...disableHtmxNavigation}>Host Portal</a>

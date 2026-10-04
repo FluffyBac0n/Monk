@@ -42,7 +42,6 @@ export default async function GetInvolved({ searchParams }: { searchParams: Prom
         <header className="get-involved-hero">
           <div className="section-shell get-involved-hero-grid">
             <div className="get-involved-hero-copy">
-              <p className="eyebrow">Join us</p>
               <h1>Make the trail more useful.</h1>
               <p>Local knowledge, careful field notes and thoughtful collaborations help EuroTrex turn a line on a map into a dependable journey.</p>
             </div>
@@ -55,13 +54,13 @@ export default async function GetInvolved({ searchParams }: { searchParams: Prom
         </header>
         <div className="trail-divider" aria-hidden="true" />
         <section className="section-shell involvement-options">
-          <article><span aria-hidden="true">01</span><h2>Volunteer</h2><p>Help check trail information, services and practical details. Tell us where you are based and what you know well.</p></article>
-          <article><span aria-hidden="true">02</span><h2>Collaborate</h2><p>Connect a community, public body, trail organisation or responsible-tourism initiative with the project.</p></article>
-          <article><span aria-hidden="true">03</span><h2>Walk with us</h2><p>Express interest in future field walks and tell us where you can take part. This is not an event booking; dates and places are confirmed separately.</p></article>
+          <article><h2>Volunteer</h2><p>Help check trail information, services and practical details. Tell us where you are based and what you know well.</p></article>
+          <article><h2>Collaborate</h2><p>Connect a community, public body, trail organisation or responsible-tourism initiative with the project.</p></article>
+          <article><h2>Walk with us</h2><p>Express interest in future field walks and tell us where you can take part. This is not an event booking; dates and places are confirmed separately.</p></article>
         </section>
         <div className="trail-divider" aria-hidden="true" />
         <section className="form-page-section">
-          <div className="section-shell form-page-grid"><div><p className="eyebrow">Tell us where you fit</p><h2>{stage ? `Report an issue at ${stage.name}.` : 'Start one useful conversation.'}</h2><p>We review enquiries manually and reply by email if we can take the next step together. There is no guaranteed response time during private testing. Project updates are a separate, optional choice.</p><a className="simple-link" href="/partnerships">Looking for sponsorship information? <span aria-hidden="true">→</span></a><p><a className="simple-link" href="/help">Need help with the app or host account?</a></p></div><InterestForm kind="involved" defaultInterest={defaultInterest} defaultMessage={defaultMessage} /></div>
+          <div className="section-shell form-page-grid"><div><h2>{stage ? `Report an issue at ${stage.name}.` : 'Start one useful conversation.'}</h2><p>We review enquiries manually and reply by email if we can take the next step together. There is no guaranteed response time during private testing. Project updates are a separate, optional choice.</p></div><InterestForm kind="involved" defaultInterest={defaultInterest} defaultMessage={defaultMessage} /></div>
         </section>
       </main>
       </PublicContent>

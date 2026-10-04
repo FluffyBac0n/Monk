@@ -3,25 +3,24 @@ import { NotifyButton } from '@/components/NotifyDialog';
 import { PublicFooter } from '@/components/PublicFooter';
 import { PublicHeader } from '@/components/PublicHeader';
 import { PublicContent } from '@/components/PublicContent';
-import { cyprusE4 } from '@/lib/cyprus-e4-data';
 import { disableHtmxNavigation, publicHtmxNavigation } from '@/lib/htmx';
 import { SITE_URL } from '@/lib/site';
 
 const paths = [
   {
-    label: 'For hikers', title: 'Plan the trail', image: '/cyprus-e4-forest-960.webp',
+    title: 'FOR HIKERS', image: '/cyprus-e4-forest-960.webp',
     alt: 'A marked section of the E4 long-distance trail through a Cyprus forest',
     copy: 'Plan your route, carry it offline and find practical places to stay with the EuroTrex mobile app.',
     action: 'Explore the hiker app', href: '#hikers',
   },
   {
-    label: 'For hosts', title: 'Welcome hikers', image: '/hosts-path.webp',
+    title: 'FOR HOSTS', image: '/hosts-path.webp',
     alt: 'A welcoming stone guesthouse beside a Cyprus hiking route',
     copy: 'List your property near the trail and help hikers travel lighter, safer and farther.',
     action: 'See how listings work', href: '#hosts',
   },
   {
-    label: 'For sponsors', title: 'Support the route', image: '/sponsors-path.webp',
+    title: 'FOR SPONSORS', image: '/sponsors-path.webp',
     alt: 'A hiker adjusting practical outdoor equipment beside a trail waymark',
     copy: 'Support a more accessible European trail network through useful equipment and responsible partnerships.',
     action: 'Explore partnerships', href: '/partnerships',
@@ -42,10 +41,10 @@ const hostSteps = [
 ];
 
 const involvement = [
-  { label: 'Field walks', title: 'Walk with us', copy: 'Join a trail walk and share the conditions and stories you find along the way.', action: 'Ask about field walks', href: '/get-involved?interest=field-walks', image: '/involved-walk.webp', alt: 'Illustration of two hikers walking together on a Cyprus trail', featured: true },
-  { label: 'Trail knowledge', title: 'Volunteer', copy: 'Help check local trail information as the network grows.', action: 'Volunteer with us', href: '/get-involved?interest=volunteer', image: '/involved-volunteer.webp', alt: 'Illustration of a volunteer checking a trail waymark and recording a field note' },
-  { label: 'Regional ideas', title: 'Collaborate', copy: 'Work with us on responsible tourism, access and regional initiatives.', action: 'Start a collaboration', href: '/get-involved?interest=collaborate', image: '/involved-collaborate.webp', alt: 'Illustration of two collaborators connecting sections of a trail route together' },
-  { label: 'Partnerships', title: 'Support the vision', copy: 'Help keep long-distance hiking practical, welcoming and accessible.', action: 'Explore partnerships', href: '/partnerships', image: '/involved-support.webp', alt: 'Illustration of people helping a trail network reach a new waypoint' },
+  { title: 'Walk with us', copy: 'Join a trail walk and share the conditions and stories you find along the way.', action: 'Ask about field walks', href: '/get-involved?interest=field-walks', image: '/involved-walk.webp', alt: 'Illustration of two hikers walking together on a Cyprus trail', featured: true },
+  { title: 'Volunteer', copy: 'Help check local trail information as the network grows.', action: 'Volunteer with us', href: '/get-involved?interest=volunteer', image: '/involved-volunteer.webp', alt: 'Illustration of a volunteer checking a trail waymark and recording a field note' },
+  { title: 'Collaborate', copy: 'Work with us on responsible tourism, access and regional initiatives.', action: 'Start a collaboration', href: '/get-involved?interest=collaborate', image: '/involved-collaborate.webp', alt: 'Illustration of two collaborators connecting sections of a trail route together' },
+  { title: 'Support the vision', copy: 'Help keep long-distance hiking practical, welcoming and accessible.', action: 'Explore partnerships', href: '/partnerships', image: '/involved-support.webp', alt: 'Illustration of people helping a trail network reach a new waypoint' },
 ];
 
 const faqs = [
@@ -70,7 +69,6 @@ export default function Home() {
   const appStoreUrl = process.env.NEXT_PUBLIC_APP_STORE_URL;
   const playStoreUrl = process.env.NEXT_PUBLIC_PLAY_STORE_URL;
   const storeUrls = [appStoreUrl, playStoreUrl].filter(Boolean);
-  const updated = new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(cyprusE4.dataUpdatedAt));
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -122,23 +120,21 @@ export default function Home() {
 
         <section className="manifesto-section" aria-labelledby="manifesto-title">
           <div className="section-shell manifesto-layout">
-            <blockquote className="manifesto-quote"><p className="eyebrow">The EuroTrex manifesto</p><h2 id="manifesto-title">“When you start to walk on the way, the way appears.”</h2></blockquote>
-            <div className="manifesto-copy"><p>You don’t need to be the fastest or the strongest. Bring your curiosity, choose a walk that suits you, and reconnect with nature.</p><p className="manifesto-signoff"><strong>Start walking. Plan with confidence. Discover more.</strong><span>Slowly. Deeply. One step at a time.</span></p></div>
+            <blockquote className="manifesto-quote"><h2 id="manifesto-title">“When you start to walk on the way, the way appears.”</h2></blockquote>
+            <div className="manifesto-copy"><p>You don’t need to be the fastest or the strongest. Bring your curiosity, choose a walk that suits you, and reconnect with nature.</p><p>Start walking. Plan with confidence. Discover more.</p><p>Slowly. Deeply. One step at a time.</p></div>
           </div>
         </section>
 
-        <TrailDivider />
-
         <section className="paths-section" id="paths" aria-labelledby="paths-title">
           <div className="section-shell">
-            <div className="section-heading"><div><p className="eyebrow">Choose your path</p><h2 id="paths-title">A trail network shaped by everyone around it.</h2></div><p>Walk it, welcome those who do, or help make the route more useful.</p></div>
+            <h2 className="section-title" id="paths-title">CHOOSE YOUR PATH</h2>
             <div className="path-grid">
               {paths.map((path, index) => (
-                <article className={`path-card reveal${index === 0 ? ' path-card-featured' : ''}`} key={path.label}>
+                <article className={`path-card reveal${index === 0 ? ' path-card-featured' : ''}`} key={path.title}>
                   <a className="path-card-link" href={path.href}>
                     <div className="path-image-wrap"><Image className="path-image" src={path.image} alt={path.alt} fill sizes={index === 0 ? '(max-width: 760px) 100vw, 64vw' : '(max-width: 760px) 100vw, 36vw'} /></div>
                     <div className="path-card-shade" />
-                    <div className="path-card-body"><p className="eyebrow light">{path.label}</p><h3>{path.title}</h3><p>{path.copy}</p><span className="editorial-link">{path.action}<i aria-hidden="true" /></span></div>
+                    <div className="path-card-body"><h3>{path.title}</h3><p>{path.copy}</p><span className="editorial-link">{path.action}<i aria-hidden="true" /></span></div>
                   </a>
                 </article>
               ))}
@@ -151,9 +147,7 @@ export default function Home() {
         <section className="hiker-showcase" id="hikers" aria-labelledby="hikers-title">
           <div className="section-shell hiker-layout">
             <div className="hiker-heading reveal">
-              <p className="eyebrow">For hikers</p>
-              <h2 id="hikers-title">Plan the trail. Keep the adventure.</h2>
-              <p className="hiker-intro">EuroTrex keeps the decisions that matter close at hand while leaving the landscape centre stage.</p>
+              <h2 className="section-title" id="hikers-title">FOR HIKERS</h2>
             </div>
             <div className="app-gallery-wrap reveal">
               <div className="app-gallery" aria-label="Screenshots from the EuroTrex iPhone app" role="region" tabIndex={0}>
@@ -168,12 +162,12 @@ export default function Home() {
               </ul>
             </div>
             <div className="hiker-launch-band" id="app-updates" aria-labelledby="download-title">
-              <Image className="app-icon" src="/eurotrex-app-icon-ui.webp" alt="EuroTrex app icon" width={256} height={256} />
-              <div className="hiker-launch-copy"><p className="eyebrow">EuroTrex in your pocket</p><h3 id="download-title">Be first on the trail.</h3><p>Currently in private testing. Get testing invitations and launch updates for iPhone and Android.</p></div>
+              <Image className="app-icon" src="/eurotrex-app-icon-e4.webp" alt="EuroTrex app icon" width={256} height={256} />
+              <div className="hiker-launch-copy"><p className="eyebrow">EuroTrex in your pocket</p><h3 id="download-title">Be first on the trail.</h3><p>Private testing: invites and launch updates for iPhone and Android.</p></div>
               <div className="hiker-launch-actions" aria-label="EuroTrex app availability" role="group">
                 <div className="store-item">{appStoreUrl ? <a href={appStoreUrl} target="_blank" rel="noreferrer" aria-label="Download EuroTrex on the App Store"><Image src="/app-store-badge.svg" alt="Download on the App Store" width={180} height={60} /></a> : <span className="store-badge"><Image src="/app-store-badge.svg" alt="" aria-hidden="true" width={180} height={60} /></span>}</div>
                 <div className="store-item store-item-google">{playStoreUrl ? <a href={playStoreUrl} target="_blank" rel="noreferrer" aria-label="Get EuroTrex on Google Play"><Image src="/google-play-badge.png" alt="Get it on Google Play" width={194} height={75} /></a> : <span className="store-badge"><Image src="/google-play-badge.png" alt="" aria-hidden="true" width={194} height={75} /></span>}</div>
-                <NotifyButton className="button button-yellow">Notify me</NotifyButton>
+                <NotifyButton className="button button-yellow">Notify Me</NotifyButton>
               </div>
             </div>
           </div>
@@ -181,31 +175,13 @@ export default function Home() {
 
         <TrailDivider />
 
-        <section className="project-section" id="project" aria-labelledby="project-title">
-          <div className="section-shell project-layout">
-            <div className="project-copy">
-              <div className="project-kicker"><div className="project-badge" aria-hidden="true"><small>European</small><strong>E4</strong><small>Cyprus</small></div><p className="eyebrow">Current trail</p></div>
-              <h2 id="project-title">From Pafos to Larnaka, one stage point at a time.</h2><p>The first EuroTrex guide follows the Cyprus-E4 across coast, forest and the Troodos mountains. Explore distances, elevation and recorded services here; plan walking days and download the route in the private-test app.</p><a className="simple-link" href="/trails/cyprus-e4">Open the Cyprus-E4 guide <span aria-hidden="true">→</span></a>
-            </div>
-            <dl className="project-facts"><div><dt>Distance</dt><dd>{cyprusE4.distanceKm.toFixed(1)} km</dd></div><div><dt>Stage points</dt><dd>{cyprusE4.stageCount}</dd></div><div><dt>High point</dt><dd>{Math.round(cyprusE4.highPointM).toLocaleString('en-GB')} m</dd></div><div><dt>Trail data updated</dt><dd>{updated}</dd></div></dl>
-          </div>
-        </section>
-
-        <TrailDivider />
-
         <section className="host-section" id="hosts" aria-labelledby="hosts-title">
           <div className="section-shell">
-            <div className="host-heading"><div><p className="eyebrow">For accommodation hosts</p><h2 id="hosts-title">A clear, three-step path to the trail.</h2></div><div className="host-summary"><p>Hotels, guesthouses, hostels, apartments, villas and camping providers can submit a listing. Hikers contact and book with hosts directly.</p></div></div>
-            <ol className="host-steps host-journey" role="list">
-              {hostSteps.map((step, index) => <li className="host-moment reveal" key={step.title}><span className="host-waypoint" aria-hidden="true" /><div className="host-step-image"><Image src={step.image} alt={step.alt} fill sizes="(max-width: 500px) 88vw, (max-width: 900px) 45vw, 31vw" /></div><div className="host-step-body"><p className="host-step-label">{['Create', 'Prepare', 'Verify'][index]}</p><h3>{step.title}</h3><p>{step.copy}</p></div></li>)}
+            <h2 className="section-title" id="hosts-title">FOR HOSTS</h2>
+            <ol className="host-steps" role="list">
+              {hostSteps.map((step) => <li className="host-moment reveal" key={step.title}><div className="host-step-image"><Image src={step.image} alt={step.alt} fill sizes="(max-width: 500px) 88vw, (max-width: 900px) 45vw, 31vw" /></div><div className="host-step-body"><h3>{step.title}</h3><p>{step.copy}</p></div></li>)}
             </ol>
-            <dl className="host-facts">
-              <div><dt>Eligibility</dt><dd>Authorised accommodation representatives near a named stage point.</dd></div>
-              <div><dt>Booking model</dt><dd>Direct with the host; EuroTrex does not process guest payments.</dd></div>
-              <div><dt>Pilot terms</dt><dd>Any fee or commission terms are confirmed before publication.</dd></div>
-              <div><dt>Review timing</dt><dd>Account and listing reviews normally take 1–3 days. Check your portal for status.</dd></div>
-            </dl>
-            <div className="host-cta-row"><p><strong>Ready to welcome hikers?</strong><span>Create an account to request access, or manage your existing listings.</span></p><ActionLink href="/portal" className="host-portal-link">Open Host Portal</ActionLink></div>
+            <div className="host-cta-row"><ActionLink href="/portal" className="button button-yellow host-portal-link">Host Portal</ActionLink></div>
           </div>
         </section>
 
@@ -213,10 +189,10 @@ export default function Home() {
 
         <section className="involved-section" id="involved" aria-labelledby="involved-title">
           <div className="section-shell">
-            <div className="section-heading"><div><p className="eyebrow">Join us</p><h2 id="involved-title">Help the path reach farther.</h2></div><p>EuroTrex grows through local knowledge, useful partnerships and people who care for the trail.</p></div>
+            <h2 className="section-title" id="involved-title">JOIN US</h2>
             <div className="involved-grid">
-              {involvement.map(({ label, title, copy, action, href, image, alt, featured }) => (
-                <article className={`reveal${featured ? ' involved-featured' : ''}`} key={title}><a className="involved-card-link" href={href}><div className="involved-image"><Image src={image} alt={alt} fill sizes={featured ? '(max-width: 820px) 100vw, 58vw' : '(max-width: 820px) 100vw, 36vw'} /></div><div className="involved-card-shade" /><div className="involved-card-body"><p className="eyebrow light">{label}</p><h3>{title}</h3><p>{copy}</p><span className="editorial-link">{action}<i aria-hidden="true" /></span></div></a></article>
+              {involvement.map(({ title, copy, action, href, image, alt, featured }) => (
+                <article className={`reveal${featured ? ' involved-featured' : ''}`} key={title}><a className="involved-card-link" href={href}><div className="involved-image"><Image src={image} alt={alt} fill sizes={featured ? '(max-width: 820px) 100vw, 58vw' : '(max-width: 820px) 100vw, 36vw'} /></div><div className="involved-card-shade" /><div className="involved-card-body"><h3>{title}</h3><p>{copy}</p><span className="editorial-link">{action}<i aria-hidden="true" /></span></div></a></article>
               ))}
             </div>
           </div>
@@ -225,7 +201,7 @@ export default function Home() {
         <TrailDivider />
 
         <section className="faq-section" id="faq" aria-labelledby="faq-title">
-          <div className="section-shell faq-layout"><div><p className="eyebrow">Quick answers</p><h2 id="faq-title">Know before you go.</h2></div><div className="faq-list">{faqs.map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</div></div>
+          <div className="section-shell faq-layout"><h2 className="section-title" id="faq-title">QUICK ANSWERS</h2><div className="faq-list">{faqs.map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</div></div>
         </section>
       </main>
       </PublicContent>

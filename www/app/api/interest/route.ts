@@ -172,7 +172,7 @@ export async function POST(request: Request) {
     const email = field(body.email, 254);
     const name = field(body.name, 120);
     const organization = field(body.organization, 160);
-    const platform = field(body.platform, 20);
+    const platform = field(body.platform, 20) || (kind === 'beta' ? 'not-sure' : '');
     const interest = field(body.interest, 30);
     const message = field(body.message, 1500);
     const sourcePath = requestPath(request);
@@ -183,8 +183,12 @@ export async function POST(request: Request) {
       const error = 'Enter a valid email address.';
       return response(isHtmx, { ok: false, error }, 400, kind, error, compact);
     }
-    if (kind === 'beta' && (!platforms.has(platform) || !trailScopes.has(trail))) {
+    if (kind === 'beta' && !platforms.has(platform)) {
       const error = 'Choose your preferred mobile platform.';
+      return response(isHtmx, { ok: false, error }, 400, kind, error, compact);
+    }
+    if (kind === 'beta' && !trailScopes.has(trail)) {
+      const error = 'Choose a supported EuroTrex trail.';
       return response(isHtmx, { ok: false, error }, 400, kind, error, compact);
     }
     if (kind === 'involved' && (!name || !interests.has(interest) || !message)) {

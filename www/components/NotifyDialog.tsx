@@ -8,7 +8,7 @@ type NotifyButtonProps = {
   trail?: string;
 };
 
-export function NotifyButton({ children = 'Notify me', className = '', trail = 'all' }: NotifyButtonProps) {
+export function NotifyButton({ children = 'Notify Me', className = '', trail = 'all' }: NotifyButtonProps) {
   return (
     <button
       type="button"
@@ -34,7 +34,7 @@ export function NotifyDialog() {
       <div className="notify-dialog-panel">
         <button className="notify-dialog-close" type="button" data-notify-close aria-label="Close notification form">×</button>
         <div className="notify-dialog-heading">
-          <Image className="notify-dialog-icon" src="/eurotrex-app-icon-ui.webp" alt="" width={256} height={256} sizes="64px" />
+          <Image className="notify-dialog-icon" src="/eurotrex-app-icon-e4.webp" alt="" width={256} height={256} sizes="64px" />
           <div>
             <p className="eyebrow">App updates</p>
             <h2 id="notify-dialog-title">Know when EuroTrex is ready.</h2>
