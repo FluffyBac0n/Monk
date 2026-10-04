@@ -5,7 +5,7 @@ import { InformationPage } from '@/components/InformationPage';
 export const metadata: Metadata = { title: 'About Us', description: 'One project connecting trail information, trip planning and accommodation, starting with Cyprus-E4.', alternates: { canonical: '/about' } };
 
 export default function About() {
-  return <InformationPage label="The company and team" title="Built by EuroTrex Ltd." introduction="Behind EuroTrex are Petros Christofides and Andreas Michaelides.">
+  return <InformationPage title="THE TEAM" titleClassName="section-title">
     <section className="team-grid" aria-label="The EuroTrex team">
       {[{ name: 'Petros Christofides', photo: '/team-petros-christofides.webp', alt: 'Petros Christofides overlooking the Cyprus coastline' }, { name: 'Andreas Michaelides', photo: '/team-andreas-michaelides.webp', alt: 'Andreas Michaelides with his dog on a coastal walk in Cyprus' }].map(({ name, photo, alt }) => (
         <article className="team-member" key={name}>

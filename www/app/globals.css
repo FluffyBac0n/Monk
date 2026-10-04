@@ -291,13 +291,15 @@ html.modal-open { overflow: hidden; }
 .notify-dialog .form-feedback .interest-success { border: 0; border-radius: 12px; margin-top: 0; padding: 18px; }
 
 main[tabindex='-1']:focus { outline: none; }
+/* Anchor navigation focuses content for keyboard users, not a full-width control. */
+main section[tabindex='-1']:focus { outline: none; }
 .htmx-request { cursor: progress; }
 
 /* Public trail, involvement and partnership pages */
 .content-page { background: var(--sand); min-height: 70vh; }
 .content-hero { background: linear-gradient(105deg, rgba(38,53,68,.97), rgba(45,97,155,.88)), url('/cyprus-e4-forest-1200.webp') center 55% / cover; color: white; }
 .content-hero-inner { padding-block: 72px; }
-.content-hero h1, .simple-page-header h1 { font-size: clamp(42px, 6vw, 72px); }
+.content-hero h1, .simple-page-header h1:not(.section-title) { font-size: clamp(42px, 6vw, 72px); }
 .content-hero h1 { color: white; }
 .content-hero-inner > p:not(.eyebrow) { color: rgba(255,255,255,.78); font-size: 18px; line-height: 1.6; max-width: 690px; }
 .breadcrumbs { align-items: center; color: var(--muted); display: flex; flex-wrap: wrap; font-size: 11px; font-weight: 750; gap: 8px; margin-bottom: 38px; }
@@ -305,6 +307,7 @@ main[tabindex='-1']:focus { outline: none; }
 .breadcrumbs a:hover { color: var(--blue); }
 .content-hero .breadcrumbs a:hover { color: white; }
 .simple-page-header { padding-block: 64px 42px; }
+.simple-page-header .section-title { margin-bottom: 0; }
 .simple-page-header > p:last-child { color: var(--muted); font-size: 17px; line-height: 1.65; max-width: 720px; }
 .trail-switcher-bar { backdrop-filter: blur(14px); background: rgba(244,242,236,.96); border-bottom: 1px solid rgba(48,62,78,.14); box-shadow: 0 8px 24px rgba(38,53,68,.05); display: none; position: sticky; top: 60px; view-transition-name: trail-navigation; z-index: 90; }
 body:has(main[data-trail-guide]) .trail-switcher-bar { display: block; }
@@ -314,7 +317,7 @@ body:has(main[data-trail-guide]) .trail-switcher-bar { display: block; }
 .trail-switcher-list li { display: flex; }
 .trail-switcher-list li + li { border-left: 1px solid rgba(48,62,78,.1); }
 .trail-switcher-item { align-items: center; color: var(--muted); display: flex; gap: 10px; min-height: 54px; padding: 0 18px; position: relative; white-space: nowrap; }
-.trail-switcher-item strong { font-size: 12px; font-weight: 800; }
+.trail-switcher-item strong { font-size: 12px; font-weight: 800; text-transform: uppercase; }
 .trail-switcher-item.active { background: rgba(255,255,255,.38); color: var(--navy); }
 .trail-switcher-item.active::after { background: var(--blue); border-radius: 999px 999px 0 0; bottom: -1px; content: ''; height: 3px; left: 14px; position: absolute; right: 14px; }
 .trail-switcher-item.active:hover, .trail-switcher-item.active:focus-visible { background: rgba(255,255,255,.7); color: var(--blue); }
@@ -955,7 +958,7 @@ td small { color: var(--muted); margin-top: 5px; }
 .service-pills li { align-items: center; display: inline-flex; gap: 7px; font-size: 14px; }
 .service-pills svg { height: 20px; width: 20px; flex: none; color: var(--blue); }
 .stage-locator { background: var(--pale-blue); border-radius: 16px; margin: 28px 0; padding: 16px; }
-.simple-page-header h1 { color: var(--navy); font-size: clamp(36px, 4vw, 54px); line-height: 1.08; }
+.simple-page-header h1:not(.section-title) { color: var(--navy); font-size: clamp(36px, 4vw, 54px); line-height: 1.08; }
 .stage-locator svg { display: block; width: 100%; }
 .stage-locator figcaption { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; font-size: 14px; }
 .stage-locator figcaption span { color: var(--muted); }

@@ -80,7 +80,6 @@ export default function CyprusE4Overview() {
               <p className="eyebrow">Cyprus-E4 map</p>
               <h2 id="cyprus-e4-map-title">One trail across the island.</h2>
               <p>Trace the route from Pafos Airport through Akamas, the Troodos Mountains and the eastern coast to Larnaka Airport.</p>
-              <a className="guide-inline-link" href="/trails/cyprus-e4/stages">Explore {cyprusE4.stageCount} stage points <span aria-hidden="true">→</span></a>
             </article>
             <figure className="guide-map-frame">
               <Image
