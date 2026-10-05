@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart' as geo;
@@ -30,6 +31,8 @@ import '../../stages/presentation/stages_screen.dart';
 import '../../trail/domain/trail_direction.dart';
 import '../../trail/presentation/trail_direction_controller.dart';
 import '../domain/offline_map_state.dart';
+import '../domain/map_camera_intent.dart';
+import '../domain/map_location_context.dart';
 import 'map_flag_marker.dart';
 import 'offline_map_controller.dart';
 
@@ -66,13 +69,11 @@ List<int> mapProgressiveStageIndexes({
 }) {
   final stride = mapStageVisibilityStride(zoom);
   if (stride == 1) return List.unmodifiable(stageIndexes);
-  return stageIndexes
-      .where(
-        (index) =>
-            index == selectedStageIndex ||
-            stageIndexes.indexOf(index) % stride == 0,
-      )
-      .toList(growable: false);
+  return [
+    for (var offset = 0; offset < stageIndexes.length; offset++)
+      if (stageIndexes[offset] == selectedStageIndex || offset % stride == 0)
+        stageIndexes[offset],
+  ];
 }
 
 double mapTrailTapToleranceM(double zoom) {
@@ -674,6 +675,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   int? _selectedDetourIndex;
   bool _locating = false;
   bool _locationTrackingActive = false;
+  final _cameraIntent = MapCameraIntent();
+  int _gpsRequestGeneration = 0;
   StreamSubscription<geo.Position>? _positionSubscription;
   int? _gpsNearestStageIndex;
   double? _gpsDistanceFromTrailM;
@@ -718,6 +721,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
   @override
   void dispose() {
+    _gpsRequestGeneration++;
     _stageAnimationGeneration++;
     _lodgingAnimationGeneration++;
     _endpointTapListener?.cancel();
@@ -857,10 +861,12 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       _selectedStageIndex = null;
     });
     await _drawLodgings(map, animate: true);
-    await map.flyTo(
-      CameraOptions(center: point, zoom: 15, bearing: 0),
-      MapAnimationOptions(duration: 700, startDelay: 0),
-    );
+    if (mounted && _cameraIntent.initialRequest != null) {
+      await map.flyTo(
+        CameraOptions(center: point, zoom: 15, bearing: 0),
+        MapAnimationOptions(duration: 700, startDelay: 0),
+      );
+    }
     await _hydrateInitialLodgingLayer(lodging);
   }
 
@@ -1905,7 +1911,9 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       longitude: coordinates.lng.toDouble(),
       locationAccuracyM: 0,
       routePoints: widget.points,
-      stages: widget.stages,
+      stages: widget.direction.isReversed
+          ? widget.stages.reversed.toList(growable: false)
+          : widget.stages,
       direction: widget.direction,
       proximityThresholdM: mapTrailTapToleranceM(_currentZoom),
     );
@@ -1918,6 +1926,13 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
   void _recordAnnotationTap() {
     _lastAnnotationTapAt = DateTime.now();
+  }
+
+  void _handleCameraGesture(MapContentGestureContext gesture) {
+    _cameraIntent.onGesture();
+    if (gesture.gestureState == GestureState.started) {
+      unawaited(_map?.cancelCameraAnimation().catchError((_) {}));
+    }
   }
 
   Future<void> _handleMapIdle() async {
@@ -1985,7 +2000,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
   Future<void> _fitRoute() async {
     final map = _map;
-    if (map == null || widget.points.isEmpty) return;
+    final request = _cameraIntent.initialRequest;
+    if (map == null || widget.points.isEmpty || request == null) return;
 
     var minLat = widget.points.first.lat;
     var maxLat = minLat;
@@ -2015,13 +2031,18 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       null,
       null,
     );
+    if (!mounted || !_cameraIntent.isCurrent(request)) return;
     await map.flyTo(camera, MapAnimationOptions(duration: 700, startDelay: 0));
   }
 
   Future<void> _focusStage(int stageIndex) async {
     final map = _map;
     final distance = widget.stages[stageIndex].accumulatedDistanceKm;
-    if (map == null || distance == null) return;
+    if (map == null ||
+        distance == null ||
+        _cameraIntent.initialRequest == null) {
+      return;
+    }
     final point = routePointNearestDistance(widget.points, distance);
     await map.flyTo(
       CameraOptions(
@@ -2041,7 +2062,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }) async {
     final map = _map;
     final distance = widget.stages[stageIndex].accumulatedDistanceKm;
-    if (map == null || distance == null) return;
+    final request = _cameraIntent.initialRequest;
+    if (map == null || distance == null || request == null) return;
     final stagePoint = routePointNearestDistance(widget.points, distance);
     final coordinates = <Position>[
       Position(stagePoint.lng, stagePoint.lat),
@@ -2082,6 +2104,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       14,
       null,
     );
+    if (!mounted || !_cameraIntent.isCurrent(request)) return;
     await map.flyTo(camera, MapAnimationOptions(duration: 700, startDelay: 0));
   }
 
@@ -2096,6 +2119,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
   Future<void> _startLocationTracking({bool focus = true}) async {
     if (_locating) return;
+    _cameraIntent.startLocation(focus: focus);
+    final cameraRequest = _cameraIntent.revision;
     setState(() => _locating = true);
     try {
       if (!await geo.Geolocator.isLocationServiceEnabled()) {
@@ -2119,12 +2144,18 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         ),
       );
       final map = _map;
-      if (map == null) return;
+      if (map == null || !mounted) return;
       await _enableLocationPuck();
       if (!mounted) return;
       setState(() => _locationTrackingActive = true);
-      await _handleGpsPosition(position, focus: focus);
+      await _handleGpsPosition(
+        position,
+        focus: focus,
+        cameraRequest: cameraRequest,
+      );
+      if (!mounted) return;
       await _positionSubscription?.cancel();
+      if (!mounted) return;
       _positionSubscription =
           geo.Geolocator.getPositionStream(
             locationSettings: const geo.LocationSettings(
@@ -2140,14 +2171,18 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
             },
           );
     } catch (_) {
+      _cameraIntent.stopLocation();
       _showMessage('Your location could not be read right now.');
       if (mounted) setState(() => _locationTrackingActive = false);
     } finally {
+      if (!_locationTrackingActive) _cameraIntent.stopLocation();
       if (mounted) setState(() => _locating = false);
     }
   }
 
   Future<void> _stopLocationTracking() async {
+    _cameraIntent.stopLocation();
+    _gpsRequestGeneration++;
     await _positionSubscription?.cancel();
     _positionSubscription = null;
     final map = _map;
@@ -2170,41 +2205,54 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
   Future<void> _handleGpsPosition(
     geo.Position position, {
-    bool focus = true,
+    bool focus = false,
+    int? cameraRequest,
   }) async {
     if (!mounted || !_locationTrackingActive) return;
-    final match = findNearbyTrailStage(
+    final generation = ++_gpsRequestGeneration;
+    final request = cameraRequest ?? _cameraIntent.revision;
+    final points = widget.points;
+    final stages = widget.stages;
+    final direction = widget.direction;
+    final location = await compute(calculateMapLocationContext, (
       latitude: position.latitude,
       longitude: position.longitude,
-      locationAccuracyM: position.accuracy,
-      routePoints: widget.points,
-      stages: widget.stages,
-      direction: widget.direction,
-      proximityThresholdM: 100000,
-    );
-    final distanceM = distanceFromTrailM(
-      latitude: position.latitude,
-      longitude: position.longitude,
-      routePoints: widget.points,
-    );
-    final stageIndex = match == null
-        ? -1
-        : widget.stages.indexWhere((stage) => stage.id == match.stageId);
-    if (mounted) {
+      accuracyM: position.accuracy,
+      points: points,
+      stages: stages,
+      direction: direction,
+    ));
+    if (!mounted ||
+        !_locationTrackingActive ||
+        generation != _gpsRequestGeneration ||
+        !identical(points, widget.points) ||
+        !listEquals(stages, widget.stages) ||
+        direction != widget.direction) {
+      return;
+    }
+    if (_gpsNearestStageIndex != location.stageIndex ||
+        _gpsDistanceFromTrailM != location.distanceM) {
       setState(() {
-        _gpsNearestStageIndex = stageIndex < 0 ? null : stageIndex;
-        _gpsDistanceFromTrailM = distanceM;
+        _gpsNearestStageIndex = location.stageIndex;
+        _gpsDistanceFromTrailM = location.distanceM;
       });
     }
     final map = _map;
-    if (!focus || map == null || !_locationTrackingActive) return;
+    if (map == null || !_cameraIntent.shouldFollowLocation(request)) return;
+    // Only the explicit location action changes zoom. Subsequent fixes keep
+    // the current zoom/bearing, and gestures stop camera following entirely.
+    final camera = focus ? await map.getCameraState() : null;
+    if (!mounted ||
+        generation != _gpsRequestGeneration ||
+        !_cameraIntent.shouldFollowLocation(request)) {
+      return;
+    }
     await map.easeTo(
       CameraOptions(
         center: Point(
           coordinates: Position(position.longitude, position.latitude),
         ),
-        zoom: math.max(_currentZoom, 14),
-        bearing: 0,
+        zoom: camera == null ? null : math.max(camera.zoom, 14),
       ),
       MapAnimationOptions(duration: 650, startDelay: 0),
     );
@@ -2269,17 +2317,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
             _lodgingsVisible ||
             _excursionsVisible ||
             _detoursVisible;
-        if (_lastMapSize != constraints.biggest) {
-          _lastMapSize = constraints.biggest;
-          final selectedStageIndex = _selectedStageIndex;
-          if (selectedStageIndex != null && !_stagesExplicitlyHidden) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _selectedStageIndex == selectedStageIndex) {
-                _focusStage(selectedStageIndex);
-              }
-            });
-          }
-        }
+        _lastMapSize = constraints.biggest;
         return Stack(
           children: [
             MapWidget(
@@ -2289,6 +2327,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
               onMapCreated: _onMapCreated,
               onMapLoadedListener: _onMapLoaded,
               onMapIdleListener: (_) => _handleMapIdle(),
+              onScrollListener: _handleCameraGesture,
+              onZoomListener: _handleCameraGesture,
             ),
             if (!hasSelection)
               Positioned(
