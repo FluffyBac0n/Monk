@@ -74,4 +74,19 @@ void main() {
     camera.stopLocation();
     expect(camera.shouldFollowLocation(camera.revision), isFalse);
   });
+
+  test('explicit centering works after browsing and stops GPS following', () {
+    final camera = MapCameraIntent()..onGesture();
+    camera.startLocation(focus: true);
+    final pendingFix = camera.revision;
+
+    final fitRequest = camera.requestFocus();
+
+    expect(camera.isCurrent(fitRequest), isTrue);
+    expect(camera.shouldFollowLocation(pendingFix), isFalse);
+    expect(camera.shouldFollowLocation(camera.revision), isFalse);
+    expect(camera.initialRequest, isNull);
+    camera.onGesture();
+    expect(camera.isCurrent(fitRequest), isFalse);
+  });
 }

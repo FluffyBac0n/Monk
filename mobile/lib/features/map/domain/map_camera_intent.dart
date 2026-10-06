@@ -14,6 +14,14 @@ class MapCameraIntent {
     _revision++;
   }
 
+  /// Starts an explicit camera action while keeping delayed automatic fits
+  /// disabled. A subsequent gesture or location action can still cancel it.
+  int requestFocus() {
+    _hasGesture = true;
+    _followingLocation = false;
+    return ++_revision;
+  }
+
   void startLocation({required bool focus}) {
     _followingLocation = focus;
     _revision++;

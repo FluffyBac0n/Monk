@@ -30,6 +30,10 @@ import '../../stages/presentation/stages_controller.dart';
 import '../../stages/presentation/stages_screen.dart';
 import '../../trail/domain/trail_direction.dart';
 import '../../trail/presentation/trail_direction_controller.dart';
+import '../data/poi_directions_service.dart';
+import '../domain/poi_directions.dart';
+import 'poi_directions_controller.dart';
+import 'poi_directions_card.dart';
 import '../domain/offline_map_state.dart';
 import '../domain/map_camera_intent.dart';
 import '../domain/map_location_context.dart';
@@ -44,6 +48,7 @@ const _red = Color(0xFFD14B45);
 const _sand = Color(0xFFF4F2EC);
 const _yellow = Color(0xFFF2C94C);
 const _routeBlue = Color(0xFF1565C0);
+const mapPoiDirectionsRouteColor = Color(0xFFE36A18);
 const _accommodationBlue = Color(0xFF0288D1);
 const _excursionLightBlue = Color(0xFF76C7E5);
 const _excursionBlueTeal = Color(0xFF356F7A);
@@ -88,6 +93,21 @@ Color mapLodgingMarkerOutlineColor({required bool isSelected}) =>
 
 const mapSelectedLodgingRingRadius = 12.5;
 const mapSelectedLodgingRingWidth = 2.5;
+
+DirectionsCoordinate? mapStageDirectionsDestination(
+  TrailStage stage,
+  List<RoutePoint> points,
+) {
+  final distance = stage.accumulatedDistanceKm;
+  if (points.isEmpty ||
+      distance == null ||
+      !distance.isFinite ||
+      distance < 0) {
+    return null;
+  }
+  final point = routePointNearestDistance(points, distance);
+  return (latitude: point.lat, longitude: point.lng);
+}
 
 double mapLodgingSelectionZoom(double currentZoom) {
   if (!currentZoom.isFinite) return 12;
@@ -304,6 +324,7 @@ class MapScreen extends ConsumerWidget {
                           ref.read(elevationProvider.notifier).refresh(),
                     )
                   : _RouteMap(
+                      accessToken: accessToken,
                       points: points,
                       stages: stages,
                       direction: direction,
@@ -611,6 +632,7 @@ Future<void> _confirmOfflineMapDelete(
 
 class _RouteMap extends ConsumerStatefulWidget {
   const _RouteMap({
+    required this.accessToken,
     required this.points,
     required this.stages,
     required this.direction,
@@ -625,6 +647,7 @@ class _RouteMap extends ConsumerStatefulWidget {
     required this.plannedFinishDistanceKm,
   });
 
+  final String accessToken;
   final List<RoutePoint> points;
   final List<TrailStage> stages;
   final TrailDirection direction;
@@ -646,6 +669,9 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   late final CameraViewportState _initialViewport;
   MapboxMap? _map;
   PolylineAnnotationManager? _routeManager;
+  PolylineAnnotationManager? _directionsManager;
+  late final PoiDirectionsController _directions;
+  Future<void> _directionsRender = Future.value();
   PointAnnotationManager? _directionMarkerManager;
   PointAnnotationManager? _endpointManager;
   PointAnnotationManager? _endpointLabelManager;
@@ -706,6 +732,9 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   @override
   void initState() {
     super.initState();
+    _directions = PoiDirectionsController(
+      ref.read(poiDirectionsServiceProvider(widget.accessToken)),
+    )..addListener(_directionsChanged);
     final first = widget.points.first;
     final last = widget.points.last;
     _initialViewport = CameraViewportState(
@@ -721,6 +750,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
   @override
   void dispose() {
+    _directions.dispose();
     _gpsRequestGeneration++;
     _stageAnimationGeneration++;
     _lodgingAnimationGeneration++;
@@ -750,6 +780,11 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       interactionID: _routeTapInteractionId,
     );
     await _drawRoute(map);
+    _directionsManager = await map.annotations.createPolylineAnnotationManager(
+      id: 'eurotrex-poi-directions',
+    );
+    await _directionsManager!.setLineCap(LineCap.ROUND);
+    await _directionsManager!.setLineJoin(LineJoin.ROUND);
   }
 
   Future<void> _onMapLoaded(MapLoadedEventData _) async {
@@ -1704,6 +1739,11 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   Future<void> _toggleStages() async {
     final map = _map;
     if (map == null || _changingStageVisibility) return;
+    if (_stagesVisible &&
+        _selectedStageIndex != null &&
+        !_isEndpointStageIndex(_selectedStageIndex)) {
+      _directions.clear();
+    }
     setState(() => _changingStageVisibility = true);
     try {
       setState(() {
@@ -1720,6 +1760,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }
 
   Future<void> _selectStage(int stageIndex) async {
+    _directions.clear();
     final map = _map;
     final distance = widget.stages[stageIndex].accumulatedDistanceKm;
     if (map == null || distance == null) return;
@@ -1738,6 +1779,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }
 
   Future<void> _clearSelectedStage() async {
+    _directions.clear();
     setState(() => _selectedStageIndex = null);
     final map = _map;
     if (map != null) await _drawStages(map);
@@ -1754,6 +1796,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }
 
   Future<void> _selectLodging(int lodgingIndex) async {
+    _directions.clear();
     final map = _map;
     if (map == null ||
         lodgingIndex < 0 ||
@@ -1789,6 +1832,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }
 
   Future<void> _clearSelectedLodging() async {
+    _directions.clear();
     setState(() {
       _selectedLodgingIndex = null;
     });
@@ -1799,6 +1843,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }
 
   Future<void> _selectExcursion(int routeIndex) async {
+    _directions.clear();
     if (routeIndex < 0 || routeIndex >= _mappedExcursions.length) return;
     final map = _map;
     final stageWasSelected = _selectedStageIndex != null;
@@ -1821,6 +1866,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }
 
   Future<void> _selectDetour(int routeIndex) async {
+    _directions.clear();
     if (routeIndex < 0 || routeIndex >= _mappedDetours.length) return;
     final map = _map;
     final stageWasSelected = _selectedStageIndex != null;
@@ -1840,6 +1886,123 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   void _clearSelectedDetour() {
     if (!mounted) return;
     setState(() => _selectedDetourIndex = null);
+  }
+
+  void _directionsChanged() {
+    if (!mounted) return;
+    setState(() {});
+    // Serialize native annotation mutations so an older request cannot leave
+    // its line behind after a newer request or a clear action.
+    _directionsRender = _directionsRender
+        .then((_) async {
+          final manager = _directionsManager;
+          if (!mounted || manager == null) return;
+          await manager.deleteAll();
+          if (!mounted) return;
+          final route = _directions.route;
+          if (route == null) return;
+          await manager.create(
+            PolylineAnnotationOptions(
+              geometry: LineString(
+                coordinates: [
+                  for (final point in route.coordinates)
+                    Position(point.longitude, point.latitude),
+                ],
+              ),
+              lineColor: mapPoiDirectionsRouteColor.toARGB32(),
+              lineWidth: 6,
+              lineBorderColor: Colors.white.toARGB32(),
+              lineBorderWidth: 2,
+            ),
+          );
+        })
+        .catchError((Object _) {
+          if (mounted && _directions.route != null) {
+            _directions.mapUnavailable();
+          }
+        });
+  }
+
+  Future<void> _getPoiDirections(DirectionsMode mode) async {
+    DirectionsCoordinate? destination;
+    if (_selectedLodgingIndex case final index?) {
+      final location = _mappedLodgings[index].location;
+      if (location != null) {
+        destination = (
+          latitude: location.latitude,
+          longitude: location.longitude,
+        );
+      }
+    } else if (_selectedStageIndex case final index?) {
+      destination = mapStageDirectionsDestination(
+        widget.stages[index],
+        widget.points,
+      );
+    }
+    if (destination == null) return;
+    _cameraIntent.onGesture();
+    final cameraRequest = _cameraIntent.revision;
+    await _directions.load(
+      destination: destination,
+      mode: mode,
+      language: context.l10n.locale.languageCode,
+    );
+    await _directionsRender;
+    if (!mounted) return;
+    if (_directions.route != null) {
+      try {
+        await _enableLocationPuck();
+      } catch (_) {
+        // Routing remains available if the native location marker cannot render.
+      }
+    }
+    final route = _directions.route;
+    final map = _map;
+    if (!mounted ||
+        map == null ||
+        route == null ||
+        !_cameraIntent.isCurrent(cameraRequest)) {
+      return;
+    }
+    try {
+      final coordinates = route.coordinates;
+      final size = _lastMapSize ?? MediaQuery.sizeOf(context);
+      final camera = await map.cameraForCoordinateBounds(
+        CoordinateBounds(
+          southwest: Point(
+            coordinates: Position(
+              coordinates.map((p) => p.longitude).reduce(math.min),
+              coordinates.map((p) => p.latitude).reduce(math.min),
+            ),
+          ),
+          northeast: Point(
+            coordinates: Position(
+              coordinates.map((p) => p.longitude).reduce(math.max),
+              coordinates.map((p) => p.latitude).reduce(math.max),
+            ),
+          ),
+          infiniteBounds: false,
+        ),
+        MbxEdgeInsets(
+          top: 70,
+          left: 36,
+          bottom: size.height * 0.3 + 20,
+          right: 60,
+        ),
+        0,
+        0,
+        16,
+        null,
+      );
+      if (!mounted ||
+          !_cameraIntent.isCurrent(cameraRequest) ||
+          _directions.route != route) {
+        return;
+      }
+      await map.flyTo(camera, MapAnimationOptions(duration: 700));
+    } catch (_) {
+      // The calculated route remains usable even if camera fitting fails.
+    }
   }
 
   Future<void> _openSelectedLodgingBooking() async {
@@ -1998,9 +2161,30 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     );
   }
 
-  Future<void> _fitRoute() async {
+  PoiDirectionsCard? _selectedDirectionsCard() {
+    final stageIndex = _selectedStageIndex;
+    if (_selectedLodgingIndex == null &&
+        (stageIndex == null ||
+            mapStageDirectionsDestination(
+                  widget.stages[stageIndex],
+                  widget.points,
+                ) ==
+                null)) {
+      return null;
+    }
+    return PoiDirectionsCard(
+      controller: _directions,
+      formatter: widget.formatter,
+      onDirections: _getPoiDirections,
+      onClear: _directions.clear,
+    );
+  }
+
+  Future<void> _fitRoute({bool userInitiated = false}) async {
     final map = _map;
-    final request = _cameraIntent.initialRequest;
+    final request = userInitiated
+        ? _cameraIntent.requestFocus()
+        : _cameraIntent.initialRequest;
     if (map == null || widget.points.isEmpty || request == null) return;
 
     var minLat = widget.points.first.lat;
@@ -2017,6 +2201,16 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     final mapSize = _lastMapSize ?? MediaQuery.sizeOf(context);
     final portrait = mapSize.height > mapSize.width;
     final bearing = routeFitBearing(widget.points, mapSize);
+    final directions = _selectedDirectionsCard();
+    final bottomPadding = directions == null
+        ? (portrait ? 78.0 : 60.0)
+        : _directionsSheetCompactSize(
+                    context,
+                    BoxConstraints.tight(mapSize),
+                    directions,
+                  ) *
+                  mapSize.height +
+              24;
     final camera = await map.cameraForCoordinateBounds(
       CoordinateBounds(
         southwest: Point(coordinates: Position(minLng, minLat)),
@@ -2024,8 +2218,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         infiniteBounds: false,
       ),
       portrait
-          ? MbxEdgeInsets(top: 56, left: 24, bottom: 78, right: 48)
-          : MbxEdgeInsets(top: 38, left: 30, bottom: 60, right: 48),
+          ? MbxEdgeInsets(top: 56, left: 24, bottom: bottomPadding, right: 48)
+          : MbxEdgeInsets(top: 38, left: 30, bottom: bottomPadding, right: 48),
       bearing,
       0,
       null,
@@ -2317,6 +2511,17 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
             _lodgingsVisible ||
             _excursionsVisible ||
             _detoursVisible;
+        final directions = _selectedDirectionsCard();
+        final controlsBottom = !hasSelection
+            ? 90.0
+            : directions == null
+            ? 116.0
+            : math.max(
+                116.0,
+                _directionsSheetCompactSize(context, constraints, directions) *
+                        constraints.maxHeight +
+                    12,
+              );
         _lastMapSize = constraints.biggest;
         return Stack(
           children: [
@@ -2380,9 +2585,18 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
               ),
             Positioned(
               right: 12,
-              bottom: hasSelection ? 116 : 90,
+              bottom: controlsBottom,
               child: Column(
                 children: [
+                  _MapControl(
+                    key: const ValueKey('map-location-control'),
+                    tooltip: context.l10n.t('My location'),
+                    icon: _locating ? null : Icons.my_location_rounded,
+                    isSelected: _locationTrackingActive,
+                    selectedColor: EurotrexPalette.blue,
+                    onPressed: _toggleCurrentLocation,
+                  ),
+                  const SizedBox(height: 10),
                   _MapControl(
                     key: const ValueKey('map-layers-control'),
                     tooltip: context.l10n.t('Map layers'),
@@ -2395,17 +2609,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
                   _MapControl(
                     key: const ValueKey('map-fit-trail-control'),
                     tooltip: context.l10n.t('Show the whole trail'),
-                    icon: Icons.hiking_rounded,
-                    onPressed: _fitRoute,
-                  ),
-                  const SizedBox(height: 10),
-                  _MapControl(
-                    key: const ValueKey('map-location-control'),
-                    tooltip: context.l10n.t('My location'),
-                    icon: _locating ? null : Icons.my_location_rounded,
-                    isSelected: _locationTrackingActive,
-                    selectedColor: EurotrexPalette.blue,
-                    onPressed: _toggleCurrentLocation,
+                    icon: Icons.fit_screen_rounded,
+                    onPressed: () => _fitRoute(userInitiated: true),
                   ),
                 ],
               ),
@@ -2434,6 +2639,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
                     ))
                       route.detour,
                 ],
+                directions: directions,
+                route: _directions.route,
                 onOpenDetails: _openSelectedStage,
                 onClose: _clearSelectedStage,
               ),
@@ -2441,6 +2648,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
               MapLodgingInfoSheet(
                 lodging: _mappedLodgings[lodgingIndex],
                 formatter: widget.formatter,
+                directions: directions,
+                route: _directions.route,
                 onBook: _openSelectedLodgingBooking,
                 onOpenExternal: _openLodgingExternal,
                 onClose: _clearSelectedLodging,
@@ -2669,10 +2878,14 @@ class MapLodgingInfoSheet extends StatelessWidget {
     required this.formatter,
     required this.onBook,
     this.onOpenExternal,
+    this.directions,
+    this.route,
     required this.onClose,
     super.key,
   });
 
+  final Widget? directions;
+  final PoiDirections? route;
   final Lodging lodging;
   final MeasurementFormatter formatter;
   final VoidCallback onBook;
@@ -2694,7 +2907,7 @@ class MapLodgingInfoSheet extends StatelessWidget {
       if (type != null && type.isNotEmpty) l10n.t(type),
       if (village != null && village.isNotEmpty) l10n.t(village),
       if (lodging.distanceFromTrailKm case final distance?)
-        formatter.distance(distance),
+        '${formatter.distance(distance)} ${l10n.t('from trail')}',
     ];
     final facts = <_MapLodgingFactData>[
       if (_formatMapLodgingPrice(lodging, l10n) case final price?)
@@ -2743,7 +2956,13 @@ class MapLodgingInfoSheet extends StatelessWidget {
       icon: Icons.hotel_rounded,
       accentColor: _accommodationBlue,
       onClose: onClose,
+      headerFooter: directions,
+      minimalCompact: directions != null,
       children: [
+        if (route != null) ...[
+          PoiDirectionsInstructions(route: route!, formatter: formatter),
+          const SizedBox(height: 12),
+        ],
         Row(
           key: ValueKey('map-lodging-contact-actions-${lodging.id}'),
           children: [
@@ -3067,6 +3286,18 @@ String _formatMapWalkingTime(int minutes, AppLocalizations l10n) {
   return '$hours ${l10n.t('h')} $remaining ${l10n.t('min')}';
 }
 
+double _directionsSheetCompactSize(
+  BuildContext context,
+  BoxConstraints constraints,
+  PoiDirectionsCard directions,
+) =>
+    ((104 +
+                directions.compactHeight(context, constraints.maxWidth - 32) +
+                MediaQuery.paddingOf(context).bottom) /
+            constraints.maxHeight)
+        .clamp(0.11, 0.7)
+        .toDouble();
+
 class _MapSelectionSheet extends StatefulWidget {
   const _MapSelectionSheet({
     super.key,
@@ -3076,8 +3307,13 @@ class _MapSelectionSheet extends StatefulWidget {
     required this.accentColor,
     required this.onClose,
     required this.children,
+    this.headerFooter,
+    this.minimalCompact = false,
   });
 
+  final Widget? headerFooter;
+  final double compactSize = 0.14;
+  final bool minimalCompact;
   final String title;
   final String subtitle;
   final IconData icon;
@@ -3090,7 +3326,31 @@ class _MapSelectionSheet extends StatefulWidget {
 }
 
 class _MapSelectionSheetState extends State<_MapSelectionSheet> {
-  static const _compactSize = 0.14;
+  double _compactSize = 0.14;
+  bool _expanded = false;
+  double get _maximumSize => widget.minimalCompact ? 0.85 : 0.62;
+  double get _expandedSize =>
+      math.min(_maximumSize, math.max(0.44, _compactSize + 0.15));
+
+  @override
+  void initState() {
+    super.initState();
+    _compactSize = widget.compactSize;
+    _controller.addListener(_extentChanged);
+  }
+
+  void _extentChanged() {
+    if (!_controller.isAttached) return;
+    final expanded = _controller.size > _compactSize + 0.035;
+    if (expanded == _expanded) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _controller.isAttached) {
+        final next = _controller.size > _compactSize + 0.035;
+        if (next != _expanded) setState(() => _expanded = next);
+      }
+    });
+  }
+
   final DraggableScrollableController _controller =
       DraggableScrollableController();
 
@@ -3103,7 +3363,7 @@ class _MapSelectionSheetState extends State<_MapSelectionSheet> {
   Future<void> _toggleExpanded() async {
     if (!_controller.isAttached) return;
     await _controller.animateTo(
-      _controller.size < 0.3 ? 0.44 : _compactSize,
+      _controller.size <= _compactSize + 0.035 ? _expandedSize : _compactSize,
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOutCubic,
     );
@@ -3111,120 +3371,159 @@ class _MapSelectionSheetState extends State<_MapSelectionSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: DraggableScrollableSheet(
-        controller: _controller,
-        initialChildSize: _compactSize,
-        minChildSize: 0.11,
-        maxChildSize: 0.62,
-        snap: true,
-        snapSizes: const [_compactSize, 0.44, 0.62],
-        expand: false,
-        builder: (context, scrollController) {
-          return Material(
-            color: _sand,
-            elevation: 12,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: ListView(
-              controller: scrollController,
-              padding: EdgeInsets.only(
-                bottom: 16 + MediaQuery.paddingOf(context).bottom,
-              ),
-              children: [
-                InkWell(
-                  onTap: _toggleExpanded,
-                  child: Ink(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [EurotrexPalette.navy, EurotrexPalette.blue],
-                      ),
-                    ),
-                    padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.white54,
-                            borderRadius: BorderRadius.circular(2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final footer = widget.headerFooter;
+        final nextCompact = widget.minimalCompact && footer is PoiDirectionsCard
+            ? _directionsSheetCompactSize(context, constraints, footer)
+            : widget.compactSize;
+        if ((nextCompact - _compactSize).abs() > 0.001) {
+          final previousCompact = _compactSize;
+          final previousSize = _controller.isAttached
+              ? _controller.size
+              : previousCompact;
+          final wasCompact = (previousSize - previousCompact).abs() < 0.001;
+          _compactSize = nextCompact;
+          if (wasCompact) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted &&
+                  _controller.isAttached &&
+                  (_controller.size - previousSize).abs() < 0.001) {
+                _controller.jumpTo(_compactSize);
+              }
+            });
+          }
+        }
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: DraggableScrollableSheet(
+            controller: _controller,
+            initialChildSize: _compactSize,
+            minChildSize: widget.minimalCompact ? _compactSize : 0.11,
+            maxChildSize: _maximumSize,
+            // Directions cards retain the height chosen by the user. Updating
+            // details during a drag must not launch a snap back to compact.
+            snap: !widget.minimalCompact,
+            snapSizes: widget.minimalCompact ? null : const [0.14, 0.44, 0.62],
+            expand: false,
+            builder: (context, scrollController) {
+              return Material(
+                color: _sand,
+                elevation: 12,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: ListView(
+                  controller: scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.only(
+                    bottom: 16 + MediaQuery.paddingOf(context).bottom,
+                  ),
+                  children: [
+                    InkWell(
+                      onTap: _toggleExpanded,
+                      child: Ink(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              EurotrexPalette.navy,
+                              EurotrexPalette.blue,
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Row(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
+                        child: Column(
                           children: [
                             Container(
-                              width: 34,
-                              height: 34,
+                              width: 40,
+                              height: 4,
                               decoration: BoxDecoration(
-                                color: widget.accentColor,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(
-                                widget.icon,
-                                color: Colors.white,
-                                size: 20,
+                                color: Colors.white54,
+                                borderRadius: BorderRadius.circular(2),
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    widget.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                    ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    color: widget.accentColor,
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                  if (widget.subtitle.isNotEmpty)
-                                    Text(
-                                      widget.subtitle,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
+                                  child: Icon(
+                                    widget.icon,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                        ),
                                       ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: context.l10n.t('Close'),
-                              color: Colors.white,
-                              onPressed: widget.onClose,
-                              icon: const Icon(Icons.close_rounded),
+                                      if (widget.subtitle.isNotEmpty &&
+                                          (!widget.minimalCompact || _expanded))
+                                        Text(
+                                          widget.subtitle,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: context.l10n.t('Close'),
+                                  color: Colors.white,
+                                  onPressed: widget.onClose,
+                                  icon: const Icon(Icons.close_rounded),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    if (widget.headerFooter != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: widget.headerFooter,
+                      ),
+                    if (!widget.minimalCompact || _expanded)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: widget.children,
+                        ),
+                      ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: widget.children,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
@@ -3294,9 +3593,13 @@ class MapStageInfoSheet extends StatefulWidget {
     required this.onClose,
     this.excursions = const [],
     this.detours = const [],
+    this.directions,
+    this.route,
     super.key,
   });
 
+  final Widget? directions;
+  final PoiDirections? route;
   final TrailStage stage;
   final int stageIndex;
   final List<TrailStage> stages;
@@ -3342,6 +3645,43 @@ class _MapStageInfoSheetState extends State<MapStageInfoSheet> {
         : widget.stageIndex == widget.stages.length - 1
         ? l10n.t('Finish')
         : null;
+
+    if (widget.directions != null) {
+      return _MapSelectionSheet(
+        key: const ValueKey('map-stage-info-sheet'),
+        title: stage.name,
+        subtitle:
+            '${l10n.t('Cyprus-E4').toUpperCase()} · ${(endpointLabel ?? l10n.stage(stage.sequence)).toUpperCase()} · ${widget.stageIndex + 1}/${widget.stages.length}',
+        icon: Icons.place_rounded,
+        accentColor: EurotrexPalette.blue,
+        onClose: widget.onClose,
+        headerFooter: widget.directions,
+        minimalCompact: true,
+        children: [
+          if (widget.route case final route?)
+            PoiDirectionsInstructions(
+              route: route,
+              formatter: widget.formatter,
+            ),
+          StageInfoCards(
+            stage: stage,
+            stages: widget.stages,
+            index: widget.stageIndex,
+            direction: widget.direction,
+            formatter: widget.formatter,
+            excursions: widget.excursions,
+            detours: widget.detours,
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            key: const ValueKey('map-open-stage-info'),
+            onPressed: widget.onOpenDetails,
+            icon: const Icon(Icons.open_in_full_rounded),
+            label: Text(l10n.t('Open Stage Info')),
+          ),
+        ],
+      );
+    }
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -3495,7 +3835,7 @@ class LodgingMapSummaryCard extends StatelessWidget {
       if (type != null && type.isNotEmpty) l10n.t(type),
       if (village != null && village.isNotEmpty) l10n.t(village),
       if (lodging.distanceFromTrailKm case final distance?)
-        formatter.distance(distance),
+        '${formatter.distance(distance)} ${l10n.t('from trail')}',
       if (!bookingAvailable) l10n.t('Booking link unavailable'),
     ].join(' · ');
 

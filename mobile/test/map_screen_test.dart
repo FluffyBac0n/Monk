@@ -463,7 +463,10 @@ void main() {
     );
 
     expect(find.text('Flughafen Pafos'), findsOneWidget);
-    expect(find.text('Gästehaus · Flughafen Larnaka · 0.4 km'), findsOneWidget);
+    expect(
+      find.text('Gästehaus · Flughafen Larnaka · 0.4 km vom Weg'),
+      findsOneWidget,
+    );
 
     await tester.tap(
       find.byKey(const ValueKey('lodging-map-summary-forest-inn')),
@@ -520,7 +523,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Forest Inn'), findsOneWidget);
-    expect(find.text('Guesthouse · Troodos · 0.4 km'), findsOneWidget);
+    expect(
+      find.text('Guesthouse · Troodos · 0.4 km from trail'),
+      findsOneWidget,
+    );
     await tester.drag(find.text('Forest Inn'), const Offset(0, -320));
     await tester.pumpAndSettle();
     expect(find.text('Price'), findsOneWidget);
