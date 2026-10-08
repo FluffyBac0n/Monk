@@ -77,6 +77,8 @@ const deReportTranslations = <String, String>{
   'Enter valid latitude and longitude.':
       'Gib gültige Breiten- und Längengrade ein.',
   'Use this location': 'Diesen Standort verwenden',
+  'A photo failed its integrity check. Your report and photos are saved; retry the upload.':
+      'Ein Foto hat die Integritätsprüfung nicht bestanden. Deine Meldung und Fotos sind gespeichert; versuche den Upload erneut.',
   'Could not send. Your report and photos are saved; retry when connected.':
       'Senden fehlgeschlagen. Deine Meldung und Fotos sind gespeichert; versuche es mit einer Verbindung erneut.',
   'Could not send. Your report is saved; retry when connected.':
@@ -178,6 +180,8 @@ const esReportTranslations = <String, String>{
   'Enter valid latitude and longitude.':
       'Introduce una latitud y longitud válidas.',
   'Use this location': 'Usar esta ubicación',
+  'A photo failed its integrity check. Your report and photos are saved; retry the upload.':
+      'Una foto no superó la comprobación de integridad. Tu aviso y tus fotos están guardados; vuelve a intentar la subida.',
   'Could not send. Your report and photos are saved; retry when connected.':
       'No se pudo enviar. Tu aviso y tus fotos están guardados; inténtalo de nuevo con conexión.',
   'Could not send. Your report is saved; retry when connected.':
@@ -280,6 +284,8 @@ const itReportTranslations = <String, String>{
   'Enter valid latitude and longitude.':
       'Inserisci latitudine e longitudine valide.',
   'Use this location': 'Usa questa posizione',
+  'A photo failed its integrity check. Your report and photos are saved; retry the upload.':
+      'Una foto non ha superato il controllo di integrità. La segnalazione e le foto sono salvate; riprova il caricamento.',
   'Could not send. Your report and photos are saved; retry when connected.':
       'Invio non riuscito. La segnalazione e le foto sono salvate; riprova con una connessione.',
   'Could not send. Your report is saved; retry when connected.':
@@ -381,6 +387,8 @@ const frReportTranslations = <String, String>{
   'Enter valid latitude and longitude.':
       'Saisissez une latitude et une longitude valides.',
   'Use this location': 'Utiliser cet emplacement',
+  'A photo failed its integrity check. Your report and photos are saved; retry the upload.':
+      'Une photo n’a pas passé la vérification d’intégrité. Votre signalement et vos photos sont enregistrés ; réessayez l’envoi.',
   'Could not send. Your report and photos are saved; retry when connected.':
       'Envoi impossible. Votre signalement et vos photos sont enregistrés ; réessayez avec une connexion.',
   'Could not send. Your report is saved; retry when connected.':

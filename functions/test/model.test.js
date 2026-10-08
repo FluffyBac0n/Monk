@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateReport, validateReview, mayReview} from '../src/report-model.js';
+import {validateReport, validateReview, mayReview, validatePhotoChecksums} from '../src/report-model.js';
 const report = {trailId: 'cyprus-e4', category: 'signpost', passability: 'difficult', description: 'Sign fallen across the trail', latitude: 34.89, longitude: 32.87, accuracyM: 8, locationSource: 'gps', observedAtMs: Date.now(), photoIds: ['photo_0'], contactEmail: ''};
 test('validates trail reports and strips injected review/ownership fields', () => {
  const clean = validateReport({...report, status: 'resolved', reporterUid: 'other', admin: true});
@@ -18,4 +18,14 @@ test('forwarded/resolved/duplicate outcomes require meaningful context', () => {
  assert.throws(() => validateReview({status:'resolved',priority:'normal'},'abc'));
  assert.throws(() => validateReview({status:'duplicate',priority:'normal',duplicateOf:'abc'},'abc'));
  assert.equal(validateReview({status:'forwarded',priority:'high',authority:'Trail authority',note:'Sent'},'abc').status,'forwarded');
+});
+
+test('checksum manifest covers every original and validates hashes and sizes', () => {
+ const item={id:'photo_0',md5Hash:'kAFQmDzST7DWlj99KOF/cg==',byteLength:3};
+ assert.equal(validatePhotoChecksums(undefined,['photo_0']),null);
+ assert.equal(validatePhotoChecksums([],[]).size,0);
+ assert.deepEqual(validatePhotoChecksums([item],['photo_0']).get('photo_0'),{md5Hash:item.md5Hash,byteLength:3});
+ for (const bad of [null,{},[],[item,item],[{...item,id:'other'}],[{...item,md5Hash:'invalid'}],
+   [{...item,md5Hash:'kAFQmDzST7DWlj99KOF/ch=='}],[{...item,byteLength:0}],
+   [{...item,byteLength:2*1024*1024}],[{...item,byteLength:3.5}]]) assert.throws(()=>validatePhotoChecksums(bad,['photo_0']));
 });

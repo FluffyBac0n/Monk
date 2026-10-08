@@ -12,15 +12,19 @@ import '../../../app.dart';
 import '../../../core/database/database_provider.dart';
 import 'report_store.dart';
 import 'report_photos.dart';
+import 'report_photo_checksum.dart';
 
 const reportUploadFailure =
     'Could not send. Your report and photos are saved; retry when connected.';
+const reportPhotoIntegrityFailure =
+    'A photo failed its integrity check. Your report and photos are saved; retry the upload.';
 const reportVerificationFailure =
     'This app could not be verified. Your report is saved. Please update the app or contact EuroTrex.';
 const reportAuthenticationFailure =
     'The reporting service rejected this submission. Your report is saved. Please try again or contact EuroTrex.';
 const reportErrorMessages = {
   reportUploadFailure,
+  reportPhotoIntegrityFailure,
   reportVerificationFailure,
   reportAuthenticationFailure,
   'Could not send. Your report is saved; retry when connected.',
@@ -160,7 +164,17 @@ class ReportSync extends ChangeNotifier with WidgetsBindingObserver {
               .httpsCallable('beginTrailReport')
               .call(draft.submission());
           if ((begin.data as Map)['received'] != true) {
+            final checksums = <ReportPhotoChecksum>[];
             for (var i = 0; i < draft.photos.length; i++) {
+              // Hash the saved original on every attempt, including when an
+              // interrupted upload is reused. The backend checks these bytes
+              // before publishing any photo or accepting the report.
+              checksums.add(
+                await ReportPhotoChecksum.fromFile(
+                  'photo_$i',
+                  File(draft.photos[i]),
+                ),
+              );
               final reference = FirebaseStorage.instanceFor(app: firebaseApp).ref(
                 'trail-report-uploads/${user.uid}/${draft.id}/photo_$i/photo.jpg',
               );
@@ -180,6 +194,9 @@ class ReportSync extends ChangeNotifier with WidgetsBindingObserver {
             }
             await functions.httpsCallable('finalizeTrailReport').call({
               'reportId': draft.id,
+              'photoChecksums': checksums
+                  .map((checksum) => checksum.toJson())
+                  .toList(),
             });
           }
           draft.state = 'sent';

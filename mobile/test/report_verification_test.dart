@@ -50,6 +50,15 @@ void main() {
         ),
         reportAuthenticationFailure,
       );
+      expect(
+        reportUploadErrorMessage(
+          FirebaseFunctionsException(
+            code: 'failed-precondition',
+            message: reportPhotoIntegrityFailure,
+          ),
+        ),
+        reportPhotoIntegrityFailure,
+      );
       const limit =
           'The daily report limit has been reached. Please try tomorrow.';
       expect(

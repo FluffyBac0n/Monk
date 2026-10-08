@@ -6,7 +6,7 @@ import {onCall, HttpsError} from 'firebase-functions/v2/https';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {createHash} from 'node:crypto';
 import sharp from 'sharp';
-import {requireId, validateReport, validateReview, mayReview} from './report-model.js';
+import {requireId, validateReport, validateReview, mayReview, validatePhotoChecksums} from './report-model.js';
 
 initializeApp();
 const db = getFirestore();
@@ -81,6 +81,7 @@ export const finalizeTrailReport = callable(async ({auth, data}) => {
   const report = snap.data();
   if (report.uploadState === 'complete') return {reportId, received: true};
   if (report.uploadState !== 'uploading') throw new HttpsError('failed-precondition', 'This draft expired. Create a new report.');
+  const checksums = validate(() => validatePhotoChecksums(data.photoChecksums, report.photoIds));
   const photos = [];
   for (const id of report.photoIds) {
     const source = bucket.file(`trail-report-uploads/${auth.uid}/${reportId}/${id}/photo.jpg`);
@@ -88,7 +89,16 @@ export const finalizeTrailReport = callable(async ({auth, data}) => {
     if (!exists) throw new HttpsError('failed-precondition', 'Some photos have not finished uploading.');
     const [meta] = await source.getMetadata();
     if (Number(meta.size) > 2 * 1024 * 1024) throw new HttpsError('invalid-argument', 'Photo is too large.');
-    const [bytes] = await source.download();
+    const [bytes] = await bucket.file(source.name, {generation: meta.generation}).download();
+    const expected = checksums?.get(id);
+    if (expected && (bytes.length !== expected.byteLength
+      || createHash('md5').update(bytes).digest('base64') !== expected.md5Hash)) {
+      // Keep originals on the device and the report pending. Only the owning
+      // reporter's mismatched staging generation is removed for a clean retry.
+      // Storage rules still deny client overwrite/delete, including on retries.
+      await source.delete({ifGenerationMatch: meta.generation, ignoreNotFound: true});
+      throw new HttpsError('failed-precondition', 'A photo failed its integrity check. Your report and photos are saved; retry the upload.');
+    }
     let full, thumb;
     try {
       const image = sharp(bytes, {limitInputPixels: 24_000_000, animated: false}).rotate();

@@ -8,6 +8,8 @@ import {getAuth, connectAuthEmulator, signInAnonymously, createUserWithEmailAndP
 import {getFunctions, connectFunctionsEmulator, httpsCallable} from 'firebase/functions';
 import {getStorage, connectStorageEmulator, ref, uploadBytes} from 'firebase/storage';
 import sharp from 'sharp';
+import {createHash} from 'node:crypto';
+import {getStorage as adminStorage} from 'firebase-admin/storage';
 const enabled = !!process.env.FIREBASE_AUTH_EMULATOR_HOST;
 test('full submission → private images → trail review → forwarding → revocation', {skip:!enabled, timeout:90000}, async () => {
  const projectId='demo-eurotrex';
@@ -38,8 +40,24 @@ test('full submission → private images → trail review → forwarding → rev
   await hiker.call('beginTrailReport',data);
   await assert.rejects(hiker.call('finalizeTrailReport',{reportId}));
   const image=await sharp({create:{width:100,height:100,channels:3,background:'#e36a18'}}).jpeg().toBuffer();
-  await uploadBytes(ref(hiker.storage,`trail-report-uploads/${hiker.user.uid}/${reportId}/photo_0/photo.jpg`),image,{contentType:'image/jpeg'});
-  assert.equal((await hiker.call('finalizeTrailReport',{reportId})).received,true);
+  const uploadPath=`trail-report-uploads/${hiker.user.uid}/${reportId}/photo_0/photo.jpg`;
+  const checksum={id:'photo_0',md5Hash:createHash('md5').update(image).digest('base64'),byteLength:image.length};
+  // A changed upload of the same byte length catches corruption that size
+  // checks alone cannot detect.
+  const corrupt=Buffer.from(image);corrupt[corrupt.length-3]^=1;
+  await uploadBytes(ref(hiker.storage,uploadPath),corrupt,{contentType:'image/jpeg'});
+  await assert.rejects(other.call('finalizeTrailReport',{reportId,photoChecksums:[checksum]}),{code:'functions/permission-denied'});
+  await assert.rejects(hiker.call('finalizeTrailReport',{reportId,photoChecksums:[]}),{code:'functions/invalid-argument'});
+  assert.equal((await adminStorage(admin).bucket().file(uploadPath).exists())[0],true);
+  await assert.rejects(hiker.call('finalizeTrailReport',{reportId,photoChecksums:[checksum]}),error=>
+   error.code==='functions/failed-precondition' && error.message.includes('integrity check'));
+  assert.equal((await adminStorage(admin).bucket().file(uploadPath).exists())[0],false);
+  assert.equal((await db.doc(`trailReports/${reportId}`).get()).data().uploadState,'uploading');
+  assert.equal((await hiker.call('trailReportReceipt',{reportId})).received,false);
+  assert.equal((await db.doc(`trailReports/${reportId}`).collection('events').get()).size,0);
+  await uploadBytes(ref(hiker.storage,uploadPath),image,{contentType:'image/jpeg'});
+  // The existing object is verified on retry, rather than assumed to be valid.
+  assert.equal((await hiker.call('finalizeTrailReport',{reportId,photoChecksums:[checksum]})).received,true);
   assert.equal((await hiker.call('beginTrailReport',data)).received,true);
   assert.equal((await hiker.call('finalizeTrailReport',{reportId})).received,true);
   assert.equal((await db.doc(`trailReports/${reportId}`).collection('events').get()).size,1);
@@ -54,5 +72,10 @@ test('full submission → private images → trail review → forwarding → rev
   await owner.call('setTrailReportAccess',{email:staff.user.email,trailId:'cyprus-e4',grant:false});
   await assert.rejects(staff.call('trailReportPhoto',{reportId,photoId:'photo_0'}));
   assert.equal((await db.doc(`trailReports/${reportId}`).get()).data().trailId,'cyprus-e4');
+  // Already-distributed builds still submit photos without the new manifest.
+  const legacyId='legacy-photo-report';
+  await hiker.call('beginTrailReport',{...data,reportId:legacyId});
+  await uploadBytes(ref(hiker.storage,`trail-report-uploads/${hiker.user.uid}/${legacyId}/photo_0/photo.jpg`),image,{contentType:'image/jpeg'});
+  assert.equal((await hiker.call('finalizeTrailReport',{reportId:legacyId})).received,true);
  } finally {await Promise.all(apps.map(deleteApp));}
 });

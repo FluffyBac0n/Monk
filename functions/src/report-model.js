@@ -47,3 +47,21 @@ export function validateReview(data, reportId) {
   if (['resolved', 'dismissed'].includes(data.status) && !note) throw new Error('Add a resolution or dismissal note.');
   return {status: data.status, priority: data.priority, authority, forwardingReference, note, duplicateOf};
 }
+
+// Older app builds omit this manifest. New builds must describe every original
+// photo so a retry cannot silently reuse a truncated or different upload.
+export function validatePhotoChecksums(value, photoIds) {
+  if (value === undefined) return null;
+  if (!Array.isArray(value) || value.length !== photoIds.length || value.length > 3) throw new Error('Invalid photo checksums.');
+  const checksums = new Map();
+  for (const item of value) {
+    if (!item || typeof item !== 'object') throw new Error('Invalid photo checksum.');
+    const id = requireId(item.id);
+    if (!photoIds.includes(id) || checksums.has(id)) throw new Error('Invalid photo identifier.');
+    if (typeof item.md5Hash !== 'string' || !/^[A-Za-z0-9+/]{22}==$/.test(item.md5Hash)
+      || Buffer.from(item.md5Hash, 'base64').toString('base64') !== item.md5Hash) throw new Error('Invalid photo checksum.');
+    if (!Number.isSafeInteger(item.byteLength) || item.byteLength <= 0 || item.byteLength >= 2 * 1024 * 1024) throw new Error('Invalid photo size.');
+    checksums.set(id, {md5Hash: item.md5Hash, byteLength: item.byteLength});
+  }
+  return checksums;
+}
