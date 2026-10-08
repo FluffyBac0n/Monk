@@ -1,0 +1,34 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function verified() { return signedIn() && request.auth.token.email_verified == true; }
+    function admin() {
+      return verified() && (request.auth.token.admin == true
+        || firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid)));
+    }
+    function canReview(reportId) {
+      let report = firestore.get(/databases/(default)/documents/trailReports/$(reportId));
+      return report.data.uploadState == 'complete' && (admin() || (verified()
+        && firestore.exists(/databases/(default)/documents/trailReportAccess/$(request.auth.uid))
+        && report.data.trailId in firestore.get(/databases/(default)/documents/trailReportAccess/$(request.auth.uid)).data.trailIds));
+    }
+    match /trail-report-uploads/{uid}/{reportId}/{photoId}/{filename} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && resource == null
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType == 'image/jpeg'
+        && firestore.get(/databases/(default)/documents/trailReports/$(reportId)).data.reporterUid == uid
+        && firestore.get(/databases/(default)/documents/trailReports/$(reportId)).data.uploadState == 'uploading'
+        && filename == 'photo.jpg'
+        && photoId in firestore.get(/databases/(default)/documents/trailReports/$(reportId)).data.photoIds;
+      allow update, delete: if false;
+    }
+    match /trail-report-media/{reportId}/{filename} {
+      allow read: if canReview(reportId);
+      allow write: if false;
+    }
+    match /{path=**} { allow read, write: if false; }
+  }
+}

@@ -13,6 +13,7 @@ export function PortalHeader({ user, admin = false, canAccessAdmin = false }: { 
       <div className="portal-nav">
         {user && <span className="account-email">{user.email}</span>}
         {admin ? <a href="/portal">Owner portal</a> : canAccessAdmin ? <a href="/admin">Admin</a> : null}
+        <a href="/trail-reports">Trail reports</a>
         <a href="/">Website</a>
         <a href="/help#hosts">Help</a>
         {user && <button className="text-button" onClick={() => signOut(auth)}>Sign out</button>}

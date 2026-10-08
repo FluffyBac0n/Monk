@@ -99,7 +99,7 @@ function AdminSession({ user }: { user: User }) {
       <PortalHeader user={user} admin />
       <div className="dashboard-shell wide">
         <section className="dashboard-title">
-          <div><p className="eyebrow">EUROTREX OPERATIONS</p><h1>Accommodation review.</h1><p>Verify ownership, protect trail quality and control every listing visible in the app.</p></div>
+          <div><p className="eyebrow">EUROTREX OPERATIONS</p><h1>Accommodation review.</h1><a className="button button-secondary" href="/trail-reports">Trail reports &amp; trail access →</a><p>Verify ownership, protect trail quality and control every listing visible in the app.</p></div>
           <span className="admin-badge">Admin</span>
         </section>
         <section className="metric-grid">

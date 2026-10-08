@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "EuroTrex";
 "NSLocationWhenInUseUsageDescription" = "EuroTrex uses your location to find your nearby trail stage.";
+"NSCameraUsageDescription" = "Take photos of trail problems to share with the authorised trail team.";
+"NSPhotoLibraryUsageDescription" = "Select photos to include in a trail problem report.";

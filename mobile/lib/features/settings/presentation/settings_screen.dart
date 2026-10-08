@@ -1,3 +1,4 @@
+import '../../reports/presentation/report_screen.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -45,6 +46,15 @@ class SettingsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
           children: [
+            ListTile(
+              leading: const Icon(Icons.report_outlined),
+              title: Text(l10n.t('My reports')),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const MyReportsScreen(),
+                ),
+              ),
+            ),
             _SettingsCard(
               icon: Icons.translate_rounded,
               title: l10n.t('Language'),

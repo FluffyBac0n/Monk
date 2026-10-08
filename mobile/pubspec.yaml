@@ -49,6 +49,14 @@ dependencies:
   url_launcher: ^6.3.2
   package_info_plus: ^10.2.1
   flutter_svg: ^2.3.0
+  firebase_auth: ^6.7.0
+  firebase_storage: ^13.6.0
+  cloud_functions: ^6.5.0
+  firebase_app_check: ^0.4.8
+  image_picker: ^1.2.4
+  path_provider: ^2.1.6
+  image: ^4.10.1
+  uuid: ^4.6.0
 
 dev_dependencies:
   integration_test:

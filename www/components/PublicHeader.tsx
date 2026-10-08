@@ -57,6 +57,7 @@ export function PublicHeader({ activeTrail }: { activeTrail?: string }) {
           </nav>
           <div className="header-actions">
             <a className="header-portal-button desktop-header-action" href="/portal" {...disableHtmxNavigation}>Host Portal</a>
+            <a className="header-portal-button desktop-header-action" href="/trail-reports" {...disableHtmxNavigation}>Trail Reports</a>
             <NotifyButton className="header-portal-button desktop-header-action">Notify Me</NotifyButton>
             <LanguageControl />
             <MobileMenu />

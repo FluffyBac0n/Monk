@@ -12,6 +12,7 @@ export default function MobileMenu() {
         <a href="/get-involved">Join Us</a>
         <a href="/about">About Us</a>
         <a className="header-portal-button" href="/portal" {...disableHtmxNavigation}>Host Portal</a>
+        <a className="header-portal-button" href="/trail-reports" {...disableHtmxNavigation}>Trail Reports</a>
         <NotifyButton className="header-portal-button">Notify Me</NotifyButton>
       </nav>
     </details>

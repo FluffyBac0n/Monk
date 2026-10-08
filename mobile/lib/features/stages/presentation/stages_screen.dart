@@ -1,3 +1,4 @@
+import '../../reports/presentation/report_screen.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -3969,6 +3970,7 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
         onElevation: _openElevation,
       ),
       appBar: EurotrexChromeTheme.appBar(
+        actions: [ReportMenu(trailId: cyprusE4TrailId, stageId: stage.id)],
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

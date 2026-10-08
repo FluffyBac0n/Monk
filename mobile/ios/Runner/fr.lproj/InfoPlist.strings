@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "EuroTrex";
 "NSLocationWhenInUseUsageDescription" = "EuroTrex utilise votre position pour trouver l’étape du sentier la plus proche.";
+"NSCameraUsageDescription" = "Prenez des photos des problèmes sur le sentier pour les partager avec l’équipe autorisée.";
+"NSPhotoLibraryUsageDescription" = "Sélectionnez les photos à inclure dans un signalement de problème sur le sentier.";

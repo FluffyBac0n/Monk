@@ -1,3 +1,4 @@
+import '../../reports/presentation/report_screen.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -301,6 +302,7 @@ class MapScreen extends ConsumerWidget {
           ],
         ),
         actions: [
+          const ReportMenu(trailId: cyprusE4TrailId),
           if (offlineMap != null)
             _OfflineMapAppBarButton(
               state: offlineMap,

@@ -28,6 +28,35 @@ service cloud.firestore {
         && (!profile.data.keys().hasAny(['accessStatus']) || profile.data.accessStatus == 'active');
     }
 
+    function canReviewTrailReports(trailId) {
+      return isAdmin() || (hasVerifiedEmail()
+        && exists(/databases/$(database)/documents/trailReportAccess/$(request.auth.uid))
+        && trailId in get(/databases/$(database)/documents/trailReportAccess/$(request.auth.uid)).data.trailIds);
+    }
+
+    match /trailReportAccess/{uid} {
+      allow get: if isAdmin() || (hasVerifiedEmail() && request.auth.uid == uid);
+      allow list: if isAdmin();
+      allow write: if false;
+    }
+
+    match /trailReports/{reportId} {
+      allow read: if resource.data.uploadState == 'complete'
+        && canReviewTrailReports(resource.data.trailId);
+      // Callable functions validate submissions/reviews and create audit events.
+      allow write: if false;
+      match /events/{eventId} {
+        allow read: if get(/databases/$(database)/documents/trailReports/$(reportId)).data.uploadState == 'complete'
+          && canReviewTrailReports(get(/databases/$(database)/documents/trailReports/$(reportId)).data.trailId);
+        allow write: if false;
+      }
+    }
+
+    match /trailReportAccessAudit/{eventId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     function validShortString(value, maximum) {
       return value is string && value.size() > 0 && value.size() <= maximum;
     }

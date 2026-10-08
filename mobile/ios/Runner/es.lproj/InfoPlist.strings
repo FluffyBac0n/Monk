@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "EuroTrex";
 "NSLocationWhenInUseUsageDescription" = "EuroTrex usa tu ubicación para encontrar la etapa de la ruta más cercana.";
+"NSCameraUsageDescription" = "Haz fotos de los problemas en la ruta para compartirlas con el equipo autorizado.";
+"NSPhotoLibraryUsageDescription" = "Selecciona fotos para incluir en un aviso de problema en la ruta.";

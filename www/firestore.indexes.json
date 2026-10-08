@@ -1,4 +1,121 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "trailReports",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "trailId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "uploadState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "receivedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "trailReports",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "uploadState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "receivedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "trailReports",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "uploadState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "trailReports",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "trailId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "uploadState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "receivedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "trailReports",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "trailId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "uploadState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "receivedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "trailReports",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "trailId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "uploadState",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "receivedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

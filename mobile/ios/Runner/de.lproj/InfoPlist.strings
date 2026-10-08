@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "EuroTrex";
 "NSLocationWhenInUseUsageDescription" = "EuroTrex verwendet deinen Standort, um deine nächstgelegene Wanderetappe zu finden.";
+"NSCameraUsageDescription" = "Fotografiere Probleme am Wanderweg, um die Bilder mit dem zuständigen Wegteam zu teilen.";
+"NSPhotoLibraryUsageDescription" = "Wähle Fotos für eine Meldung über ein Problem am Wanderweg aus.";

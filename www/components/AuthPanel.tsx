@@ -13,6 +13,7 @@ import { auth } from '@/lib/firebase';
 
 type AuthPanelProps = {
   admin?: boolean;
+  trailReports?: boolean;
 };
 
 type AccountMode = 'signin' | 'register';
@@ -36,7 +37,7 @@ function authErrorMessage(caught: unknown) {
   return messages[authErrorCode(caught)] || 'We could not complete that request. Please try again.';
 }
 
-export function AuthPanel({ admin = false }: AuthPanelProps = {}) {
+export function AuthPanel({ admin = false, trailReports = false }: AuthPanelProps = {}) {
   const [mode, setMode] = useState<AuthMode>('signin');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -74,7 +75,7 @@ export function AuthPanel({ admin = false }: AuthPanelProps = {}) {
     const password = String(data.get('password') || '');
     const companyName = String(data.get('companyName') || '').trim();
 
-    if (mode === 'register' && !admin && !companyName) {
+    if (mode === 'register' && !admin && !trailReports && !companyName) {
       setError('Enter your company name.');
       setBusy(false);
       return;
@@ -84,7 +85,7 @@ export function AuthPanel({ admin = false }: AuthPanelProps = {}) {
       if (mode === 'register' && !admin) {
         const result = await createUserWithEmailAndPassword(auth, email, password);
         try {
-          await registerOwnerProfile(result.user, companyName);
+          if (!trailReports) await registerOwnerProfile(result.user, companyName);
         } catch {
           await deleteUser(result.user).catch(() => undefined);
           throw new Error('profile-create-failed');
@@ -128,14 +129,14 @@ export function AuthPanel({ admin = false }: AuthPanelProps = {}) {
     clearFeedback();
   }
 
-  const heading = admin
+  const heading = trailReports ? (mode === 'register' ? 'Create your trail team account.' : mode === 'reset' ? 'Reset your password.' : 'Trail team sign in.') : admin
     ? 'Administrator sign in.'
     : mode === 'register'
       ? 'Create your host account.'
       : mode === 'reset'
         ? 'Reset your password.'
         : 'Welcome back.';
-  const introduction = admin
+  const introduction = trailReports ? 'Verify your email, then ask a EuroTrex administrator to assign your trails. Only assigned trail teams and administrators can open reports.' : admin
     ? 'Sign in with your authorised EuroTrex administrator account.'
     : mode === 'register'
       ? 'Add your company details and verify your email. Host access is reviewed within 1–3 days; property listings are reviewed separately after submission.'
@@ -145,12 +146,12 @@ export function AuthPanel({ admin = false }: AuthPanelProps = {}) {
 
   return (
     <section className="auth-card">
-      <p className="eyebrow">{admin ? 'EUROTREX OPERATIONS' : 'ACCOMMODATION PARTNERS'}</p>
+      <p className="eyebrow">{trailReports ? 'TRAIL REPORTS' : admin ? 'EUROTREX OPERATIONS' : 'ACCOMMODATION PARTNERS'}</p>
       <h1>{heading}</h1>
       <p>{introduction}</p>
 
       {!admin && mode !== 'reset' && (
-        <div className="auth-tabs" role="group" aria-label="Host account action">
+        <div className="auth-tabs" role="group" aria-label={trailReports ? "Trail team account action" : "Host account action"}>
           <button type="button" aria-pressed={mode === 'signin'} className={mode === 'signin' ? 'active' : ''} onClick={() => switchAccountMode('signin')}>Sign in</button>
           <button type="button" aria-pressed={mode === 'register'} className={mode === 'register' ? 'active' : ''} onClick={() => switchAccountMode('register')}>Create account</button>
         </div>
@@ -165,7 +166,7 @@ export function AuthPanel({ admin = false }: AuthPanelProps = {}) {
         </form>
       ) : (
         <form onSubmit={submitAccount} className="form-grid single">
-          {mode === 'register' && !admin && <label><span className="field-label">Company name <span className="required-marker" aria-hidden="true">*</span></span><input name="companyName" autoComplete="organization" minLength={2} maxLength={160} required /></label>}
+          {mode === 'register' && !admin && !trailReports && <label><span className="field-label">Company name <span className="required-marker" aria-hidden="true">*</span></span><input name="companyName" autoComplete="organization" minLength={2} maxLength={160} required /></label>}
           <label><span className="field-label">Email address <span className="required-marker" aria-hidden="true">*</span></span><input name="email" type="email" autoComplete="email" maxLength={254} required /></label>
           <label><span className="field-label">Password <span className="required-marker" aria-hidden="true">*</span></span><input name="password" type="password" minLength={8} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} required /></label>
           {error && <p className="form-message error" role="alert">{error}</p>}
@@ -176,7 +177,7 @@ export function AuthPanel({ admin = false }: AuthPanelProps = {}) {
 
       {mode === 'signin' && <button type="button" className="text-button reset-link" disabled={busy} onClick={openReset}>Forgot your password?</button>}
       {mode === 'reset' && <button type="button" className="text-button reset-link" disabled={busy} onClick={() => switchAccountMode('signin')}>Back to sign in</button>}
-      {!admin && mode === 'signin' && <p className="auth-invitation-help">Want to list a stay? <a href="/portal?mode=register" onClick={(event) => { event.preventDefault(); switchAccountMode('register'); }}>Create your host account</a>.</p>}
+      {!admin && !trailReports && mode === 'signin' && <p className="auth-invitation-help">Want to list a stay? <a href="/portal?mode=register" onClick={(event) => { event.preventDefault(); switchAccountMode('register'); }}>Create your host account</a>.</p>}
     </section>
   );
 }

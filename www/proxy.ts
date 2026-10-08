@@ -7,13 +7,13 @@ const contentSecurityPolicy = [
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/",
   "script-src-attr 'none'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://tile.openstreetmap.org",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com",
-  "frame-src 'self' https://eurotrex.firebaseapp.com",
+  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://europe-west1-eurotrex.cloudfunctions.net https://www.google.com/recaptcha/",
+  "frame-src 'self' https://eurotrex.firebaseapp.com https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   'upgrade-insecure-requests',
@@ -35,9 +35,13 @@ export function proxy(request: NextRequest) {
     // Safari upgrades localhost assets too. Our local server has no TLS;
     // keep every other protection and retain HTTPS enforcement elsewhere.
     if (localHttp && name === 'Strict-Transport-Security') return;
-    response.headers.set(name, localHttp && name === 'Content-Security-Policy'
-      ? value.replace('; upgrade-insecure-requests', '')
-      : value);
+    let header = localHttp && name === 'Content-Security-Policy'
+      ? value.replace('; upgrade-insecure-requests', '') : value;
+    if (localHttp && name === 'Content-Security-Policy' && process.env.NODE_ENV === 'development'
+      && process.env.NEXT_PUBLIC_REPORTS_EMULATOR === 'true') {
+      header = header.replace("connect-src 'self'", "connect-src 'self' http://127.0.0.1:9099 http://127.0.0.1:8080 http://127.0.0.1:5001");
+    }
+    response.headers.set(name, header);
   });
   return response;
 }

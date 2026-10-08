@@ -637,3 +637,13 @@ For app usage:
 - Read `detours`, then each selected detour's nested `routeChunks` ordered by
   `chunkIndex`; use its two connection maps to render where it leaves and rejoins
   the E4.
+
+## Private trail problem reports
+
+Trail problem reports use root collections `trailReports`, `trailReportAccess`,
+`trailReportAccessAudit`, and `trailReportQuotas`. Every report includes `trailId`;
+reports are intentionally outside the public trail hierarchy. Only verified
+admins and verified users assigned to that trail can read completed reports and
+their audit history. Callable Functions control writes and return limited
+receipts to submitting hikers. See [trail-reports.md](trail-reports.md) for the
+mobile queue, private image paths, role management, deployment and test workflow.

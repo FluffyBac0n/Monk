@@ -1,3 +1,4 @@
+import 'features/reports/data/report_sync.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -16,6 +17,7 @@ class EuroTrexApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(firebaseReadyProvider)) ref.watch(reportSyncProvider);
     final settings = ref.watch(appSettingsProvider);
     final legalConsent = ref.watch(legalConsentProvider);
     return MaterialApp(

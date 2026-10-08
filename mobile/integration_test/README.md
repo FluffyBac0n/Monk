@@ -31,3 +31,17 @@ flutter run -d <simulator-id> --dart-define-from-file=env.local.json
 ```
 
 Never print or commit `env.local.json` or expose the token in test output.
+
+Trail reporting is covered by `trail_reports_test.dart`. Start the isolated
+`demo-eurotrex` Firebase emulators with `firebase.reports.json` and seed
+`trails/cyprus-e4` first. From `mobile/`, run:
+
+```sh
+flutter test integration_test/trail_reports_test.dart -d <simulator-id> --dart-define-from-file=env.local.json
+```
+
+This checks validation, native persistent images/SQLite drafts, offline queueing,
+Firebase upload/finalization and the receipt. It uses a separate Firebase app
+connected only to emulator endpoints. Android debug builds permit HTTP only to
+localhost and the emulator host; release network settings are unchanged. Real
+camera/GPS and signed device attestation need a separate physical-device check.
