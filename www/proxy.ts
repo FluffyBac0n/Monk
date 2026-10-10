@@ -10,9 +10,9 @@ const contentSecurityPolicy = [
   "script-src 'self' 'unsafe-inline' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/",
   "script-src-attr 'none'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://tile.openstreetmap.org",
+  "img-src 'self' data: blob: https://api.mapbox.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://europe-west1-eurotrex.cloudfunctions.net https://www.google.com/recaptcha/",
+  "connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebaseapp.com https://europe-west1-eurotrex.cloudfunctions.net https://www.google.com/recaptcha/",
   "frame-src 'self' https://eurotrex.firebaseapp.com https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
@@ -30,6 +30,13 @@ const securityHeaders = [
 
 export function proxy(request: NextRequest) {
   const response = NextResponse.next();
+  // Documents point to build-specific chunks. Revalidate them after publication
+  // while the excluded, content-hashed static assets keep their normal caching.
+  if (!request.nextUrl.pathname.startsWith('/api/')) {
+    response.headers.set('Cache-Control', 'private, no-cache, max-age=0, must-revalidate');
+    response.headers.set('CDN-Cache-Control', 'no-store');
+    response.headers.set('Cloudflare-CDN-Cache-Control', 'no-store');
+  }
   const localHttp = isLocalHttpPreview(request.url);
   securityHeaders.forEach(([name, value]) => {
     // Safari upgrades localhost assets too. Our local server has no TLS;

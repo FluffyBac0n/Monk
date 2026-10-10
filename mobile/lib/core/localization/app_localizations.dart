@@ -6,6 +6,7 @@ import 'translations_directions.dart';
 import 'translations_it.dart';
 import 'translations_legal.dart';
 import 'translations_reports.dart';
+import 'translations_map.dart';
 
 class AppLocalizations {
   const AppLocalizations(this.locale);
@@ -148,18 +149,21 @@ class _AppLocalizationsDelegate
 const _translations = <String, Map<String, String>>{
   'it': {
     ...itReportTranslations,
+    ...itMapTranslations,
     ...italianTranslations,
     ...italianLegalTranslations,
     ...itDirectionsTranslations,
   },
   'fr': {
     ...frReportTranslations,
+    ...frMapTranslations,
     ...frenchTranslations,
     ...frenchLegalTranslations,
     ...frDirectionsTranslations,
   },
   'de': {
     ...deReportTranslations,
+    ...deMapTranslations,
     ...deDirectionsTranslations,
     ...germanLegalTranslations,
     'EUROTREX': 'EUROTREX',
@@ -758,6 +762,7 @@ const _translations = <String, Map<String, String>>{
   },
   'es': {
     ...esReportTranslations,
+    ...esMapTranslations,
     ...esDirectionsTranslations,
     ...spanishLegalTranslations,
     'EUROTREX': 'EUROTREX',

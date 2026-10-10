@@ -1157,3 +1157,111 @@ td small { color: var(--muted); margin-top: 5px; }
   .report-export-actions .button { width: 100%; }
   .report-members li { align-items: flex-start; flex-direction: column; gap: 12px; }
 }
+
+/* Trail care map and date controls share the portal's spacing and control sizes. */
+.report-map-panel { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; overflow: hidden; }
+.report-map-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; }
+.report-map-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; font-size: 13px; font-weight: 700; color: var(--navy); }
+.report-map-legend span { display: inline-flex; gap: 8px; align-items: center; }
+.report-map-line { width: 26px; height: 4px; border-radius: 4px; background: var(--blue); }
+.report-map-warning { color: #b78c16; font-style: normal; font-size: 22px; }
+.report-map-panel .trail-report-map { height: 420px; border: 0; border-radius: 0; margin: 0; }
+.report-map-caption { margin: 0; padding: 14px 20px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.report-map-message { position: absolute; top: 100px; left: 20px; right: 70px; background: #fff; padding: 20px; border-radius: 14px; box-shadow: 0 4px 18px #26354420; color: var(--navy); }
+.report-map-message p { margin: 0 0 14px; }
+.report-map-marker { width: 46px; height: 46px; padding: 0; border: 0; background: transparent; cursor: pointer; z-index: 1; }
+.report-map-marker svg { display: block; width: 46px; height: 46px; overflow: visible; filter: drop-shadow(0 2px 2px #26354455); transition: scale .15s; }
+.report-map-marker path { fill: var(--gold); stroke: var(--navy); stroke-width: 2; }
+.report-map-marker text { fill: var(--navy); font: 900 29px system-ui, sans-serif; }
+.report-map-marker.is-selected { z-index: 3; }
+.report-map-marker.is-selected path { fill: #d56825; stroke: #fff; stroke-width: 3; }
+.report-map-marker.is-selected text { fill: #fff; }
+.report-map-marker.is-selected svg { scale: 1.2; filter: drop-shadow(0 0 4px #263544aa); }
+.report-map-marker:focus-visible { outline: 3px solid var(--blue); outline-offset: 5px; border-radius: 10px; }
+.report-date-field { position: relative; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.report-date-label { font-size: 13px; font-weight: 800; color: var(--navy); }
+.report-date-trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 48px; background: #fbfcfa; border: 1px solid #cbd2ce; border-radius: var(--radius-control); padding: 12px 14px; color: var(--navy); font: inherit; font-size: 14px; text-transform: none; cursor: pointer; }
+.report-date-trigger:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.report-date-trigger svg { flex-shrink: 0; }
+.report-calendar { position: absolute; top: calc(100% + 10px); right: 0; z-index: 10; width: 360px; max-width: calc(100vw - 48px); padding: 16px; background: #fff; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 12px 36px #26354426; }
+.report-calendar-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; color: var(--navy); }
+.report-calendar-header strong { font-size: 15px; }
+.report-calendar-arrow.button { width: 46px; min-width: 46px; padding: 0; font-size: 25px; }
+.report-calendar-weekdays, .report-calendar-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.report-calendar-weekdays { margin-bottom: 6px; color: var(--muted); font-size: 11px; font-weight: 700; text-align: center; }
+.report-calendar-day { min-height: 46px; width: 100%; border: 1px solid transparent; border-radius: var(--radius-compact-control); background: transparent; color: var(--navy); font: inherit; font-size: 13px; cursor: pointer; padding: 0; }
+.report-calendar-day.outside-month { color: #859198; }
+.report-calendar-day.today { border-color: var(--blue); }
+.report-calendar-day:hover { background: var(--pale-blue); }
+.report-calendar-day.chosen { background: var(--blue); color: #fff; font-weight: 800; }
+.report-calendar-day:focus-visible { outline: 2px solid var(--navy); outline-offset: -3px; }
+.report-calendar-footer { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); margin-top: 14px; padding-top: 14px; }
+@media (max-width: 520px) {
+  .report-map-toolbar { padding: 14px; gap: 10px; }
+  .report-map-legend { gap: 4px 14px; }
+  .report-map-panel .trail-report-map { height: 360px; }
+  .report-map-caption { padding: 14px; }
+  .report-calendar { left: 0; right: auto; width: 100%; padding: 12px; }
+}
+
+.report-map-panel.is-preloading { height: 0; margin: 0; border: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
+.report-map-toolbar .button { flex-shrink: 0; white-space: nowrap; }
+.report-action-choices { display: flex; flex-wrap: wrap; gap: 12px; }
+.report-location-actions { display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; max-width: 100%; overflow-x: auto; padding: 4px 3px 12px; }
+.report-location-actions .button { flex: 0 0 auto; white-space: nowrap; min-height: var(--control-height); gap: 9px; }
+.report-location-actions img { object-fit: contain; flex-shrink: 0; }
+.report-progress { margin: 24px 0; padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: #f8faf8; }
+.report-progress-title, .report-review-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.report-progress-title > strong { color: var(--navy); font-size: 15px; }
+.report-progress-steps { --step-gap: 8px; list-style: none; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: var(--step-gap); padding: 0; margin: 24px 0 18px; }
+.report-progress-steps li { position: relative; display: grid; align-content: start; justify-items: center; gap: 8px; text-align: center; color: var(--muted); font-size: 12px; }
+.report-progress-steps li::before { content: ''; position: absolute; height: 2px; background: var(--line); top: 17px; left: calc(-50% - var(--step-gap) + 23px); width: calc(100% + var(--step-gap) - 46px); }
+.report-progress-steps li:first-child::before { display: none; }
+.report-progress-steps li > span { display: grid; place-items: center; position: relative; width: 36px; height: 36px; border-radius: 50%; background: #fff; border: 1px solid var(--line); font-size: 13px; font-weight: 800; }
+.report-progress-steps li.reached > span { color: #17583a; background: #dcefe4; border-color: #a9ccb8; }
+.report-progress-steps li.current > span { color: #fff; background: var(--blue); border-color: var(--blue); box-shadow: 0 0 0 4px #2d5dd318; }
+.report-progress-steps li.current strong { color: var(--blue); }
+.report-progress-steps small { font-size: 10px; }
+.report-progress p { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.report-progress .report-forwarded-to { border-top: 1px solid var(--line); padding-top: 12px; overflow-wrap: anywhere; }
+.report-status.status-reviewed { background: #e2ebfa; color: #254b9a; }
+.report-status.status-forwarded { background: #ede6f4; color: #67458a; }
+.report-status.status-dismissed, .report-status.status-duplicate { background: #e9ebec; color: #4e5a60; }
+.report-review-workflow { border-top: 1px solid var(--line); margin-top: 28px; padding-top: 28px; }
+.report-review-heading { margin-bottom: 22px; }
+.report-review-heading h3 { margin: 0; }
+.report-review-heading .eyebrow { margin: 0 0 8px; }
+.report-other-outcomes { margin: 18px 0; color: var(--muted); font-size: 13px; }
+.report-other-outcomes summary { cursor: pointer; padding: 8px 0; }
+.report-other-outcomes .report-action-choices { margin-top: 10px; }
+.report-action-form { margin-top: 20px; padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: #f8faf8; }
+.report-action-explanation { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.6; }
+.report-forward-fields { display: grid; gap: 20px; }
+.report-forward-fields .report-helper { margin: -8px 0 0; }
+.report-transition-confirm { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.report-transition-confirm > span { color: var(--muted); font-size: 13px; }
+.report-transition-confirm > span strong { color: var(--navy); }
+@media (max-width: 520px) {
+  .report-progress, .report-action-form { padding: 16px; }
+  .report-progress-steps { --step-gap: 4px; }
+  .report-progress-steps li { font-size: 11px; }
+  .report-action-choices .button { flex: 1 1 calc(50% - 12px); padding-inline: 10px; }
+  .report-transition-confirm { flex-direction: column; align-items: stretch; }
+}
+
+.report-next-step-link { margin-top: 18px; }
+.report-review-workflow { scroll-margin-top: 28px; }
+.report-review-workflow:focus { outline: none; }
+
+/* Report dropdowns share the calendar's rounded surface, spacing and selection colors. */
+.report-select-field { position: relative; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.report-select-trigger { text-align: left; }
+.report-select-trigger > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-select-trigger:disabled { opacity: .6; cursor: default; }
+.report-select-menu { position: absolute; top: calc(100% + 10px); left: 0; z-index: 12; width: 100%; min-width: 0; max-height: 300px; overflow-y: auto; overscroll-behavior: contain; padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 12px 36px #26354426; }
+.report-select-menu.opens-above { top: auto; bottom: calc(100% + 10px); }
+.report-select-option { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 46px; padding: 10px 12px; border: 2px solid transparent; border-radius: var(--radius-compact-control); color: var(--navy); font-size: 14px; line-height: 1.4; cursor: pointer; overflow-wrap: anywhere; }
+.report-select-option > span:last-child { width: 16px; flex-shrink: 0; }
+.report-select-option.active { background: var(--pale-blue); border-color: var(--blue); }
+.report-select-option[aria-selected='true'] { background: var(--blue); color: #fff; font-weight: 800; }
+.report-select-option[aria-selected='true'].active { border-color: var(--navy); }

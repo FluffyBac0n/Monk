@@ -1,4 +1,6 @@
 const deReportTranslations = <String, String>{
+  'Received': 'Empfangen',
+  'Status unavailable': 'Status nicht verfügbar',
   'This app could not be verified. Your report is saved. Please update the app or contact EuroTrex.':
       'Diese App konnte nicht verifiziert werden. Deine Meldung ist gespeichert. Aktualisiere die App oder kontaktiere EuroTrex.',
   'The reporting service rejected this submission. Your report is saved. Please try again or contact EuroTrex.':
@@ -102,6 +104,8 @@ const deReportTranslations = <String, String>{
 };
 
 const esReportTranslations = <String, String>{
+  'Received': 'Recibido',
+  'Status unavailable': 'Estado no disponible',
   'This app could not be verified. Your report is saved. Please update the app or contact EuroTrex.':
       'No se pudo verificar esta aplicación. Tu aviso está guardado. Actualiza la aplicación o contacta con EuroTrex.',
   'The reporting service rejected this submission. Your report is saved. Please try again or contact EuroTrex.':
@@ -205,6 +209,8 @@ const esReportTranslations = <String, String>{
 };
 
 const itReportTranslations = <String, String>{
+  'Received': 'Ricevuta',
+  'Status unavailable': 'Stato non disponibile',
   'This app could not be verified. Your report is saved. Please update the app or contact EuroTrex.':
       'Impossibile verificare questa app. La segnalazione è salvata. Aggiorna l’app o contatta EuroTrex.',
   'The reporting service rejected this submission. Your report is saved. Please try again or contact EuroTrex.':
@@ -309,6 +315,8 @@ const itReportTranslations = <String, String>{
 };
 
 const frReportTranslations = <String, String>{
+  'Received': 'Reçu',
+  'Status unavailable': 'Statut indisponible',
   'This app could not be verified. Your report is saved. Please update the app or contact EuroTrex.':
       'Impossible de vérifier cette application. Votre signalement est enregistré. Mettez l’application à jour ou contactez EuroTrex.',
   'The reporting service rejected this submission. Your report is saved. Please try again or contact EuroTrex.':

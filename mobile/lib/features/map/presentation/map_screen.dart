@@ -40,6 +40,7 @@ import '../domain/map_camera_intent.dart';
 import '../domain/map_location_context.dart';
 import 'map_flag_marker.dart';
 import 'offline_map_controller.dart';
+import 'map_background_sheet.dart';
 
 const mapboxAccessToken = String.fromEnvironment('MAPBOX_ACCESS_TOKEN');
 
@@ -722,6 +723,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   bool _detoursLoaded = false;
   bool _openingLodgingBooking = false;
   bool _initialCameraApplied = false;
+  MapBackground _background = MapBackground.terrain;
+  bool _changingBackground = false;
   Size? _lastMapSize;
   int _stageSheetGeneration = 0;
   int _stageAnimationGeneration = 0;
@@ -2101,7 +2104,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }
 
   Future<void> _handleMapIdle() async {
-    if (_updatingZoomLayers) return;
+    if (_updatingZoomLayers || _changingBackground) return;
     final map = _map;
     if (map == null) return;
     _updatingZoomLayers = true;
@@ -2129,8 +2132,73 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     }
   }
 
-  Future<void> _openLayersSheet() async {
+  Future<void> _openBackgroundSheet() async {
+    if (!mounted ||
+        _map == null ||
+        !_initialCameraApplied ||
+        _changingBackground ||
+        _updatingZoomLayers ||
+        _changingStageVisibility ||
+        _changingLodgingVisibility) {
+      return;
+    }
+    final next = await showModalBottomSheet<MapBackground>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * .85,
+      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) => MapBackgroundSheet(
+        selected: _background,
+        onSelect: (background) => Navigator.pop(context, background),
+      ),
+    );
+    if (next == null || next == _background || !mounted) return;
+    final map = _map;
+    if (map == null) return;
+    final previous = _background;
+    setState(() => _changingBackground = true);
+    try {
+      // Keep the existing native map, camera, GPS and annotation managers.
+      // Mapbox retains annotations across styles; sprite names need resolving again.
+      await map
+          .loadStyleURI(next.styleUri)
+          .timeout(const Duration(seconds: 20));
+      if (!mounted) return;
+      setState(() => _background = next);
+      await _refreshStyleMarkers(map);
+    } catch (_) {
+      if (!mounted) return;
+      try {
+        await map
+            .loadStyleURI(previous.styleUri)
+            .timeout(const Duration(seconds: 20));
+        if (!mounted) return;
+        setState(() => _background = previous);
+        await _refreshStyleMarkers(map);
+      } catch (_) {
+        // Keep the picker available so the user can return to downloaded Terrain.
+      }
+      _showMessage(
+        'Could not load this map layer. Check your connection and try again.',
+      );
+    } finally {
+      if (mounted) setState(() => _changingBackground = false);
+    }
+  }
+
+  Future<void> _refreshStyleMarkers(MapboxMap map) async {
+    _stageStyleImages.clear();
+    _lodgingStyleImages.clear();
+    await _drawStages(map);
     if (!mounted) return;
+    await _drawLodgings(map);
+  }
+
+  Future<void> _openPoiSheet() async {
+    if (!mounted || _changingBackground) return;
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
@@ -2143,7 +2211,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
               if (sheetContext.mounted) setSheetState(() {});
             }
 
-            return _MapLayersSheet(
+            return _MapPoiSheet(
               stagesVisible: _stagesVisible,
               lodgingsVisible: _lodgingsVisible,
               excursionsVisible: _excursionsVisible,
@@ -2600,12 +2668,21 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
                   ),
                   const SizedBox(height: 10),
                   _MapControl(
-                    key: const ValueKey('map-layers-control'),
-                    tooltip: context.l10n.t('Map layers'),
-                    icon: Icons.layers_outlined,
+                    key: const ValueKey('map-poi-control'),
+                    tooltip: context.l10n.t('Points of Interest'),
+                    icon: Icons.pin_drop_outlined,
                     isSelected: hasActiveLayers,
                     selectedColor: EurotrexPalette.navy,
-                    onPressed: _openLayersSheet,
+                    onPressed: _openPoiSheet,
+                  ),
+                  const SizedBox(height: 10),
+                  _MapControl(
+                    key: const ValueKey('map-layers-control'),
+                    tooltip: context.l10n.t('Map layers'),
+                    icon: _changingBackground ? null : Icons.layers_outlined,
+                    isSelected: _background != MapBackground.terrain,
+                    selectedColor: EurotrexPalette.navy,
+                    onPressed: _openBackgroundSheet,
                   ),
                   const SizedBox(height: 10),
                   _MapControl(
@@ -2675,8 +2752,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }
 }
 
-class _MapLayersSheet extends StatelessWidget {
-  const _MapLayersSheet({
+class _MapPoiSheet extends StatelessWidget {
+  const _MapPoiSheet({
     required this.stagesVisible,
     required this.lodgingsVisible,
     required this.excursionsVisible,
@@ -2708,7 +2785,7 @@ class _MapLayersSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Material(
-      key: const ValueKey('map-layers-sheet'),
+      key: const ValueKey('map-poi-sheet'),
       color: _sand,
       elevation: 14,
       shape: const RoundedRectangleBorder(
@@ -2736,11 +2813,14 @@ class _MapLayersSheet extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(Icons.layers_outlined, color: EurotrexPalette.navy),
+                const Icon(
+                  Icons.pin_drop_outlined,
+                  color: EurotrexPalette.navy,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    l10n.t('Map layers'),
+                    l10n.t('Points of Interest'),
                     style: const TextStyle(
                       color: EurotrexPalette.navy,
                       fontSize: 18,

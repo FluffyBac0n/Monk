@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { SITE_URL } from '@/lib/site';
+import { deploymentRecovery } from '@/lib/deployment-recovery';
 import './globals.css';
 
 const publicRuntimeBootstrap = `(() => {
-  if (/^\\/(?:portal|admin)(?:\\/|$)/.test(window.location.pathname)) return;
+  if (/^\\/(?:portal|admin|trail-reports)(?:\\/|$)/.test(window.location.pathname)) return;
 
   window.addEventListener('popstate', (event) => {
     if (!event.state || event.state.htmx !== true) return;
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: deploymentRecovery }} />
         <meta
           name="htmx-config"
           content={JSON.stringify({ allowEval: false, allowScriptTags: false, includeIndicatorStyles: false })}

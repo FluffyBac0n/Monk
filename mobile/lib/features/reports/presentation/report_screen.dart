@@ -18,6 +18,7 @@ import '../../trail/domain/trail_direction.dart';
 import '../data/report_photos.dart';
 import '../data/report_store.dart';
 import '../data/report_sync.dart';
+import 'report_card_header.dart';
 
 const _reportSand = Color(0xFFF4F2EC);
 const _reportSurface = Color(0xFFFBFAF6);
@@ -121,9 +122,9 @@ const reportCategoryLabels = {
   'other': 'Other',
 };
 const reportStatusLabels = {
-  'new': 'New',
+  'new': 'Received',
   'reviewed': 'Reviewed',
-  'forwarded': 'Forwarded',
+  'forwarded': 'Sent',
   'resolved': 'Resolved',
   'duplicate': 'Duplicate',
   'dismissed': 'Dismissed',
@@ -432,9 +433,21 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                       for (final entry in reportCategoryLabels.entries)
                         DropdownMenuItem(
                           value: entry.key,
-                          child: Text(
-                            t(entry.value),
-                            overflow: TextOverflow.ellipsis,
+                          child: Row(
+                            children: [
+                              Icon(
+                                reportDamageIcon(entry.key),
+                                size: 22,
+                                color: EurotrexPalette.navy,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  t(entry.value),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                     ],
@@ -722,31 +735,27 @@ class MyReportsScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              context.l10n.t(
+                            ReportCardHeader(
+                              category: draft.category,
+                              title: context.l10n.t(
                                 reportCategoryLabels[draft.category] ?? 'Other',
                               ),
-                              style: Theme.of(context).textTheme.titleMedium,
+                              uploadState: draft.state,
+                              remoteStatus: draft.remoteStatus,
                             ),
+                            const SizedBox(height: 8),
                             Text(
                               draft.description.isEmpty
                                   ? context.l10n.t('Draft')
                                   : draft.description,
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              context.l10n.t(switch (draft.state) {
-                                'draft' => 'Draft',
-                                'queued' => 'Waiting for connection',
-                                'uploading' => 'Uploading…',
-                                'sent' => 'Sent',
-                                _ => 'Upload failed — saved on device',
-                              }),
-                            ),
-                            if (draft.state == 'sent')
+                            if (draft.state == 'sent') ...[
+                              const SizedBox(height: 12),
                               SelectableText(
-                                '${context.l10n.t('Reference')}: ${draft.id}\n${context.l10n.t('Status')}: ${context.l10n.t(reportStatusLabels[draft.remoteStatus] ?? 'New')}',
+                                '${context.l10n.t('Reference')}: ${draft.id}',
+                                style: Theme.of(context).textTheme.bodySmall,
                               ),
+                            ],
                             if (draft.error.isNotEmpty)
                               Text(
                                 context.l10n.t(

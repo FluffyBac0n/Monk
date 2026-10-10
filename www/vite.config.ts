@@ -1,5 +1,6 @@
 import { sites } from '@openai/sites-vite-plugin';
 import path from 'node:path';
+import {readFileSync, existsSync} from 'node:fs';
 import tailwindcss from '@tailwindcss/postcss';
 import vinext from 'vinext';
 import { defineConfig, type Plugin } from 'vite';
@@ -54,7 +55,11 @@ const localBindingConfig = {
     : [],
 };
 
-export default defineConfig(async () => {
+export default defineConfig(async ({mode}) => {
+  if (mode === 'development' && existsSync(new URL('./env.local.json', import.meta.url))) {
+    const config = JSON.parse(readFileSync(new URL('./env.local.json', import.meta.url), 'utf8'));
+    if (typeof config.MAPBOX_ACCESS_TOKEN === 'string' && config.MAPBOX_ACCESS_TOKEN.startsWith('pk.')) localVars.MAPBOX_PUBLIC_ACCESS_TOKEN = config.MAPBOX_ACCESS_TOKEN;
+  }
   // Keep Wrangler and Miniflare state project-local. These are non-secret tool
   // settings; application environment belongs in ignored `.env*` files.
   process.env.WRANGLER_WRITE_LOGS ??= 'false';
