@@ -24,6 +24,7 @@ class MapCameraIntent {
 
   void startLocation({required bool focus}) {
     _followingLocation = focus;
+    if (focus) _hasGesture = true;
     _revision++;
   }
 

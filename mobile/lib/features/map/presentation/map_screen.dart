@@ -41,6 +41,7 @@ import '../domain/map_location_context.dart';
 import 'map_flag_marker.dart';
 import 'offline_map_controller.dart';
 import 'map_background_sheet.dart';
+import 'map_session.dart';
 
 const mapboxAccessToken = String.fromEnvironment('MAPBOX_ACCESS_TOKEN');
 
@@ -669,7 +670,13 @@ class _RouteMap extends ConsumerStatefulWidget {
 }
 
 class _RouteMapState extends ConsumerState<_RouteMap> {
-  late final CameraViewportState _initialViewport;
+  late final CameraOptions _initialCamera;
+  late final MapSession _session;
+  late final bool _restoringCamera;
+  late final bool _restoreGps;
+  late final bool _restoreLodgings;
+  late final bool _restoreExcursions;
+  late final bool _restoreDetours;
   MapboxMap? _map;
   PolylineAnnotationManager? _routeManager;
   PolylineAnnotationManager? _directionsManager;
@@ -740,17 +747,44 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     _directions = PoiDirectionsController(
       ref.read(poiDirectionsServiceProvider(widget.accessToken)),
     )..addListener(_directionsChanged);
+    _session = ref.read(mapSessionProvider(cyprusE4TrailId));
+    _background = _session.background;
+    _stagesVisible = _session.stagesVisible;
+    _stagesExplicitlyHidden = _session.stagesExplicitlyHidden;
+    _restoreGps = _session.gpsEnabled;
+    _restoreLodgings = _session.lodgingsVisible;
+    _restoreExcursions = _session.excursionsVisible;
+    _restoreDetours = _session.detoursVisible;
+    final savedCamera = _session.camera;
+    _restoringCamera =
+        savedCamera != null &&
+        widget.initialStageIndex == null &&
+        widget.initialLodging == null &&
+        widget.initialLodgings.isEmpty &&
+        widget.initialExcursions.isEmpty &&
+        widget.initialDetours.isEmpty &&
+        widget.plannedStartDistanceKm == null &&
+        widget.plannedFinishDistanceKm == null;
+    if (_restoringCamera) _cameraIntent.onGesture();
     final first = widget.points.first;
     final last = widget.points.last;
-    _initialViewport = CameraViewportState(
-      center: Point(
-        coordinates: Position(
-          (first.lng + last.lng) / 2,
-          (first.lat + last.lat) / 2,
-        ),
-      ),
-      zoom: 7,
-    );
+    _initialCamera = _restoringCamera
+        ? CameraOptions(
+            center: savedCamera!.center,
+            zoom: savedCamera.zoom,
+            bearing: savedCamera.bearing,
+            pitch: savedCamera.pitch,
+            padding: savedCamera.padding,
+          )
+        : CameraOptions(
+            center: Point(
+              coordinates: Position(
+                (first.lng + last.lng) / 2,
+                (first.lat + last.lat) / 2,
+              ),
+            ),
+            zoom: 7,
+          );
   }
 
   @override
@@ -771,6 +805,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
   Future<void> _onMapCreated(MapboxMap map) async {
     _map = map;
+    await map.setCamera(_initialCamera);
     final usesMetricUnits = widget.formatter.system == MeasurementSystem.metric;
     await map.scaleBar.updateSettings(
       ScaleBarSettings(
@@ -799,13 +834,29 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     _initialCameraApplied = true;
     await _drawEndpoints(map);
     await _drawStages(map, animate: true);
-    if (widget.locationStageId != null) {
+    if (_restoreGps || widget.locationStageId != null) {
       try {
-        await _startLocationTracking(focus: false);
+        unawaited(
+          _startLocationTracking(focus: false, requestPermission: !_restoreGps),
+        );
       } catch (_) {
         // Keep the selected stage usable if location rendering is unavailable.
       }
     }
+    if (_restoreLodgings &&
+        widget.initialLodging == null &&
+        widget.initialLodgings.isEmpty) {
+      await _toggleLodgings();
+    }
+    if (!mounted) return;
+    if (_restoreExcursions && widget.initialExcursions.isEmpty) {
+      await _toggleExcursions();
+    }
+    if (!mounted) return;
+    if (_restoreDetours && widget.initialDetours.isEmpty) {
+      await _toggleDetours();
+    }
+    if (!mounted) return;
     final initialExcursions = widget.initialExcursions
         .where((route) => route.points.length >= 2)
         .toList(growable: false);
@@ -846,7 +897,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         );
       }
       await _selectStage(initialIndex);
-    } else {
+    } else if (!_restoringCamera) {
       await _fitRoute();
     }
   }
@@ -857,6 +908,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     setState(() {
       _mappedLodgings = lodgings;
       _lodgingsVisible = true;
+      _session.lodgingsVisible = true;
       _lodgingsLoaded = false;
       _selectedLodgingIndex = null;
     });
@@ -871,6 +923,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     setState(() {
       _mappedExcursions = excursions;
       _excursionsVisible = true;
+      _session.excursionsVisible = true;
       _excursionsLoaded = false;
     });
     await _drawExcursions(map);
@@ -882,6 +935,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     setState(() {
       _mappedDetours = detours;
       _detoursVisible = true;
+      _session.detoursVisible = true;
       _detoursLoaded = false;
     });
     await _drawDetours(map);
@@ -897,6 +951,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     setState(() {
       _mappedLodgings = [lodging];
       _lodgingsVisible = true;
+      _session.lodgingsVisible = true;
       _selectedLodgingIndex = 0;
       _selectedStageIndex = null;
     });
@@ -1647,6 +1702,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     } finally {
       if (mounted) {
         setState(() => _changingLodgingVisibility = false);
+        _session.lodgingsVisible = _lodgingsVisible;
       }
     }
   }
@@ -1692,7 +1748,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         _showMessage('Excursion routes are currently unavailable.');
       }
     } finally {
-      if (mounted) setState(() => _changingExcursionVisibility = false);
+      if (mounted) {
+        setState(() => _changingExcursionVisibility = false);
+        _session.excursionsVisible = _excursionsVisible;
+      }
     }
   }
 
@@ -1737,7 +1796,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         _showMessage('Detour routes are currently unavailable.');
       }
     } finally {
-      if (mounted) setState(() => _changingDetourVisibility = false);
+      if (mounted) {
+        setState(() => _changingDetourVisibility = false);
+        _session.detoursVisible = _detoursVisible;
+      }
     }
   }
 
@@ -1754,13 +1816,19 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       setState(() {
         _stagesVisible = !_stagesVisible;
         _stagesExplicitlyHidden = !_stagesVisible;
+        _session.stagesVisible = _stagesVisible;
+        _session.stagesExplicitlyHidden = _stagesExplicitlyHidden;
         if (!_stagesVisible && !_isEndpointStageIndex(_selectedStageIndex)) {
           _selectedStageIndex = null;
         }
       });
       await _drawStages(map, animate: _stagesVisible);
     } finally {
-      if (mounted) setState(() => _changingStageVisibility = false);
+      if (mounted) {
+        setState(() => _changingStageVisibility = false);
+        _session.stagesVisible = _stagesVisible;
+        _session.stagesExplicitlyHidden = _stagesExplicitlyHidden;
+      }
     }
   }
 
@@ -2168,6 +2236,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
           .timeout(const Duration(seconds: 20));
       if (!mounted) return;
       setState(() => _background = next);
+      _session.background = next;
       await _refreshStyleMarkers(map);
     } catch (_) {
       if (!mounted) return;
@@ -2177,6 +2246,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
             .timeout(const Duration(seconds: 20));
         if (!mounted) return;
         setState(() => _background = previous);
+        _session.background = previous;
         await _refreshStyleMarkers(map);
       } catch (_) {
         // Keep the picker available so the user can return to downloaded Terrain.
@@ -2381,7 +2451,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     await _startLocationTracking();
   }
 
-  Future<void> _startLocationTracking({bool focus = true}) async {
+  Future<void> _startLocationTracking({
+    bool focus = true,
+    bool requestPermission = true,
+  }) async {
     if (_locating) return;
     _cameraIntent.startLocation(focus: focus);
     final cameraRequest = _cameraIntent.revision;
@@ -2393,7 +2466,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       }
 
       var permission = await geo.Geolocator.checkPermission();
-      if (permission == geo.LocationPermission.denied) {
+      if (permission == geo.LocationPermission.denied && requestPermission) {
         permission = await geo.Geolocator.requestPermission();
       }
       if (permission == geo.LocationPermission.denied ||
@@ -2412,6 +2485,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       await _enableLocationPuck();
       if (!mounted) return;
       setState(() => _locationTrackingActive = true);
+      _session.gpsEnabled = true;
       await _handleGpsPosition(
         position,
         focus: focus,
@@ -2445,6 +2519,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }
 
   Future<void> _stopLocationTracking() async {
+    _session.gpsEnabled = false;
     _cameraIntent.stopLocation();
     _gpsRequestGeneration++;
     await _positionSubscription?.cancel();
@@ -2503,23 +2578,13 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     }
     final map = _map;
     if (map == null || !_cameraIntent.shouldFollowLocation(request)) return;
-    // Only the explicit location action changes zoom. Subsequent fixes keep
-    // the current zoom/bearing, and gestures stop camera following entirely.
-    final camera = focus ? await map.getCameraState() : null;
-    if (!mounted ||
-        generation != _gpsRequestGeneration ||
-        !_cameraIntent.shouldFollowLocation(request)) {
-      return;
-    }
-    await map.easeTo(
-      CameraOptions(
-        center: Point(
-          coordinates: Position(position.longitude, position.latitude),
-        ),
-        zoom: camera == null ? null : math.max(camera.zoom, 14),
-      ),
-      MapAnimationOptions(duration: 650, startDelay: 0),
+    final camera = mapGpsCameraUpdate(
+      explicitFocus: focus,
+      latitude: position.latitude,
+      longitude: position.longitude,
     );
+    if (camera == null) return;
+    await map.easeTo(camera, MapAnimationOptions(duration: 650, startDelay: 0));
   }
 
   Future<void> _enableLocationPuck() async {
@@ -2597,8 +2662,13 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
           children: [
             MapWidget(
               key: const ValueKey('cyprus-e4-map'),
-              styleUri: MapboxStyles.OUTDOORS,
-              viewport: _initialViewport,
+              styleUri: _background.styleUri,
+              // All camera moves are explicit native commands. An idle viewport
+              // cannot reapply the startup camera when GPS rebuilds the UI.
+              viewport: const IdleViewportState(),
+              onCameraChangeListener: (event) {
+                if (mounted) _session.camera = event.cameraState;
+              },
               onMapCreated: _onMapCreated,
               onMapLoadedListener: _onMapLoaded,
               onMapIdleListener: (_) => _handleMapIdle(),

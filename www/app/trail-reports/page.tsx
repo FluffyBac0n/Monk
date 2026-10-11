@@ -1,7 +1,7 @@
 'use client';
 import {useCallback, useEffect, useState} from 'react';
 import type {User} from 'firebase/auth';
-import {collection, doc, onSnapshot} from 'firebase/firestore';
+import {collection, onSnapshot} from 'firebase/firestore';
 import {AccountVerificationGate} from '@/components/AccountVerificationGate';
 import {AuthPanel} from '@/components/AuthPanel';
 import {PortalHeader} from '@/components/PortalHeader';
@@ -11,57 +11,73 @@ import {TrailReportMap} from '@/components/TrailReportMap';
 import {ReportProgress, ReportReview, reportStatusLabels} from '@/components/ReportReview';
 import {preloadTrailRoutes} from '@/lib/trail-route';
 import {preloadReportMap} from '@/lib/report-map-runtime';
+import {watchReportAccess, reportLoadError, type AccessState} from '@/lib/report-access';
 import {useAuthState} from '@/lib/use-auth';
 import {db} from '@/lib/firebase';
-import {reportAccess, watchTrailReports, watchReportEvents, reportCategories, reportStatuses, reportPhoto,
+import {watchTrailReports, watchReportEvents, reportCategories, reportStatuses, reportPhoto,
   setReportAccess, reportMapUrl, reportMapyUrl, reportPrintHtml, downloadFile,
   type TrailReport, type ReportEvent, type Trail} from '@/lib/trail-reports';
 
 export default function TrailReportsPage() {
   const {user, loading} = useAuthState();
-  useEffect(() => {void preloadReportMap().catch(() => {});}, []);
   if (loading) return <div className="loading-screen">Opening trail reports…</div>;
   if (!user) return <main className="portal-page trail-reports-page"><PortalHeader /><AuthPanel trailReports /></main>;
   if (!user.emailVerified) return <AccountVerificationGate user={user} />;
   return <ReportWorkspace key={user.uid} user={user} />;
 }
 function ReportWorkspace({user}: {user: User}) {
-  const [access, setAccess] = useState<{admin: boolean; trails: Trail[]} | null>(null);
+  const [accessState, setAccessState] = useState<AccessState>({status: 'loading'});
+  const [attempt, setAttempt] = useState(0);
+  const access = accessState.status === 'ready' ? accessState.access : null;
+  const [mapPrepared, setMapPrepared] = useState(false);
   const [trailId, setTrailId] = useState('');
   const [reviewMessage, setReviewMessage] = useState('');
   const [status, setStatus] = useState(''), [category, setCategory] = useState(''), [fromDate, setFromDate] = useState('');
   const [count, setCount] = useState(50), [rows, setRows] = useState<TrailReport[]>([]);
   const [selected, setSelected] = useState(''), [mapView, setMapView] = useState(false);
   const [error, setError] = useState(''), [loading, setLoading] = useState(true);
+  useEffect(() => watchReportAccess(user, state => {
+    setAccessState(state);
+    if (state.status === 'ready') {
+      setTrailId(current => state.access.trails.some(t => t.id === current) ? current : state.access.trails[0]?.id || '');
+    } else {setRows([]); setSelected(''); setError('');}
+  }), [user, attempt]);
+  // Let access checks and the first report list finish before warming map geometry.
   useEffect(() => {
-    let alive = true;
-    const refresh = () => reportAccess(user).then(result => {
-      if (!alive) return;
-      preloadTrailRoutes(result.trails.map(trail => trail.id));
-      setAccess(result); setTrailId(current => result.trails.some(t => t.id === current) ? current : result.trails[0]?.id || '');
-    }).catch(() => { if (alive) {setAccess(null); setRows([]); setSelected(''); setError('Could not check trail access. Reload to retry.');} });
-    void refresh();
-    const stop = onSnapshot(doc(db, 'trailReportAccess', user.uid), () => {void refresh();}, () => {void refresh();});
-    return () => {alive = false; stop();};
-  }, [user]);
+    if (!access || !trailId || loading || error) return;
+    const timer = window.setTimeout(() => {
+      void preloadReportMap().catch(() => {});
+      setMapPrepared(true);
+      preloadTrailRoutes([trailId, ...access.trails.map(t => t.id).filter(id => id !== trailId)]);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [access, loading, error, trailId]);
   useEffect(() => {
     setRows([]); setSelected(''); setCount(50);
   }, [trailId, status, category, fromDate]);
   useEffect(() => {
     if (!access || !trailId || !access.trails.some(t => t.id === trailId)) {setRows([]); setLoading(false); return;}
     setLoading(true); setError('');
-    return watchTrailReports(trailId, status, category, count, fromDate, reports => {
-      setRows(reports); setLoading(false);
+    const timer = window.setTimeout(() => {
+      setLoading(false); setError('Connecting to reports is taking too long. Check your connection and try again.');
+    }, 12000);
+    const stop = watchTrailReports(trailId, status, category, count, fromDate, reports => {
+      window.clearTimeout(timer); setError(''); setRows(reports); setLoading(false);
       setSelected(current => reports.some(r => r.id === current) ? current : '');
-    }, () => {setRows([]); setSelected(''); setLoading(false); setError('Reports could not be loaded. Your access may have changed; reload to retry.');});
+    }, cause => {
+      window.clearTimeout(timer); setRows([]); setSelected(''); setLoading(false);
+      setError(reportLoadError(cause, 'reports'));
+    });
+    return () => {window.clearTimeout(timer); stop();};
   }, [access, trailId, status, category, count, fromDate]);
+
   const choose = useCallback((id: string) => setSelected(id), []);
   const current = rows.find(row => row.id === selected);
   const trailName = access?.trails.find(t => t.id === trailId)?.name || trailId;
   return <main className="portal-page trail-reports-page"><PortalHeader user={user} canAccessAdmin={access?.admin} /><div className="dashboard-shell wide">
-    <section className="dashboard-title"><div><p className="eyebrow">TRAIL CARE</p><h1>Trail reports.</h1><p>Review problems, coordinate repairs and keep a record of what happens next.</p></div><span className="admin-badge">{access?.admin ? 'Admin' : 'Trail team'}</span></section>
-    {error && <p className="notice error" role="alert">{error}</p>}
-    {!access ? <p>Checking your assigned trails…</p> : !access.trails.length ? <section className="access-card"><h2>No trails assigned yet.</h2><p>Your email is verified. Ask a EuroTrex administrator to grant trail access to {user.email}.</p></section> : <>
+    <section className="dashboard-title"><div><p className="eyebrow">TRAIL CARE</p><h1>Trail reports.</h1><p>Review problems, coordinate repairs and keep a record of what happens next.</p></div>{access && <span className="admin-badge">{access.admin ? 'Admin' : 'Trail team'}</span>}</section>
+    {(error || accessState.status === 'error') && <section className="notice error" role="alert"><p>{accessState.status === 'error' ? accessState.message : error}</p><button className="button button-secondary" onClick={() => setAttempt(n => n + 1)}>Try again</button></section>}
+    {!access ? (accessState.status === 'loading' ? <p role="status">Checking your assigned trails…</p> : null) : !access.trails.length ? <section className="access-card"><h2>No trails assigned yet.</h2><p>Your email is verified. Ask a EuroTrex administrator to grant trail access to {user.email}.</p></section> : <>
       <section className="form-panel form-grid report-filters" aria-label="Filter reports">
         <ReportSelect label="Trail" value={trailId} onChange={setTrailId} options={access.trails.map(t => ({value: t.id, label: t.name}))} />
         <ReportSelect label="Status" value={status} onChange={setStatus} options={[{value: '', label: 'All statuses'}, ...reportStatuses.map(s => ({value: s, label: reportStatusLabels[s]}))]} />
@@ -69,11 +85,11 @@ function ReportWorkspace({user}: {user: User}) {
         <ReportDatePicker value={fromDate} onChange={setFromDate} />
         <button className="button button-secondary" aria-pressed={mapView} onClick={() => setMapView(v => !v)}>{mapView ? 'Hide map' : 'Show map'}</button>
       </section>
-      {trailId && <TrailReportMap visible={mapView} key={trailId} trailId={trailId} trailName={trailName} reports={rows} selectedId={selected} onSelect={choose} />}
+      {trailId && (mapPrepared || mapView) && <TrailReportMap visible={mapView} key={trailId} trailId={trailId} trailName={trailName} reports={rows} selectedId={selected} onSelect={choose} />}
       {reviewMessage && <p className="notice" role="status">{reviewMessage}</p>}
-      <p className="report-list-caption" role="status">{loading ? 'Loading reports…' : `${rows.length} reports loaded · newest first`}</p>
+      <p className="report-list-caption" role="status">{loading ? 'Loading reports…' : error ? 'Reports are unavailable.' : `${rows.length} reports loaded · newest first`}</p>
       <div className="report-workspace"><section className="report-inbox" aria-label="Reports">
-        {!loading && !rows.length && <div className="empty-state report-empty-state"><h3>No reports to review.</h3><p>Submitted trail problems will appear here. Try another filter or trail.</p></div>}
+        {!loading && !error && !rows.length && <div className="empty-state report-empty-state"><h3>No reports to review.</h3><p>Submitted trail problems will appear here. Try another filter or trail.</p></div>}
         {rows.map(report => <button key={report.id} className={`report-list-card ${selected === report.id ? 'selected' : ''}`} aria-pressed={selected === report.id} onClick={() => choose(report.id)}>
           <span className="report-card-meta"><span className={`report-status status-${report.status}`}>{reportStatusLabels[report.status] || report.status}</span><span>{report.receivedAt?.toDate().toLocaleDateString()}</span></span>
           <strong>{reportCategories[report.category] || report.category}</strong><p>{report.description}</p><span className="report-card-meta"><span>{report.passability} · {report.priority}</span><span>{report.photos.length} photos</span></span>

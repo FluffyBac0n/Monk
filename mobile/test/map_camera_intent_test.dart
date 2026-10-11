@@ -73,6 +73,11 @@ void main() {
     expect(camera.initialRequest, isNull);
     camera.stopLocation();
     expect(camera.shouldFollowLocation(camera.revision), isFalse);
+    expect(
+      camera.initialRequest,
+      isNull,
+      reason: 'Stopping GPS must not revive the original zoom',
+    );
   });
 
   test('explicit centering works after browsing and stops GPS following', () {

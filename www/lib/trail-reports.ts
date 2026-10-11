@@ -1,9 +1,7 @@
 'use client';
 import {httpsCallable} from 'firebase/functions';
-import {collection, doc, getDoc, getDocs, onSnapshot, query, where, orderBy, limit, type Timestamp} from 'firebase/firestore';
-import type {User} from 'firebase/auth';
+import {collection, onSnapshot, query, where, orderBy, limit, type Timestamp} from 'firebase/firestore';
 import {db, reportFunctions} from './firebase';
-import {userIsAdmin} from './accommodations';
 export const reportCategories: Record<string, string> = {signpost: 'Signpost', vegetation: 'Vegetation', obstruction: 'Obstruction / rockfall', path_damage: 'Damaged path', other: 'Other'};
 export const reportStatuses = ['new', 'reviewed', 'forwarded', 'resolved', 'duplicate', 'dismissed'];
 export type ReportPhoto = {id: string; path: string; thumbnailPath: string};
@@ -16,20 +14,14 @@ export type TrailReport = {
 };
 export type Trail = {id: string; name: string};
 export type ReportEvent = {id: string; action: string; status?: string; previousStatus?: string; note?: string; actorEmail?: string; authority?: string; forwardingReference?: string; createdAt?: Timestamp};
-export async function reportAccess(user: User) {
-  const admin = await userIsAdmin(user);
-  const membership = await getDoc(doc(db, 'trailReportAccess', user.uid));
-  const ids: string[] = membership.data()?.trailIds || [];
-  const trails = admin ? (await getDocs(collection(db, 'trails'))).docs
-    : (await Promise.all(ids.map(id => getDoc(doc(db, 'trails', id))))).filter(item => item.exists());
-  return {admin, trails: trails.map(item => ({id: item.id, name: String(item.data()?.name || item.id)}))};
-}
 export function watchTrailReports(trailId: string, status: string, category: string, count: number, fromDate: string,
   receive: (rows: TrailReport[]) => void, fail: (error: Error) => void) {
   return onSnapshot(query(collection(db, 'trailReports'), where('trailId', '==', trailId), where('uploadState', '==', 'complete'),
     ...(status ? [where('status', '==', status)] : []), ...(category ? [where('category', '==', category)] : []),
     ...(fromDate ? [where('receivedAt', '>=', new Date(fromDate))] : []), orderBy('receivedAt', 'desc'), limit(count)),
-    snapshot => receive(snapshot.docs.map(d => ({...d.data(), id: d.id}) as TrailReport)), fail);
+    {includeMetadataChanges: true}, snapshot => {
+      if (!snapshot.metadata.fromCache) receive(snapshot.docs.map(d => ({...d.data(), id: d.id}) as TrailReport));
+    }, fail);
 }
 export function watchReportEvents(id: string, receive: (rows: ReportEvent[]) => void, fail: (error: Error) => void) {
   return onSnapshot(query(collection(db, 'trailReports', id, 'events'), orderBy('createdAt', 'desc'), limit(100)),

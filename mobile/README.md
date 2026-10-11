@@ -41,6 +41,24 @@ Always include `--dart-define-from-file=env.local.json` when launching the app o
 or device. Without it, the map screen will show setup instructions instead of map tiles. Do not
 commit the token file.
 
+### iOS simulator with live Firebase reports
+
+Run from `mobile/` with **both** local configuration files:
+
+```bash
+flutter run -d <ios-simulator-id> --dart-define-from-file=env.local.json --dart-define-from-file=firebase-debug.local.json
+```
+
+The ignored `firebase-debug.local.json` contains the private
+`FIREBASE_APP_CHECK_IOS_DEBUG_TOKEN` registered for local testing. Do not print,
+share, or commit it. Omitting it selects App Attest, which cannot verify an iOS
+simulator and causes report uploads to remain saved on the device. Changes to
+these build definitions require a full relaunch, not hot reload.
+
+Use this configuration only for local debug builds. Release and profile builds
+always use App Attest, even if a debug token is supplied. Keep App Check enforced
+for production services.
+
 ## Connect Firebase
 
 The app is configured for the `eurotrex` Firebase project on Android and iOS. To regenerate the
