@@ -1206,7 +1206,6 @@ class _StageBottomNavigationBar extends StatelessWidget {
           _StageBottomAction(
             key: const ValueKey('stage-bottom-planner'),
             icon: Icons.route_rounded,
-            showPlannerTrailIcon: true,
             label: l10n.t('Route planner'),
             visibleLabel: l10n.t('Planner'),
             onTap: onPlanner,
@@ -1265,7 +1264,6 @@ class _StageBottomAction extends StatelessWidget {
     this.isPrimary = false,
     this.badgeCount = 0,
     this.showReverseTrailIcon = false,
-    this.showPlannerTrailIcon = false,
     super.key,
   });
 
@@ -1278,7 +1276,6 @@ class _StageBottomAction extends StatelessWidget {
   final bool isPrimary;
   final int badgeCount;
   final bool showReverseTrailIcon;
-  final bool showPlannerTrailIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -1291,9 +1288,6 @@ class _StageBottomAction extends StatelessWidget {
     Widget buildIcon(double size) {
       if (showReverseTrailIcon) {
         return _ReverseTrailIcon(color: foreground, size: size + 4);
-      }
-      if (showPlannerTrailIcon) {
-        return _PlannerTrailIcon(color: foreground, size: size + 4);
       }
       return Icon(icon, color: foreground, size: size);
     }
@@ -1419,85 +1413,6 @@ class _ReverseTrailIcon extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _PlannerTrailIcon extends StatelessWidget {
-  const _PlannerTrailIcon({required this.color, required this.size});
-
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox.square(
-      key: const ValueKey('planner-zigzag-route-icon'),
-      dimension: size,
-      child: CustomPaint(painter: _PlannerTrailIconPainter(color)),
-    );
-  }
-}
-
-class _PlannerTrailIconPainter extends CustomPainter {
-  const _PlannerTrailIconPainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final stages = <Offset>[
-      Offset(size.width * 0.14, size.height * 0.84),
-      Offset(size.width * 0.67, size.height * 0.66),
-      Offset(size.width * 0.28, size.height * 0.43),
-    ];
-    final finish = Offset(size.width * 0.67, size.height * 0.21);
-    final routePoints = [...stages, finish];
-    final routePaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    for (var segment = 0; segment < routePoints.length - 1; segment++) {
-      final start = routePoints[segment];
-      final end = routePoints[segment + 1];
-      final distance = (end - start).distance;
-      final dots = (distance / (size.width * 0.10)).ceil();
-      for (var dot = 1; dot < dots; dot++) {
-        canvas.drawCircle(
-          Offset.lerp(start, end, dot / dots)!,
-          size.width * 0.026,
-          routePaint,
-        );
-      }
-    }
-
-    final stopPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    final stopOutlinePaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.1;
-    for (final stage in stages) {
-      canvas.drawCircle(stage, size.width * 0.058, stopOutlinePaint);
-      canvas.drawCircle(stage, size.width * 0.020, stopPaint);
-    }
-
-    final flagPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.25
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final flag = Path()
-      ..moveTo(finish.dx, finish.dy)
-      ..lineTo(finish.dx, size.height * 0.04)
-      ..lineTo(size.width * 0.90, size.height * 0.12)
-      ..lineTo(finish.dx, size.height * 0.20);
-    canvas.drawPath(flag, flagPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _PlannerTrailIconPainter oldDelegate) {
-    return oldDelegate.color != color;
   }
 }
 

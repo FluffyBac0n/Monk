@@ -66,6 +66,7 @@ class RoutePlanRequest {
       overnightPreference != RouteOvernightPreference.accommodation;
 
   RoutePlanRequest copyWith({
+    double? maximumDailyDistanceKm,
     int? walkingDays,
     bool clearWalkingDays = false,
     int? maximumDailyWalkingMinutes,
@@ -84,7 +85,8 @@ class RoutePlanRequest {
     startStageId: startStageId,
     finishStageId: finishStageId,
     minimumDailyDistanceKm: minimumDailyDistanceKm,
-    maximumDailyDistanceKm: maximumDailyDistanceKm,
+    maximumDailyDistanceKm:
+        maximumDailyDistanceKm ?? this.maximumDailyDistanceKm,
     maximumDailyWalkingMinutes: clearMaximumDailyWalkingMinutes
         ? null
         : maximumDailyWalkingMinutes ?? this.maximumDailyWalkingMinutes,
@@ -620,18 +622,18 @@ RoutePlanFailure diagnoseRoutePlanFailure({
     return RoutePlanFailure.exactDayCount;
   }
 
-  if (request.maximumDailyWalkingMinutes != null &&
-      buildDeterministicRoutePlan(
-            stages: stages,
-            lodgings: lodgings,
-            direction: direction,
-            request: flexibleStay.copyWith(
-              clearMaximumDailyWalkingMinutes: true,
-              clearWalkingDays: true,
-              constraint: RoutePlanConstraint.dailyPace,
-            ),
-          ) !=
-          null) {
+  // Check the user's effort limits independently of stay preferences and days.
+  // A distance gap is just as actionable as a walking-time limit.
+  if (buildDeterministicRoutePlan(
+        stages: stages,
+        lodgings: lodgings,
+        direction: direction,
+        request: request.copyWith(
+          maximumDailyDistanceKm: distance,
+          clearMaximumDailyWalkingMinutes: true,
+        ),
+      ) !=
+      null) {
     return RoutePlanFailure.dailyPaceExceeded;
   }
 
@@ -728,7 +730,8 @@ _OvernightStop? _resolveOvernightStop({
             .where((lodging) => _lodgingPrice(lodging) == null)
             .toList(growable: false);
   if (unpricedLodgings.isNotEmpty ||
-      (includeUnknownPrices &&
+      (preference != RouteOvernightPreference.camping &&
+          includeUnknownPrices &&
           stage.services['lodging'] == true &&
           lodgings.isEmpty)) {
     return _OvernightStop(

@@ -5,6 +5,46 @@ import 'package:eurotrex/features/trail/domain/trail_direction.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('camping never substitutes an unlisted hotel for a campsite', () {
+    final plan = buildDeterministicRoutePlan(
+      stages: [
+        _stage('start', 3, 0),
+        _stage('hotel', 2, 20, lodging: true),
+        _stage('finish', 1, 40),
+      ],
+      lodgings: const [],
+      direction: TrailDirection.pafosToLarnaka,
+      request: const RoutePlanRequest(
+        startStageId: 'start',
+        finishStageId: 'finish',
+        minimumDailyDistanceKm: 1,
+        maximumDailyDistanceKm: 25,
+        overnightPreference: RouteOvernightPreference.camping,
+      ),
+    );
+    expect(plan, isNull);
+  });
+
+  test('distance limit failures identify effort rather than missing stays', () {
+    final failure = diagnoseRoutePlanFailure(
+      stages: [
+        _stage('start', 3, 0),
+        _stage('hotel', 2, 30, lodging: true),
+        _stage('finish', 1, 60),
+      ],
+      lodgings: const [],
+      direction: TrailDirection.pafosToLarnaka,
+      request: const RoutePlanRequest(
+        startStageId: 'start',
+        finishStageId: 'finish',
+        minimumDailyDistanceKm: 1,
+        maximumDailyDistanceKm: 25,
+        constraint: RoutePlanConstraint.dailyPace,
+      ),
+    );
+    expect(failure, RoutePlanFailure.dailyPaceExceeded);
+  });
+
   test('builds a balanced itinerary between valid overnight stages', () {
     final plan = buildDeterministicRoutePlan(
       stages: [

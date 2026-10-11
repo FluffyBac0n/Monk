@@ -13,6 +13,172 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  registerPlannerWorkflowTests();
+
+  testWidgets('reversing endpoints updates the uphill estimate', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(_PlannerDatabase()),
+          stagesProvider.overrideWith(_PlannerStagesController.new),
+          lodgingRepositoryProvider.overrideWithValue(
+            const _PlannerLodgingRepository(),
+          ),
+        ],
+        child: const MaterialApp(home: RoutePlannerScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('route-planner-add')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('route-planner-swap-stages')));
+    await tester.pumpAndSettle();
+    final next = find.byKey(const ValueKey('route-planner-route-next'));
+    await tester.ensureVisible(next);
+    await tester.tap(next);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('↑ 200'), findsOneWidget);
+    expect(find.textContaining('↑ 400'), findsNothing);
+  });
+
+  testWidgets('stage taps on the route map choose start and finish', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(_PlannerDatabase()),
+          stagesProvider.overrideWith(_PlannerStagesController.new),
+          elevationProvider.overrideWith(_PlannerElevationController.new),
+          lodgingRepositoryProvider.overrideWithValue(
+            const _PlannerLodgingRepository(),
+          ),
+        ],
+        child: const MaterialApp(home: RoutePlannerScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('route-planner-add')));
+    await tester.pumpAndSettle();
+
+    final map = find.byKey(const ValueKey('route-planner-selection-map'));
+    final topLeft = tester.getTopLeft(map);
+    final size = tester.getSize(map);
+    final routeY = topLeft.dy + size.height / 2 - 17;
+    await tester.tapAt(Offset(topLeft.dx + size.width / 2, routeY));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('route-planner-stage-callout')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('route-planner-callout-start')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('overnight → finish'), findsOneWidget);
+
+    await tester.tapAt(Offset(topLeft.dx + size.width * 0.72, routeY));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('route-planner-callout-finish')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('overnight → waypoint-2'), findsOneWidget);
+  });
+
+  testWidgets('trip map fills the screen and stage fields are searchable', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(_PlannerDatabase()),
+          stagesProvider.overrideWith(_PlannerStagesController.new),
+          elevationProvider.overrideWith(_PlannerElevationController.new),
+          lodgingRepositoryProvider.overrideWithValue(
+            const _PlannerLodgingRepository(),
+          ),
+        ],
+        child: const MaterialApp(home: RoutePlannerScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('route-planner-add')));
+    await tester.pumpAndSettle();
+
+    final map = find.byKey(const ValueKey('route-planner-selection-map'));
+    expect(tester.getSize(map).height, greaterThan(700));
+
+    await tester.tap(find.byKey(const ValueKey('route-planner-start-stage')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('route-planner-stage-search')),
+      findsOneWidget,
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('route-planner-stage-search')),
+      'waypoint-1',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('waypoint-1').last);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('waypoint-1 → finish'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('route-planner-swap-stages')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('finish → waypoint-1'), findsOneWidget);
+  });
+
+  testWidgets('large trail geometry opens the Trip step without blocking', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(_PlannerDatabase()),
+          stagesProvider.overrideWith(_PlannerStagesController.new),
+          elevationProvider.overrideWith(_LargePlannerElevationController.new),
+          lodgingRepositoryProvider.overrideWithValue(
+            const _PlannerLodgingRepository(),
+          ),
+        ],
+        child: const MaterialApp(home: RoutePlannerScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('route-planner-add')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('route-planner-selection-map')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('route-planner-route-next')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+}
+
+void registerPlannerWorkflowTests() {
   testWidgets('planner saves a choice through the three-step wizard', (
     tester,
   ) async {
@@ -26,6 +192,7 @@ void main() {
         overrides: [
           appDatabaseProvider.overrideWithValue(database),
           stagesProvider.overrideWith(_PlannerStagesController.new),
+          elevationProvider.overrideWith(_PlannerElevationController.new),
           lodgingRepositoryProvider.overrideWithValue(
             const _PlannerLodgingRepository(),
           ),
@@ -162,6 +329,21 @@ void main() {
     expect(database.settings, contains('savedRoutesV1'));
     expect(database.settings['savedRoutesV1'], contains('pafosToLarnaka'));
 
+    await tester.tap(find.byType(ExpansionTile));
+    await tester.pumpAndSettle();
+    final open = find.widgetWithText(FilledButton, 'Open and edit');
+    await tester.ensureVisible(open);
+    await tester.tap(open);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('route-plan-day-2')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('route-saved-confirmation')),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(done);
+    await tester.tap(done);
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byIcon(Icons.delete_outline_rounded));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('confirm-delete-saved-route')));
@@ -169,7 +351,7 @@ void main() {
     expect(find.byKey(const ValueKey('saved-routes-empty')), findsOneWidget);
   });
 
-  testWidgets('stage taps on the route map choose start and finish', (
+  testWidgets('fixed days allows uneven legs between sparse overnight stops', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -180,7 +362,7 @@ void main() {
       ProviderScope(
         overrides: [
           appDatabaseProvider.overrideWithValue(_PlannerDatabase()),
-          stagesProvider.overrideWith(_PlannerStagesController.new),
+          stagesProvider.overrideWith(_SparseStages.new),
           elevationProvider.overrideWith(_PlannerElevationController.new),
           lodgingRepositoryProvider.overrideWithValue(
             const _PlannerLodgingRepository(),
@@ -190,113 +372,28 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('route-planner-add')));
-    await tester.pumpAndSettle();
+    Future<void> tapKey(String key) async {
+      final target = find.byKey(ValueKey(key));
+      await tester.ensureVisible(target);
+      await tester.pumpAndSettle();
+      await tester.tap(target);
+      await tester.pumpAndSettle();
+    }
 
-    final map = find.byKey(const ValueKey('route-planner-selection-map'));
-    final topLeft = tester.getTopLeft(map);
-    final size = tester.getSize(map);
-    final routeY = topLeft.dy + size.height / 2 - 17;
-    await tester.tapAt(Offset(topLeft.dx + size.width / 2, routeY));
-    await tester.pumpAndSettle();
+    await tapKey('route-planner-add');
+    await tapKey('route-planner-route-next');
+    await tapKey('route-planner-pace-next');
+    await tapKey('route-planner-build');
     expect(
-      find.byKey(const ValueKey('route-planner-stage-callout')),
+      find.byKey(const ValueKey('route-planner-no-result')),
       findsOneWidget,
     );
-    await tester.tap(find.byKey(const ValueKey('route-planner-callout-start')));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('overnight → finish'), findsOneWidget);
-
-    await tester.tapAt(Offset(topLeft.dx + size.width * 0.72, routeY));
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const ValueKey('route-planner-callout-finish')),
-    );
-    await tester.pumpAndSettle();
-    expect(find.textContaining('overnight → waypoint-2'), findsOneWidget);
-  });
-
-  testWidgets('trip map fills the screen and stage fields are searchable', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          appDatabaseProvider.overrideWithValue(_PlannerDatabase()),
-          stagesProvider.overrideWith(_PlannerStagesController.new),
-          elevationProvider.overrideWith(_PlannerElevationController.new),
-          lodgingRepositoryProvider.overrideWithValue(
-            const _PlannerLodgingRepository(),
-          ),
-        ],
-        child: const MaterialApp(home: RoutePlannerScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('route-planner-add')));
-    await tester.pumpAndSettle();
-
-    final map = find.byKey(const ValueKey('route-planner-selection-map'));
-    expect(tester.getSize(map).height, greaterThan(700));
-
-    await tester.tap(find.byKey(const ValueKey('route-planner-start-stage')));
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey('route-planner-stage-search')),
-      findsOneWidget,
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('route-planner-stage-search')),
-      'waypoint-1',
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('waypoint-1').last);
-    await tester.pumpAndSettle();
-    expect(find.textContaining('waypoint-1 → finish'), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey('route-planner-swap-stages')));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('finish → waypoint-1'), findsOneWidget);
-  });
-
-  testWidgets('large trail geometry opens the Trip step without blocking', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          appDatabaseProvider.overrideWithValue(_PlannerDatabase()),
-          stagesProvider.overrideWith(_PlannerStagesController.new),
-          elevationProvider.overrideWith(_LargePlannerElevationController.new),
-          lodgingRepositoryProvider.overrideWithValue(
-            const _PlannerLodgingRepository(),
-          ),
-        ],
-        child: const MaterialApp(home: RoutePlannerScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const ValueKey('route-planner-add')));
-    await tester.pumpAndSettle();
-
-    expect(
-      find.byKey(const ValueKey('route-planner-selection-map')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('route-planner-route-next')),
-      findsOneWidget,
-    );
-    expect(tester.takeException(), isNull);
+    await tapKey('route-planner-recovery-days');
+    expect(find.text('2 days'), findsOneWidget);
+    await tapKey('route-planner-pace-next');
+    await tapKey('route-planner-build');
+    expect(find.byKey(const ValueKey('route-planner-no-result')), findsNothing);
+    expect(find.byKey(const ValueKey('route-plan-day-2')), findsOneWidget);
   });
 }
 
@@ -392,4 +489,13 @@ TrailStage _stage(
     elevationDownM: 50,
     services: {'lodging': lodging, 'tent': false},
   );
+}
+
+class _SparseStages extends StagesController {
+  @override
+  Future<List<TrailStage>> build() async => [
+    _stage('start', 3, 0),
+    _stage('overnight', 2, 10, lodging: true),
+    _stage('finish', 1, 100),
+  ];
 }

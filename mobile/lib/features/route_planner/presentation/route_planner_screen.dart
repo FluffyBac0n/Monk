@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 
@@ -80,6 +81,7 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
   Map<RoutePlanStyle, _PlannedVariant?> variants = const {};
   Map<RoutePlanStyle, RoutePlanFailure?> variantFailures = const {};
   RoutePlanStyle? selectedStyle;
+  int? recoveryWalkingDays;
   String? customStartStageId;
   String? customFinishStageId;
   String? draftRouteId;
@@ -159,9 +161,8 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
         ((finish.accumulatedDistanceKm ?? 0) -
                 (start.accumulatedDistanceKm ?? 0))
             .abs();
-    final requiredDailyKm = sectionDistance / math.max(1, walkingDays);
     final maximumDistance = planConstraint == RoutePlanConstraint.fixedDays
-        ? math.max(dailyTargetKm * 1.75, requiredDailyKm * 1.2)
+        ? math.max(1.0, sectionDistance)
         : paceUnit == RoutePaceUnit.distance
         ? dailyTargetKm
         : dailyTargetKm * 1.65;
@@ -213,6 +214,17 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
           ),
       };
       variants = built;
+      recoveryWalkingDays =
+          planConstraint == RoutePlanConstraint.fixedDays &&
+              built.values.every((variant) => variant == null)
+          ? _buildVariant(
+              style: RoutePlanStyle.balanced,
+              stages: stages,
+              lodgings: lodgings,
+              system: system,
+              flexibleDays: true,
+            )?.plan.days.length
+          : null;
       variantFailures = {
         for (final style in RoutePlanStyle.values)
           style: built[style] == null
@@ -270,6 +282,7 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
     required List<TrailStage> stages,
     required List<Lodging> lodgings,
     required MeasurementSystem system,
+    bool flexibleDays = false,
   }) {
     _PlannedVariant? best;
     var bestScore = double.infinity;
@@ -282,12 +295,18 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
       final startIndex = ordered.indexWhere((stage) => stage.id == startId);
       final finishIndex = ordered.indexWhere((stage) => stage.id == finishId);
       if (startIndex < 0 || finishIndex <= startIndex) continue;
-      final request = requestFor(
+      var request = requestFor(
         style,
         ordered[startIndex],
         ordered[finishIndex],
         system,
       );
+      if (flexibleDays) {
+        request = request.copyWith(
+          clearWalkingDays: true,
+          constraint: RoutePlanConstraint.dailyPace,
+        );
+      }
       final plan = buildDeterministicRoutePlan(
         stages: stages,
         lodgings: lodgings,
@@ -333,7 +352,9 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
     var ascent = 0.0;
     if (lower >= 0) {
       for (final stage in stages.sublist(lower + 1, upper + 1)) {
-        ascent += stage.elevationUpM ?? 0;
+        ascent += startIndex > finishIndex
+            ? stage.elevationDownM ?? 0
+            : stage.elevationUpM ?? 0;
       }
     }
     final distance =
@@ -953,10 +974,10 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
             onSave: saveSelectedRoute,
             onReviewPace: () => setState(() => step = 1),
             onReviewStay: () => setState(() => step = 2),
-            onUseSuggestedDays: estimate == null
+            onUseSuggestedDays: recoveryWalkingDays == null
                 ? null
                 : () => setState(() {
-                    walkingDays = estimate.suggestedDays;
+                    walkingDays = recoveryWalkingDays!;
                     planConstraint = RoutePlanConstraint.fixedDays;
                     step = 1;
                   }),
@@ -1679,6 +1700,25 @@ class _RouteSelectionMapState extends ConsumerState<_RouteSelectionMap> {
   double _currentZoom = 7;
   int _currentStageVisibilityStride = mapStageVisibilityStride(7);
   bool _updatingZoomLayers = false;
+  Future<void> _mapOperations = Future<void>.value();
+
+  // Serialize annotation-manager changes. A pending native call can finish
+  // after navigating to Pace; only ignore channel errors for that disposed map.
+  Future<void> _runMapOperation(Future<void> Function() action) {
+    final operation = _mapOperations.then((_) async {
+      if (!mounted || _map == null) return;
+      try {
+        await action();
+      } on PlatformException {
+        if (mounted) rethrow;
+      }
+    });
+    _mapOperations = operation.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return operation;
+  }
 
   List<_PlannerLocatedStage> get _locatedStages => [
     for (var index = 0; index < widget.stages.length; index++)
@@ -1711,46 +1751,55 @@ class _RouteSelectionMapState extends ConsumerState<_RouteSelectionMap> {
     final map = _map;
     if (map == null) return;
     if (oldWidget.points != widget.points) {
-      unawaited(_redrawMap());
+      unawaited(_runMapOperation(_redrawMap));
     } else if (oldWidget.start?.id != widget.start?.id ||
         oldWidget.finish?.id != widget.finish?.id) {
-      unawaited(_drawSelectedRoute(map));
-      unawaited(_drawStages(map));
+      unawaited(
+        _runMapOperation(() async {
+          await _drawSelectedRoute(map);
+          if (mounted) await _drawStages(map);
+        }),
+      );
     } else if (oldWidget.stages != widget.stages) {
-      unawaited(_drawStages(map));
+      unawaited(_runMapOperation(() => _drawStages(map)));
     }
   }
 
   @override
   void dispose() {
     _stageTapListener?.cancel();
+    _map = null;
+    _mapLoaded = false;
     super.dispose();
   }
 
   Future<void> _onMapCreated(MapboxMap map) async {
+    if (!mounted) return;
     _map = map;
-    await map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
-    await map.compass.updateSettings(
-      CompassSettings(
-        position: OrnamentPosition.TOP_LEFT,
-        marginTop: 142,
-        marginLeft: 12,
-      ),
-    );
-    await map.logo.updateSettings(
-      LogoSettings(
-        position: OrnamentPosition.TOP_LEFT,
-        marginTop: 86,
-        marginLeft: 12,
-      ),
-    );
-    await map.attribution.updateSettings(
-      AttributionSettings(
-        position: OrnamentPosition.TOP_LEFT,
-        marginTop: 116,
-        marginLeft: 12,
-      ),
-    );
+    await _runMapOperation(() async {
+      await map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
+      await map.compass.updateSettings(
+        CompassSettings(
+          position: OrnamentPosition.TOP_LEFT,
+          marginTop: 142,
+          marginLeft: 12,
+        ),
+      );
+      await map.logo.updateSettings(
+        LogoSettings(
+          position: OrnamentPosition.TOP_LEFT,
+          marginTop: 86,
+          marginLeft: 12,
+        ),
+      );
+      await map.attribution.updateSettings(
+        AttributionSettings(
+          position: OrnamentPosition.TOP_LEFT,
+          marginTop: 116,
+          marginLeft: 12,
+        ),
+      );
+    });
   }
 
   Future<void> _handleMapIdle() async {
@@ -1774,16 +1823,21 @@ class _RouteSelectionMapState extends ConsumerState<_RouteSelectionMap> {
   }
 
   Future<void> _onMapLoaded(MapLoadedEventData _) async {
+    if (!mounted) return;
     _mapLoaded = true;
-    await _redrawMap();
-    await _fitTrail();
+    await _runMapOperation(() async {
+      await _redrawMap();
+      if (mounted) await _fitTrail();
+    });
   }
 
   Future<void> _redrawMap() async {
     final map = _map;
     if (map == null || widget.points.length < 2) return;
     await _drawBaseRoute(map);
+    if (!mounted) return;
     await _drawSelectedRoute(map);
+    if (!mounted) return;
     await _drawStages(map);
   }
 
@@ -1913,6 +1967,7 @@ class _RouteSelectionMapState extends ConsumerState<_RouteSelectionMap> {
           customData: {'stageIndex': item.index, 'name': item.stage.name},
         ),
     ]);
+    if (!mounted) return;
     for (var index = 0; index < annotations.length; index++) {
       final annotation = annotations[index];
       if (annotation != null) {
@@ -1935,7 +1990,9 @@ class _RouteSelectionMapState extends ConsumerState<_RouteSelectionMap> {
   Future<void> _toggleStages() async {
     setState(() => _stagesVisible = !_stagesVisible);
     final map = _map;
-    if (map != null && _mapLoaded) await _drawStages(map);
+    if (map != null && _mapLoaded) {
+      await _runMapOperation(() => _drawStages(map));
+    }
   }
 
   Future<void> _fitTrail() async {
@@ -1972,6 +2029,7 @@ class _RouteSelectionMapState extends ConsumerState<_RouteSelectionMap> {
     setState(() => _locating = true);
     try {
       final location = await ref.read(deviceLocationReaderProvider)();
+      if (!mounted) return;
       await map.location.updateSettings(
         LocationComponentSettings(
           enabled: true,
@@ -2046,7 +2104,7 @@ class _RouteSelectionMapState extends ConsumerState<_RouteSelectionMap> {
               viewport: _initialViewport,
               onMapCreated: _onMapCreated,
               onMapLoadedListener: _onMapLoaded,
-              onMapIdleListener: (_) => _handleMapIdle(),
+              onMapIdleListener: (_) => _runMapOperation(_handleMapIdle),
             )
           else if (widget.points.length < 2)
             Center(child: Text(context.l10n.t('Route map is loading…')))
@@ -2100,7 +2158,9 @@ class _RouteSelectionMapState extends ConsumerState<_RouteSelectionMap> {
                 _PlannerMapButton(
                   key: const ValueKey('route-planner-map-center'),
                   tooltip: context.l10n.t('Center trail'),
-                  onPressed: mapAvailable ? _fitTrail : null,
+                  onPressed: mapAvailable
+                      ? () => _runMapOperation(_fitTrail)
+                      : null,
                   child: const Icon(Icons.center_focus_strong_rounded),
                 ),
               ],
@@ -2444,7 +2504,9 @@ class _PaceStep extends StatelessWidget {
               ),
               Text(
                 context.l10n.t(
-                  'Walking time includes an allowance for climbing. Route styles rank alternatives without changing this limit.',
+                  constraint == RoutePlanConstraint.fixedDays
+                      ? 'Your days are fixed. Daily effort may exceed your target to reach an overnight stop.'
+                      : 'Walking time includes an allowance for climbing. Route styles rank alternatives without changing this limit.',
                 ),
                 style: const TextStyle(fontSize: 11, color: Colors.black54),
               ),
@@ -3083,6 +3145,25 @@ class _PlanResult extends StatelessWidget {
           ),
         ),
       ),
+      if (request.constraint == RoutePlanConstraint.fixedDays &&
+          plan.days.any(
+            (day) => request.paceUnit == RoutePaceUnit.hours
+                ? day.estimatedWalkingMinutes > request.paceValue * 60
+                : day.distanceKm >
+                      (request.preferredDailyDistanceKm ?? double.infinity),
+          )) ...[
+        const SizedBox(height: 12),
+        Text(
+          context.l10n.t(
+            'Some days exceed your preferred effort. Check the daily distances and walking times, or choose Limit effort.',
+          ),
+          key: const ValueKey('route-planner-effort-notice'),
+          style: const TextStyle(
+            color: EurotrexPalette.navy,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
       const SizedBox(height: 12),
       _RouteOverview(
         plan: plan,

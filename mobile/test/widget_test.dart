@@ -2715,15 +2715,11 @@ void main() {
     expect(find.byIcon(Icons.filter_list_rounded), findsOneWidget);
     expect(find.byKey(const ValueKey('stage-bottom-planner')), findsOneWidget);
     expect(
-      find.byKey(const ValueKey('planner-zigzag-route-icon')),
-      findsOneWidget,
-    );
-    expect(
       find.descendant(
         of: find.byKey(const ValueKey('stage-bottom-planner')),
         matching: find.byIcon(Icons.route_rounded),
       ),
-      findsNothing,
+      findsOneWidget,
     );
     expect(
       find.byKey(const ValueKey('reverse-trail-direction')),
