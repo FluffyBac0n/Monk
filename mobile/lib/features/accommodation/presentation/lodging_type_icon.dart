@@ -1,8 +1,51 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 const mapboxOutdoorAccommodationGreen = Color(0xFF38890F);
 const mapboxLodgingMauve = Color(0xFF8C727B);
+
+final _markerImages = <String, Future<Uint8List>>{};
+
+/// The map and cards use the same bundled Maki artwork on every map style.
+Future<Uint8List> lodgingMarkerImage(String? type) => _markerImages.putIfAbsent(
+  lodgingMakiIconName(type),
+  () => _renderMarker(type),
+);
+
+Future<Uint8List> _renderMarker(String? type) async {
+  final info = await vg.loadPicture(
+    SvgAssetLoader('assets/maki/${lodgingMakiIconName(type)}.svg'),
+    null,
+  );
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  canvas.drawCircle(const Offset(21, 21), 20, Paint()..color = Colors.white);
+  canvas.drawCircle(
+    const Offset(21, 21),
+    18,
+    Paint()..color = lodgingMakiMarkerColor(type),
+  );
+  canvas.save();
+  canvas.translate(8.5, 8.5);
+  canvas.scale(25 / info.size.width, 25 / info.size.height);
+  canvas.saveLayer(
+    Offset.zero & info.size,
+    Paint()
+      ..colorFilter = const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+  );
+  canvas.drawPicture(info.picture);
+  canvas.restore();
+  canvas.restore();
+  info.picture.dispose();
+  final picture = recorder.endRecording();
+  final image = await picture.toImage(42, 42);
+  final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+  picture.dispose();
+  image.dispose();
+  return bytes!.buffer.asUint8List();
+}
 
 String lodgingMakiIconName(String? type) {
   final normalized = type?.trim().toLowerCase() ?? '';

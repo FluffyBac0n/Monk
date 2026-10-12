@@ -10,10 +10,10 @@ class StagePinIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const SizedBox(
-    width: 34,
-    height: 34,
+    width: 24,
+    height: 24,
     child: Center(
-      child: CustomPaint(size: Size(27.2, 34), painter: _StagePinPainter()),
+      child: CustomPaint(size: Size(19.2, 24), painter: _StagePinPainter()),
     ),
   );
 }

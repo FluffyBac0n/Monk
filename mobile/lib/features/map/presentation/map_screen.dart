@@ -693,13 +693,13 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   Cancelable? _endpointTapListener;
   final Map<String, int> _endpointIndexByAnnotation = {};
   PointAnnotationManager? _stageManager;
+  CircleAnnotationManager? _stageSelectionManager;
   Cancelable? _stageTapListener;
   final Map<String, int> _stageIndexByAnnotation = {};
   CircleAnnotationManager? _lodgingSelectionManager;
   PointAnnotationManager? _lodgingManager;
   Cancelable? _lodgingTapListener;
   final Map<String, int> _lodgingIndexByAnnotation = {};
-  final Map<String, String?> _lodgingStyleImages = {};
   List<Lodging> _mappedLodgings = const [];
   PolylineAnnotationManager? _excursionRouteManager;
   Cancelable? _excursionTapListener;
@@ -1323,6 +1323,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }
 
   Future<void> _drawStages(MapboxMap map, {bool animate = false}) async {
+    final pinHeight = 80 / MediaQuery.devicePixelRatioOf(context);
     final animationGeneration = ++_stageAnimationGeneration;
     final shouldAnimate = animate && !MediaQuery.disableAnimationsOf(context);
     _stageTapListener?.cancel();
@@ -1333,6 +1334,11 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     }
     _stageManager = null;
     _stageIndexByAnnotation.clear();
+    final oldSelection = _stageSelectionManager;
+    _stageSelectionManager = null;
+    if (oldSelection != null) {
+      await map.annotations.removeAnnotationManager(oldSelection);
+    }
 
     final locatedStages = _locatedStages();
     if (locatedStages.isEmpty) return;
@@ -1340,6 +1346,32 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       widget.stages,
       widget.direction,
     );
+    final selected = locatedStages
+        .where((item) => item.index == _selectedStageIndex)
+        .firstOrNull;
+    if (selected != null) {
+      final isEndpoint =
+          selected.index == endpointIndexes.startIndex ||
+          selected.index == endpointIndexes.finishIndex;
+      final selection = await map.annotations.createCircleAnnotationManager();
+      _stageSelectionManager = selection;
+      await selection.setCircleTranslateAnchor(CircleTranslateAnchor.VIEWPORT);
+      await selection.setCircleTranslate([0, isEndpoint ? 0 : -pinHeight / 2]);
+      await selection.create(
+        CircleAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(selected.point.lng, selected.point.lat),
+          ),
+          circleRadius: isEndpoint
+              ? mapSelectedLodgingRingRadius
+              : pinHeight / 2 + 2,
+          circleOpacity: 0,
+          circleStrokeColor: EurotrexPalette.blue.toARGB32(),
+          circleStrokeWidth: mapSelectedLodgingRingWidth,
+          circleStrokeOpacity: 1,
+        ),
+      );
+    }
     final visibleStageIndexes = mapVisibleIntermediateStageIndexes(
       locatedStageIndexes: [
         for (final locatedStage in locatedStages) locatedStage.index,
@@ -1388,7 +1420,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
           ),
           image: stageIcon,
           iconAnchor: IconAnchor.BOTTOM,
-          iconSize: item.index == _selectedStageIndex ? 1.25 : 1.0,
+          iconSize: 1.0,
           symbolSortKey: item.index == _selectedStageIndex ? 2 : 1,
           customData: {'stageIndex': item.index, 'name': item.stage.name},
         ),
@@ -1437,13 +1469,12 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     final animationGeneration = _lodgingAnimationGeneration;
     final shouldAnimate = animate && !animationsDisabled;
 
-    final makiIconNames = {
-      for (final lodging in _mappedLodgings) lodgingMakiIconName(lodging.type),
+    final markerImages = {
+      for (final lodging in _mappedLodgings)
+        lodgingMakiIconName(lodging.type): await lodgingMarkerImage(
+          lodging.type,
+        ),
     };
-    final styleImages = <String, String?>{};
-    for (final iconName in makiIconNames) {
-      styleImages[iconName] = await _resolveLodgingStyleImage(map, iconName);
-    }
 
     final selectedLodgingIndex = _selectedLodgingIndex;
     if (selectedLodgingIndex != null &&
@@ -1499,26 +1530,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
               _mappedLodgings[index].location!.latitude,
             ),
           ),
-          iconImage:
-              styleImages[lodgingMakiIconName(_mappedLodgings[index].type)],
+          image: markerImages[lodgingMakiIconName(_mappedLodgings[index].type)],
           iconSize: index == _selectedLodgingIndex ? 1.55 : 1.4,
-          iconColor: _accommodationBlue.toARGB32(),
-          iconHaloColor: mapLodgingMarkerOutlineColor(
-            isSelected: index == _selectedLodgingIndex,
-          ).toARGB32(),
-          iconHaloWidth: index == _selectedLodgingIndex ? 2.5 : 2,
-          iconHaloBlur: index == _selectedLodgingIndex ? 0 : 0.5,
-          textField:
-              styleImages[lodgingMakiIconName(_mappedLodgings[index].type)] ==
-                  null
-              ? '●'
-              : null,
-          textSize: index == _selectedLodgingIndex ? 23 : 21,
-          textColor: _accommodationBlue.toARGB32(),
-          textHaloColor: mapLodgingMarkerOutlineColor(
-            isSelected: index == _selectedLodgingIndex,
-          ).toARGB32(),
-          textHaloWidth: index == _selectedLodgingIndex ? 2.5 : 2,
           symbolSortKey: index == _selectedLodgingIndex ? 2 : 1,
           customData: {
             'lodgingIndex': index,
@@ -1610,34 +1623,6 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         await Future<void>.delayed(_markerEntranceFrame);
       }
     }
-  }
-
-  Future<String?> _resolveLodgingStyleImage(
-    MapboxMap map,
-    String makiIconName,
-  ) async {
-    if (_lodgingStyleImages.containsKey(makiIconName)) {
-      return _lodgingStyleImages[makiIconName];
-    }
-    for (final candidate in [
-      '$makiIconName-15',
-      makiIconName,
-      '$makiIconName-11',
-    ]) {
-      try {
-        if (await map.style.getStyleImage(candidate) != null) {
-          _lodgingStyleImages[makiIconName] = candidate;
-          return candidate;
-        }
-      } catch (_) {
-        // Try the next sprite naming convention.
-      }
-    }
-    final fallback = makiIconName == 'lodging'
-        ? null
-        : await _resolveLodgingStyleImage(map, 'lodging');
-    _lodgingStyleImages[makiIconName] = fallback;
-    return fallback;
   }
 
   Future<void> _toggleLodgings() async {
@@ -2247,7 +2232,6 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     await _issueLayer?.update(
       ref.read(trailIssuesProvider(cyprusE4TrailId)).value ?? const [],
     );
-    _lodgingStyleImages.clear();
     await _drawStages(map);
     if (!mounted) return;
     await _drawLodgings(map);
@@ -2908,7 +2892,7 @@ class _MapPoiSheet extends StatelessWidget {
             ),
             _MapLayerRow(
               key: const ValueKey('map-layer-accommodation'),
-              label: l10n.t('Overnight stays'),
+              label: l10n.t('Lodgings'),
               icon: Icons.hotel_outlined,
               color: _accommodationBlue,
               selected: lodgingsVisible,
@@ -3101,7 +3085,7 @@ class MapLodgingInfoSheet extends StatelessWidget {
       leading: LodgingTypeIcon(
         type: lodging.type,
         color: lodgingMakiMarkerColor(lodging.type),
-        size: 34,
+        size: 24,
       ),
       onClose: onClose,
       headerFooter: directions,
@@ -3616,33 +3600,15 @@ class _MapSelectionSheetState extends State<_MapSelectionSheet> {
                                     ),
                                 const SizedBox(width: 10),
                                 Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        widget.title,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      if (widget.subtitle.isNotEmpty &&
-                                          (!widget.minimalCompact || _expanded))
-                                        Text(
-                                          widget.subtitle,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                    ],
+                                  child: Text(
+                                    widget.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
                                 ),
                                 if (footer is PoiDirectionsCard)
@@ -3655,6 +3621,26 @@ class _MapSelectionSheetState extends State<_MapSelectionSheet> {
                                 ),
                               ],
                             ),
+                            if (widget.subtitle.isNotEmpty &&
+                                (!widget.minimalCompact || _expanded))
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  left: widget.leading != null ? 34 : 44,
+                                ),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    widget.subtitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -3858,11 +3844,10 @@ class _MapStageInfoSheetState extends State<MapStageInfoSheet> {
             detours: widget.detours,
           ),
           const SizedBox(height: 24),
-          FilledButton.icon(
+          FilledButton(
             key: const ValueKey('map-open-stage-info'),
             onPressed: widget.onOpenDetails,
-            icon: const Icon(Icons.open_in_full_rounded),
-            label: Text(l10n.t('Open Stage Info')),
+            child: Text(l10n.t('Open Stage')),
           ),
         ],
       );
@@ -3976,7 +3961,7 @@ class _MapStageInfoSheetState extends State<MapStageInfoSheet> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-                  child: FilledButton.icon(
+                  child: FilledButton(
                     key: const ValueKey('map-open-stage-info'),
                     onPressed: widget.onOpenDetails,
                     style: FilledButton.styleFrom(
@@ -3984,8 +3969,7 @@ class _MapStageInfoSheetState extends State<MapStageInfoSheet> {
                       foregroundColor: Colors.white,
                       minimumSize: const Size.fromHeight(48),
                     ),
-                    icon: const Icon(Icons.open_in_full_rounded),
-                    label: Text(l10n.t('Open Stage Info')),
+                    child: Text(l10n.t('Open Stage')),
                   ),
                 ),
               ],

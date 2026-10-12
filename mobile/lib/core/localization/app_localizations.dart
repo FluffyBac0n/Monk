@@ -66,7 +66,7 @@ extension AppLocalizationsContext on BuildContext {
 
 const _englishTerminology = <String, String>{
   'Stage by stage': 'Point by point',
-  'Stages': 'Stage points',
+  'Stages': 'Stages',
   'Stage': 'Stage point',
   'Stay': 'Stays',
   'Lodging': 'Stays',
@@ -104,7 +104,7 @@ const _englishTerminology = <String, String>{
   'Hide stages': 'Hide stage points',
   'Show stages': 'Show stage points',
   'Close stage summary': 'Close stage-point summary',
-  'Open Stage Info': 'Open stage-point information',
+  'Open Stage': 'Open Stage',
   'Tap a stage to see its details.': 'Tap a stage point to see its details.',
   'The numbers on the left show stage length, ascent, descent, and + distance from the trail.':
       'The numbers on the left show section distance, ascent, descent, and + distance from the trail.',
@@ -113,7 +113,7 @@ const _englishTerminology = <String, String>{
       'No services recorded for this stage point.',
   'Stage information is stored on this device.':
       'Stage-point information is stored on this device.',
-  'Back to stages': 'Back to stage points',
+  'Back to stages': 'Back to stages',
   'Download Cyprus-E4 to browse its stages without a connection.':
       'Download Cyprus-E4 to browse its stage points without a connection.',
   'Places to stay near this stage': 'Places to stay near this stage point',
@@ -283,7 +283,7 @@ const _translations = <String, Map<String, String>>{
     'per day': 'pro Tag',
     'Walking time includes an allowance for climbing. Each option adjusts the effort around this target.':
         'Die Gehzeit berücksichtigt Anstiege. Jede Option passt die Belastung an dieses Ziel an.',
-    'Overnight stays': 'Übernachtungen',
+    'Lodgings': 'Unterkünfte',
     'Either': 'Beides',
     'Price per night': 'Preis pro Nacht',
     'The range applies per room, per night, using listed prices.':
@@ -512,7 +512,7 @@ const _translations = <String, Map<String, String>>{
         'Offline-Höhenprofil wird vorbereitet…',
     'Download profile': 'Profil herunterladen',
     'Close stage summary': 'Etappenübersicht schließen',
-    'Open Stage Info': 'Etappeninfo öffnen',
+    'Open Stage': 'Etappe öffnen',
     'Stage': 'Etappe',
     'Tap a stage to see its details.':
         'Tippe auf eine Etappe, um ihre Details anzusehen.',
@@ -881,7 +881,7 @@ const _translations = <String, Map<String, String>>{
     'per day': 'al día',
     'Walking time includes an allowance for climbing. Each option adjusts the effort around this target.':
         'El tiempo de caminata incluye un margen para las subidas. Cada opción ajusta el esfuerzo a este objetivo.',
-    'Overnight stays': 'Pernoctaciones',
+    'Lodgings': 'Alojamientos',
     'Either': 'Cualquiera',
     'Price per night': 'Precio por noche',
     'The range applies per room, per night, using listed prices.':
@@ -1113,7 +1113,7 @@ const _translations = <String, Map<String, String>>{
         'Preparando el perfil sin conexión…',
     'Download profile': 'Descargar perfil',
     'Close stage summary': 'Cerrar resumen de etapa',
-    'Open Stage Info': 'Abrir información de la etapa',
+    'Open Stage': 'Abrir etapa',
     'Stage': 'Etapa',
     'Tap a stage to see its details.': 'Toca una etapa para ver sus detalles.',
     'The numbers on the left show stage length, ascent, descent, and + distance from the trail.':

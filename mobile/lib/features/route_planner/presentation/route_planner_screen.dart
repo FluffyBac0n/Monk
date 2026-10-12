@@ -2596,7 +2596,7 @@ class _StayStep extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       _Panel(
-        title: context.l10n.t('Overnight stays'),
+        title: context.l10n.t('Lodgings'),
         icon: Icons.hotel_rounded,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

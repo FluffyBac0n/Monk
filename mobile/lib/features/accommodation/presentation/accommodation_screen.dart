@@ -153,7 +153,7 @@ class _AccommodationScreenState extends ConsumerState<AccommodationScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              l10n.t('Overnight stays'),
+              l10n.t('Lodgings'),
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
             Text(
@@ -1019,46 +1019,49 @@ class _LodgingCard extends ConsumerWidget {
               children: [
                 SizedBox(
                   key: ValueKey('lodging-type-marker-${lodging.id}'),
-                  width: 38,
-                  height: 38,
+                  width: 24,
+                  height: 24,
                   child: Center(
                     child: LodgingTypeIcon(
                       type: type,
                       color: markerColor,
-                      size: 34,
+                      size: 24,
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name == null || name.isEmpty
-                            ? l10n.t('Accommodation')
-                            : l10n.t(name),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: EurotrexPalette.navy,
-                              fontWeight: FontWeight.w900,
-                              height: 1.05,
-                            ),
-                      ),
-                      if (type != null && type.isNotEmpty) ...[
-                        const SizedBox(height: 1),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          l10n.t(type),
-                          style: TextStyle(
-                            color: markerColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          name == null || name.isEmpty
+                              ? l10n.t('Accommodation')
+                              : l10n.t(name),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: EurotrexPalette.navy,
+                                fontWeight: FontWeight.w900,
+                                height: 1.05,
+                              ),
                         ),
+                        if (type != null && type.isNotEmpty) ...[
+                          const SizedBox(height: 1),
+                          Text(
+                            l10n.t(type),
+                            style: TextStyle(
+                              color: markerColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
                 if (lodging.distanceFromTrailKm case final distance?) ...[

@@ -112,7 +112,7 @@ const italianTranslations = <String, String>{
   'per day': 'al giorno',
   'Walking time includes an allowance for climbing. Each option adjusts the effort around this target.':
       'Il tempo di cammino include un margine per le salite. Ogni opzione regola lo sforzo attorno a questo obiettivo.',
-  'Overnight stays': 'Pernottamenti',
+  'Lodgings': 'Alloggi',
   'Either': 'Entrambi',
   'Price per night': 'Prezzo per notte',
   'The range applies per room, per night, using listed prices.':
@@ -342,7 +342,7 @@ const italianTranslations = <String, String>{
       'Preparazione del profilo altimetrico offline…',
   'Download profile': 'Scarica profilo',
   'Close stage summary': 'Chiudi il riepilogo della tappa',
-  'Open Stage Info': 'Apri informazioni sulla tappa',
+  'Open Stage': 'Apri tappa',
   'Stage': 'Tappa',
   'Tap a stage to see its details.':
       'Tocca una tappa per visualizzarne i dettagli.',

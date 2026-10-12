@@ -22,7 +22,6 @@ import '../domain/elevation_totals.dart';
 import '../domain/route_point.dart';
 import 'elevation_controller.dart';
 
-const _ink = EurotrexPalette.navy;
 const _sand = Color(0xFFF4F2EC);
 const _contourLowland = Color(0xFF3E9ED0);
 const _contourFoothill = Color(0xFF61AF57);
@@ -56,7 +55,6 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
       ? _ElevationScope.fullTrail
       : _ElevationScope.stage;
   bool isLocating = false;
-  double? inspectedDistanceKm;
   List<RoutePoint>? _sourceProfile;
   List<RoutePoint>? _smoothedProfile;
 
@@ -257,11 +255,6 @@ class _ElevationScreenState extends ConsumerState<ElevationScreen> {
                     transformationController: elevationTransformationController,
                     onScopeChanged: _changeScope,
                     gpsRouteDistanceKm: locationMatch?.projectedRouteDistanceKm,
-                    inspectedDistanceKm: inspectedDistanceKm,
-                    onInspectionChanged: (distanceKm) {
-                      if (distanceKm == inspectedDistanceKm) return;
-                      setState(() => inspectedDistanceKm = distanceKm);
-                    },
                     onRefresh: () =>
                         ref.read(elevationProvider.notifier).refresh(),
                   );
@@ -288,8 +281,6 @@ class _ElevationContent extends StatelessWidget {
     required this.transformationController,
     required this.onScopeChanged,
     required this.gpsRouteDistanceKm,
-    required this.inspectedDistanceKm,
-    required this.onInspectionChanged,
     required this.onRefresh,
   });
 
@@ -302,8 +293,6 @@ class _ElevationContent extends StatelessWidget {
   final TransformationController transformationController;
   final ValueChanged<_ElevationScope> onScopeChanged;
   final double? gpsRouteDistanceKm;
-  final double? inspectedDistanceKm;
-  final ValueChanged<double?> onInspectionChanged;
   final Future<void> Function() onRefresh;
 
   @override
@@ -404,17 +393,6 @@ class _ElevationContent extends StatelessWidget {
     final gpsChartDistance = gpsRouteDistanceKm == null
         ? null
         : chartDistanceForCanonical(gpsRouteDistanceKm!);
-    final inspectedCanonicalDistance = inspectedDistanceKm == null
-        ? null
-        : direction.isReversed
-        ? totalDistance - inspectedDistanceKm!
-        : inspectedDistanceKm!;
-    final inspectedPoint = inspectedCanonicalDistance == null
-        ? null
-        : routePointAtDistance(points, inspectedCanonicalDistance);
-    final inspectedChartDistance = inspectedDistanceKm == null
-        ? null
-        : inspectedDistanceKm! - chartDistanceOffset;
     final horizontalScale = transformationController.value
         .getMaxScaleOnAxis()
         .clamp(1.0, 15.0);
@@ -505,17 +483,6 @@ class _ElevationContent extends StatelessWidget {
                                       chartDistanceOffset,
                                 ),
                               ],
-                              if (inspectedChartDistance != null &&
-                                  inspectedChartDistance >= 0 &&
-                                  inspectedChartDistance <= chartDistance)
-                                VerticalLine(
-                                  x: inspectedChartDistance,
-                                  color: EurotrexPalette.navy.withValues(
-                                    alpha: 0.62,
-                                  ),
-                                  strokeWidth: 1.2,
-                                  dashArray: const [4, 4],
-                                ),
                             ],
                           ),
                           gridData: FlGridData(
@@ -577,43 +544,7 @@ class _ElevationContent extends StatelessWidget {
                               ),
                             ),
                           ),
-                          lineTouchData: LineTouchData(
-                            touchSpotThreshold: 16,
-                            distanceCalculator: (touchPoint, spotPoint) =>
-                                (touchPoint - spotPoint).distance,
-                            touchCallback: (event, response) {
-                              if (event is FlPanEndEvent ||
-                                  event is FlPanCancelEvent ||
-                                  event is FlLongPressEnd ||
-                                  event is FlPointerExitEvent) {
-                                onInspectionChanged(null);
-                                return;
-                              }
-                              final touched = response?.lineBarSpots;
-                              if (touched == null) return;
-                              for (final spot in touched) {
-                                if (spot.barIndex == 0) {
-                                  onInspectionChanged(
-                                    spot.x + chartDistanceOffset,
-                                  );
-                                  break;
-                                }
-                              }
-                            },
-                            touchTooltipData: LineTouchTooltipData(
-                              getTooltipColor: (_) => _ink,
-                              getTooltipItems: (spots) => spots.map((spot) {
-                                if (spot.barIndex != 0) return null;
-                                return LineTooltipItem(
-                                  '${formatter.distance(spot.x)}\n${formatter.altitude(spot.y)}',
-                                  const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
+                          lineTouchData: const LineTouchData(enabled: false),
                           lineBarsData: [
                             LineChartBarData(
                               spots: [
@@ -656,30 +587,6 @@ class _ElevationContent extends StatelessWidget {
                                         radius: 6,
                                         color: EurotrexPalette.navy,
                                         strokeWidth: 3,
-                                        strokeColor: Colors.white,
-                                      ),
-                                ),
-                              ),
-                            if (inspectedPoint != null &&
-                                inspectedChartDistance != null &&
-                                inspectedChartDistance >= 0 &&
-                                inspectedChartDistance <= chartDistance)
-                              LineChartBarData(
-                                spots: [
-                                  FlSpot(
-                                    inspectedChartDistance,
-                                    inspectedPoint.altitudeM,
-                                  ),
-                                ],
-                                color: Colors.transparent,
-                                barWidth: 0,
-                                dotData: FlDotData(
-                                  show: true,
-                                  getDotPainter: (_, _, _, _) =>
-                                      FlDotCirclePainter(
-                                        radius: 4.5,
-                                        color: EurotrexPalette.blue,
-                                        strokeWidth: 2,
                                         strokeColor: Colors.white,
                                       ),
                                 ),

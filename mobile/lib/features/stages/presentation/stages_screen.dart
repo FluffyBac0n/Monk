@@ -4346,7 +4346,7 @@ class _StageDetailBottomNavigationBar extends StatelessWidget {
                   ? 'No accommodation is listed for this stage.'
                   : 'Accommodation',
             ),
-            visibleLabel: l10n.t('Overnight stays'),
+            visibleLabel: l10n.t('Lodgings'),
             badgeCount: accommodationCount,
             onTap: isLoadingAccommodation ? null : onAccommodation,
           ),

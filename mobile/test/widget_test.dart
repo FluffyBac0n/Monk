@@ -598,9 +598,7 @@ void main() {
     },
   );
 
-  testWidgets('shows landing trail cards and opens Cyprus-E4', (
-    tester,
-  ) async {
+  testWidgets('shows landing trail cards and opens Cyprus-E4', (tester) async {
     final lodgingRepository = _TrailPreloadLodgingRepository();
     await tester.pumpWidget(
       ProviderScope(
@@ -752,7 +750,7 @@ void main() {
       findsNothing,
     );
     expect(
-      find.descendant(of: cyprusCard, matching: find.text('Stage points')),
+      find.descendant(of: cyprusCard, matching: find.text('Stages')),
       findsNothing,
     );
     expect(
@@ -2973,19 +2971,8 @@ void main() {
       find.byKey(const ValueKey('lodging-type-icon-lodging')),
       findsOneWidget,
     );
-    final marker = tester.widget<Container>(
-      find.byKey(const ValueKey('lodging-type-marker-forest-inn')),
-    );
-    expect(
-      marker.decoration,
-      isA<BoxDecoration>()
-          .having(
-            (decoration) => decoration.color,
-            'color',
-            const Color(0xFF8C727B),
-          )
-          .having((decoration) => decoration.shape, 'shape', BoxShape.circle),
-    );
+    final marker = find.byKey(const ValueKey('lodging-type-marker-forest-inn'));
+    expect(tester.getSize(marker), const Size(24, 24));
     expect(find.text('Forest Inn'), findsOneWidget);
     expect(find.textContaining('Platres'), findsNothing);
     expect(find.text('0.4 km'), findsOneWidget);
@@ -4046,6 +4033,7 @@ void main() {
     final chart = tester.widget<LineChart>(find.byType(LineChart));
     expect(chart.transformationConfig.scaleAxis, FlScaleAxis.horizontal);
     expect(chart.transformationConfig.maxScale, 15);
+    expect(chart.data.lineTouchData.enabled, isFalse);
     expect(chart.data.lineBarsData.first.color, EurotrexPalette.navy);
     expect(chart.data.lineBarsData.first.barWidth, 1.5);
     expect(chart.duration, Duration.zero);
@@ -4053,6 +4041,17 @@ void main() {
     final transformationController =
         chart.transformationConfig.transformationController!;
     final chartCenter = tester.getCenter(find.byType(LineChart));
+    await tester.tapAt(chartCenter);
+    await tester.pump();
+    final tappedChart = tester.widget<LineChart>(find.byType(LineChart));
+    expect(
+      tappedChart.data.lineBarsData.length,
+      chart.data.lineBarsData.length,
+    );
+    expect(
+      tappedChart.data.extraLinesData.verticalLines.length,
+      chart.data.extraLinesData.verticalLines.length,
+    );
     final leftFinger = await tester.startGesture(
       chartCenter - const Offset(20, 0),
       pointer: 1,
@@ -4246,24 +4245,13 @@ void main() {
       expect(find.byKey(const Key('elevation-stage-summary')), findsOneWidget);
       expect(find.byKey(const Key('elevation-stage-toggle')), findsNothing);
 
-      final baseBar = chart.data.lineBarsData.first;
-      final inspectedSpot = baseBar.spots[baseBar.spots.length ~/ 2];
-      chart.data.lineTouchData.touchCallback!(
-        FlPanUpdateEvent(
-          DragUpdateDetails(
-            globalPosition: Offset(100, 100),
-            localPosition: Offset(100, 100),
-          ),
-        ),
-        LineTouchResponse(
-          touchLocation: const Offset(100, 100),
-          touchChartCoordinate: Offset(inspectedSpot.x, inspectedSpot.y),
-          lineBarSpots: [TouchLineBarSpot(baseBar, 0, inspectedSpot, 0)],
-        ),
-      );
+      expect(chart.data.lineTouchData.enabled, isFalse);
+      final seriesCount = chart.data.lineBarsData.length;
+      await tester.tap(find.byType(LineChart));
       await tester.pump();
       chart = tester.widget<LineChart>(find.byType(LineChart));
-      expect(chart.data.extraLinesData.verticalLines.length, greaterThan(2));
+      expect(chart.data.extraLinesData.verticalLines, hasLength(2));
+      expect(chart.data.lineBarsData, hasLength(seriesCount));
     },
   );
 
