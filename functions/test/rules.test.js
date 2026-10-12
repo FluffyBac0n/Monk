@@ -11,6 +11,7 @@ test('Firestore report permissions enforce trail boundaries, including audit and
   await env.withSecurityRulesDisabled(async context => {
    const db=context.firestore();
    for (const [path,value] of Object.entries({
+    'trailIssues/official':{trailId:'cyprus-e4',description:'Broken sign',latitude:35,longitude:33},
     'admins/admin':{}, 'trailReportAccess/cyprus':{trailIds:['cyprus-e4']}, 'trailReportAccess/crete':{trailIds:['crete-e4']},
     'trailReports/one':{trailId:'cyprus-e4',reporterUid:'hiker',uploadState:'complete',photoIds:['photo_0']},
     'trailReports/two':{trailId:'crete-e4',reporterUid:'other',uploadState:'complete'},
@@ -19,6 +20,9 @@ test('Firestore report permissions enforce trail boundaries, including audit and
    })) await setDoc(doc(db,path),value);
   });
   const user=id=>env.authenticatedContext(id,{email:`${id}@example.com`,email_verified:true}).firestore();
+  await assertSucceeds(getDocs(query(collection(env.unauthenticatedContext().firestore(),'trailIssues'),where('trailId','==','cyprus-e4'))));
+  await assertFails(setDoc(doc(user('hiker'),'trailIssues/forged'),{trailId:'cyprus-e4'}));
+  await assertFails(setDoc(doc(user('admin'),'trailIssues/official'),{description:'Bypass review'}));
   await assertSucceeds(getDoc(doc(user('cyprus'),'trailReports/one')));
   await assertSucceeds(getDoc(doc(user('admin'),'trailReports/two')));
   await assertFails(getDoc(doc(user('crete'),'trailReports/one')));

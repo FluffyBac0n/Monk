@@ -92,3 +92,18 @@ For website UI tests only, start `www` in development with `NEXT_PUBLIC_REPORTS_
 - A successful report submission from the latest Play-installed Internal Testing build remains a release prerequisite; the supplied Play signing fingerprint is registered and the owner confirmed the project link.
 
 The normal iOS simulator app was restored after testing. No Google Play/TestFlight upload was performed. The Firebase CLI reported a build-image cleanup warning after otherwise successful deployments; retained build images may need an Artifact Registry cleanup policy.
+
+## Official issues on the mobile map
+
+The website's **Approve issue** action uses the existing `reviewed` status. A review transaction writes a public `trailIssues/{reportId}` projection for `reviewed` and `forwarded` reports; it deletes that projection for `new`, `resolved`, `dismissed`, and `duplicate`. Reopening a closed report republishes it. Report status, audit event, and map notice change atomically. Approval publishes only trail ID, category, description, passability, coordinates, status, and update timestamp. Identity, contact email, photos, authority and internal notes remain in the private report collection. Clients cannot write notices, including admin clients; authorized review callables are the only normal publishing path.
+
+The app listens to notices filtered by trail ID. Yellow warning triangles show the category, short description and passability on tap. Resolving removes the marker and closes an open description sheet after the next Firestore snapshot. Issue refreshes do not move the camera or reset GPS, background or POIs. Firestore's existing device cache can show the last known notices without a connection; changes made while offline become visible after reconnection. Stage points use red map pins with white outlines on every background; GPS stays blue and trail endpoints retain their flags.
+
+After deploying the updated `reviewTrailReport` and Firestore rules, reconcile previously reviewed reports with:
+
+```sh
+node scripts/sync-official-trail-issues.mjs --project eurotrex
+node scripts/sync-official-trail-issues.mjs --project eurotrex --apply
+```
+
+The first command is a count-only dry run. The second publishes eligible existing reports and removes stale projections. Source update-time checks prevent a concurrent resolution from being overwritten by this migration. Never manually delete private reports without also reconciling their public projections.

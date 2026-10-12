@@ -64,10 +64,23 @@ test('full submission → private images → trail review → forwarding → rev
   await assert.rejects(hiker.call('trailReportPhoto',{reportId,photoId:'photo_0'}));
   await assert.rejects(other.call('trailReportPhoto',{reportId,photoId:'photo_0'}));
   assert.ok((await staff.call('trailReportPhoto',{reportId,photoId:'photo_0'})).data.length>0);
-  const current=(await db.doc(`trailReports/${reportId}`).get()).data();
+  assert.equal((await db.doc(`trailIssues/${reportId}`).get()).exists,false);
+  let current=(await db.doc(`trailReports/${reportId}`).get()).data();
+  await staff.call('reviewTrailReport',{reportId,updatedAtMs:current.updatedAt.toMillis(),status:'reviewed',priority:'normal',note:'Private review note'});
+  const issue=(await db.doc(`trailIssues/${reportId}`).get()).data();
+  assert.equal(issue.description,data.description);
+  assert.equal(issue.latitude,data.latitude);
+  for (const key of ['reporterUid','contactEmail','photos','note','reviewedBy','authority']) assert.equal(issue[key],undefined);
+  current=(await db.doc(`trailReports/${reportId}`).get()).data();
   await assert.rejects(other.call('reviewTrailReport',{reportId,updatedAtMs:current.updatedAt.toMillis(),status:'resolved',priority:'normal',note:'No'}));
   await staff.call('reviewTrailReport',{reportId,updatedAtMs:current.updatedAt.toMillis(),status:'forwarded',priority:'high',authority:'Trail maintenance team',note:'Sent for repair'});
   const receipt=await hiker.call('trailReportReceipt',{reportId}); assert.equal(receipt.status,'forwarded'); assert.equal(receipt.description,undefined);
+  assert.equal((await db.doc(`trailIssues/${reportId}`).get()).data().status,'forwarded');
+  for (const status of ['resolved','reviewed','dismissed','reviewed','new']) {
+    const latest=(await db.doc(`trailReports/${reportId}`).get()).data();
+    await staff.call('reviewTrailReport',{reportId,updatedAtMs:latest.updatedAt.toMillis(),status,priority:'normal',note:'Status lifecycle test'});
+    assert.equal((await db.doc(`trailIssues/${reportId}`).get()).exists,status==='reviewed');
+  }
   await assert.rejects(staff.call('setTrailReportAccess',{email:other.user.email,trailId:'cyprus-e4',grant:true}));
   await owner.call('setTrailReportAccess',{email:staff.user.email,trailId:'cyprus-e4',grant:false});
   await assert.rejects(staff.call('trailReportPhoto',{reportId,photoId:'photo_0'}));

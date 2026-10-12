@@ -65,3 +65,17 @@ export function validatePhotoChecksums(value, photoIds) {
   }
   return checksums;
 }
+
+// Public map projection. Never spread a private report into this document.
+export function officialTrailIssue(report) {
+  if (report.uploadState !== 'complete' || !['reviewed', 'forwarded'].includes(report.status)) return null;
+  return {
+    trailId: report.trailId,
+    category: report.category,
+    description: report.description,
+    passability: report.passability,
+    latitude: report.latitude,
+    longitude: report.longitude,
+    status: report.status,
+  };
+}

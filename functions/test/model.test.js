@@ -1,3 +1,4 @@
+import {officialTrailIssue} from '../src/report-model.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validateReport, validateReview, mayReview, validatePhotoChecksums} from '../src/report-model.js';
@@ -28,4 +29,13 @@ test('checksum manifest covers every original and validates hashes and sizes', (
  for (const bad of [null,{},[],[item,item],[{...item,id:'other'}],[{...item,md5Hash:'invalid'}],
    [{...item,md5Hash:'kAFQmDzST7DWlj99KOF/ch=='}],[{...item,byteLength:0}],
    [{...item,byteLength:2*1024*1024}],[{...item,byteLength:3.5}]]) assert.throws(()=>validatePhotoChecksums(bad,['photo_0']));
+});
+
+test('official issue projection includes only approved public fields', () => {
+ const report = {trailId:'cyprus-e4',uploadState:'complete',status:'reviewed',category:'signpost',description:'Broken sign',passability:'difficult',latitude:35,longitude:33,
+   reporterUid:'private',contactEmail:'private@example.com',photos:[{path:'private'}],note:'Internal',authority:'Private authority'};
+ assert.deepEqual(Object.keys(officialTrailIssue(report)).sort(), ['trailId','category','description','passability','latitude','longitude','status'].sort());
+ for (const status of ['new','resolved','dismissed','duplicate']) assert.equal(officialTrailIssue({...report,status}),null);
+ assert.equal(officialTrailIssue({...report,uploadState:'uploading'}),null);
+ assert.equal(officialTrailIssue({...report,status:'forwarded'}).description,'Broken sign');
 });

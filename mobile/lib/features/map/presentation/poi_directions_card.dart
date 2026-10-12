@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/settings/measurement_formatter.dart';
+import '../../../core/theme/eurotrex_palette.dart';
 import '../domain/poi_directions.dart';
 import 'poi_directions_controller.dart';
 
@@ -48,113 +49,228 @@ class PoiDirectionsCard extends StatelessWidget {
   /// Fit the collapsed sheet to its actual status text, including larger text
   /// settings and wrapped offline messages, without revealing contact details.
   double compactHeight(BuildContext context, double width) {
-    var height = 48.0;
+    var height = 0.0;
+    final canClear =
+        controller.route != null ||
+        controller.busy ||
+        controller.failure != null;
     for (final line in _statusLines(context)) {
-      final painter = TextPainter(
-        text: TextSpan(
-          text: line.text,
-          style: DefaultTextStyle.of(context).style.merge(line.style),
-        ),
-        textDirection: Directionality.of(context),
-        textScaler: MediaQuery.textScalerOf(context),
-      )..layout(maxWidth: width);
+      final painter =
+          TextPainter(
+            text: TextSpan(
+              text: line.text,
+              style: DefaultTextStyle.of(context).style.merge(line.style),
+            ),
+            textDirection: Directionality.of(context),
+            textScaler: MediaQuery.textScalerOf(context),
+          )..layout(
+            maxWidth:
+                width -
+                (canClear ? 48 : 0) -
+                (controller.route != null ? 48 : 0),
+          );
       height += painter.height;
       painter.dispose();
     }
-    return height;
+    return canClear && height < 48 ? 48 : height;
+  }
+
+  bool get hasStatus =>
+      controller.route != null ||
+      controller.busy ||
+      controller.failure != null ||
+      controller.straightLineDistanceM != null;
+
+  Widget headerActions(BuildContext context) {
+    final l10n = context.l10n;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          key: const ValueKey('poi-directions-button'),
+          tooltip: l10n.t(controller.busy ? 'Finding route…' : 'Directions'),
+          color: Colors.white,
+          disabledColor: Colors.white54,
+          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+          onPressed: controller.busy
+              ? null
+              : () => onDirections(controller.mode),
+          icon: controller.busy
+              ? const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.directions_rounded),
+        ),
+        PopupMenuButton<DirectionsMode>(
+          key: const ValueKey('poi-directions-mode'),
+          enabled: !controller.busy,
+          tooltip: l10n.t('Travel mode'),
+          initialValue: controller.mode,
+          color: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          elevation: 4,
+          position: PopupMenuPosition.over,
+          constraints: const BoxConstraints(minWidth: 200),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: EurotrexPalette.paleBlue),
+          ),
+          onSelected: onDirections,
+          itemBuilder: (_) => [
+            for (final mode in DirectionsMode.values)
+              PopupMenuItem(
+                value: mode,
+                height: 52,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: mode == controller.mode
+                        ? EurotrexPalette.paleBlue
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        mode == DirectionsMode.walking
+                            ? Icons.directions_walk_rounded
+                            : Icons.directions_car_rounded,
+                        color: EurotrexPalette.navy,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          l10n.t(
+                            mode == DirectionsMode.walking
+                                ? 'Walking'
+                                : 'Driving',
+                          ),
+                          style: const TextStyle(
+                            color: EurotrexPalette.navy,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        mode == controller.mode
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                        color: mode == controller.mode
+                            ? EurotrexPalette.blue
+                            : EurotrexPalette.navy,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+          child: Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            decoration: BoxDecoration(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  controller.mode == DirectionsMode.walking
+                      ? Icons.directions_walk_rounded
+                      : Icons.directions_car_rounded,
+                  color: controller.busy ? Colors.grey : Colors.white,
+                  size: 20,
+                ),
+                const Icon(
+                  Icons.expand_more_rounded,
+                  size: 18,
+                  color: Colors.white,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final route = controller.route;
-    final failure = controller.failure;
-    final straight = controller.straightLineDistanceM;
+  Widget build(BuildContext context) => summary(context);
+
+  Widget summary(
+    BuildContext context, {
+    bool expanded = false,
+    VoidCallback? onToggle,
+  }) {
+    if (!hasStatus) return const SizedBox.shrink();
     final status = _statusLines(context);
+    final canClear =
+        controller.route != null ||
+        controller.busy ||
+        controller.failure != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
-              child: FilledButton.icon(
-                key: const ValueKey('poi-directions-button'),
-                onPressed: controller.busy
-                    ? null
-                    : () => onDirections(controller.mode),
-                icon: controller.busy
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.directions_rounded),
-                label: Text(
-                  l10n.t(controller.busy ? 'Finding route…' : 'Directions'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            PopupMenuButton<DirectionsMode>(
-              key: const ValueKey('poi-directions-mode'),
-              enabled: !controller.busy,
-              tooltip: l10n.t('Travel mode'),
-              initialValue: controller.mode,
-              onSelected: onDirections,
-              itemBuilder: (_) => [
-                for (final mode in DirectionsMode.values)
-                  PopupMenuItem(
-                    value: mode,
-                    child: Text(
-                      l10n.t(
-                        mode == DirectionsMode.walking ? 'Walking' : 'Driving',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < status.length; i++)
+                    Text(
+                      status[i].text,
+                      key: ValueKey(
+                        controller.route != null && i == 0
+                            ? 'poi-directions-summary'
+                            : controller.failure != null && i == 0
+                            ? 'poi-directions-error'
+                            : 'poi-straight-line-distance',
                       ),
+                      style: status[i].style,
                     ),
-                  ),
-              ],
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      controller.mode == DirectionsMode.walking
-                          ? Icons.directions_walk
-                          : Icons.directions_car,
-                      size: 20,
-                    ),
-                    const Icon(Icons.arrow_drop_down, size: 18),
-                  ],
-                ),
+                ],
               ),
             ),
-            if (route != null || controller.busy || failure != null)
+            if (controller.route != null)
+              IconButton(
+                key: const ValueKey('poi-directions-expand'),
+                tooltip: context.l10n.t('Route directions'),
+                color: EurotrexPalette.navy,
+                onPressed: onToggle,
+                icon: Icon(
+                  expanded
+                      ? Icons.arrow_drop_up_rounded
+                      : Icons.arrow_drop_down_rounded,
+                ),
+              ),
+            if (canClear)
               IconButton(
                 key: const ValueKey('poi-directions-clear'),
-                tooltip: l10n.t('Clear route'),
+                tooltip: context.l10n.t('Clear route'),
+                color: EurotrexPalette.navy,
                 onPressed: onClear,
-                icon: const Icon(Icons.close),
+                icon: const Icon(Icons.close_rounded),
               ),
           ],
         ),
-        if (route != null)
-          Text(
-            status.first.text,
-            key: const ValueKey('poi-directions-summary'),
-            style: status.first.style,
-          ),
-        if (failure != null)
-          Text(
-            l10n.t(directionsFailureMessage(failure)),
-            key: const ValueKey('poi-directions-error'),
-            style: const TextStyle(fontSize: 14),
-          ),
-        if (route == null && straight != null)
-          Text(
-            '${formatter.proximityDistance(straight)} · ${l10n.t('Straight-line distance from you')}',
-            key: const ValueKey('poi-straight-line-distance'),
-            style: const TextStyle(fontSize: 14),
+        if (expanded && controller.route != null)
+          PoiDirectionsInstructions(
+            route: controller.route!,
+            formatter: formatter,
           ),
       ],
     );
@@ -179,10 +295,8 @@ class PoiDirectionsInstructions extends StatelessWidget {
   final MeasurementFormatter formatter;
 
   @override
-  Widget build(BuildContext context) => ExpansionTile(
+  Widget build(BuildContext context) => Column(
     key: const ValueKey('poi-directions-instructions'),
-    tilePadding: EdgeInsets.zero,
-    title: Text(context.l10n.t('Route directions')),
     children: [
       for (final step in route.steps)
         ListTile(

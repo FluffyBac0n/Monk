@@ -6,7 +6,7 @@ import {onCall, HttpsError} from 'firebase-functions/v2/https';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {createHash} from 'node:crypto';
 import sharp from 'sharp';
-import {requireId, validateReport, validateReview, mayReview, validatePhotoChecksums} from './report-model.js';
+import {requireId, validateReport, validateReview, mayReview, validatePhotoChecksums, officialTrailIssue} from './report-model.js';
 
 initializeApp();
 const db = getFirestore();
@@ -158,6 +158,10 @@ export const reviewTrailReport = callable(async (request) => {
     if (request.data.updatedAtMs !== current.data().updatedAt.toMillis()) throw new HttpsError('aborted', 'Another user updated this report. Refresh before saving.');
     const {note, ...fields} = change;
     tx.update(snap.ref, {...fields, updatedAt: FieldValue.serverTimestamp(), reviewedBy: request.auth.uid});
+    const issueRef = db.doc(`trailIssues/${snap.id}`);
+    const issue = officialTrailIssue({...current.data(), ...fields});
+    if (issue) tx.set(issueRef, {...issue, updatedAt: FieldValue.serverTimestamp()});
+    else tx.delete(issueRef);
     tx.create(event, {action: 'review', ...change, previousStatus: current.data().status,
       actorId: request.auth.uid, actorEmail: request.auth.token.email, createdAt: FieldValue.serverTimestamp()});
   });

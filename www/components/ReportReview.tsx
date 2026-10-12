@@ -27,13 +27,13 @@ export function ReportProgress({report, events}: {report: TrailReport; events: R
 
 type Action = 'review' | 'forward' | 'resolve' | 'note' | 'dismiss' | 'duplicate' | 'reopen';
 const actions: Record<Action, {label: string; button: string; status?: string; explanation: string}> = {
-  review: {label: 'Review', button: 'Mark reviewed', status: 'reviewed', explanation: 'Confirm you have checked the report and set its priority.'},
-  forward: {label: 'Record sending', button: 'Mark as sent', status: 'forwarded', explanation: 'Send the printable report through your usual email or channel, then record the recipient here. Mark as sent records your action; it does not send an email.'},
-  resolve: {label: 'Resolve', button: 'Mark resolved', status: 'resolved', explanation: 'Describe the work completed or how you confirmed the problem has been fixed.'},
+  review: {label: 'Review', button: 'Approve issue', status: 'reviewed', explanation: 'Confirm the issue and its priority. Approval publishes its location, problem type and description on the mobile trail map.'},
+  forward: {label: 'Record sending', button: 'Mark as sent', status: 'forwarded', explanation: 'Send the printable report through your usual email or channel, then record the recipient here. Mark as sent records your action; it does not send an email. The issue remains visible on the mobile trail map.'},
+  resolve: {label: 'Resolve', button: 'Mark resolved', status: 'resolved', explanation: 'Describe the work completed or how you confirmed the problem has been fixed. Resolving removes the warning from the mobile trail map.'},
   note: {label: 'Update details', button: 'Save changes', explanation: 'Add a progress note or update the priority. The current status is kept.'},
   dismiss: {label: 'Dismiss', button: 'Dismiss report', status: 'dismissed', explanation: 'Explain why this report needs no further action.'},
   duplicate: {label: 'Link duplicate', button: 'Link duplicate', status: 'duplicate', explanation: 'Enter the reference of the original report for the same trail.'},
-  reopen: {label: 'Reopen review', button: 'Reopen review', status: 'reviewed', explanation: 'Explain why the report needs another review.'},
+  reopen: {label: 'Reopen review', button: 'Reopen review', status: 'reviewed', explanation: 'Explain why the issue is active again. Reopening restores its warning on the mobile trail map.'},
 };
 const nextAction = (status: string): Action => status === 'new' ? 'review' : status === 'reviewed' ? 'forward' : 'note';
 export function ReportReview({report, onSaved}: {report: TrailReport; onSaved: (message: string) => void}) {

@@ -115,6 +115,27 @@ void main() {
         expect(find.text('1.2 km · 15 min · Walking'), findsOneWidget);
         expect(
           tester
+              .getCenter(find.byKey(const ValueKey('poi-directions-button')))
+              .dy,
+          closeTo(
+            tester.getCenter(find.text('A very long accommodation name')).dy,
+            1,
+          ),
+        );
+        expect(
+          tester
+              .getTopLeft(find.byKey(const ValueKey('poi-directions-clear')))
+              .dy,
+          greaterThan(
+            tester
+                .getBottomLeft(
+                  find.byKey(const ValueKey('poi-directions-button')),
+                )
+                .dy,
+          ),
+        );
+        expect(
+          tester
               .getRect(find.byKey(const ValueKey('poi-directions-summary')))
               .bottom,
           lessThan(720),
@@ -140,8 +161,45 @@ void main() {
         await tester.tap(find.text('Driving').last);
         await tester.pumpAndSettle();
         expect(find.text('1.2 km · 15 min · Driving'), findsOneWidget);
+        final expand = find.byKey(const ValueKey('poi-directions-expand'));
+        final clear = find.byKey(const ValueKey('poi-directions-clear'));
+        expect(
+          tester.getCenter(expand).dx,
+          lessThan(tester.getCenter(clear).dx),
+        );
+        expect(
+          tester.getCenter(expand).dy,
+          closeTo(tester.getCenter(clear).dy, 1),
+        );
+        final beforeDirectionsHeight = tester.getSize(sheet).height;
+        await tester.tap(expand);
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSize(sheet).height,
+          greaterThan(beforeDirectionsHeight),
+        );
+        expect(
+          find.byKey(const ValueKey('poi-directions-instructions')),
+          findsOneWidget,
+        );
+        await tester.tap(expand);
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSize(sheet).height,
+          closeTo(beforeDirectionsHeight, 1),
+        );
+        expect(
+          find.byKey(const ValueKey('poi-directions-instructions')),
+          findsNothing,
+        );
+        await tester.tap(expand);
+        await tester.pumpAndSettle();
         await tester.tap(find.byKey(const ValueKey('poi-directions-clear')));
         await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('poi-directions-instructions')),
+          findsNothing,
+        );
         expect(
           find.byKey(const ValueKey('poi-directions-summary')),
           findsNothing,
@@ -171,11 +229,18 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: PoiDirectionsCard(
-            controller: controller,
-            formatter: const MeasurementFormatter(MeasurementSystem.imperial),
-            onDirections: (_) => retries++,
-            onClear: controller.clear,
+          body: Builder(
+            builder: (context) {
+              final card = PoiDirectionsCard(
+                controller: controller,
+                formatter: const MeasurementFormatter(
+                  MeasurementSystem.imperial,
+                ),
+                onDirections: (_) => retries++,
+                onClear: controller.clear,
+              );
+              return Column(children: [card.headerActions(context), card]);
+            },
           ),
         ),
       ),
@@ -189,7 +254,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('poi-directions-summary')), findsNothing);
-    await tester.tap(find.text('Directions'));
+    await tester.tap(find.byKey(const ValueKey('poi-directions-button')));
     expect(retries, 1);
   });
 }

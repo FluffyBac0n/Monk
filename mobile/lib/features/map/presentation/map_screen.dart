@@ -1,3 +1,7 @@
+import '../../reports/data/trail_issues.dart';
+import '../../reports/presentation/trail_issue_sheet.dart';
+import 'trail_issue_layer.dart';
+import 'map_stage_pin.dart';
 import '../../reports/presentation/report_screen.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -682,6 +686,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   PolylineAnnotationManager? _directionsManager;
   late final PoiDirectionsController _directions;
   Future<void> _directionsRender = Future.value();
+  TrailIssueLayer? _issueLayer;
   PointAnnotationManager? _directionMarkerManager;
   PointAnnotationManager? _endpointManager;
   PointAnnotationManager? _endpointLabelManager;
@@ -690,7 +695,6 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   PointAnnotationManager? _stageManager;
   Cancelable? _stageTapListener;
   final Map<String, int> _stageIndexByAnnotation = {};
-  final Map<String, String?> _stageStyleImages = {};
   CircleAnnotationManager? _lodgingSelectionManager;
   PointAnnotationManager? _lodgingManager;
   Cancelable? _lodgingTapListener;
@@ -789,6 +793,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
   @override
   void dispose() {
+    _issueLayer?.dispose();
     _directions.dispose();
     _gpsRequestGeneration++;
     _stageAnimationGeneration++;
@@ -832,6 +837,25 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     final map = _map;
     if (map == null) return;
     _initialCameraApplied = true;
+    _issueLayer = TrailIssueLayer(map, (issue) {
+      if (!mounted) return;
+      _recordAnnotationTap();
+      showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        useSafeArea: true,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.6,
+        ),
+        backgroundColor: _sand,
+        builder: (_) =>
+            TrailIssueSheet(trailId: issue.trailId, issueId: issue.id),
+      );
+    });
+    await _issueLayer!.update(
+      ref.read(trailIssuesProvider(cyprusE4TrailId)).value ?? const [],
+    );
     await _drawEndpoints(map);
     await _drawStages(map, animate: true);
     if (_restoreGps || widget.locationStageId != null) {
@@ -1339,7 +1363,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         .toList(growable: false);
     if (displayedStages.isEmpty) return;
 
-    final stageIcon = await _resolveStageStyleImage(map, 'marker-stroked');
+    final stageIcon = await mapStagePinImage();
     final manager = await map.annotations.createPointAnnotationManager();
     _stageManager = manager;
     await manager.setIconAllowOverlap(false);
@@ -1362,24 +1386,9 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
           geometry: Point(
             coordinates: Position(item.point.lng, item.point.lat),
           ),
-          iconImage: stageIcon,
+          image: stageIcon,
           iconAnchor: IconAnchor.BOTTOM,
-          iconSize: item.index == _selectedStageIndex ? 1.65 : 1.35,
-          iconColor: mapStagePointColor(
-            item.stage,
-            isSelected: item.index == _selectedStageIndex,
-          ).toARGB32(),
-          iconHaloColor: Colors.white.toARGB32(),
-          iconHaloWidth: item.index == _selectedStageIndex ? 3.5 : 2.25,
-          iconHaloBlur: 0.5,
-          textField: stageIcon == null ? '●' : null,
-          textSize: item.index == _selectedStageIndex ? 25 : 21,
-          textColor: mapStagePointColor(
-            item.stage,
-            isSelected: item.index == _selectedStageIndex,
-          ).toARGB32(),
-          textHaloColor: Colors.white.toARGB32(),
-          textHaloWidth: item.index == _selectedStageIndex ? 3.5 : 2.25,
+          iconSize: item.index == _selectedStageIndex ? 1.25 : 1.0,
           symbolSortKey: item.index == _selectedStageIndex ? 2 : 1,
           customData: {'stageIndex': item.index, 'name': item.stage.name},
         ),
@@ -1571,31 +1580,6 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         await Future<void>.delayed(_markerEntranceFrame);
       }
     }
-  }
-
-  Future<String?> _resolveStageStyleImage(
-    MapboxMap map,
-    String makiIconName,
-  ) async {
-    if (_stageStyleImages.containsKey(makiIconName)) {
-      return _stageStyleImages[makiIconName];
-    }
-    for (final candidate in [
-      '$makiIconName-15',
-      makiIconName,
-      '$makiIconName-11',
-    ]) {
-      try {
-        if (await map.style.getStyleImage(candidate) != null) {
-          _stageStyleImages[makiIconName] = candidate;
-          return candidate;
-        }
-      } catch (_) {
-        // Try the next sprite naming convention.
-      }
-    }
-    _stageStyleImages[makiIconName] = null;
-    return null;
   }
 
   Future<void> _animateLodgingEntrance(
@@ -2260,7 +2244,9 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }
 
   Future<void> _refreshStyleMarkers(MapboxMap map) async {
-    _stageStyleImages.clear();
+    await _issueLayer?.update(
+      ref.read(trailIssuesProvider(cyprusE4TrailId)).value ?? const [],
+    );
     _lodgingStyleImages.clear();
     await _drawStages(map);
     if (!mounted) return;
@@ -2634,6 +2620,11 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(trailIssuesProvider(cyprusE4TrailId), (_, next) {
+      if (next.hasValue) unawaited(_issueLayer?.update(next.requireValue));
+    });
+    ref.watch(trailIssuesProvider(cyprusE4TrailId));
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final hasSelection =
@@ -3107,14 +3098,15 @@ class MapLodgingInfoSheet extends StatelessWidget {
       subtitle: details.join(' · '),
       icon: Icons.hotel_rounded,
       accentColor: _accommodationBlue,
+      leading: LodgingTypeIcon(
+        type: lodging.type,
+        color: lodgingMakiMarkerColor(lodging.type),
+        size: 34,
+      ),
       onClose: onClose,
       headerFooter: directions,
       minimalCompact: directions != null,
       children: [
-        if (route != null) ...[
-          PoiDirectionsInstructions(route: route!, formatter: formatter),
-          const SizedBox(height: 12),
-        ],
         Row(
           key: ValueKey('map-lodging-contact-actions-${lodging.id}'),
           children: [
@@ -3460,10 +3452,12 @@ class _MapSelectionSheet extends StatefulWidget {
     required this.onClose,
     required this.children,
     this.headerFooter,
+    this.leading,
     this.minimalCompact = false,
   });
 
   final Widget? headerFooter;
+  final Widget? leading;
   final double compactSize = 0.14;
   final bool minimalCompact;
   final String title;
@@ -3480,6 +3474,8 @@ class _MapSelectionSheet extends StatefulWidget {
 class _MapSelectionSheetState extends State<_MapSelectionSheet> {
   double _compactSize = 0.14;
   bool _expanded = false;
+  bool _directionsExpanded = false;
+  double? _sizeBeforeDirections;
   double get _maximumSize => widget.minimalCompact ? 0.85 : 0.62;
   double get _expandedSize =>
       math.min(_maximumSize, math.max(0.44, _compactSize + 0.15));
@@ -3526,6 +3522,10 @@ class _MapSelectionSheetState extends State<_MapSelectionSheet> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final footer = widget.headerFooter;
+        if (footer is PoiDirectionsCard && footer.controller.route == null) {
+          _directionsExpanded = false;
+          _sizeBeforeDirections = null;
+        }
         final nextCompact = widget.minimalCompact && footer is PoiDirectionsCard
             ? _directionsSheetCompactSize(context, constraints, footer)
             : widget.compactSize;
@@ -3600,19 +3600,20 @@ class _MapSelectionSheetState extends State<_MapSelectionSheet> {
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                Container(
-                                  width: 34,
-                                  height: 34,
-                                  decoration: BoxDecoration(
-                                    color: widget.accentColor,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Icon(
-                                    widget.icon,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
+                                widget.leading ??
+                                    Container(
+                                      width: 34,
+                                      height: 34,
+                                      decoration: BoxDecoration(
+                                        color: widget.accentColor,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        widget.icon,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
@@ -3644,6 +3645,8 @@ class _MapSelectionSheetState extends State<_MapSelectionSheet> {
                                     ],
                                   ),
                                 ),
+                                if (footer is PoiDirectionsCard)
+                                  footer.headerActions(context),
                                 IconButton(
                                   tooltip: context.l10n.t('Close'),
                                   color: Colors.white,
@@ -3656,10 +3659,44 @@ class _MapSelectionSheetState extends State<_MapSelectionSheet> {
                         ),
                       ),
                     ),
-                    if (widget.headerFooter != null)
+                    if (footer != null &&
+                        (footer is! PoiDirectionsCard || footer.hasStatus))
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                        child: widget.headerFooter,
+                        child: footer is PoiDirectionsCard
+                            ? footer.summary(
+                                context,
+                                expanded: _directionsExpanded,
+                                onToggle: () {
+                                  final opening = !_directionsExpanded;
+                                  if (opening) {
+                                    _sizeBeforeDirections =
+                                        _controller.isAttached
+                                        ? _controller.size
+                                        : _compactSize;
+                                  }
+                                  final target = opening
+                                      ? math.max(
+                                          _sizeBeforeDirections!,
+                                          _expandedSize,
+                                        )
+                                      : (_sizeBeforeDirections ?? _compactSize)
+                                            .clamp(_compactSize, _maximumSize)
+                                            .toDouble();
+                                  setState(() => _directionsExpanded = opening);
+                                  if (!opening) _sizeBeforeDirections = null;
+                                  if (_controller.isAttached) {
+                                    _controller.animateTo(
+                                      target,
+                                      duration: const Duration(
+                                        milliseconds: 260,
+                                      ),
+                                      curve: Curves.easeOutCubic,
+                                    );
+                                  }
+                                },
+                              )
+                            : footer,
                       ),
                     if (!widget.minimalCompact || _expanded)
                       Padding(
@@ -3806,15 +3843,11 @@ class _MapStageInfoSheetState extends State<MapStageInfoSheet> {
             '${l10n.t('Cyprus-E4').toUpperCase()} · ${(endpointLabel ?? l10n.stage(stage.sequence)).toUpperCase()} · ${widget.stageIndex + 1}/${widget.stages.length}',
         icon: Icons.place_rounded,
         accentColor: EurotrexPalette.blue,
+        leading: const StagePinIcon(),
         onClose: widget.onClose,
         headerFooter: widget.directions,
         minimalCompact: true,
         children: [
-          if (widget.route case final route?)
-            PoiDirectionsInstructions(
-              route: route,
-              formatter: widget.formatter,
-            ),
           StageInfoCards(
             stage: stage,
             stages: widget.stages,
@@ -3887,6 +3920,8 @@ class _MapStageInfoSheetState extends State<MapStageInfoSheet> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
+                            const StagePinIcon(),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,

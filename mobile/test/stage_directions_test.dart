@@ -152,10 +152,15 @@ void main() {
     await drag.up();
     await tester.pumpAndSettle();
     expect(tester.getSize(sheet).height, closeTo(draggedHeight, 1));
+    await tester.tap(find.byKey(const ValueKey('poi-directions-expand')));
+    await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('poi-directions-instructions')),
       findsOneWidget,
     );
+    await tester.tap(find.byKey(const ValueKey('poi-directions-expand')));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(sheet).height, closeTo(draggedHeight, 1));
     final open = find.byKey(const ValueKey('map-open-stage-info'));
     await tester.drag(find.byType(ListView).first, const Offset(0, -650));
     await tester.pumpAndSettle();

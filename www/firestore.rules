@@ -40,6 +40,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Approved map notices contain no reporter identity, photos or review notes.
+    // Publishing/removal is atomic with the authorized server review operation.
+    match /trailIssues/{issueId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /trailReports/{reportId} {
       allow read: if resource.data.uploadState == 'complete'
         && canReviewTrailReports(resource.data.trailId);

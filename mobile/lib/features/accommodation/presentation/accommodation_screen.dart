@@ -1017,19 +1017,15 @@ class _LodgingCard extends ConsumerWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
+                SizedBox(
                   key: ValueKey('lodging-type-marker-${lodging.id}'),
                   width: 38,
                   height: 38,
-                  decoration: BoxDecoration(
-                    color: markerColor,
-                    shape: BoxShape.circle,
-                  ),
                   child: Center(
                     child: LodgingTypeIcon(
                       type: type,
-                      color: Colors.white,
-                      size: 21,
+                      color: markerColor,
+                      size: 34,
                     ),
                   ),
                 ),
