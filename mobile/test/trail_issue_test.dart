@@ -74,6 +74,9 @@ void main() {
     updates.add([issue]);
     await tester.pumpAndSettle();
     expect(find.text(issue.description), findsOneWidget);
+    expect(find.text('Description:'), findsOneWidget);
+    expect(find.text('Can hikers pass?'), findsOneWidget);
+    expect(find.byIcon(Icons.signpost_outlined), findsOneWidget);
     updates.add([]);
     await tester.pumpAndSettle();
     expect(find.byType(TrailIssueSheet), findsNothing);

@@ -693,7 +693,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   Cancelable? _endpointTapListener;
   final Map<String, int> _endpointIndexByAnnotation = {};
   PointAnnotationManager? _stageManager;
-  CircleAnnotationManager? _stageSelectionManager;
+  PointAnnotationManager? _selectedStageManager;
+  Cancelable? _selectedStageTapListener;
   Cancelable? _stageTapListener;
   final Map<String, int> _stageIndexByAnnotation = {};
   CircleAnnotationManager? _lodgingSelectionManager;
@@ -800,6 +801,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     _lodgingAnimationGeneration++;
     _endpointTapListener?.cancel();
     _stageTapListener?.cancel();
+    _selectedStageTapListener?.cancel();
     _lodgingTapListener?.cancel();
     _excursionTapListener?.cancel();
     _detourTapListener?.cancel();
@@ -842,12 +844,16 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       _recordAnnotationTap();
       showModalBottomSheet<void>(
         context: context,
-        showDragHandle: true,
+        showDragHandle: false,
         isScrollControlled: true,
         useSafeArea: true,
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * 0.6,
         ),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        clipBehavior: Clip.antiAlias,
         backgroundColor: _sand,
         builder: (_) =>
             TrailIssueSheet(trailId: issue.trailId, issueId: issue.id),
@@ -1323,23 +1329,23 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   }
 
   Future<void> _drawStages(MapboxMap map, {bool animate = false}) async {
-    final pinHeight = 80 / MediaQuery.devicePixelRatioOf(context);
     final animationGeneration = ++_stageAnimationGeneration;
     final shouldAnimate = animate && !MediaQuery.disableAnimationsOf(context);
     _stageTapListener?.cancel();
+    _selectedStageTapListener?.cancel();
     _stageTapListener = null;
+    _selectedStageTapListener = null;
+    final previousSelected = _selectedStageManager;
+    _selectedStageManager = null;
+    if (previousSelected != null) {
+      await map.annotations.removeAnnotationManager(previousSelected);
+    }
     final previousManager = _stageManager;
     if (previousManager != null) {
       await map.annotations.removeAnnotationManager(previousManager);
     }
     _stageManager = null;
     _stageIndexByAnnotation.clear();
-    final oldSelection = _stageSelectionManager;
-    _stageSelectionManager = null;
-    if (oldSelection != null) {
-      await map.annotations.removeAnnotationManager(oldSelection);
-    }
-
     final locatedStages = _locatedStages();
     if (locatedStages.isEmpty) return;
     final endpointIndexes = mapStageEndpointIndexes(
@@ -1349,29 +1355,6 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     final selected = locatedStages
         .where((item) => item.index == _selectedStageIndex)
         .firstOrNull;
-    if (selected != null) {
-      final isEndpoint =
-          selected.index == endpointIndexes.startIndex ||
-          selected.index == endpointIndexes.finishIndex;
-      final selection = await map.annotations.createCircleAnnotationManager();
-      _stageSelectionManager = selection;
-      await selection.setCircleTranslateAnchor(CircleTranslateAnchor.VIEWPORT);
-      await selection.setCircleTranslate([0, isEndpoint ? 0 : -pinHeight / 2]);
-      await selection.create(
-        CircleAnnotationOptions(
-          geometry: Point(
-            coordinates: Position(selected.point.lng, selected.point.lat),
-          ),
-          circleRadius: isEndpoint
-              ? mapSelectedLodgingRingRadius
-              : pinHeight / 2 + 2,
-          circleOpacity: 0,
-          circleStrokeColor: EurotrexPalette.blue.toARGB32(),
-          circleStrokeWidth: mapSelectedLodgingRingWidth,
-          circleStrokeOpacity: 1,
-        ),
-      );
-    }
     final visibleStageIndexes = mapVisibleIntermediateStageIndexes(
       locatedStageIndexes: [
         for (final locatedStage in locatedStages) locatedStage.index,
@@ -1391,9 +1374,13 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         : visibleStageIndexes;
     final displayedStageIndexes = progressiveStageIndexes.toSet();
     final displayedStages = locatedStages
-        .where((item) => displayedStageIndexes.contains(item.index))
+        .where(
+          (item) =>
+              displayedStageIndexes.contains(item.index) &&
+              item.index != _selectedStageIndex,
+        )
         .toList(growable: false);
-    if (displayedStages.isEmpty) return;
+    if (displayedStages.isEmpty && selected == null) return;
 
     final stageIcon = await mapStagePinImage();
     final manager = await map.annotations.createPointAnnotationManager();
@@ -1440,6 +1427,36 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         _selectStage(stageIndex);
       },
     );
+    // Keep the enlarged selected pin visible when zooming out. Other stage
+    // pins still use progressive decluttering.
+    if (selected != null && displayedStageIndexes.contains(selected.index)) {
+      final selectedManager = await map.annotations
+          .createPointAnnotationManager();
+      _selectedStageManager = selectedManager;
+      await selectedManager.setIconAllowOverlap(true);
+      await selectedManager.setIconIgnorePlacement(true);
+      await selectedManager.create(
+        PointAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(selected.point.lng, selected.point.lat),
+          ),
+          image: stageIcon,
+          iconAnchor: IconAnchor.BOTTOM,
+          iconSize: 1.25,
+          customData: {
+            'stageIndex': selected.index,
+            'name': selected.stage.name,
+          },
+        ),
+      );
+      _selectedStageTapListener = selectedManager.tapEvents(
+        onTap: (_) {
+          if (!mounted) return;
+          _recordAnnotationTap();
+          _selectStage(selected.index);
+        },
+      );
+    }
     if (shouldAnimate) {
       await _animateStageEntrance(manager, animationGeneration);
     }
@@ -1485,6 +1502,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
         final selectionManager = await map.annotations
             .createCircleAnnotationManager();
         _lodgingSelectionManager = selectionManager;
+        await selectionManager.setCirclePitchAlignment(
+          CirclePitchAlignment.VIEWPORT,
+        );
+        await selectionManager.setCirclePitchScale(CirclePitchScale.VIEWPORT);
         await selectionManager.create(
           CircleAnnotationOptions(
             geometry: Point(
@@ -1804,8 +1825,10 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
   Future<void> _selectStage(int stageIndex) async {
     _directions.clear();
     final map = _map;
-    final distance = widget.stages[stageIndex].accumulatedDistanceKm;
-    if (map == null || distance == null) return;
+    final selected = _locatedStages()
+        .where((item) => item.index == stageIndex)
+        .firstOrNull;
+    if (map == null || selected == null) return;
     final lodgingWasSelected = _selectedLodgingIndex != null;
     setState(() {
       _selectedStageIndex = stageIndex;
@@ -1818,6 +1841,19 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     if (lodgingWasSelected && _lodgingsVisible) {
       await _drawLodgings(map);
     }
+    if (!mounted || _selectedStageIndex != stageIndex) return;
+    final camera = await map.getCameraState();
+    if (!mounted || _selectedStageIndex != stageIndex) return;
+    await map.easeTo(
+      CameraOptions(
+        center: Point(
+          coordinates: Position(selected.point.lng, selected.point.lat),
+        ),
+        zoom: mapLodgingSelectionZoom(camera.zoom),
+        bearing: camera.bearing,
+      ),
+      MapAnimationOptions(duration: 520, startDelay: 0),
+    );
   }
 
   Future<void> _clearSelectedStage() async {
