@@ -1,3 +1,4 @@
+import 'package:eurotrex/features/reports/presentation/report_damage_icon.dart';
 import 'package:eurotrex/core/localization/app_localizations.dart';
 import 'package:eurotrex/features/reports/presentation/report_card_header.dart';
 import 'package:eurotrex/features/reports/presentation/report_status_badge.dart';
@@ -48,7 +49,7 @@ void main() {
       await tester.pumpWidget(header(329, state: state));
       await tester.pumpAndSettle();
       final badge = tester.getRect(find.byType(ReportStatusBadge));
-      final icon = tester.getRect(find.byIcon(Icons.signpost_outlined));
+      final icon = tester.getRect(find.byType(ReportDamageIcon));
       expect(badge.right, closeTo(329, .1));
       expect(badge.top, 0);
       expect(badge.left, greaterThan(icon.right));

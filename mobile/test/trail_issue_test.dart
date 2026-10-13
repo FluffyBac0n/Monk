@@ -1,3 +1,4 @@
+import 'package:eurotrex/features/reports/presentation/report_damage_icon.dart';
 import 'dart:async';
 import 'package:eurotrex/features/reports/domain/trail_issue.dart';
 import 'package:eurotrex/features/reports/data/trail_issues.dart';
@@ -76,7 +77,7 @@ void main() {
     expect(find.text(issue.description), findsOneWidget);
     expect(find.text('Description:'), findsOneWidget);
     expect(find.text('Can hikers pass?'), findsOneWidget);
-    expect(find.byIcon(Icons.signpost_outlined), findsOneWidget);
+    expect(find.byType(ReportDamageIcon), findsOneWidget);
     updates.add([]);
     await tester.pumpAndSettle();
     expect(find.byType(TrailIssueSheet), findsNothing);

@@ -2,14 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 import 'report_status_badge.dart';
-
-IconData reportDamageIcon(String category) => switch (category) {
-  'signpost' => Icons.signpost_outlined,
-  'vegetation' => Icons.grass_rounded,
-  'obstruction' => Icons.landscape_outlined,
-  'path_damage' => Icons.route_outlined,
-  _ => Icons.warning_amber_rounded,
-};
+import 'report_damage_icon.dart';
 
 class ReportCardHeader extends StatelessWidget {
   const ReportCardHeader({
@@ -68,8 +61,8 @@ class ReportCardHeader extends StatelessWidget {
                 color: EurotrexPalette.paleBlue,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                reportDamageIcon(category),
+              child: ReportDamageIcon(
+                category: category,
                 color: EurotrexPalette.navy,
                 size: 22,
               ),

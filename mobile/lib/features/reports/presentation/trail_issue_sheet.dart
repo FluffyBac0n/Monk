@@ -4,7 +4,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/theme/eurotrex_palette.dart';
 import '../data/trail_issues.dart';
 import 'report_screen.dart';
-import 'report_card_header.dart';
+import 'report_damage_icon.dart';
 
 class TrailIssueSheet extends ConsumerWidget {
   const TrailIssueSheet({
@@ -60,8 +60,8 @@ class TrailIssueSheet extends ConsumerWidget {
                 ),
                 Row(
                   children: [
-                    Icon(
-                      reportDamageIcon(issue.category),
+                    ReportDamageIcon(
+                      category: issue.category,
                       color: EurotrexPalette.navy,
                       size: 24,
                     ),

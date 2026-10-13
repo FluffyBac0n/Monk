@@ -19,6 +19,7 @@ import '../data/report_photos.dart';
 import '../data/report_store.dart';
 import '../data/report_sync.dart';
 import 'report_card_header.dart';
+import 'report_damage_icon.dart';
 
 const _reportSand = Color(0xFFF4F2EC);
 const _reportSurface = Color(0xFFFBFAF6);
@@ -435,8 +436,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                           value: entry.key,
                           child: Row(
                             children: [
-                              Icon(
-                                reportDamageIcon(entry.key),
+                              ReportDamageIcon(
+                                category: entry.key,
                                 size: 22,
                                 color: EurotrexPalette.navy,
                               ),
