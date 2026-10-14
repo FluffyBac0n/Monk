@@ -1,6 +1,6 @@
 # Map Improvements
 
-Proposed improvements for EuroTrex, recorded on 13 October 2026. These are suggestions only; implementation has not started.
+Proposed improvements for EuroTrex, recorded on 13 October 2026. The optional 3D stage preview now has a mobile prototype for review (14 October 2026). The other items remain suggestions.
 
 The priorities are helping hikers stay on the trail, understand what lies ahead and use the app without reception. Some features are provided directly by Mapbox; others combine Mapbox with EuroTrex’s GPS, trail and report data.
 
@@ -24,6 +24,10 @@ These build on existing functionality and would be useful during most hikes.
 | Medium | Grouped POIs and issues | When zoomed out, show grouped markers such as “4 lodgings” or “3 issues”. Tapping expands them. This makes busy areas easier to read. |
 | Medium | Optional 3D stage preview | Let hikers tilt the terrain to understand an upcoming climb, valley or descent before starting. Keep the normal hiking view simple and make 3D an optional preview. |
 | Later | “What can I reach in 30 minutes?” | Show a walking-reach area around the hiker to help find nearby villages or services. Mapbox walking isochrones provide estimates and do not automatically account for EuroTrex’s reported trail damage. |
+
+## 3D preview prototype
+
+Open **3D stage preview** from stage details or the expanded stage card on the map. A separate screen shows that stage's trail section over Mapbox terrain at natural elevation, with 2D/3D comparison, pan, zoom, rotation and a reset control. The normal map retains its own state. This first version needs an internet connection for terrain data.
 
 ## Routing and reported problems
 

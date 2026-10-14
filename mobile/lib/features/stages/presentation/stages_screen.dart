@@ -1,3 +1,5 @@
+import '../../map/domain/stage_preview.dart';
+import '../../map/presentation/stage_preview_screen.dart';
 import '../../reports/presentation/report_screen.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -3946,6 +3948,34 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        key: const ValueKey('stage-detail-3d-preview'),
+                        onPressed:
+                            stagePreviewPoints(
+                                  points: previewRoute ?? const [],
+                                  stages: widget.stages,
+                                  stageIndex: index,
+                                ).length <
+                                2
+                            ? null
+                            : () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => StagePreviewScreen(
+                                    stageName: stage.name,
+                                    points: stagePreviewPoints(
+                                      points: previewRoute ?? const [],
+                                      stages: widget.stages,
+                                      stageIndex: index,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                        icon: const Icon(Icons.view_in_ar_rounded, size: 20),
+                        label: Text(l10n.t('3D stage preview')),
+                      ),
+                    ),
                     _StageMapPreview(
                       key: _mapPreviewKey,
                       routePoints: previewRoute ?? const [],

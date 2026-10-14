@@ -1,3 +1,5 @@
+import '../domain/stage_preview.dart';
+import 'stage_preview_screen.dart';
 import '../../reports/data/trail_issues.dart';
 import '../../reports/presentation/trail_issue_sheet.dart';
 import 'trail_issue_layer.dart';
@@ -2802,6 +2804,26 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
                 directions: directions,
                 route: _directions.route,
                 onOpenDetails: _openSelectedStage,
+                onPreview:
+                    stagePreviewPoints(
+                          points: widget.points,
+                          stages: widget.stages,
+                          stageIndex: stageIndex,
+                        ).length <
+                        2
+                    ? null
+                    : () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => StagePreviewScreen(
+                            stageName: widget.stages[stageIndex].name,
+                            points: stagePreviewPoints(
+                              points: widget.points,
+                              stages: widget.stages,
+                              stageIndex: stageIndex,
+                            ),
+                          ),
+                        ),
+                      ),
                 onClose: _clearSelectedStage,
               ),
             if (_selectedLodgingIndex case final lodgingIndex?)
@@ -3802,6 +3824,7 @@ class MapStageInfoSheet extends StatefulWidget {
     required this.formatter,
     required this.onOpenDetails,
     required this.onClose,
+    this.onPreview,
     this.excursions = const [],
     this.detours = const [],
     this.directions,
@@ -3817,6 +3840,7 @@ class MapStageInfoSheet extends StatefulWidget {
   final TrailDirection direction;
   final MeasurementFormatter formatter;
   final VoidCallback onOpenDetails;
+  final VoidCallback? onPreview;
   final VoidCallback onClose;
   final List<TrailExcursion> excursions;
   final List<TrailDetour> detours;
@@ -3885,6 +3909,15 @@ class _MapStageInfoSheetState extends State<MapStageInfoSheet> {
             onPressed: widget.onOpenDetails,
             child: Text(l10n.t('Open Stage')),
           ),
+          if (widget.onPreview != null) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const ValueKey('map-stage-3d-preview'),
+              onPressed: widget.onPreview,
+              icon: const Icon(Icons.view_in_ar_rounded),
+              label: Text(l10n.t('3D stage preview')),
+            ),
+          ],
         ],
       );
     }
