@@ -7,6 +7,7 @@ import { AuthPanel } from '@/components/AuthPanel';
 import { PortalHeader } from '@/components/PortalHeader';
 import {
   approveSubmission,
+  approveOwnerProfile,
   normalizeHttpUrl,
   removePublishedLodging,
   removeSubmissionAccommodation,
@@ -15,13 +16,14 @@ import {
   watchAllPublishedLodgings,
   watchAllSubmissions,
   watchAudit,
+  watchOwnerProfiles,
 } from '@/lib/accommodations';
-import type { AccommodationSubmission, AuditEntry, PublishedLodging, SubmissionStatus } from '@/lib/models';
+import type { AccommodationSubmission, AuditEntry, OwnerProfile, PublishedLodging, SubmissionStatus } from '@/lib/models';
 import { statusLabels } from '@/lib/models';
 import { useAuthState } from '@/lib/use-auth';
 import { trailDisplayName } from '@/lib/trail-names';
 
-type Tab = 'review' | 'all' | 'published' | 'audit';
+type Tab = 'hosts' | 'review' | 'all' | 'published' | 'audit';
 
 function safeExternalUrl(value: string) {
   try { return normalizeHttpUrl(value, true); }
@@ -58,6 +60,11 @@ function AdminSession({ user }: { user: User }) {
   const [submissions, setSubmissions] = useState<AccommodationSubmission[]>([]);
   const [published, setPublished] = useState<PublishedLodging[]>([]);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
+  const [hosts, setHosts] = useState<OwnerProfile[]>([]);
+  const [hostsLoading, setHostsLoading] = useState(true);
+  const [hostsError, setHostsError] = useState('');
+  const [hostSearch, setHostSearch] = useState('');
+  const [success, setSuccess] = useState('');
   const [tab, setTab] = useState<Tab>('review');
   const [status, setStatus] = useState<'all' | SubmissionStatus>('all');
   const [search, setSearch] = useState('');
@@ -68,11 +75,15 @@ function AdminSession({ user }: { user: User }) {
     const stopSubmissions = watchAllSubmissions(setSubmissions, (caught) => setError(caught.message));
     const stopPublished = watchAllPublishedLodgings(setPublished, (caught) => setError(caught.message));
     const stopAudit = watchAudit(setAudit, (caught) => setError(caught.message));
-    return () => { stopSubmissions(); stopPublished(); stopAudit(); };
+    const stopHosts = watchOwnerProfiles((rows) => {
+      setHosts(rows); setHostsLoading(false); setHostsError('');
+    }, () => { setHostsLoading(false); setHostsError('Could not load host accounts. Reload to retry.'); });
+    return () => { stopSubmissions(); stopPublished(); stopAudit(); stopHosts(); };
   }, [user]);
 
   const queue = submissions.filter((row) => ['pending', 'pending_update'].includes(row.status));
-  const owners = new Set(submissions.map((row) => row.ownerId)).size;
+  const pendingHosts = hosts.filter((row) => row.accessStatus === 'pending');
+  const filteredHosts = hosts.filter((row) => [row.businessName, row.email].join(' ').toLowerCase().includes(hostSearch.trim().toLowerCase()));
   const filtered = useMemo(() => submissions.filter((row) => {
     const statusMatch = status === 'all' || row.status === status;
     const needle = search.trim().toLowerCase();
@@ -90,6 +101,7 @@ function AdminSession({ user }: { user: User }) {
   async function act(id: string, action: () => Promise<void>) {
     setBusyId(id);
     setError('');
+    setSuccess('');
     try { await action(); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Action failed.'); }
     finally { setBusyId(''); }
   }
@@ -105,17 +117,35 @@ function AdminSession({ user }: { user: User }) {
         <section className="metric-grid">
           <article><span>{queue.length}</span><p>Awaiting review</p></article>
           <article><span>{published.length}</span><p>Live listings</p></article>
-          <article><span>{owners}</span><p>Hosts</p></article>
+          <article><span>{hostsLoading ? '…' : hostsError ? '—' : pendingHosts.length}</span><p>Host accounts awaiting approval</p><button className="text-button" onClick={() => setTab('hosts')}>Review host accounts</button></article>
           <article><span>{submissions.filter((row) => row.status === 'changes_requested').length}</span><p>Changes requested</p></article>
         </section>
         {error && <p className="notice error" role="alert">{error}</p>}
+        {success && <p className="notice success" role="status">{success}</p>}
 
         <div className="dashboard-tabs" role="group" aria-label="Admin views">
+          <button aria-pressed={tab === 'hosts'} className={tab === 'hosts' ? 'active' : ''} onClick={() => setTab('hosts')}>Host accounts {pendingHosts.length > 0 && <b>{pendingHosts.length}</b>}</button>
           <button aria-pressed={tab === 'review'} className={tab === 'review' ? 'active' : ''} onClick={() => setTab('review')}>Review queue <b>{queue.length}</b></button>
           <button aria-pressed={tab === 'all'} className={tab === 'all' ? 'active' : ''} onClick={() => setTab('all')}>All submissions</button>
           <button aria-pressed={tab === 'published'} className={tab === 'published' ? 'active' : ''} onClick={() => setTab('published')}>Live listings</button>
           <button aria-pressed={tab === 'audit'} className={tab === 'audit' ? 'active' : ''} onClick={() => setTab('audit')}>Audit log</button>
         </div>
+
+        {tab === 'hosts' && (
+          <section>
+            <div className="panel-heading"><div><p className="eyebrow">HOST ACCESS</p><h2>Host accounts</h2><p>Approve hosts to let them submit accommodations. Each listing is reviewed separately before publication. Hosts must also verify their email.</p></div></div>
+            <div className="filters"><label>Search hosts<input type="search" value={hostSearch} onChange={(event) => setHostSearch(event.target.value)} placeholder="Business name or email…" /></label></div>
+            {hostsError ? <p className="notice error" role="alert">{hostsError}</p> : hostsLoading ? <p role="status">Loading host accounts…</p> : !filteredHosts.length ? <div className="empty-state"><h3>{hostSearch ? 'No matching host accounts.' : 'No host accounts yet.'}</h3></div> : (
+              <div className="table-wrap"><table><thead><tr><th>Host / business</th><th>Email</th><th>Registered</th><th>Account status</th><th>Control</th></tr></thead><tbody>{filteredHosts.map((host) => {
+                const access = host.accessStatus ?? 'active';
+                return <tr key={host.id}><td><strong>{host.businessName || 'Host account'}</strong></td><td>{host.email}</td><td>{host.createdAt?.toDate?.().toLocaleDateString() || '—'}</td><td><span className={`status status-${access === 'active' ? 'approved' : access === 'pending' ? 'pending' : 'removed'}`}>{access === 'pending' ? 'Awaiting approval' : access === 'active' ? 'Active' : 'Disabled'}</span></td><td>{access === 'pending' ? <button className="button button-primary" disabled={Boolean(busyId)} onClick={() => act(`host:${host.id}`, async () => {
+                  await approveOwnerProfile(user, host.id);
+                  setSuccess(`${host.businessName || 'Host account'} approved. They can now submit accommodations after verifying their email.`);
+                })}>{busyId === `host:${host.id}` ? 'Approving…' : 'Approve host account'}</button> : '—'}</td></tr>;
+              })}</tbody></table></div>
+            )}
+          </section>
+        )}
 
         {tab === 'review' && (
           <section className="admin-list">
@@ -142,7 +172,7 @@ function AdminSession({ user }: { user: User }) {
         {tab === 'audit' && (
           <section>
             <div className="panel-heading"><div><p className="eyebrow">ACCOUNTABILITY</p><h2>Accommodation audit log</h2></div><p>{audit.length} events</p></div>
-            <div className="table-wrap"><table><thead><tr><th>Action</th><th>Accommodation</th><th>Administrator</th><th>Note</th><th>Time</th></tr></thead><tbody>{audit.map((row) => <tr key={row.id}><td><span className="status">{row.action || 'updated'}</span></td><td><strong>{row.accommodationName || row.lodgingId || 'Accommodation'}</strong><small>{row.trailId}</small></td><td>{row.actorEmail || 'Admin'}</td><td>{row.note || '—'}</td><td>{row.createdAt?.toDate?.().toLocaleString() || 'Pending'}</td></tr>)}</tbody></table></div>
+            <div className="table-wrap"><table><thead><tr><th>Action</th><th>Accommodation / host</th><th>Administrator</th><th>Note</th><th>Time</th></tr></thead><tbody>{audit.map((row) => <tr key={row.id}><td><span className="status">{row.action || 'updated'}</span></td><td><strong>{row.accommodationName || row.lodgingId || 'Accommodation'}</strong><small>{row.trailId}</small></td><td>{row.actorEmail || 'Admin'}</td><td>{row.note || '—'}</td><td>{row.createdAt?.toDate?.().toLocaleString() || 'Pending'}</td></tr>)}</tbody></table></div>
           </section>
         )}
 

@@ -18,7 +18,7 @@ control the portal after the Site access gate; they do not make the Site public.
 1. Open `https://eurotrex.andreasmic332452.chatgpt.site/portal` while signed in
    to the Site owner account.
 2. Select **Create account**, enter a test company name and email, and create the password. Confirm that the portal asks you to verify the email.
-3. After verification, confirm the portal shows **Your host account is under review**. In Firebase Console, find `ownerProfiles/{UID}` and change `accessStatus` from `pending` to `active`.
+3. After verification, confirm the portal shows **Your host account is under review**. As an administrator, open `/admin` → **Host accounts**, find the business name or email, and select **Approve host account**. The pending count and status update immediately, and approval is recorded in the audit log. Only administrators can approve accounts; hosts cannot activate themselves. This sets `ownerProfiles/{UID}.accessStatus` from `pending` to `active` and does not publish any listings.
 4. Sign in again, add an accommodation, choose a real trail stage, accept the policy, and
    submit it.
 5. Confirm the dashboard shows **Awaiting review**. Sign out and back in to verify

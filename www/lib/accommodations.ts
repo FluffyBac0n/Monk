@@ -12,6 +12,7 @@ import {
   getDocs,
   onSnapshot,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   where,
@@ -25,6 +26,7 @@ import type {
   AccommodationDraft,
   AccommodationDraftValues,
   AuditEntry,
+  OwnerProfile,
   PublishedLodging,
   StageOption,
   SubmissionStatus,
@@ -49,6 +51,36 @@ export async function registerOwnerProfile(user: User, companyName: string) {
     accessStatus: 'pending',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+  });
+}
+
+export function watchOwnerProfiles(
+  onData: (rows: OwnerProfile[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  return onSnapshot(collection(db, 'ownerProfiles'), (snapshot) => {
+    const rows = snapshot.docs.map((row) => ({ ...row.data(), id: row.id } as OwnerProfile));
+    onData(rows.sort((a, b) => Number(b.accessStatus === 'pending') - Number(a.accessStatus === 'pending')
+      || (a.businessName || a.email || '').localeCompare(b.businessName || b.email || '')));
+  }, onError);
+}
+
+export async function approveOwnerProfile(actor: User, ownerId: string) {
+  const profileRef = doc(db, 'ownerProfiles', ownerId);
+  const auditRef = doc(collection(db, 'accommodationAudit'));
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(profileRef);
+    if (!snapshot.exists()) throw new Error('This host account no longer exists.');
+    const profile = snapshot.data();
+    if (profile.accessStatus !== 'pending') throw new Error('This account is no longer awaiting approval.');
+    transaction.update(profileRef, { accessStatus: 'active', updatedAt: serverTimestamp() });
+    transaction.set(auditRef, {
+      submissionId: '', lodgingId: '', trailId: '', ownerId,
+      accommodationName: profile.businessName || '',
+      action: 'approved',
+      note: 'Host account approved. Accommodation listings require a separate review.',
+      actorId: actor.uid, actorEmail: actor.email || '', createdAt: serverTimestamp(),
+    });
   });
 }
 

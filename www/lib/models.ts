@@ -1,3 +1,11 @@
+export type OwnerProfile = {
+  id: string;
+  email: string;
+  businessName: string;
+  accessStatus?: string;
+  createdAt?: { toDate?: () => Date };
+};
+
 export type SubmissionStatus =
   | 'draft'
   | 'pending'
