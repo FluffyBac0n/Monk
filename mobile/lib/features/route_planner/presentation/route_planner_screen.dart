@@ -19,6 +19,7 @@ import '../../elevation/domain/route_point.dart';
 import '../../elevation/presentation/elevation_controller.dart';
 import '../../map/domain/offline_map_state.dart';
 import '../../map/presentation/map_screen.dart';
+import '../../map/presentation/map_stage_pin.dart';
 import '../../map/presentation/offline_map_controller.dart';
 import '../../stages/domain/stage.dart';
 import '../../stages/presentation/stages_controller.dart';
@@ -1926,39 +1927,22 @@ class _RouteSelectionMapState extends ConsumerState<_RouteSelectionMap> {
     if (located.isEmpty) return;
     final manager = await map.annotations.createPointAnnotationManager();
     _stageManager = manager;
-    await manager.setTextAllowOverlap(false);
-    await manager.setTextIgnorePlacement(false);
+    await manager.setIconAllowOverlap(false);
+    await manager.setIconIgnorePlacement(false);
+    final stageIcon = await mapStagePinImage();
     final annotations = await manager.createMulti([
       for (final item in located)
         PointAnnotationOptions(
           geometry: Point(
             coordinates: Position(item.point.lng, item.point.lat),
           ),
-          textField: item.stage.id == widget.start?.id
-              ? 'S'
-              : item.stage.id == widget.finish?.id
-              ? 'F'
-              : '${item.index + 1}',
-          textSize:
+          image: stageIcon,
+          iconAnchor: IconAnchor.BOTTOM,
+          iconSize:
               item.stage.id == widget.start?.id ||
                   item.stage.id == widget.finish?.id
-              ? 14
-              : 11,
-          textColor:
-              item.stage.id == widget.start?.id ||
-                  item.stage.id == widget.finish?.id
-              ? Colors.white.toARGB32()
-              : EurotrexPalette.navy.toARGB32(),
-          textHaloColor: item.stage.id == widget.finish?.id
-              ? _comfort.toARGB32()
-              : item.stage.id == widget.start?.id
-              ? EurotrexPalette.blue.toARGB32()
-              : Colors.white.toARGB32(),
-          textHaloWidth:
-              item.stage.id == widget.start?.id ||
-                  item.stage.id == widget.finish?.id
-              ? 6
-              : 4,
+              ? 1.25
+              : 1.0,
           symbolSortKey:
               item.stage.id == widget.start?.id ||
                   item.stage.id == widget.finish?.id
@@ -2133,16 +2117,6 @@ class _RouteSelectionMapState extends ConsumerState<_RouteSelectionMap> {
             child: Column(
               children: [
                 _PlannerMapButton(
-                  key: const ValueKey('route-planner-map-stages'),
-                  tooltip: context.l10n.t(
-                    _stagesVisible ? 'Hide stages' : 'Show all stages',
-                  ),
-                  active: _stagesVisible,
-                  onPressed: _toggleStages,
-                  child: const Icon(Icons.signpost_outlined),
-                ),
-                const SizedBox(height: 8),
-                _PlannerMapButton(
                   key: const ValueKey('route-planner-map-gps'),
                   tooltip: context.l10n.t('Show my location'),
                   active: _gpsVisible,
@@ -2156,12 +2130,22 @@ class _RouteSelectionMapState extends ConsumerState<_RouteSelectionMap> {
                 ),
                 const SizedBox(height: 8),
                 _PlannerMapButton(
+                  key: const ValueKey('route-planner-map-stages'),
+                  tooltip: context.l10n.t(
+                    _stagesVisible ? 'Hide stages' : 'Show all stages',
+                  ),
+                  active: _stagesVisible,
+                  onPressed: _toggleStages,
+                  child: const Icon(Icons.pin_drop_outlined),
+                ),
+                const SizedBox(height: 8),
+                _PlannerMapButton(
                   key: const ValueKey('route-planner-map-center'),
                   tooltip: context.l10n.t('Center trail'),
                   onPressed: mapAvailable
                       ? () => _runMapOperation(_fitTrail)
                       : null,
-                  child: const Icon(Icons.center_focus_strong_rounded),
+                  child: const Icon(Icons.fit_screen_rounded),
                 ),
               ],
             ),
@@ -2274,16 +2258,7 @@ class _RouteSelectionPainter extends CustomPainter {
       if (!showAllStages && !isStart && !isFinish) continue;
       final point = routePointNearestDistance(points, distance);
       final center = projectPoint(point);
-      canvas.drawCircle(
-        center,
-        isStart || isFinish ? 9 : 7,
-        Paint()..color = Colors.white,
-      );
-      canvas.drawCircle(
-        center,
-        isStart || isFinish ? 6 : 4,
-        Paint()..color = isFinish ? _comfort : EurotrexPalette.blue,
-      );
+      paintStageMapPin(canvas, center, height: isStart || isFinish ? 36 : 29);
     }
   }
 
@@ -3570,28 +3545,7 @@ class _RouteOverviewPainter extends CustomPainter {
             : right,
       );
       final center = project(point);
-      canvas.drawCircle(center, 10, Paint()..color = Colors.white);
-      canvas.drawCircle(
-        center,
-        8,
-        Paint()
-          ..color = index == 0 ? EurotrexPalette.navy : _dayColor(index - 1),
-      );
-      final painter = TextPainter(
-        text: TextSpan(
-          text: index == 0 ? 'S' : '$index',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 9,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      painter.paint(
-        canvas,
-        center - Offset(painter.width / 2, painter.height / 2),
-      );
+      paintStageMapPin(canvas, center);
     }
   }
 

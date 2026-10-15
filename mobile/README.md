@@ -41,22 +41,26 @@ Always include `--dart-define-from-file=env.local.json` when launching the app o
 or device. Without it, the map screen will show setup instructions instead of map tiles. Do not
 commit the token file.
 
-### iOS simulator with live Firebase reports
+### Simulators with live Firebase reports
 
-Run from `mobile/` with **both** local configuration files:
+Run from `mobile/` with **both** local configuration files (use the Android emulator ID for Android):
 
 ```bash
 flutter run -d <ios-simulator-id> --dart-define-from-file=env.local.json --dart-define-from-file=firebase-debug.local.json
 ```
 
 The ignored `firebase-debug.local.json` contains the private
-`FIREBASE_APP_CHECK_IOS_DEBUG_TOKEN` registered for local testing. Do not print,
+`FIREBASE_APP_CHECK_IOS_DEBUG_TOKEN` and `FIREBASE_APP_CHECK_ANDROID_DEBUG_TOKEN`
+registered for local testing in their respective Firebase apps. Do not print,
 share, or commit it. Omitting it selects App Attest, which cannot verify an iOS
-simulator and causes report uploads to remain saved on the device. Changes to
+simulator and causes report uploads to remain saved on the device. On Android,
+omitting its debug token selects Play Integrity, which rejects a locally installed
+emulator build. Changes to
 these build definitions require a full relaunch, not hot reload.
 
 Use this configuration only for local debug builds. Release and profile builds
-always use App Attest, even if a debug token is supplied. Keep App Check enforced
+always use App Attest on iOS and Play Integrity on Android, even if a debug token
+is supplied. Keep App Check enforced
 for production services.
 
 ## Connect Firebase

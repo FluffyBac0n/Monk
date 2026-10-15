@@ -1677,8 +1677,9 @@ void main() {
         tester
             .getSize(find.byKey(const Key('stage-route-preview-panel')))
             .height,
-        stageIndex == 0 ? 222 : 343,
+        stageIndex == 0 ? 270 : 391,
       );
+      expect(find.byKey(const Key('stage-detail-3d-preview')), findsOneWidget);
       if (stageIndex == 0) {
         expect(
           find.byKey(const Key('stage-route-preview-divider')),

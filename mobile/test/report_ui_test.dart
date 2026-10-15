@@ -32,6 +32,39 @@ class OfflineReportSync extends ChangeNotifier implements ReportSync {
 }
 
 void main() {
+  testWidgets('empty drafts show their status only in the badge', (
+    tester,
+  ) async {
+    final store = MemoryReportStore();
+    final sync = OfflineReportSync();
+    final draft = ReportDraft(
+      id: 'empty-draft',
+      trailId: 'cyprus-e4',
+      createdAt: DateTime.utc(2026, 10, 14),
+    );
+    await store.save(draft);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          reportStoreProvider.overrideWithValue(store),
+          reportSyncProvider.overrideWithValue(sync),
+        ],
+        child: const MaterialApp(home: MyReportsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Draft'), findsOneWidget);
+    expect(find.text('Continue draft'), findsOneWidget);
+    draft.description = 'A broken sign near the junction';
+    await store.save(draft);
+    sync.changed();
+    await tester.pumpAndSettle();
+    expect(find.text('Draft'), findsOneWidget);
+    expect(find.text(draft.description), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    sync.dispose();
+  });
+
   test('report categories, states, and upload errors have translations', () {
     for (final locale in const ['de', 'es', 'it', 'fr']) {
       final keys = AppLocalizations.translationKeys(Locale(locale));

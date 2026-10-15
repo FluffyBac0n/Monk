@@ -5,6 +5,16 @@ import 'package:flutter/material.dart';
 Future<Uint8List>? _stagePin;
 Future<Uint8List> mapStagePinImage() => _stagePin ??= _renderPin();
 
+/// Paints the shared map marker with its tip anchored at [position].
+void paintStageMapPin(Canvas canvas, Offset position, {double height = 32}) {
+  canvas.save();
+  canvas.translate(position.dx, position.dy);
+  canvas.scale(height / 80);
+  canvas.translate(-32, -76);
+  _drawPin(canvas, outline: true);
+  canvas.restore();
+}
+
 class StagePinIcon extends StatelessWidget {
   const StagePinIcon({super.key});
 

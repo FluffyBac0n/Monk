@@ -99,6 +99,7 @@ void main() {
       await tester.enterText(description, 'SIMULATOR TEST: damaged signpost');
       await tester.testTextInput.receiveAction(TextInputAction.done);
       FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
       expect(find.byType(CheckboxListTile), findsNothing);
       expect(draft.description, 'SIMULATOR TEST: damaged signpost');
       expect(draft.contactEmail, isEmpty);
@@ -107,6 +108,7 @@ void main() {
         350,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Send report'));
       await tester.pumpAndSettle();
       // Native PackageInfo/SQLite work may complete after the route animation

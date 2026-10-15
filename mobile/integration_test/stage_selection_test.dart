@@ -152,7 +152,7 @@ void main() {
         expect(
           rings.whereType<QueriedRenderedFeature>().where((ring) {
             final properties = ring.queriedFeature.feature['properties'] as Map;
-            final paint = properties['layerProperties'];
+            final paint = properties['layerProperties'] ?? properties;
             return paint is Map &&
                 paint['circle-radius'] == mapSelectedLodgingRingRadius;
           }),
@@ -179,7 +179,7 @@ void main() {
       );
       for (final pin in selectedPins) {
         final properties = pin.queriedFeature.feature['properties'] as Map;
-        final layout = properties['layerProperties'] as Map;
+        final layout = properties['layerProperties'] as Map? ?? properties;
         expect(layout['icon-size'], 1.25);
       }
     }

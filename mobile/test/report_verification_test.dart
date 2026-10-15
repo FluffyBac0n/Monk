@@ -5,6 +5,29 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('Android release and profile builds always use Play Integrity', () {
+    expect(
+      androidAppCheckProviderForBuild(
+        isDebugBuild: false,
+        debugToken: 'private-test-token',
+      ),
+      isA<AndroidPlayIntegrityProvider>(),
+    );
+  });
+
+  test('Android debug verification requires an explicit development token', () {
+    expect(
+      androidAppCheckProviderForBuild(isDebugBuild: true),
+      isA<AndroidPlayIntegrityProvider>(),
+    );
+    final provider = androidAppCheckProviderForBuild(
+      isDebugBuild: true,
+      debugToken: 'private-test-token',
+    );
+    expect(provider, isA<AndroidDebugProvider>());
+    expect((provider as AndroidDebugProvider).debugToken, 'private-test-token');
+  });
+
   test('release and profile builds always use App Attest', () {
     expect(
       appleAppCheckProviderForBuild(
@@ -40,6 +63,12 @@ void main() {
       expect(
         reportUploadErrorMessage(StateError(reportVerificationFailure)),
         reportVerificationFailure,
+      );
+      expect(
+        reportUploadErrorMessage(
+          FirebaseException(plugin: 'firebase_storage', code: 'unauthorized'),
+        ),
+        reportAuthenticationFailure,
       );
       expect(
         reportUploadErrorMessage(

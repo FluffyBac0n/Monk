@@ -744,12 +744,10 @@ class MyReportsScreen extends ConsumerWidget {
                               uploadState: draft.state,
                               remoteStatus: draft.remoteStatus,
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              draft.description.isEmpty
-                                  ? context.l10n.t('Draft')
-                                  : draft.description,
-                            ),
+                            if (draft.description.trim().isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(draft.description),
+                            ],
                             if (draft.state == 'sent') ...[
                               const SizedBox(height: 12),
                               SelectableText(

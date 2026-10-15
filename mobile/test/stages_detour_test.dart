@@ -216,7 +216,7 @@ void main() {
       find.byKey(const ValueKey('detour-detail-teishia-tis-madaris')),
       findsOneWidget,
     );
-    expect(find.text('E4 - CYPRUS · DETOUR'), findsOneWidget);
+    expect(find.text('CYPRUS-E4 · DETOUR'), findsOneWidget);
     expect(find.text('Teishia tis Madaris'), findsWidgets);
 
     Navigator.of(

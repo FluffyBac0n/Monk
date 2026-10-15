@@ -336,14 +336,33 @@ void main() {
             find.byKey(const ValueKey('poi-directions-instructions')),
             findsNothing,
           );
+          final beforeInstructions = tester.getSize(card).height;
+          await tester.tap(find.byKey(const ValueKey('poi-directions-expand')));
+          await tester.pumpAndSettle();
+          expect(
+            find.byKey(const ValueKey('poi-directions-instructions')),
+            findsOneWidget,
+          );
+          expect(tester.getSize(card).height, greaterThan(beforeInstructions));
+          await tester.tap(find.byKey(const ValueKey('poi-directions-expand')));
+          await tester.pumpAndSettle();
+          expect(tester.getSize(card).height, closeTo(beforeInstructions, 1));
           await _expandWithDrag(tester, useStage);
           if (!useStage) {
             expect(find.textContaining('from trail'), findsOneWidget);
           }
           expect(
             find.byKey(const ValueKey('poi-directions-instructions')),
+            findsNothing,
+          );
+          await tester.tap(find.byKey(const ValueKey('poi-directions-expand')));
+          await tester.pumpAndSettle();
+          expect(
+            find.byKey(const ValueKey('poi-directions-instructions')),
             findsOneWidget,
           );
+          await tester.tap(find.byKey(const ValueKey('poi-directions-expand')));
+          await tester.pumpAndSettle();
           await tester.tap(
             find.text(useStage ? 'Platres' : 'Platres accommodation'),
           );

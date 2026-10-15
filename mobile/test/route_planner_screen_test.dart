@@ -233,6 +233,35 @@ void registerPlannerWorkflowTests() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('route-planner-map-gps')), findsOneWidget);
+    final gpsControl = find.byKey(const ValueKey('route-planner-map-gps'));
+    final stagesControl = find.byKey(
+      const ValueKey('route-planner-map-stages'),
+    );
+    final centerControl = find.byKey(
+      const ValueKey('route-planner-map-center'),
+    );
+    expect(
+      tester.getTopLeft(gpsControl).dy,
+      lessThan(tester.getTopLeft(stagesControl).dy),
+    );
+    expect(
+      tester.getTopLeft(stagesControl).dy,
+      lessThan(tester.getTopLeft(centerControl).dy),
+    );
+    expect(
+      find.descendant(
+        of: stagesControl,
+        matching: find.byIcon(Icons.pin_drop_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: centerControl,
+        matching: find.byIcon(Icons.fit_screen_rounded),
+      ),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const ValueKey('route-planner-map-center')),
       findsOneWidget,

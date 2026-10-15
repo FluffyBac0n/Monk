@@ -1,5 +1,67 @@
 # Android Release Checklist
 
+## Internal testing update - 15 October 2026
+
+The current release candidate is **1.0.0 (3)** for `com.eurotrex.e4`.
+The previous recorded testing release was `1.0.0 (2)`. Confirm the highest
+uploaded version code in Play Console before uploading this candidate. If code
+3 has already been used, increment the number and rebuild.
+
+Prepared artifacts (relative to `mobile/`):
+
+- `build/releases/1.0.0+3/EuroTrex-1.0.0+3.aab` - signed App Bundle,
+  90,025,813 bytes.
+- `build/releases/1.0.0+3/release-notes.txt` - tester release notes.
+- `build/releases/1.0.0+3/mapping.zip` - retained release deobfuscation mapping.
+- `build/releases/1.0.0+3/validation.json` and `SHA256SUMS.txt` - verified
+  package/version, signing certificate, compatibility and artifact checksum.
+
+Verification completed:
+
+- [x] All 243 shared Flutter unit/widget tests and localization checks passed.
+- [x] All 11 Android native checks passed on the Pixel 8 API 36 emulator.
+- [x] All 11 iOS native checks passed on the iPhone 17 Pro simulator.
+- [x] Static analysis passed with no issues.
+- [x] Signed release App Bundle built using the current Mapbox configuration.
+- [x] Google bundletool validation passed; JAR signature verified and matched
+      the existing upload keystore.
+- [x] Version name `1.0.0`, version code `3`, minimum API 24, target API 36,
+      non-debuggable application and ARM64/ARMv7/x86-64 libraries verified.
+- [x] Bundle requests 16 KB ZIP alignment; all included 64-bit native library
+      load segments support 16 KB pages.
+- [x] Private simulator App Check debug credentials are absent from the bundle.
+      Release builds select Play Integrity on Android.
+- [x] Existing production photo-upload rules can read report ownership in
+      Firestore; a complete live photo submission and privacy check passed.
+- [ ] Confirm the highest version code already uploaded to Play Console.
+- [ ] Upload to the existing **Internal testing** track and roll out to the
+      existing tester group. The currently connected browser Google account
+      does not have access to EuroTrex's Play developer account.
+- [ ] Install/update through Google Play on a tester's physical phone and check
+      a report with a photo, so production Play Integrity is exercised.
+
+Repeatable publication steps:
+
+1. In Play Console, check **Test and release > Latest releases and bundles**
+   and choose a version code above every previous upload. Update
+   `mobile/pubspec.yaml`.
+2. From `mobile/`, run
+   `flutter build appbundle --release --dart-define-from-file=env.local.json`.
+   Allow the normal package/plugin refresh, particularly after integration
+   tests; skipping it can leave the generated test-plugin registration in a
+   release build. Do not pass `firebase-debug.local.json` to a release build.
+3. Verify the package/version, upload signature and 16 KB compatibility. Retain
+   the App Bundle, checksum, release notes and mapping for this version.
+4. Open **Test and release > Testing > Internal testing > Create new release**.
+   Upload the AAB and add the release notes. Retain the existing tester group.
+5. Review Play's errors/warnings and start the rollout to internal testers.
+6. Ask an existing tester to update through Google Play and check maps, GPS,
+   saved routes and a report/photo upload. Use the existing opt-in link for any
+   tester who has not joined yet.
+
+The sections below preserve the earlier setup checklist and its historical
+verification record.
+
 Status checked: 21 August 2026
 
 Android development is now active. The local toolchain and a representative

@@ -52,6 +52,7 @@ String reportUploadErrorMessage(Object error) {
     }
     if (error.code == 'unauthenticated' ||
         error.code == 'permission-denied' ||
+        (error.plugin == 'firebase_storage' && error.code == 'unauthorized') ||
         error is FirebaseAuthException) {
       return reportAuthenticationFailure;
     }
