@@ -5,6 +5,8 @@ import {
   interestRateLimitExpiryIndex,
   interestRateLimitsTable,
   interestSubmissionsTable,
+  interestPreferencesTable,
+  storyPublicationTable,
 } from '@/db/schema';
 
 let schemaReady: Promise<void> | null = null;
@@ -21,6 +23,8 @@ export async function ensureInterestSchema() {
     schemaReady = db
       .batch([
         db.prepare(interestSubmissionsTable),
+        db.prepare(interestPreferencesTable),
+        db.prepare(storyPublicationTable),
         db.prepare(betaEmailIndex),
         db.prepare(interestCreatedAtIndex),
         db.prepare(interestRateLimitsTable),

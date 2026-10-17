@@ -26,9 +26,17 @@ export const metadata: Metadata = {
     default: 'EuroTrex — Cyprus-E4 trail app and route planner',
     template: '%s · EuroTrex',
   },
-  description: 'Plan and navigate the Cyprus-E4 with offline route guidance, flexible route planning, elevation context and practical trail-side stays.',
+  description:
+    'Plan and navigate the Cyprus-E4 with offline route guidance, flexible route planning, elevation context and practical trail-side stays.',
   applicationName: 'EuroTrex',
-  keywords: ['Cyprus-E4', 'E4 trail app', 'Cyprus hiking', 'offline hiking maps', 'long-distance trails Europe', 'EuroTrex'],
+  keywords: [
+    'Cyprus-E4',
+    'E4 trail app',
+    'Cyprus hiking',
+    'offline hiking maps',
+    'long-distance trails Europe',
+    'EuroTrex',
+  ],
   alternates: { canonical: '/' },
   icons: { icon: '/favicon-48.png', apple: '/apple-touch-icon.png' },
   openGraph: {
@@ -37,25 +45,77 @@ export const metadata: Metadata = {
     url: '/',
     siteName: 'EuroTrex',
     title: 'EuroTrex — Cyprus-E4 trail app and route planner',
-    description: 'Offline route guidance, flexible route planning and trail-side stays for the Cyprus-E4.',
-    images: [{ url: '/og.jpg', width: 1200, height: 675, alt: 'EuroTrex guide to the Cyprus-E4 trail' }],
+    description:
+      'Offline route guidance, flexible route planning and trail-side stays for the Cyprus-E4.',
+    images: [
+      {
+        url: '/og.jpg',
+        width: 1200,
+        height: 675,
+        alt: 'EuroTrex guide to the Cyprus-E4 trail',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'EuroTrex — Cyprus-E4 trail app',
-    description: 'Plan and navigate the Cyprus-E4 with offline guidance, flexible route planning and practical stays.',
+    description:
+      'Plan and navigate the Cyprus-E4 with offline guidance, flexible route planning and practical stays.',
     images: ['/og.jpg'],
   },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@graph': [
+                {
+                  '@type': 'Organization',
+                  '@id': `${SITE_URL}/#organization`,
+                  name: 'EuroTrex',
+                  legalName: 'EuroTrex Ltd',
+                  url: SITE_URL,
+                  logo: `${SITE_URL}/eurotrex-wordmark-ui.webp`,
+                  email: 'info@eurotrex.eu',
+                },
+                {
+                  '@type': 'WebSite',
+                  '@id': `${SITE_URL}/#website`,
+                  url: SITE_URL,
+                  name: 'EuroTrex',
+                  publisher: { '@id': `${SITE_URL}/#organization` },
+                  inLanguage: 'en',
+                },
+                {
+                  '@type': 'MobileApplication',
+                  '@id': `${SITE_URL}/#app`,
+                  name: 'EuroTrex',
+                  url: `${SITE_URL}/trails/cyprus-e4#app`,
+                  operatingSystem: 'iOS, Android',
+                  applicationCategory: 'TravelApplication',
+                  description:
+                    'Offline route guidance, walking-day planning, elevation and trail-side accommodation for Cyprus-E4.',
+                },
+              ],
+            }).replace(/</g, '\\u003c'),
+          }}
+        />
         <script dangerouslySetInnerHTML={{ __html: deploymentRecovery }} />
         <meta
           name="htmx-config"
-          content={JSON.stringify({ allowEval: false, allowScriptTags: false, includeIndicatorStyles: false })}
+          content={JSON.stringify({
+            allowEval: false,
+            allowScriptTags: false,
+            includeIndicatorStyles: false,
+          })}
         />
         <script dangerouslySetInnerHTML={{ __html: publicRuntimeBootstrap }} />
       </head>

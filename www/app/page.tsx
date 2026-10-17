@@ -1,209 +1,233 @@
 import Image from 'next/image';
-import { NotifyButton } from '@/components/NotifyDialog';
-import { PublicFooter } from '@/components/PublicFooter';
-import { PublicHeader } from '@/components/PublicHeader';
 import { PublicContent } from '@/components/PublicContent';
-import { disableHtmxNavigation, publicHtmxNavigation } from '@/lib/htmx';
-import { SITE_URL } from '@/lib/site';
+import { PublicHeader } from '@/components/PublicHeader';
+import { PublicFooter } from '@/components/PublicFooter';
+import { AppDownload } from '@/components/AppDownload';
+import { websiteCopy } from '@/lib/website-copy';
+import { publicHtmxNavigation } from '@/lib/htmx';
 
+const copy = websiteCopy.home;
 const paths = [
   {
-    title: 'FOR HIKERS', image: '/cyprus-e4-forest-960.webp',
-    alt: 'A marked section of the E4 long-distance trail through a Cyprus forest',
-    copy: 'Plan your route, carry it offline and find practical places to stay with the EuroTrex mobile app.',
-    action: 'Explore the hiker app', href: '#hikers',
+    title: 'For Hikers',
+    copy: copy.hikers,
+    image: '/cyprus-e4-forest-960.webp',
+    alt: 'A marked forest path in Cyprus',
+    action: 'Get the Eurotrex E4 App',
+    href: '/trails/cyprus-e4#app',
   },
   {
-    title: 'FOR HOSTS', image: '/hosts-path.webp',
-    alt: 'A welcoming stone guesthouse beside a Cyprus hiking route',
-    copy: 'List your property near the trail and help hikers travel lighter, safer and farther.',
-    action: 'See how listings work', href: '#hosts',
+    title: 'For Hosts',
+    copy: copy.hosts,
+    image: '/hosts-path.webp',
+    alt: 'A welcoming stone guesthouse near a hiking trail',
+    action: 'Become a Certified Host',
+    href: '/become-a-host',
   },
   {
-    title: 'FOR SPONSORS', image: '/sponsors-path.webp',
-    alt: 'A hiker adjusting practical outdoor equipment beside a trail waymark',
-    copy: 'Support a more accessible European trail network through useful equipment and responsible partnerships.',
-    action: 'Explore partnerships', href: '/partnerships',
+    title: 'For Sponsors',
+    copy: copy.sponsors,
+    image: '/sponsors-path.webp',
+    alt: 'A hiker preparing equipment beside the trail',
+    action: 'Become a Sponsor',
+    href: '/partnerships',
   },
 ];
-
-const appFeatures = [
-  ['Offline route guidance', 'Download trail geometry and stage-point context before leaving mobile coverage.'],
-  ['Flexible trip planning', 'Choose your start and finish, compare walking days and shape a route around your pace.'],
-  ['Elevation at a glance', 'Understand climbs, descents and the terrain ahead before committing to the next section.'],
-  ['Trail-side stays', 'Find practical accommodation near a stage point and contact hosts directly.'],
-];
-
-const hostSteps = [
-  { title: 'Create your host account', copy: 'Add your company details and verify your email. We review your request before activating host access.', image: '/host-step-account-photo.webp', alt: 'A guesthouse owner creating a host account on a laptop' },
-  { title: 'Prepare your listing', copy: 'Once approved, add your location, nearest stage point, prices and contact details. Save a draft and preview the app card.', image: '/host-step-details-photo.webp', alt: 'A guesthouse owner checking property details' },
-  { title: 'Submit for verification', copy: 'We review owner authority, contact details and trail relevance before publication.', image: '/host-step-verified-photo.webp', alt: 'A hiker finding a verified trail-side guesthouse' },
-];
-
 const involvement = [
-  { title: 'Walk with us', copy: 'Join a trail walk and share the conditions and stories you find along the way.', action: 'Ask about field walks', href: '/get-involved?interest=field-walks', image: '/involved-walk.webp', alt: 'Illustration of two hikers walking together on a Cyprus trail', featured: true },
-  { title: 'Volunteer', copy: 'Help check local trail information as the network grows.', action: 'Volunteer with us', href: '/get-involved?interest=volunteer', image: '/involved-volunteer.webp', alt: 'Illustration of a volunteer checking a trail waymark and recording a field note' },
-  { title: 'Collaborate', copy: 'Work with us on responsible tourism, access and regional initiatives.', action: 'Start a collaboration', href: '/get-involved?interest=collaborate', image: '/involved-collaborate.webp', alt: 'Illustration of two collaborators connecting sections of a trail route together' },
-  { title: 'Support the vision', copy: 'Help keep long-distance hiking practical, welcoming and accessible.', action: 'Explore partnerships', href: '/partnerships', image: '/involved-support.webp', alt: 'Illustration of people helping a trail network reach a new waypoint' },
+  [
+    'Volunteer',
+    copy.volunteer,
+    'Apply to Volunteer',
+    '/get-involved?interest=volunteer#interest-form',
+  ],
+  ['Work With Us', copy.work, 'View Openings', '/get-involved#opportunities'],
+  [
+    'Walk With Us',
+    copy.walk,
+    'See Trail Schedule',
+    '/get-involved#expeditions',
+  ],
+  [
+    'Support Our Vision',
+    copy.support,
+    'Donate to Eurotrex',
+    '/get-involved?interest=donate#support',
+  ],
 ];
-
-const faqs = [
-  ['Which trail does EuroTrex currently cover?', 'EuroTrex is starting with the 558 km Cyprus-E4, from Pafos Airport to Larnaka Airport. The current dataset includes 123 named stage points.'],
-  ['Can I use the app without mobile coverage?', 'The private-test app supports downloaded route and stage information. Prepare your downloads while connected and check them before setting off. Live services and external booking pages still need a connection.'],
-  ['Do I need to be an experienced long-distance hiker?', 'You can start with a short section suited to your fitness and experience. EuroTrex helps you compare distance, elevation and recorded stays; conditions and remoteness still matter when choosing a walk.'],
-  ['When will the iPhone and Android apps be available?', 'The iPhone and Android apps are in preparation. Ask to be notified and EuroTrex will email you when testing invitations or verified store links are ready.'],
-  ['What does a verified accommodation mean?', 'EuroTrex reviews the owner’s authority, contact details and relevance to the trail. Verification is not an endorsement or a booking guarantee; hikers still book directly with each host.'],
-];
-
-function ActionLink({ href, children, className = '' }: { href: string; children: React.ReactNode; className?: string }) {
-  const classes = `fill-link ${className}`.trim();
-  const navigation = href.startsWith('/portal') ? disableHtmxNavigation : {};
-  return <a className={classes} href={href} {...navigation}><span>{children}</span></a>;
-}
-
-function TrailDivider() {
-  return <div className="trail-divider" aria-hidden="true" />;
-}
 
 export default function Home() {
-  const appStoreUrl = process.env.NEXT_PUBLIC_APP_STORE_URL;
-  const playStoreUrl = process.env.NEXT_PUBLIC_PLAY_STORE_URL;
-  const storeUrls = [appStoreUrl, playStoreUrl].filter(Boolean);
-
-  const structuredData = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      { '@type': 'Organization', '@id': `${SITE_URL}/#organization`, name: 'EuroTrex', legalName: 'EuroTrex Ltd', url: SITE_URL, logo: `${SITE_URL}/eurotrex-wordmark-ui.webp`, email: 'info@eurotrex.eu' },
-      { '@type': 'WebSite', '@id': `${SITE_URL}/#website`, url: SITE_URL, name: 'EuroTrex', publisher: { '@id': `${SITE_URL}/#organization` }, inLanguage: 'en' },
-      { '@type': 'WebPage', '@id': `${SITE_URL}/#webpage`, url: SITE_URL, name: 'EuroTrex — Cyprus-E4 trail app and route planner', description: 'Plan and navigate the Cyprus-E4 with offline maps, flexible route planning, elevation context and practical trail-side stays.', isPartOf: { '@id': `${SITE_URL}/#website` }, about: { '@id': `${SITE_URL}/#app` }, inLanguage: 'en' },
-      { '@type': 'MobileApplication', '@id': `${SITE_URL}/#app`, name: 'EuroTrex', url: SITE_URL, operatingSystem: 'iOS, Android', applicationCategory: 'TravelApplication', description: 'Offline route guidance, flexible route planning, elevation context and trail-side accommodation for the Cyprus-E4.', featureList: appFeatures.map(([feature]) => feature), screenshot: [`${SITE_URL}/app-stages.webp`, `${SITE_URL}/app-planner.webp`, `${SITE_URL}/app-elevation.webp`], ...(storeUrls.length ? { sameAs: storeUrls } : {}) },
-      { '@type': 'FAQPage', '@id': `${SITE_URL}/#faq`, mainEntity: faqs.map(([question, answer]) => ({ '@type': 'Question', name: question, acceptedAnswer: { '@type': 'Answer', text: answer } })) },
-    ],
-  };
-
   return (
     <>
-      <a className="skip-link" href="#main-content">Skip to content</a>
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <PublicHeader />
-
       <PublicContent>
-      <main id="main-content" tabIndex={-1} {...publicHtmxNavigation}>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
-        <section className="hero">
-          <div className="hero-media">
-            <picture>
-              <source
-                srcSet="/zapalo-coast-hero-640.webp 640w, /zapalo-coast-hero-960.webp 960w, /zapalo-coast-hero-1280.webp 1280w, /zapalo-coast-hero-1920.webp 1920w"
-                sizes="(max-width: 760px) 100vw, 78vw"
-                type="image/webp"
-              />
-              <img
-                className="hero-image"
-                src="/zapalo-coast-hero-1280.webp"
-                alt="Zapalo Bay’s limestone cliffs and coastal trail above the Mediterranean in Cyprus"
-                decoding="async"
-                fetchPriority="high"
-              />
-            </picture>
-          </div>
-          <div className="hero-shade" />
-          <div className="hero-inner">
-            <div className="hero-content">
-              <h1>Find your way<br />with EuroTrex.</h1>
-              <p className="hero-copy">Discover long-distance trails, plan walking days, and find places to stay—starting with Cyprus-E4.</p>
-              <div className="hero-actions">
-                <ActionLink href="/trails/cyprus-e4" className="button button-outline">Explore the Cyprus-E4</ActionLink>
+        <main id="main-content" tabIndex={-1} {...publicHtmxNavigation}>
+          <section className="hero">
+            <div className="hero-media">
+              <picture>
+                <source
+                  srcSet="/zapalo-coast-hero-640.webp 640w, /zapalo-coast-hero-960.webp 960w, /zapalo-coast-hero-1280.webp 1280w, /zapalo-coast-hero-1920.webp 1920w"
+                  sizes="100vw"
+                  type="image/webp"
+                />
+                <img
+                  className="hero-image"
+                  src="/zapalo-coast-hero-1280.webp"
+                  alt="Limestone cliffs and the Mediterranean at Zapalo Bay in Cyprus"
+                  decoding="async"
+                  fetchPriority="high"
+                />
+              </picture>
+            </div>
+            <div className="hero-shade" />
+            <div className="hero-inner">
+              <div className="hero-content">
+                <h1>
+                  Find your way
+                  <br />
+                  with Eurotrex.
+                </h1>
+                <p className="hero-copy">{copy.introduction}</p>
+                <div className="hero-actions">
+                  <a className="button button-outline" href="/trails/cyprus-e4">
+                    Explore the E4 Cyprus Trail{' '}
+                    <span aria-hidden="true">→</span>
+                  </a>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
-
-        <section className="manifesto-section" aria-labelledby="manifesto-title">
-          <div className="section-shell manifesto-layout">
-            <blockquote className="manifesto-quote"><h2 id="manifesto-title">“When you start to walk on the way, the way appears.”</h2></blockquote>
-            <div className="manifesto-copy"><p>You don’t need to be the fastest or the strongest. Bring your curiosity, choose a walk that suits you, and reconnect with nature.</p><p>Start walking. Plan with confidence. Discover more.</p><p>Slowly. Deeply. One step at a time.</p></div>
-          </div>
-        </section>
-
-        <section className="paths-section" id="paths" aria-labelledby="paths-title">
-          <div className="section-shell">
-            <h2 className="section-title" id="paths-title">CHOOSE YOUR PATH</h2>
-            <div className="path-grid">
-              {paths.map((path, index) => (
-                <article className={`path-card reveal${index === 0 ? ' path-card-featured' : ''}`} key={path.title}>
-                  <a className="path-card-link" href={path.href}>
-                    <div className="path-image-wrap"><Image className="path-image" src={path.image} alt={path.alt} fill sizes={index === 0 ? '(max-width: 760px) 100vw, 64vw' : '(max-width: 760px) 100vw, 36vw'} /></div>
-                    <div className="path-card-shade" />
-                    <div className="path-card-body"><h3>{path.title}</h3><p>{path.copy}</p><span className="editorial-link">{path.action}<i aria-hidden="true" /></span></div>
+          </section>
+          <section
+            className="manifesto-section"
+            aria-labelledby="manifesto-title"
+          >
+            <div className="section-shell manifesto-layout">
+              <blockquote className="manifesto-quote">
+                <h2 id="manifesto-title">“{copy.quote}”</h2>
+              </blockquote>
+              <div className="manifesto-copy">
+                <p>{copy.motivation}</p>
+                <p>{copy.reasons}</p>
+                <p>
+                  <strong>{copy.closing}</strong>
+                  <br />
+                  {copy.rhythm}
+                </p>
+                <a className="simple-link" href="/get-inspired">
+                  Get Inspired <span aria-hidden="true">→</span>
+                </a>
+              </div>
+            </div>
+          </section>
+          <section className="paths-section" id="paths">
+            <div className="section-shell">
+              <h2 className="section-title">Choose Your Path</h2>
+              <div className="path-grid feedback-path-grid">
+                {paths.map((path) => (
+                  <article className="path-card" key={path.title}>
+                    <a className="path-card-link" href={path.href}>
+                      <div className="path-image-wrap">
+                        <Image
+                          className="path-image"
+                          src={path.image}
+                          alt={path.alt}
+                          fill
+                          sizes="(max-width: 760px) 100vw, 33vw"
+                        />
+                      </div>
+                      <div className="path-card-shade" />
+                      <div className="path-card-body">
+                        <h3>{path.title}</h3>
+                        <p>{path.copy}</p>
+                        <span className="editorial-link">
+                          {path.action}
+                          <i aria-hidden="true" />
+                        </span>
+                      </div>
+                    </a>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+          <section
+            className="section-shell foundation-section"
+            aria-labelledby="foundation-title"
+          >
+            <p className="eyebrow">Current Project Focus</p>
+            <h2 id="foundation-title">
+              Our Foundation:
+              <br />
+              The E4 Cyprus Trail
+            </h2>
+            <p>{copy.focus}</p>
+            <a className="button button-secondary" href="/about">
+              Read about the Eurotrex Initiative{' '}
+              <span aria-hidden="true">→</span>
+            </a>
+          </section>
+          <AppDownload id="hikers" />
+          <section
+            className="section-shell community-links"
+            aria-labelledby="community-links-title"
+          >
+            <h2 className="section-title" id="community-links-title">
+              Get Involved
+            </h2>
+            <div>
+              {involvement.map(([title, text, label, href]) => (
+                <article key={title}>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                  <a className="simple-link" href={href}>
+                    {label} <span aria-hidden="true">→</span>
                   </a>
                 </article>
               ))}
             </div>
-          </div>
-        </section>
-
-        <TrailDivider />
-
-        <section className="hiker-showcase" id="hikers" aria-labelledby="hikers-title">
-          <div className="section-shell hiker-layout">
-            <div className="hiker-heading reveal">
-              <h2 className="section-title" id="hikers-title">FOR HIKERS</h2>
-            </div>
-            <div className="app-gallery-wrap reveal">
-              <div className="app-gallery" aria-label="Screenshots from the EuroTrex iPhone app" role="region" tabIndex={0}>
-                <figure className="phone-shot phone-planner"><Image src="/app-planner.webp" alt="EuroTrex iPhone route planner showing the Cyprus-E4 on a map" width={720} height={1565} sizes="(max-width: 760px) 72vw, 250px" /><figcaption>Shape your trip</figcaption></figure>
-                <figure className="phone-shot phone-stages"><Image src="/app-stages.webp" alt="EuroTrex iPhone app showing Cyprus-E4 stage points" width={720} height={1565} sizes="(max-width: 760px) 72vw, 230px" /><figcaption>Browse stage points</figcaption></figure>
-                <figure className="phone-shot phone-elevation"><Image src="/app-elevation.webp" alt="EuroTrex iPhone app showing an E4 elevation profile" width={720} height={1565} sizes="(max-width: 760px) 72vw, 230px" /><figcaption>Read the terrain</figcaption></figure>
+          </section>
+          <section className="faq-section" id="faq">
+            <div className="section-shell faq-layout">
+              <h2 className="section-title">Quick Answers</h2>
+              <div className="faq-list">
+                <details>
+                  <summary>Which trail does Eurotrex currently cover?</summary>
+                  <p>
+                    We are building our foundations on the E4 Cyprus trail.
+                    Explore the guide for route information from our trail
+                    database.
+                  </p>
+                </details>
+                <details>
+                  <summary>Can I use the app without mobile coverage?</summary>
+                  <p>
+                    Download route and stage information before setting off.
+                    Live updates and external booking pages still need a
+                    connection.
+                  </p>
+                </details>
+                <details>
+                  <summary>How can I become a host?</summary>
+                  <p>
+                    Individuals, businesses and organisations can apply. Your
+                    account and accommodation listing are reviewed separately.
+                  </p>
+                  <a href="/become-a-host">Learn about hosting →</a>
+                </details>
+                <details>
+                  <summary>When can I join a mapping expedition?</summary>
+                  <p>
+                    See our expedition schedule and register your interest in
+                    walking with us.
+                  </p>
+                  <a href="/get-involved#expeditions">See Trail Schedule →</a>
+                </details>
               </div>
             </div>
-            <div className="hiker-features reveal">
-              <ul className="feature-list">
-                {appFeatures.map(([title, copy]) => <li key={title}><span aria-hidden="true">✓</span><div><strong>{title}</strong><p>{copy}</p></div></li>)}
-              </ul>
-            </div>
-            <div className="hiker-launch-band" id="app-updates" aria-labelledby="download-title">
-              <Image className="app-icon" src="/eurotrex-app-icon-e4.webp" alt="EuroTrex app icon" width={256} height={256} />
-              <div className="hiker-launch-copy"><p className="eyebrow">EuroTrex in your pocket</p><h3 id="download-title">Be first on the trail.</h3><p>Private testing: invites and launch updates for iPhone and Android.</p></div>
-              <div className="hiker-launch-actions" aria-label="EuroTrex app availability" role="group">
-                <div className="store-item">{appStoreUrl ? <a href={appStoreUrl} target="_blank" rel="noreferrer" aria-label="Download EuroTrex on the App Store"><Image src="/app-store-badge.svg" alt="Download on the App Store" width={180} height={60} /></a> : <span className="store-badge"><Image src="/app-store-badge.svg" alt="" aria-hidden="true" width={180} height={60} /></span>}</div>
-                <div className="store-item store-item-google">{playStoreUrl ? <a href={playStoreUrl} target="_blank" rel="noreferrer" aria-label="Get EuroTrex on Google Play"><Image src="/google-play-badge.png" alt="Get it on Google Play" width={194} height={75} /></a> : <span className="store-badge"><Image src="/google-play-badge.png" alt="" aria-hidden="true" width={194} height={75} /></span>}</div>
-                <NotifyButton className="button button-yellow">Notify Me</NotifyButton>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <TrailDivider />
-
-        <section className="host-section" id="hosts" aria-labelledby="hosts-title">
-          <div className="section-shell">
-            <h2 className="section-title" id="hosts-title">FOR HOSTS</h2>
-            <ol className="host-steps" role="list">
-              {hostSteps.map((step) => <li className="host-moment reveal" key={step.title}><div className="host-step-image"><Image src={step.image} alt={step.alt} fill sizes="(max-width: 500px) 88vw, (max-width: 900px) 45vw, 31vw" /></div><div className="host-step-body"><h3>{step.title}</h3><p>{step.copy}</p></div></li>)}
-            </ol>
-            <div className="host-cta-row"><ActionLink href="/portal" className="button button-yellow host-portal-link">Host Portal</ActionLink></div>
-          </div>
-        </section>
-
-        <TrailDivider />
-
-        <section className="involved-section" id="involved" aria-labelledby="involved-title">
-          <div className="section-shell">
-            <h2 className="section-title" id="involved-title">JOIN US</h2>
-            <div className="involved-grid">
-              {involvement.map(({ title, copy, action, href, image, alt, featured }) => (
-                <article className={`reveal${featured ? ' involved-featured' : ''}`} key={title}><a className="involved-card-link" href={href}><div className="involved-image"><Image src={image} alt={alt} fill sizes={featured ? '(max-width: 820px) 100vw, 58vw' : '(max-width: 820px) 100vw, 36vw'} /></div><div className="involved-card-shade" /><div className="involved-card-body"><h3>{title}</h3><p>{copy}</p><span className="editorial-link">{action}<i aria-hidden="true" /></span></div></a></article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <TrailDivider />
-
-        <section className="faq-section" id="faq" aria-labelledby="faq-title">
-          <div className="section-shell faq-layout"><h2 className="section-title" id="faq-title">QUICK ANSWERS</h2><div className="faq-list">{faqs.map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</div></div>
-        </section>
-      </main>
+          </section>
+        </main>
       </PublicContent>
       <PublicFooter />
     </>

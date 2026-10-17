@@ -40,14 +40,46 @@ function sortedSubmissions(rows: AccommodationSubmission[]) {
   return rows.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function submissionFromDoc(id: string, data: DocumentData): AccommodationSubmission {
+function submissionFromDoc(
+  id: string,
+  data: DocumentData
+): AccommodationSubmission {
   return { id, ...data } as AccommodationSubmission;
 }
 
-export async function registerOwnerProfile(user: User, companyName: string) {
+export function ownerProfileLabel(profile: {
+  businessName?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}) {
+  return (
+    profile.businessName?.trim() ||
+    [profile.firstName, profile.lastName].filter(Boolean).join(' ').trim() ||
+    profile.email ||
+    'Host account'
+  );
+}
+
+export async function registerOwnerProfile(
+  user: User,
+  profile: { firstName: string; lastName: string; businessName?: string }
+) {
+  if (
+    !profile.firstName.trim() ||
+    !profile.lastName.trim() ||
+    profile.firstName.trim().length > 80 ||
+    profile.lastName.trim().length > 80 ||
+    (profile.businessName?.trim().length || 0) > 160
+  )
+    throw new Error(
+      'Enter your first name and surname, and check the company name.'
+    );
   await setDoc(doc(db, 'ownerProfiles', user.uid), {
     email: user.email || '',
-    businessName: companyName.trim(),
+    firstName: profile.firstName.trim(),
+    lastName: profile.lastName.trim(),
+    businessName: profile.businessName?.trim() || '',
     accessStatus: 'pending',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -56,13 +88,25 @@ export async function registerOwnerProfile(user: User, companyName: string) {
 
 export function watchOwnerProfiles(
   onData: (rows: OwnerProfile[]) => void,
-  onError: (error: Error) => void,
+  onError: (error: Error) => void
 ): Unsubscribe {
-  return onSnapshot(collection(db, 'ownerProfiles'), (snapshot) => {
-    const rows = snapshot.docs.map((row) => ({ ...row.data(), id: row.id } as OwnerProfile));
-    onData(rows.sort((a, b) => Number(b.accessStatus === 'pending') - Number(a.accessStatus === 'pending')
-      || (a.businessName || a.email || '').localeCompare(b.businessName || b.email || '')));
-  }, onError);
+  return onSnapshot(
+    collection(db, 'ownerProfiles'),
+    (snapshot) => {
+      const rows = snapshot.docs.map(
+        (row) => ({ ...row.data(), id: row.id }) as OwnerProfile
+      );
+      onData(
+        rows.sort(
+          (a, b) =>
+            Number(b.accessStatus === 'pending') -
+              Number(a.accessStatus === 'pending') ||
+            ownerProfileLabel(a).localeCompare(ownerProfileLabel(b))
+        )
+      );
+    },
+    onError
+  );
 }
 
 export async function approveOwnerProfile(actor: User, ownerId: string) {
@@ -70,16 +114,26 @@ export async function approveOwnerProfile(actor: User, ownerId: string) {
   const auditRef = doc(collection(db, 'accommodationAudit'));
   await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(profileRef);
-    if (!snapshot.exists()) throw new Error('This host account no longer exists.');
+    if (!snapshot.exists())
+      throw new Error('This host account no longer exists.');
     const profile = snapshot.data();
-    if (profile.accessStatus !== 'pending') throw new Error('This account is no longer awaiting approval.');
-    transaction.update(profileRef, { accessStatus: 'active', updatedAt: serverTimestamp() });
+    if (profile.accessStatus !== 'pending')
+      throw new Error('This account is no longer awaiting approval.');
+    transaction.update(profileRef, {
+      accessStatus: 'active',
+      updatedAt: serverTimestamp(),
+    });
     transaction.set(auditRef, {
-      submissionId: '', lodgingId: '', trailId: '', ownerId,
-      accommodationName: profile.businessName || '',
+      submissionId: '',
+      lodgingId: '',
+      trailId: '',
+      ownerId,
+      accommodationName: ownerProfileLabel(profile),
       action: 'approved',
       note: 'Host account approved. Accommodation listings require a separate review.',
-      actorId: actor.uid, actorEmail: actor.email || '', createdAt: serverTimestamp(),
+      actorId: actor.uid,
+      actorEmail: actor.email || '',
+      createdAt: serverTimestamp(),
     });
   });
 }
@@ -87,38 +141,54 @@ export async function approveOwnerProfile(actor: User, ownerId: string) {
 export function watchOwnerSubmissions(
   ownerId: string,
   onData: (rows: AccommodationSubmission[]) => void,
-  onError: (error: Error) => void,
+  onError: (error: Error) => void
 ): Unsubscribe {
   return onSnapshot(
     query(submissions, where('ownerId', '==', ownerId)),
-    (snapshot) => onData(sortedSubmissions(snapshot.docs.map((row) => submissionFromDoc(row.id, row.data())))),
-    onError,
+    (snapshot) =>
+      onData(
+        sortedSubmissions(
+          snapshot.docs.map((row) => submissionFromDoc(row.id, row.data()))
+        )
+      ),
+    onError
   );
 }
 
 export function watchOwnerDrafts(
   ownerId: string,
   onData: (rows: AccommodationDraft[]) => void,
-  onError: (error: Error) => void,
+  onError: (error: Error) => void
 ): Unsubscribe {
   return onSnapshot(
     query(drafts, where('ownerId', '==', ownerId)),
-    (snapshot) => onData(snapshot.docs.map((row) => ({ id: row.id, ...row.data() } as AccommodationDraft)).sort((a, b) => a.values.name.localeCompare(b.values.name))),
-    onError,
+    (snapshot) =>
+      onData(
+        snapshot.docs
+          .map((row) => ({ id: row.id, ...row.data() }) as AccommodationDraft)
+          .sort((a, b) => a.values.name.localeCompare(b.values.name))
+      ),
+    onError
   );
 }
 
 export function watchPublishedLodgingsForSubmissions(
   ownerSubmissions: AccommodationSubmission[],
   onData: (rows: PublishedLodging[]) => void,
-  onError: (error: Error) => void,
+  onError: (error: Error) => void
 ): Unsubscribe {
   const records = new Map<string, PublishedLodging>();
-  const publishedPaths = new Map<string, { trailId: string; lodgingId: string }>();
+  const publishedPaths = new Map<
+    string,
+    { trailId: string; lodgingId: string }
+  >();
   ownerSubmissions.forEach((submission) => {
     if (!submission.publishedTrailId || !submission.publishedLodgingId) return;
     const key = `${submission.publishedTrailId}/${submission.publishedLodgingId}`;
-    publishedPaths.set(key, { trailId: submission.publishedTrailId, lodgingId: submission.publishedLodgingId });
+    publishedPaths.set(key, {
+      trailId: submission.publishedTrailId,
+      lodgingId: submission.publishedLodgingId,
+    });
   });
 
   if (!publishedPaths.size) {
@@ -126,16 +196,28 @@ export function watchPublishedLodgingsForSubmissions(
     return () => undefined;
   }
 
-  const publish = () => onData([...records.values()].sort((a, b) => (a.name || '').localeCompare(b.name || '')));
-  const unsubscribes = [...publishedPaths.entries()].map(([key, path]) => onSnapshot(
-    doc(db, 'trails', path.trailId, 'lodgings', path.lodgingId),
-    (snapshot) => {
-      if (snapshot.exists()) records.set(key, { id: snapshot.id, trailId: path.trailId, ...snapshot.data() } as PublishedLodging);
-      else records.delete(key);
-      publish();
-    },
-    onError,
-  ));
+  const publish = () =>
+    onData(
+      [...records.values()].sort((a, b) =>
+        (a.name || '').localeCompare(b.name || '')
+      )
+    );
+  const unsubscribes = [...publishedPaths.entries()].map(([key, path]) =>
+    onSnapshot(
+      doc(db, 'trails', path.trailId, 'lodgings', path.lodgingId),
+      (snapshot) => {
+        if (snapshot.exists())
+          records.set(key, {
+            id: snapshot.id,
+            trailId: path.trailId,
+            ...snapshot.data(),
+          } as PublishedLodging);
+        else records.delete(key);
+        publish();
+      },
+      onError
+    )
+  );
   return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
 }
 
@@ -144,12 +226,19 @@ export function normalizeHttpUrl(value: string, required = false) {
   if (!trimmed && !required) return '';
   try {
     const url = new URL(trimmed);
-    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new Error();
+    if (
+      !['http:', 'https:'].includes(url.protocol) ||
+      url.username ||
+      url.password
+    )
+      throw new Error();
     return url.toString();
   } catch {
-    throw new Error(required
-      ? 'Enter a complete website address beginning with http:// or https://.'
-      : 'The optional map link must begin with http:// or https://.');
+    throw new Error(
+      required
+        ? 'Enter a complete website address beginning with http:// or https://.'
+        : 'The optional map link must begin with http:// or https://.'
+    );
   }
 }
 
@@ -158,18 +247,24 @@ export async function saveAccommodationDraft(
   values: AccommodationDraftValues,
   currentStep: number,
   draftId = '',
-  sourceSubmissionId = '',
+  sourceSubmissionId = ''
 ) {
-  const record = draftId ? doc(db, 'accommodationDrafts', draftId) : doc(drafts);
-  await setDoc(record, {
-    ownerId: user.uid,
-    ownerEmail: user.email || '',
-    sourceSubmissionId,
-    currentStep: Math.min(4, Math.max(1, currentStep)),
-    values,
-    updatedAt: serverTimestamp(),
-    ...(draftId ? {} : { createdAt: serverTimestamp() }),
-  }, { merge: true });
+  const record = draftId
+    ? doc(db, 'accommodationDrafts', draftId)
+    : doc(drafts);
+  await setDoc(
+    record,
+    {
+      ownerId: user.uid,
+      ownerEmail: user.email || '',
+      sourceSubmissionId,
+      currentStep: Math.min(4, Math.max(1, currentStep)),
+      values,
+      updatedAt: serverTimestamp(),
+      ...(draftId ? {} : { createdAt: serverTimestamp() }),
+    },
+    { merge: true }
+  );
   return record.id;
 }
 
@@ -177,31 +272,44 @@ export async function deleteAccommodationDraft(user: User, draftId: string) {
   const record = doc(db, 'accommodationDrafts', draftId);
   const snapshot = await getDoc(record);
   if (!snapshot.exists()) return;
-  if (snapshot.data().ownerId !== user.uid) throw new Error('You can only delete your own draft.');
+  if (snapshot.data().ownerId !== user.uid)
+    throw new Error('You can only delete your own draft.');
   await deleteDoc(record);
 }
 
 export function watchAllSubmissions(
   onData: (rows: AccommodationSubmission[]) => void,
-  onError: (error: Error) => void,
+  onError: (error: Error) => void
 ): Unsubscribe {
   return onSnapshot(
     submissions,
-    (snapshot) => onData(sortedSubmissions(snapshot.docs.map((row) => submissionFromDoc(row.id, row.data())))),
-    onError,
+    (snapshot) =>
+      onData(
+        sortedSubmissions(
+          snapshot.docs.map((row) => submissionFromDoc(row.id, row.data()))
+        )
+      ),
+    onError
   );
 }
 
 export async function listTrails(): Promise<TrailOption[]> {
   const snapshot = await getDocs(collection(db, 'trails'));
-  const rows = snapshot.docs.map((row) => ({ id: row.id, name: trailDisplayName(row.id, String(row.data().name || row.id)) }));
+  const rows = snapshot.docs.map((row) => ({
+    id: row.id,
+    name: trailDisplayName(row.id, String(row.data().name || row.id)),
+  }));
   return rows.length ? rows : [{ id: 'cyprus-e4', name: 'Cyprus-E4' }];
 }
 
 export async function listStages(trailId: string): Promise<StageOption[]> {
   const snapshot = await getDocs(collection(db, 'trails', trailId, 'stages'));
   return snapshot.docs
-    .map((row) => ({ id: row.id, name: String(row.data().name || row.id), sequence: Number(row.data().sequence || 0) }))
+    .map((row) => ({
+      id: row.id,
+      name: String(row.data().name || row.id),
+      sequence: Number(row.data().sequence || 0),
+    }))
     .sort((a, b) => b.sequence - a.sequence);
 }
 
@@ -219,23 +327,35 @@ export async function saveSubmission(
     | 'createdAt'
     | 'updatedAt'
   >,
-  existing?: AccommodationSubmission,
+  existing?: AccommodationSubmission
 ) {
   if (existing?.status === 'removed') {
-    throw new Error('Removed accommodations cannot be resubmitted. Create a new listing instead.');
+    throw new Error(
+      'Removed accommodations cannot be resubmitted. Create a new listing instead.'
+    );
   }
-  const record = existing ? doc(db, 'accommodationSubmissions', existing.id) : doc(submissions);
-  const hasPublishedVersion = Boolean(existing?.publishedLodgingId && existing?.publishedTrailId);
-  const status: SubmissionStatus = hasPublishedVersion || existing?.status === 'approved' || existing?.status === 'pending_update'
-    ? 'pending_update'
-    : 'pending';
+  const record = existing
+    ? doc(db, 'accommodationSubmissions', existing.id)
+    : doc(submissions);
+  const hasPublishedVersion = Boolean(
+    existing?.publishedLodgingId && existing?.publishedTrailId
+  );
+  const status: SubmissionStatus =
+    hasPublishedVersion ||
+    existing?.status === 'approved' ||
+    existing?.status === 'pending_update'
+      ? 'pending_update'
+      : 'pending';
   const normalizedValues = {
     ...values,
     website: normalizeHttpUrl(values.website, true),
     googleMapsUrl: normalizeHttpUrl(values.googleMapsUrl || '', false),
   };
   const safeValues = Object.fromEntries(
-    Object.entries(normalizedValues).map(([key, value]) => [key, value === undefined ? null : value]),
+    Object.entries(normalizedValues).map(([key, value]) => [
+      key,
+      value === undefined ? null : value,
+    ])
   );
   await setDoc(
     record,
@@ -248,7 +368,7 @@ export async function saveSubmission(
       updatedAt: serverTimestamp(),
       ...(existing ? {} : { createdAt: serverTimestamp() }),
     },
-    { merge: true },
+    { merge: true }
   );
   return record.id;
 }
@@ -266,7 +386,8 @@ function publicLodgingData(submission: AccommodationSubmission) {
     description: submission.description,
     priceMinEur: submission.priceMinEur ?? null,
     priceMaxEur: submission.priceMaxEur ?? null,
-    minPriceText: submission.priceMinEur != null ? `From €${submission.priceMinEur}` : null,
+    minPriceText:
+      submission.priceMinEur != null ? `From €${submission.priceMinEur}` : null,
     contact: {
       phone: submission.phone,
       whatsapp: submission.whatsapp || '',
@@ -277,9 +398,10 @@ function publicLodgingData(submission: AccommodationSubmission) {
     distanceFromTrailKm: submission.distanceFromTrailKm ?? null,
     capacityPeople: submission.capacityPeople ?? null,
     monthsOpen: submission.monthsOpen || '',
-    location: submission.latitude != null && submission.longitude != null
-      ? { latitude: submission.latitude, longitude: submission.longitude }
-      : null,
+    location:
+      submission.latitude != null && submission.longitude != null
+        ? { latitude: submission.latitude, longitude: submission.longitude }
+        : null,
     ownerId: deleteField(),
     sourceSubmissionId: deleteField(),
     approvedAt: serverTimestamp(),
@@ -294,11 +416,12 @@ async function addAudit(
   action: string,
   note: string,
   trailId?: string,
-  lodgingId?: string,
+  lodgingId?: string
 ) {
   batch.set(doc(collection(db, 'accommodationAudit')), {
     submissionId: submission?.id || '',
-    lodgingId: lodgingId || submission?.publishedLodgingId || submission?.id || '',
+    lodgingId:
+      lodgingId || submission?.publishedLodgingId || submission?.id || '',
     trailId: trailId || submission?.trailId || '',
     ownerId: submission?.ownerId || '',
     accommodationName: submission?.name || '',
@@ -310,16 +433,30 @@ async function addAudit(
   });
 }
 
-export async function approveSubmission(actor: User, submission: AccommodationSubmission, note = '') {
+export async function approveSubmission(
+  actor: User,
+  submission: AccommodationSubmission,
+  note = ''
+) {
   const batch = writeBatch(db);
   // Public lodging paths must not expose the private submission identifier.
   // Generate an independent ID on first approval and retain it for later edits.
-  const lodgingId = submission.publishedLodgingId
-    || doc(collection(db, 'trails', submission.trailId, 'lodgings')).id;
-  if (submission.publishedTrailId && submission.publishedTrailId !== submission.trailId) {
-    batch.delete(doc(db, 'trails', submission.publishedTrailId, 'lodgings', lodgingId));
+  const lodgingId =
+    submission.publishedLodgingId ||
+    doc(collection(db, 'trails', submission.trailId, 'lodgings')).id;
+  if (
+    submission.publishedTrailId &&
+    submission.publishedTrailId !== submission.trailId
+  ) {
+    batch.delete(
+      doc(db, 'trails', submission.publishedTrailId, 'lodgings', lodgingId)
+    );
   }
-  batch.set(doc(db, 'trails', submission.trailId, 'lodgings', lodgingId), publicLodgingData(submission), { merge: true });
+  batch.set(
+    doc(db, 'trails', submission.trailId, 'lodgings', lodgingId),
+    publicLodgingData(submission),
+    { merge: true }
+  );
   batch.update(doc(db, 'accommodationSubmissions', submission.id), {
     status: 'approved',
     publishedLodgingId: lodgingId,
@@ -329,7 +466,15 @@ export async function approveSubmission(actor: User, submission: AccommodationSu
     reviewedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  await addAudit(batch, actor, submission, 'approved', note, submission.trailId, lodgingId);
+  await addAudit(
+    batch,
+    actor,
+    submission,
+    'approved',
+    note,
+    submission.trailId,
+    lodgingId
+  );
   await batch.commit();
 }
 
@@ -337,7 +482,7 @@ export async function reviewSubmission(
   actor: User,
   submission: AccommodationSubmission,
   status: Extract<SubmissionStatus, 'changes_requested' | 'rejected'>,
-  note: string,
+  note: string
 ) {
   const batch = writeBatch(db);
   batch.update(doc(db, 'accommodationSubmissions', submission.id), {
@@ -351,7 +496,11 @@ export async function reviewSubmission(
   await batch.commit();
 }
 
-export async function removeSubmissionAccommodation(actor: User, submission: AccommodationSubmission, note: string) {
+export async function removeSubmissionAccommodation(
+  actor: User,
+  submission: AccommodationSubmission,
+  note: string
+) {
   const batch = writeBatch(db);
   const lodgingId = submission.publishedLodgingId || submission.id;
   const publishedTrailId = submission.publishedTrailId || submission.trailId;
@@ -363,37 +512,58 @@ export async function removeSubmissionAccommodation(actor: User, submission: Acc
     reviewedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  await addAudit(batch, actor, submission, 'removed', note, submission.trailId, lodgingId);
+  await addAudit(
+    batch,
+    actor,
+    submission,
+    'removed',
+    note,
+    submission.trailId,
+    lodgingId
+  );
   await batch.commit();
 }
 
 export function watchAllPublishedLodgings(
   onData: (rows: PublishedLodging[]) => void,
-  onError: (error: Error) => void,
+  onError: (error: Error) => void
 ) {
   return onSnapshot(
     collectionGroup(db, 'lodgings'),
-    (snapshot) => onData(snapshot.docs.map((row) => ({
-      id: row.id,
-      trailId: row.ref.parent.parent?.id || '',
-      ...row.data(),
-    } as PublishedLodging)).sort((a, b) => (a.name || '').localeCompare(b.name || ''))),
-    onError,
+    (snapshot) =>
+      onData(
+        snapshot.docs
+          .map(
+            (row) =>
+              ({
+                id: row.id,
+                trailId: row.ref.parent.parent?.id || '',
+                ...row.data(),
+              }) as PublishedLodging
+          )
+          .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+      ),
+    onError
   );
 }
 
 export function watchAudit(
   onData: (rows: AuditEntry[]) => void,
-  onError: (error: Error) => void,
+  onError: (error: Error) => void
 ) {
   return onSnapshot(
     collection(db, 'accommodationAudit'),
-    (snapshot) => onData(snapshot.docs.map((row) => ({ id: row.id, ...row.data() } as AuditEntry)).sort((a, b) => {
-      const left = a.createdAt?.toDate?.().getTime() || 0;
-      const right = b.createdAt?.toDate?.().getTime() || 0;
-      return right - left;
-    })),
-    onError,
+    (snapshot) =>
+      onData(
+        snapshot.docs
+          .map((row) => ({ id: row.id, ...row.data() }) as AuditEntry)
+          .sort((a, b) => {
+            const left = a.createdAt?.toDate?.().getTime() || 0;
+            const right = b.createdAt?.toDate?.().getTime() || 0;
+            return right - left;
+          })
+      ),
+    onError
   );
 }
 
@@ -401,11 +571,19 @@ export async function removePublishedLodging(
   actor: User,
   lodging: PublishedLodging,
   note: string,
-  sourceSubmission?: AccommodationSubmission,
+  sourceSubmission?: AccommodationSubmission
 ) {
   const batch = writeBatch(db);
   batch.delete(doc(db, 'trails', lodging.trailId, 'lodgings', lodging.id));
-  await addAudit(batch, actor, null, 'removed', note, lodging.trailId, lodging.id);
+  await addAudit(
+    batch,
+    actor,
+    null,
+    'removed',
+    note,
+    lodging.trailId,
+    lodging.id
+  );
   if (sourceSubmission) {
     batch.update(doc(db, 'accommodationSubmissions', sourceSubmission.id), {
       status: 'removed',
@@ -426,34 +604,48 @@ export async function userIsAdmin(user: User) {
 }
 
 export async function getOwnerAccess(user: User) {
-  if (!user.emailVerified) return { allowed: false, isAdmin: false, reason: 'email-unverified' as const };
+  if (!user.emailVerified)
+    return {
+      allowed: false,
+      isAdmin: false,
+      reason: 'email-unverified' as const,
+    };
   const isAdmin = await userIsAdmin(user);
   if (isAdmin) return { allowed: true, isAdmin: true, reason: null };
 
   const profile = await getDoc(doc(db, 'ownerProfiles', user.uid));
-  if (!profile.exists()) return { allowed: false, isAdmin: false, reason: 'not-invited' as const };
+  if (!profile.exists())
+    return { allowed: false, isAdmin: false, reason: 'not-invited' as const };
   const data = profile.data();
-  const emailMatches = typeof data.email === 'string'
-    && data.email.toLowerCase() === (user.email || '').toLowerCase();
-  const accessStatus = typeof data.accessStatus === 'string' ? data.accessStatus : 'active';
+  const emailMatches =
+    typeof data.email === 'string' &&
+    data.email.toLowerCase() === (user.email || '').toLowerCase();
+  const accessStatus =
+    typeof data.accessStatus === 'string' ? data.accessStatus : 'active';
   const active = accessStatus === 'active';
   return {
     allowed: emailMatches && active,
     isAdmin: false,
     reason: !emailMatches
-      ? 'email-mismatch' as const
+      ? ('email-mismatch' as const)
       : active
         ? null
         : accessStatus === 'pending'
-          ? 'pending' as const
-          : 'disabled' as const,
+          ? ('pending' as const)
+          : ('disabled' as const),
   };
 }
 
-export async function deleteDraft(user: User, submission: AccommodationSubmission) {
-  if (submission.ownerId !== user.uid) throw new Error('You can only delete your own accommodation.');
+export async function deleteDraft(
+  user: User,
+  submission: AccommodationSubmission
+) {
+  if (submission.ownerId !== user.uid)
+    throw new Error('You can only delete your own accommodation.');
   if (!['draft', 'rejected', 'changes_requested'].includes(submission.status)) {
-    throw new Error('Only drafts or listings returned for changes can be deleted.');
+    throw new Error(
+      'Only drafts or listings returned for changes can be deleted.'
+    );
   }
   await deleteDoc(doc(db, 'accommodationSubmissions', submission.id));
 }

@@ -38,6 +38,19 @@ export const interestPreferencesTable = `
   )
 `;
 
+// Publication permission is distinct from private contact details and marketing consent.
+export const storyPublicationTable = `
+  CREATE TABLE IF NOT EXISTS story_publication_permissions (
+    submission_id TEXT PRIMARY KEY NOT NULL,
+    public_name TEXT NOT NULL,
+    title TEXT NOT NULL,
+    publication_consent INTEGER NOT NULL CHECK (publication_consent IN (0, 1)),
+    consent_at TEXT NOT NULL,
+    reviewed_by TEXT NOT NULL DEFAULT '',
+    reviewed_at TEXT NOT NULL DEFAULT ''
+  )
+`;
+
 export const interestRateLimitsTable = `
   CREATE TABLE IF NOT EXISTS interest_rate_limits (
     bucket_key TEXT PRIMARY KEY NOT NULL,

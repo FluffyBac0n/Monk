@@ -2,6 +2,8 @@
 
 Reviewed 17 October 2026.
 
+Historical review: the user subsequently authorized implementation on `codex/website-feedback-v3`, using the Text sheets and database statistics, with programme enquiries first. See [the implementation handoff](website-feedback-v3-implementation.md) for the delivered scope and validation.
+
 Source: [feedback workbook](</Users/amich/Desktop/Website Design - v3 - Added Host Portal.xlsx>), all 12 worksheets and 44 distinct embedded images. Worksheet/cell references below refer to that workbook. Current implementation was assessed from the website and relevant shared data source files in this checkout. The deployed website, production account state and runtime behaviour were not re-tested for this review.
 
 The workbook is stakeholder feedback to evaluate. This review authorizes no implementation, publication, payments, invitations or access changes. The workbook and application source remain unchanged by this review.

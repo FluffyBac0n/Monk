@@ -1,6 +1,6 @@
 # EuroTrex website
 
-The EuroTrex marketing site and accommodation partner portal. The public site sends hikers to the mobile app; authenticated website accounts are reserved for accommodation owners and administrators.
+The EuroTrex public trail guide, marketing site and accommodation partner portal. Authenticated website accounts are reserved for accommodation owners and administrators.
 
 ## Stack
 
@@ -19,7 +19,7 @@ The checked-in Firebase fallback points to the existing `eurotrex` project so th
 
 ## Data flow
 
-1. A prospective host creates an account with a company name and email. The site creates a tightly limited `ownerProfiles/{uid}` request with `accessStatus: "pending"`; clients cannot activate or edit that status.
+1. A prospective host creates an account with first name, surname and email; company or organisation is optional. Existing company-only accounts remain supported. The site creates a tightly limited `ownerProfiles/{uid}` request with `accessStatus: "pending"`; clients cannot activate or edit that status.
 2. The owner verifies their email. A trusted administrator reviews the request and changes `accessStatus` to `active`; unverified or pending accounts cannot read or write host listing data.
 3. Their form writes only to `accommodationSubmissions/{id}` with an awaiting-review status.
 4. An administrator approves the submission. One atomic batch publishes a mobile-compatible record to `trails/{trailId}/lodgings/{id}`, updates the submission and records `accommodationAudit/{id}`. Public records do not expose owner or private submission identifiers.
@@ -32,7 +32,7 @@ The admin inventory uses a Firestore collection-group query so it covers lodging
 
 Create a document at `admins/{firebaseAuthUid}` for each administrator, or issue a custom auth claim of `admin: true`. The dashboard accepts either. Admin documents should only be created through a trusted Firebase console or server process.
 
-Host account requests are created through the portal with `accessStatus: "pending"`. Review each request in Firebase Console or another trusted server process, confirm the company and email, then set `accessStatus` to `active`. The profile email must exactly match the verified Authentication email. Set `accessStatus` to `disabled` to revoke portal access without deleting the account or its audit history.
+Host account requests are created through the portal with `accessStatus: "pending"`. Review each request in the administrator dashboard or a trusted Firebase process, confirm the person or organisation and email, then activate access. The profile email must exactly match the verified Authentication email. Disable access to revoke portal access without deleting the account or its audit history.
 
 Deploy the included rules and captured indexes after reviewing them alongside the project's existing production configuration:
 
@@ -45,6 +45,14 @@ Do not replace broader production rules blindly; merge if the mobile app relies 
 For a fresh project, local backups and guarded recovery, follow
 [Firestore deployment and backup](docs/firestore-deployment-and-backup.md).
 Live documents and credentials must remain outside Git.
+
+## Public website data and feedback release
+
+The Cyprus guide reads public Firestore trail, stage, geometry, lodging and reviewed issue records. Route geometry is cached by its metadata version; the guide refreshes public records after 60 seconds and polls the notice fragment every 60 seconds while open. The web itinerary planner uses recorded overnight information and reports incompatible constraints without inventing stops.
+
+Programme enquiries and story submissions use the existing D1 `DB` binding. Stories require separate publication consent and an administrator's approval; contact email and private name are never selected for publication. Administrators review stories in the **Trail stories** tab. Partner, Premium, Friends and Member programmes are enquiries, without billing or automatic entitlements.
+
+The feedback source, validation results and rollout prerequisites are documented in [the implementation handoff](../docs/website-feedback-v3-implementation.md). Apply the new D1 migration and matching Firestore rules through the existing release process before activating the updated signup flow.
 
 ## Private testing and release
 

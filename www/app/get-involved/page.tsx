@@ -1,87 +1,207 @@
-import Image from 'next/image';
 import type { Metadata } from 'next';
+import { EditorialPage } from '@/components/EditorialPage';
 import { InterestForm } from '@/components/InterestForm';
-import { PublicContent } from '@/components/PublicContent';
-import { PublicFooter } from '@/components/PublicFooter';
-import { PublicHeader } from '@/components/PublicHeader';
-import { disableHtmxNavigation, publicHtmxNavigation } from '@/lib/htmx';
-import { getCyprusE4Stage } from '@/lib/cyprus-e4-data';
+import { websiteCopy } from '@/lib/website-copy';
+import { getPublicTrail } from '@/lib/public-trail-data';
 
 export const metadata: Metadata = {
-  title: 'Join us',
-  description: 'Volunteer, join field walks, collaborate or support the EuroTrex Cyprus-E4 project.',
+  title: 'Community & Support',
+  description: websiteCopy.community.introduction,
   alternates: { canonical: '/get-involved' },
-  openGraph: {
-    type: 'website',
-    url: '/get-involved',
-    title: 'Join EuroTrex',
-    description: 'Volunteer, join field walks, collaborate or support more dependable long-distance trail guides.',
-    images: [{ url: '/involved-volunteer.webp', width: 1000, height: 750, alt: 'A volunteer recording and refreshing a trail waymark' }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Join EuroTrex',
-    description: 'Volunteer, join field walks, collaborate or support more dependable long-distance trail guides.',
-    images: ['/involved-volunteer.webp'],
-  },
 };
+const copy = websiteCopy.community;
+const interests = new Set([
+  'volunteer',
+  'collaborate',
+  'field-walks',
+  'sponsor',
+  'host',
+  'other',
+  'report',
+  'donate',
+  'work',
+  'member',
+  'partner-host',
+  'premium-host',
+  'friend-of-the-path',
+]);
 
-const validInterests = new Set(['volunteer', 'collaborate', 'field-walks', 'sponsor', 'host', 'other', 'report']);
-const participation = [
-  { interest: 'volunteer', title: 'Volunteer', copy: 'Check trail details and share your local knowledge.' },
-  { interest: 'collaborate', title: 'Collaborate', copy: 'Connect your community or organisation with the project.' },
-  { interest: 'field-walks', title: 'Walk with us', copy: 'Register your interest in future field walks.' },
-];
-
-export default async function GetInvolved({ searchParams }: { searchParams: Promise<{ interest?: string; point?: string }> }) {
-  const { interest, point } = await searchParams;
-  const defaultInterest = interest && validInterests.has(interest) ? interest : 'volunteer';
-  const stage = point ? getCyprusE4Stage(point) : undefined;
-  const defaultMessage = stage ? `Trail: Cyprus-E4\nStage point: ${stage.name}\nPage: /trails/cyprus-e4/stages/${stage.id}\n\nWhat has changed?\n` : '';
-
+export default async function Community({
+  searchParams,
+}: {
+  searchParams: Promise<{ interest?: string; point?: string }>;
+}) {
+  const params = await searchParams;
+  const interest = interests.has(params.interest || '')
+    ? params.interest!
+    : 'field-walks';
+  const stage = params.point
+    ? (await getPublicTrail().catch(() => null))?.stages.find(
+        (point) => point.id === params.point
+      )
+    : undefined;
+  const message = stage
+    ? `Trail: Cyprus-E4\nStage point: ${stage.name}\nStage ID: ${stage.id}\n\nWhat needs updating?\n`
+    : interest === 'work'
+      ? 'Please let me know about future work and volunteer openings.'
+      : '';
   return (
-    <>
-      <a className="skip-link" href="#main-content">Skip to content</a><PublicHeader />
-      <PublicContent>
-      <main id="main-content" className="content-page get-involved-page" tabIndex={-1} {...publicHtmxNavigation}>
-        <header className="get-involved-hero">
-          <div className="section-shell get-involved-hero-grid">
-            <div className="get-involved-hero-copy">
-              <p className="eyebrow">Join us</p>
-              <h1>Make a difference<br />on the trail.</h1>
-              <p>Share what you know, lend a hand or walk with us. Help make Cyprus-E4 more useful for everyone.</p>
-            </div>
-            <figure className="get-involved-hero-image">
-              <Image src="/involved-volunteer.webp" alt="A volunteer recording and refreshing a trail waymark" fill priority sizes="(max-width: 600px) calc(100vw - 40px), (max-width: 900px) 36vw, 440px" />
-            </figure>
+    <EditorialPage
+      eyebrow="Community & Support"
+      title="Walk with us."
+      introduction={copy.introduction}
+      image="/cyprus-e4-hermit-1280.webp"
+      imageAlt="A quiet landscape along the Cyprus trail"
+    >
+      <nav
+        className="section-shell editorial-subnav"
+        aria-label="Community sections"
+      >
+        <a href="#walk-with-us">Walk With Us</a>
+        <a href="#opportunities">Work With Us &amp; Volunteer</a>
+        <a href="#collaborate">Collaborate &amp; Partner</a>
+        <a href="#support">Donate &amp; Sponsor</a>
+      </nav>
+      <section className="section-shell" id="walk-with-us">
+        <div className="editorial-split">
+          <div>
+            <p className="eyebrow">Join Our Mapping Expeditions</p>
+            <h2>
+              Our Trail Philosophy
+              <br />
+              and Pace
+            </h2>
+            <p>{copy.paceIntroduction}</p>
           </div>
-        </header>
-        <section className="form-page-section" aria-labelledby="participation-title">
-          <div className="section-shell form-page-grid">
-            <div>
-              <h2 id="participation-title">Ways to help.</h2>
-              <nav className="participation-options" aria-label="Choose how to take part">
-                {participation.map(({ interest: value, title, copy }) => (
-                  <a key={value} href={`/get-involved?interest=${value}#interest-form`} data-interest-choice={value} aria-controls="interest-form" aria-current={defaultInterest === value ? 'true' : undefined} {...disableHtmxNavigation}>
-                    <div><h3>{title}</h3><p>{copy}</p></div>
-                    <span data-interest-choice-label>{defaultInterest === value ? 'Selected' : 'Choose →'}</span>
-                  </a>
-                ))}
-              </nav>
-              <p className="participation-note">Field-walk dates and places are confirmed separately.</p>
-              <a className="simple-link" href="/partnerships">Looking to sponsor the project? <span aria-hidden="true">→</span></a>
+          <dl className="community-principles">
+            {copy.pace.map(([title, text]) => (
+              <div key={title}>
+                <dt>{title}</dt>
+                <dd>{text}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+      <section className="section-shell expedition-section" id="expeditions">
+        <h2 className="section-title">Upcoming Expeditions</h2>
+        <p>{copy.schedule}</p>
+        <div className="expedition-list">
+          {['Cyprus', 'Crete', 'Peloponnese'].map((place) => (
+            <div key={place}>
+              <strong>{place}</strong>
+              <span>E4 Trail</span>
+              <span className="status">Coming Soon</span>
             </div>
-            <div id="interest-form" className="enquiry-panel">
-              <h2>{stage ? `Report an issue at ${stage.name}.` : 'Let’s hear from you.'}</h2>
-              <p>Tell us where you are based and how you would like to help. We review enquiries and reply by email.</p>
-              <InterestForm kind="involved" defaultInterest={defaultInterest} defaultMessage={defaultMessage} />
-              <p className="enquiry-note">Response times vary during private testing.</p>
-            </div>
+          ))}
+        </div>
+        <a
+          className="button button-primary"
+          href="/get-involved?interest=field-walks#interest-form"
+        >
+          Register interest in walking with us
+        </a>
+      </section>
+      <section className="section-shell editorial-split" id="opportunities">
+        <div>
+          <p className="eyebrow">Work With Us &amp; Volunteer</p>
+          <h2>
+            Bring your skills
+            <br />
+            to the trail.
+          </h2>
+        </div>
+        <div>
+          <p>
+            <strong>{copy.noOpenings}</strong>
+          </p>
+          <p>{copy.opportunities}</p>
+          <div className="editorial-actions">
+            <a
+              className="button button-secondary"
+              href="/get-involved?interest=volunteer#interest-form"
+            >
+              Apply to Volunteer
+            </a>
+            <a
+              className="button button-primary"
+              href="/get-involved?interest=work#interest-form"
+            >
+              Join the mailing list
+            </a>
           </div>
-        </section>
-      </main>
-      </PublicContent>
-      <PublicFooter />
-    </>
+        </div>
+      </section>
+      <section className="section-shell editorial-split" id="collaborate">
+        <div>
+          <p className="eyebrow">Collaborate &amp; Partner</p>
+          <h2>
+            Connect your community
+            <br />
+            with the path.
+          </h2>
+        </div>
+        <div>
+          <p>
+            Share your local knowledge, help with regional trail data
+            collection, or ask about working together.
+          </p>
+          <a
+            className="simple-link"
+            href="/get-involved?interest=collaborate#interest-form"
+          >
+            Start a collaboration →
+          </a>
+        </div>
+      </section>
+      <section className="section-shell editorial-split" id="support">
+        <div>
+          <p className="eyebrow">Donate &amp; Sponsor</p>
+          <h2>Support Our Vision</h2>
+        </div>
+        <div>
+          <p>{websiteCopy.home.support}</p>
+          <p>
+            Tell us how you would like to contribute. We will discuss the
+            arrangements with you directly; no payment is taken here.
+          </p>
+          <div className="editorial-actions">
+            <a
+              className="button button-primary"
+              href="/get-involved?interest=donate#interest-form"
+            >
+              Enquire about supporting Eurotrex
+            </a>
+            <a className="simple-link" href="/partnerships">
+              Become a Sponsor →
+            </a>
+          </div>
+        </div>
+      </section>
+      <section
+        className="section-shell form-page-grid programme-enquiry"
+        id="interest-form"
+      >
+        <div>
+          <p className="eyebrow">Your part in the journey</p>
+          <h2>
+            {stage
+              ? `Report an issue at ${stage.name}.`
+              : 'Let’s hear from you.'}
+          </h2>
+          <p>
+            Tell us where you are based and how you would like to help. We
+            review enquiries and reply by email.
+          </p>
+        </div>
+        <div className="enquiry-panel">
+          <InterestForm
+            kind="involved"
+            defaultInterest={interest}
+            defaultMessage={message}
+          />
+        </div>
+      </section>
+    </EditorialPage>
   );
 }

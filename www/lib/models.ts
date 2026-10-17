@@ -1,7 +1,9 @@
 export type OwnerProfile = {
   id: string;
   email: string;
-  businessName: string;
+  firstName?: string;
+  lastName?: string;
+  businessName?: string;
   accessStatus?: string;
   createdAt?: { toDate?: () => Date };
 };
@@ -132,5 +134,8 @@ export const statusLabels: Record<SubmissionStatus, string> = {
 };
 
 export function submissionHasPublishedVersion(row: AccommodationSubmission) {
-  return row.status === 'approved' || Boolean(row.publishedLodgingId && row.publishedTrailId);
+  return (
+    row.status === 'approved' ||
+    Boolean(row.publishedLodgingId && row.publishedTrailId)
+  );
 }

@@ -248,14 +248,23 @@ service cloud.firestore {
         && request.auth.uid == ownerId
         && request.auth.token.email is string
         && request.resource.data.keys().hasOnly([
-          'email', 'businessName', 'accessStatus', 'createdAt', 'updatedAt'
+          'email', 'firstName', 'lastName', 'businessName', 'accessStatus', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.keys().hasAll([
-          'email', 'businessName', 'accessStatus', 'createdAt', 'updatedAt'
+          'email', 'accessStatus', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.email == request.auth.token.email
         && validShortString(request.resource.data.email, 254)
-        && validShortString(request.resource.data.businessName, 160)
+        // Keep complete company-only signup clients working during rollout.
+        // New individual/organisation signups must supply both personal names.
+        && ((request.resource.data.keys().hasAll(['firstName', 'lastName'])
+            && validShortString(request.resource.data.firstName, 80)
+            && validShortString(request.resource.data.lastName, 80)
+            && (!request.resource.data.keys().hasAny(['businessName'])
+              || validString(request.resource.data.businessName, 160)))
+          || (!request.resource.data.keys().hasAny(['firstName', 'lastName'])
+            && request.resource.data.keys().hasAll(['businessName'])
+            && validShortString(request.resource.data.businessName, 160)))
         && request.resource.data.accessStatus == 'pending'
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time

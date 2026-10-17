@@ -3,24 +3,43 @@ import { notFound } from 'next/navigation';
 import { PublicContent } from '@/components/PublicContent';
 import { PublicFooter } from '@/components/PublicFooter';
 import { PublicHeader } from '@/components/PublicHeader';
-import { ServiceIcon, StageLocator, StageStays } from '@/components/StageContext';
-import { cyprusE4, cyprusE4Stages, getCyprusE4Stage } from '@/lib/cyprus-e4-data';
+import {
+  ServiceIcon,
+  StageLocator,
+  StageStays,
+} from '@/components/StageContext';
+import { cyprusE4Stages } from '@/lib/cyprus-e4-data';
+import { getPublicTrail } from '@/lib/public-trail-data';
+import { InformationPage } from '@/components/InformationPage';
 import { publicHtmxNavigation } from '@/lib/htmx';
 import { SITE_URL } from '@/lib/site';
 
 type StagePageProps = { params: Promise<{ stageId: string }> };
 
 const serviceLabels: Record<string, string> = {
-  lodging: 'Stays', tent: 'Camping', food: 'Food', grocery: 'Groceries', drinkableWater: 'Drinking water', nonDrinkableWater: 'Non-drinking water', toilets: 'Toilets', medical: 'Medical help', pharmacy: 'Pharmacy', atm: 'ATM', busStop: 'Bus stop',
+  lodging: 'Stays',
+  tent: 'Camping',
+  food: 'Food',
+  grocery: 'Groceries',
+  drinkableWater: 'Drinking water',
+  nonDrinkableWater: 'Non-drinking water',
+  toilets: 'Toilets',
+  medical: 'Medical help',
+  pharmacy: 'Pharmacy',
+  atm: 'ATM',
+  busStop: 'Bus stop',
 };
 
 export function generateStaticParams() {
   return cyprusE4Stages.map((stage) => ({ stageId: stage.id }));
 }
 
-export async function generateMetadata({ params }: StagePageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: StagePageProps): Promise<Metadata> {
   const { stageId } = await params;
-  const stage = getCyprusE4Stage(stageId);
+  const trail = await getPublicTrail().catch(() => null);
+  const stage = trail?.stages.find((point) => point.id === stageId);
   if (!stage) return {};
   return {
     title: `${stage.name} · Cyprus-E4 stage point`,
@@ -31,44 +50,204 @@ export async function generateMetadata({ params }: StagePageProps): Promise<Meta
 
 export default async function CyprusE4StagePage({ params }: StagePageProps) {
   const { stageId } = await params;
-  const stage = getCyprusE4Stage(stageId);
+  const trail = await getPublicTrail().catch(() => null);
+  if (!trail)
+    return (
+      <InformationPage
+        title="Trail point unavailable"
+        introduction="The trail information could not be refreshed."
+      >
+        <a
+          className="button button-primary"
+          href={`/trails/cyprus-e4/stages/${encodeURIComponent(stageId)}`}
+        >
+          Try again
+        </a>
+      </InformationPage>
+    );
+  const stage = trail.stages.find((point) => point.id === stageId);
   if (!stage) notFound();
-  const index = cyprusE4Stages.findIndex((row) => row.id === stage.id);
-  const previous = cyprusE4Stages[index - 1];
-  const next = cyprusE4Stages[index + 1];
-  const services = Object.entries(stage.services).filter(([, available]) => available).map(([key]) => ({ key, label: serviceLabels[key] || key }));
-  const updated = new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(cyprusE4.dataUpdatedAt));
-  const schema = { '@context': 'https://schema.org', '@type': 'Place', name: `${stage.name} — Cyprus-E4`, url: `${SITE_URL}/trails/cyprus-e4/stages/${stage.id}`, isPartOf: { '@type': 'Route', name: 'Cyprus-E4', url: `${SITE_URL}/trails/cyprus-e4` } };
+  const index = trail.stages.findIndex((row) => row.id === stage.id);
+  const previous = trail.stages[index - 1];
+  const next = trail.stages[index + 1];
+  const services = Object.entries(stage.services)
+    .filter(([, available]) => available)
+    .map(([key]) => ({ key, label: serviceLabels[key] || key }));
+  const updated =
+    trail.updatedAt && Number.isFinite(Date.parse(trail.updatedAt))
+      ? new Intl.DateTimeFormat('en-GB', {
+          dateStyle: 'long',
+          timeZone: 'UTC',
+        }).format(new Date(trail.updatedAt))
+      : 'Not recorded';
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'Place',
+    name: `${stage.name} — Cyprus-E4`,
+    url: `${SITE_URL}/trails/cyprus-e4/stages/${stage.id}`,
+    isPartOf: {
+      '@type': 'Route',
+      name: 'Cyprus-E4',
+      url: `${SITE_URL}/trails/cyprus-e4`,
+    },
+  };
 
   return (
     <>
-      <a className="skip-link" href="#main-content">Skip to content</a><PublicHeader activeTrail="cyprus-e4" />
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+      <PublicHeader activeTrail="cyprus-e4" />
       <PublicContent>
-      <main id="main-content" className="content-page" data-trail-guide="cyprus-e4" tabIndex={-1} {...publicHtmxNavigation}>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
-        <header className="simple-page-header section-shell">
-          <a className="stage-return-link" href="/trails/cyprus-e4/stages"><span aria-hidden="true">←</span> All stage points</a>
-          <p className="eyebrow">Point {index + 1} of {cyprusE4Stages.length}</p><h1>{stage.name}</h1><p>{stage.accumulatedDistanceKm?.toFixed(1) ?? '—'} km from Pafos Airport on the published Cyprus-E4 route.</p>
-        </header>
-        <section className="section-shell stage-detail-grid">
-          <div>
-            <dl className="stage-metrics">
-              <div><dt>{previous ? 'From previous point' : 'Route start'}</dt><dd>{stage.segmentLengthKm?.toFixed(1) ?? '—'} km</dd></div><div><dt>Ascent</dt><dd>{stage.elevationUpM?.toFixed(0) ?? '—'} m</dd></div><div><dt>Descent</dt><dd>{stage.elevationDownM?.toFixed(0) ?? '—'} m</dd></div><div><dt>Altitude</dt><dd>{stage.altitudeM?.toFixed(0) ?? '—'} m</dd></div>
-            </dl>
-            <StageLocator stage={stage} />
-            <p className="stage-context">{previous ? `The incoming section from ${previous.name} is ${stage.segmentLengthKm?.toFixed(1) ?? 'an unrecorded number of'} km.` : 'This is the start of the published Pafos-to-Larnaka direction.'} {next ? `Continue towards ${next.name}, the next named point.` : 'This is the final point in this direction.'} Stage points are reference locations, not prescribed walking days.</p>
-            <article className="stage-section"><p className="eyebrow">Terrain and route</p><h2>What the current data can tell you.</h2><p>The published snapshot records distance and elevation into this point. Detailed surface and terrain notes have not yet been editorially published, so do not infer conditions from elevation alone. Use the route in the app and current local advice when planning.</p></article>
-            <article className="stage-section"><p className="eyebrow">Services at this point</p><h2>{services.length ? `${services.length} recorded services.` : 'No services recorded.'}</h2>{services.length ? <ul className="service-pills">{services.map(({ key, label }) => <li key={key}><ServiceIcon service={key} />{label}</li>)}</ul> : <p>No endpoint services are present in the current data. That does not prove none exist; plan conservatively.</p>}<p className="data-caveat">Service flags refer to this named point, not the entire incoming segment. Opening hours and seasonal availability are not guaranteed.</p></article>
-            <StageStays stage={stage} />
-            <article className="stage-section"><p className="eyebrow">Transport and safety</p><h2>{stage.services.busStop ? 'A bus stop is recorded here.' : 'No bus stop is recorded here.'}</h2><p>Confirm live timetables and access locally. Carry sufficient water, check weather and closures, download offline data, and share your plan. For emergencies in Cyprus, call 112.</p></article>
-          </div>
-          <aside className="stage-aside"><strong>Trail data updated {updated}</strong><p>Field-check date: not recorded. A data update is not confirmation that every service has been recently inspected.</p><a className="button button-secondary" href={`/get-involved?interest=report&point=${stage.id}`}>Report an issue</a></aside>
-        </section>
-        <nav className="section-shell stage-pagination" aria-label="Adjacent stage points">
-          {previous ? <a href={`/trails/cyprus-e4/stages/${previous.id}`}><small>Previous point</small><strong>← {previous.name}</strong></a> : <span />}
-          {next ? <a href={`/trails/cyprus-e4/stages/${next.id}`}><small>Next point</small><strong>{next.name} →</strong></a> : <span />}
-        </nav>
-      </main>
+        <main
+          id="main-content"
+          className="content-page"
+          data-trail-guide="cyprus-e4"
+          tabIndex={-1}
+          {...publicHtmxNavigation}
+        >
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+          />
+          <header className="simple-page-header section-shell">
+            <a className="stage-return-link" href="/trails/cyprus-e4/stages">
+              <span aria-hidden="true">←</span> All stage points
+            </a>
+            <p className="eyebrow">
+              Point {index + 1} of {trail.stages.length}
+            </p>
+            <h1>{stage.name}</h1>
+            <p>
+              {stage.accumulatedDistanceKm?.toFixed(1) ?? '—'} km from{' '}
+              {trail.stages[0].name} on the published Cyprus-E4 route.
+            </p>
+          </header>
+          <section className="section-shell stage-detail-grid">
+            <div>
+              <dl className="stage-metrics">
+                <div>
+                  <dt>{previous ? 'From previous point' : 'Route start'}</dt>
+                  <dd>{stage.segmentLengthKm?.toFixed(1) ?? '—'} km</dd>
+                </div>
+                <div>
+                  <dt>Ascent</dt>
+                  <dd>{stage.elevationUpM?.toFixed(0) ?? '—'} m</dd>
+                </div>
+                <div>
+                  <dt>Descent</dt>
+                  <dd>{stage.elevationDownM?.toFixed(0) ?? '—'} m</dd>
+                </div>
+                <div>
+                  <dt>Altitude</dt>
+                  <dd>{stage.altitudeM?.toFixed(0) ?? '—'} m</dd>
+                </div>
+              </dl>
+              <StageLocator stage={stage} points={trail.points} />
+              <p className="stage-context">
+                {previous
+                  ? `The incoming section from ${previous.name} is ${stage.segmentLengthKm?.toFixed(1) ?? 'an unrecorded number of'} km.`
+                  : 'This is the start of the published Pafos-to-Larnaka direction.'}{' '}
+                {next
+                  ? `Continue towards ${next.name}, the next named point.`
+                  : 'This is the final point in this direction.'}{' '}
+                Stage points are reference locations, not prescribed walking
+                days.
+              </p>
+              <article className="stage-section">
+                <p className="eyebrow">Terrain and route</p>
+                <h2>What the current data can tell you.</h2>
+                <p>
+                  The published snapshot records distance and elevation into
+                  this point. Detailed surface and terrain notes have not yet
+                  been editorially published, so do not infer conditions from
+                  elevation alone. Use the route in the app and current local
+                  advice when planning.
+                </p>
+              </article>
+              <article className="stage-section">
+                <p className="eyebrow">Services at this point</p>
+                <h2>
+                  {services.length
+                    ? `${services.length} recorded services.`
+                    : 'No services recorded.'}
+                </h2>
+                {services.length ? (
+                  <ul className="service-pills">
+                    {services.map(({ key, label }) => (
+                      <li key={key}>
+                        <ServiceIcon service={key} />
+                        {label}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>
+                    No endpoint services are present in the current data. That
+                    does not prove none exist; plan conservatively.
+                  </p>
+                )}
+                <p className="data-caveat">
+                  Service flags refer to this named point, not the entire
+                  incoming segment. Opening hours and seasonal availability are
+                  not guaranteed.
+                </p>
+              </article>
+              <StageStays
+                stage={stage}
+                lodgings={trail.lodgings}
+                available={trail.lodgingsAvailable}
+              />
+              <article className="stage-section">
+                <p className="eyebrow">Transport and safety</p>
+                <h2>
+                  {stage.services.busStop
+                    ? 'A bus stop is recorded here.'
+                    : 'No bus stop is recorded here.'}
+                </h2>
+                <p>
+                  Confirm live timetables and access locally. Carry sufficient
+                  water, check weather and closures, download offline data, and
+                  share your plan. For emergencies in Cyprus, call 112.
+                </p>
+              </article>
+            </div>
+            <aside className="stage-aside">
+              <strong>Trail data updated {updated}</strong>
+              <p>
+                Field-check date: not recorded. A data update is not
+                confirmation that every service has been recently inspected.
+              </p>
+              <a
+                className="button button-secondary"
+                href={`/get-involved?interest=report&point=${stage.id}`}
+              >
+                Report an issue
+              </a>
+            </aside>
+          </section>
+          <nav
+            className="section-shell stage-pagination"
+            aria-label="Adjacent stage points"
+          >
+            {previous ? (
+              <a href={`/trails/cyprus-e4/stages/${previous.id}`}>
+                <small>Previous point</small>
+                <strong>← {previous.name}</strong>
+              </a>
+            ) : (
+              <span />
+            )}
+            {next ? (
+              <a href={`/trails/cyprus-e4/stages/${next.id}`}>
+                <small>Next point</small>
+                <strong>{next.name} →</strong>
+              </a>
+            ) : (
+              <span />
+            )}
+          </nav>
+        </main>
       </PublicContent>
       <PublicFooter />
     </>

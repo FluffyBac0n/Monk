@@ -2,16 +2,37 @@ import { env } from 'cloudflare:workers';
 import { NextResponse } from 'next/server';
 import { database, ensureInterestSchema } from '@/lib/db';
 
-const interests = new Set(['volunteer', 'collaborate', 'field-walks', 'sponsor', 'host', 'other', 'report']);
+const interests = new Set([
+  'volunteer',
+  'collaborate',
+  'field-walks',
+  'sponsor',
+  'host',
+  'other',
+  'report',
+  'partner-host',
+  'premium-host',
+  'friend-of-the-path',
+  'member',
+  'donate',
+  'work',
+  'story',
+]);
 const trailScopes = new Set(['all', 'cyprus-e4', 'crete-e4', 'peloponnese-e4']);
 const platforms = new Set(['ios', 'android', 'both', 'not-sure']);
-const acceptedMediaTypes = new Set(['application/json', 'application/x-www-form-urlencoded']);
+const acceptedMediaTypes = new Set([
+  'application/json',
+  'application/x-www-form-urlencoded',
+]);
 const maximumBodyBytes = 16 * 1024;
 const rateLimitWindowSeconds = 10 * 60;
 const rateLimitRequests = 8;
 
 class RequestError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string
+  ) {
     super(message);
   }
 }
@@ -24,8 +45,14 @@ function validEmail(email: string) {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function interestFragment(kind: string, message: string, success: boolean, compact = false) {
-  if (!success) return `<p class="form-message error" role="alert">${message}</p>`;
+function interestFragment(
+  kind: string,
+  message: string,
+  success: boolean,
+  compact = false
+) {
+  if (!success)
+    return `<p class="form-message error" role="alert">${message}</p>`;
   const title = kind === 'beta' ? 'You’re on the trail.' : 'Message received.';
   return `<div class="interest-success${compact ? ' compact' : ''}" role="status" tabindex="-1"><span aria-hidden="true">✓</span><div><strong>${title}</strong><p>${message}</p></div></div>`;
 }
@@ -36,35 +63,54 @@ function response(
   status: number,
   kind = '',
   message = '',
-  compact = false,
+  compact = false
 ) {
   const headers = { 'Cache-Control': 'no-store', Vary: 'HX-Request' };
   if (!isHtmx) return NextResponse.json(payload, { status, headers });
-  return new NextResponse(interestFragment(kind, message || payload.error || 'The form could not be sent.', payload.ok, compact), {
-    status: 200,
-    headers: {
-      ...headers,
-      'content-type': 'text/html; charset=utf-8',
-      'X-EuroTrex-Interest-Success': payload.ok ? 'true' : 'false',
-      'X-EuroTrex-Interest-Status': String(status),
-    },
-  });
+  return new NextResponse(
+    interestFragment(
+      kind,
+      message || payload.error || 'The form could not be sent.',
+      payload.ok,
+      compact
+    ),
+    {
+      status: 200,
+      headers: {
+        ...headers,
+        'content-type': 'text/html; charset=utf-8',
+        'X-EuroTrex-Interest-Success': payload.ok ? 'true' : 'false',
+        'X-EuroTrex-Interest-Status': String(status),
+      },
+    }
+  );
 }
 
 function assertSameOrigin(request: Request) {
   const expectedOrigin = new URL(request.url).origin;
   const origin = request.headers.get('origin');
   if (origin) {
-    if (origin !== expectedOrigin) throw new RequestError(403, 'This form can only be submitted from the EuroTrex website.');
+    if (origin !== expectedOrigin)
+      throw new RequestError(
+        403,
+        'This form can only be submitted from the EuroTrex website.'
+      );
     return;
   }
 
   const referer = request.headers.get('referer');
-  if (!referer) throw new RequestError(403, 'This form can only be submitted from the EuroTrex website.');
+  if (!referer)
+    throw new RequestError(
+      403,
+      'This form can only be submitted from the EuroTrex website.'
+    );
   try {
     if (new URL(referer).origin !== expectedOrigin) throw new Error();
   } catch {
-    throw new RequestError(403, 'This form can only be submitted from the EuroTrex website.');
+    throw new RequestError(
+      403,
+      'This form can only be submitted from the EuroTrex website.'
+    );
   }
 }
 
@@ -91,19 +137,27 @@ async function boundedBody(request: Request) {
 
   const combined = new Uint8Array(total);
   let offset = 0;
-  chunks.forEach((chunk) => { combined.set(chunk, offset); offset += chunk.byteLength; });
+  chunks.forEach((chunk) => {
+    combined.set(chunk, offset);
+    offset += chunk.byteLength;
+  });
   return new TextDecoder().decode(combined);
 }
 
 async function requestBody(request: Request) {
-  const mediaType = (request.headers.get('content-type') || '').split(';', 1)[0].trim().toLowerCase();
-  if (!acceptedMediaTypes.has(mediaType)) throw new RequestError(415, 'Use the website form to send this request.');
+  const mediaType = (request.headers.get('content-type') || '')
+    .split(';', 1)[0]
+    .trim()
+    .toLowerCase();
+  if (!acceptedMediaTypes.has(mediaType))
+    throw new RequestError(415, 'Use the website form to send this request.');
   const text = await boundedBody(request);
 
   try {
     if (mediaType === 'application/json') {
       const parsed: unknown = JSON.parse(text);
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error();
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+        throw new Error();
       return parsed as Record<string, unknown>;
     }
     return Object.fromEntries(new URLSearchParams(text).entries());
@@ -113,7 +167,8 @@ async function requestBody(request: Request) {
 }
 
 function requestPath(request: Request) {
-  const currentUrl = request.headers.get('HX-Current-URL') || request.headers.get('referer');
+  const currentUrl =
+    request.headers.get('HX-Current-URL') || request.headers.get('referer');
   if (!currentUrl) return '/';
   try {
     const parsed = new URL(currentUrl, request.url);
@@ -126,9 +181,17 @@ function requestPath(request: Request) {
 
 async function hmac(value: string, secret: string) {
   const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
   const digest = await crypto.subtle.sign('HMAC', key, encoder.encode(value));
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 async function rateLimited(request: Request) {
@@ -140,15 +203,23 @@ async function rateLimited(request: Request) {
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = now + rateLimitWindowSeconds;
   const bucket = await hmac(address, secret);
-  await db.prepare('DELETE FROM interest_rate_limits WHERE expires_at <= ?').bind(now).run();
-  const result = await db.prepare(`
+  await db
+    .prepare('DELETE FROM interest_rate_limits WHERE expires_at <= ?')
+    .bind(now)
+    .run();
+  const result = await db
+    .prepare(
+      `
     INSERT INTO interest_rate_limits (bucket_key, request_count, expires_at)
     VALUES (?, 1, ?)
     ON CONFLICT(bucket_key) DO UPDATE SET
       request_count = CASE WHEN interest_rate_limits.expires_at <= ? THEN 1 ELSE interest_rate_limits.request_count + 1 END,
       expires_at = CASE WHEN interest_rate_limits.expires_at <= ? THEN excluded.expires_at ELSE interest_rate_limits.expires_at END
     RETURNING request_count
-  `).bind(bucket, expiresAt, now, now).first<{ request_count: number }>();
+  `
+    )
+    .bind(bucket, expiresAt, now, now)
+    .first<{ request_count: number }>();
   return Number(result?.request_count || 0) > rateLimitRequests;
 }
 
@@ -159,22 +230,57 @@ export async function POST(request: Request) {
     const body = await requestBody(request);
     await ensureInterestSchema();
     if (await rateLimited(request)) {
-      const message = 'Too many requests were received. Please wait a few minutes and try again.';
+      const message =
+        'Too many requests were received. Please wait a few minutes and try again.';
       return response(isHtmx, { ok: false, error: message }, 429, '', message);
     }
 
     const searchParams = new URL(request.url).searchParams;
     const requestedKind = body.kind || searchParams.get('kind');
-    const kind = requestedKind === 'beta' || requestedKind === 'involved' ? requestedKind : '';
-    const compact = body.compact === true || body.compact === 'true' || searchParams.get('compact') === 'true';
-    if (field(body.website, 200)) return response(isHtmx, { ok: true }, 200, kind, 'Thank you.', compact);
+    const kind =
+      requestedKind === 'beta' || requestedKind === 'involved'
+        ? requestedKind
+        : '';
+    const compact =
+      body.compact === true ||
+      body.compact === 'true' ||
+      searchParams.get('compact') === 'true';
+    if (field(body.website, 200))
+      return response(isHtmx, { ok: true }, 200, kind, 'Thank you.', compact);
 
     const email = field(body.email, 254);
     const name = field(body.name, 120);
     const organization = field(body.organization, 160);
-    const platform = field(body.platform, 20) || (kind === 'beta' ? 'not-sure' : '');
+    const platform =
+      field(body.platform, 20) || (kind === 'beta' ? 'not-sure' : '');
     const interest = field(body.interest, 30);
-    const message = field(body.message, 1500);
+    const story = kind === 'involved' && interest === 'story';
+    const maximumMessage = story ? 5000 : 1500;
+    if (
+      typeof body.message === 'string' &&
+      body.message.trim().length > maximumMessage
+    )
+      throw new RequestError(
+        400,
+        `Keep your message within ${maximumMessage.toLocaleString('en-GB')} characters.`
+      );
+    const message = field(body.message, maximumMessage);
+    const publicName = field(body.publicName, 80);
+    const storyTitle = field(body.storyTitle, 160);
+    const publicationConsent =
+      body.publicationConsent === 'yes' || body.publicationConsent === true;
+    if (
+      story &&
+      (!publicationConsent ||
+        !publicName ||
+        !storyTitle ||
+        (typeof body.publicName === 'string' && body.publicName.length > 80) ||
+        (typeof body.storyTitle === 'string' && body.storyTitle.length > 160))
+    )
+      throw new RequestError(
+        400,
+        'Add a story title and public display name, and confirm permission to publish.'
+      );
     const sourcePath = requestPath(request);
     const consent = body.consent === true || body.consent === 'yes';
     const trail = field(body.trail, 40) || 'all';
@@ -191,7 +297,10 @@ export async function POST(request: Request) {
       const error = 'Choose a supported EuroTrex trail.';
       return response(isHtmx, { ok: false, error }, 400, kind, error, compact);
     }
-    if (kind === 'involved' && (!name || !interests.has(interest) || !message)) {
+    if (
+      kind === 'involved' &&
+      (!name || !interests.has(interest) || !message)
+    ) {
       const error = 'Complete your name, interest and message.';
       return response(isHtmx, { ok: false, error }, 400, kind, error, compact);
     }
@@ -202,29 +311,94 @@ export async function POST(request: Request) {
     const createdAt = new Date().toISOString();
 
     if (kind === 'beta') {
-      await db.batch([db.prepare(`
+      await db.batch([
+        db
+          .prepare(
+            `
         INSERT OR IGNORE INTO interest_submissions
           (id, kind, name, email, email_normalized, organization, platform, interest, message, source_path, status, created_at)
         VALUES (?, 'beta', ?, ?, ?, '', ?, '', '', ?, 'new', ?)
-      `).bind(id, '', email, normalizedEmail, platform, sourcePath, createdAt),
-      db.prepare(`INSERT INTO interest_preferences (submission_id, scope, updates_opt_in, platform, updated_at)
+      `
+          )
+          .bind(
+            id,
+            '',
+            email,
+            normalizedEmail,
+            platform,
+            sourcePath,
+            createdAt
+          ),
+        db
+          .prepare(
+            `INSERT INTO interest_preferences (submission_id, scope, updates_opt_in, platform, updated_at)
         SELECT id, ?, 1, ?, ? FROM interest_submissions WHERE kind = 'beta' AND email_normalized = ?
         ON CONFLICT(submission_id, scope) DO UPDATE SET platform = excluded.platform, updated_at = excluded.updated_at, updates_opt_in = 1
-      `).bind(trail, platform, createdAt, normalizedEmail)]);
-      const confirmation = trail === 'all' ? 'You’re on the notification list. We’ll email you when testing invitations or official store links are ready.' : 'Your trail preference is saved. We’ll email you when there is news about this guide or its availability in the app.';
+      `
+          )
+          .bind(trail, platform, createdAt, normalizedEmail),
+      ]);
+      const confirmation =
+        trail === 'all'
+          ? 'You’re on the notification list. We’ll email you when testing invitations or official store links are ready.'
+          : 'Your trail preference is saved. We’ll email you when there is news about this guide or its availability in the app.';
       return response(isHtmx, { ok: true }, 200, kind, confirmation, compact);
     }
 
-    await db.batch([db.prepare(`
+    const statements = [
+      db
+        .prepare(
+          `
       INSERT INTO interest_submissions
         (id, kind, name, email, email_normalized, organization, platform, interest, message, source_path, status, created_at)
       VALUES (?, 'involved', ?, ?, ?, ?, '', ?, ?, ?, 'new', ?)
-    `).bind(id, name, email, normalizedEmail, organization, interest, message, sourcePath, createdAt),
-    db.prepare('INSERT INTO interest_preferences (submission_id, scope, updates_opt_in, platform, updated_at) VALUES (?, ?, ?, ?, ?)').bind(id, 'project', consent ? 1 : 0, '', createdAt)]);
-    return response(isHtmx, { ok: true }, 201, kind, 'Thank you. Your message is with the EuroTrex team.', compact);
+    `
+        )
+        .bind(
+          id,
+          name,
+          email,
+          normalizedEmail,
+          organization,
+          interest,
+          message,
+          sourcePath,
+          createdAt
+        ),
+      db
+        .prepare(
+          'INSERT INTO interest_preferences (submission_id, scope, updates_opt_in, platform, updated_at) VALUES (?, ?, ?, ?, ?)'
+        )
+        .bind(id, 'project', consent ? 1 : 0, '', createdAt),
+    ];
+    if (story)
+      statements.push(
+        db
+          .prepare(
+            'INSERT INTO story_publication_permissions (submission_id, public_name, title, publication_consent, consent_at) VALUES (?, ?, ?, 1, ?)'
+          )
+          .bind(id, publicName, storyTitle, createdAt)
+      );
+    await db.batch(statements);
+    return response(
+      isHtmx,
+      { ok: true },
+      201,
+      kind,
+      story
+        ? 'Your story is with the Eurotrex team for review. It will appear publicly only after approval; your email stays private.'
+        : 'Thank you. Your message is with the EuroTrex team.',
+      compact
+    );
   } catch (caught) {
     if (caught instanceof RequestError) {
-      return response(isHtmx, { ok: false, error: caught.message }, caught.status, '', caught.message);
+      return response(
+        isHtmx,
+        { ok: false, error: caught.message },
+        caught.status,
+        '',
+        caught.message
+      );
     }
     console.error('Interest submission failed', caught);
     const message = 'We could not save this right now. Please try again.';
