@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { EditorialPage } from '@/components/EditorialPage';
 import { InterestForm } from '@/components/InterestForm';
@@ -47,12 +48,103 @@ export default async function Community({
       : '';
   return (
     <EditorialPage
-      eyebrow="Community & Support"
-      title="Walk with us."
-      introduction={copy.introduction}
-      image="/cyprus-e4-hermit-1280.webp"
-      imageAlt="A quiet landscape along the Cyprus trail"
+      pageClass="get-involved-page"
+      hero={
+        <header className="get-involved-hero">
+          <div className="section-shell get-involved-hero-grid">
+            <div className="get-involved-hero-copy">
+              <p className="eyebrow">Community &amp; Support</p>
+              <h1>
+                Make a difference
+                <br />
+                on the trail.
+              </h1>
+              <p>{copy.introduction}</p>
+            </div>
+            <figure className="get-involved-hero-image">
+              <Image
+                src="/involved-volunteer.webp"
+                alt="A volunteer recording a trail waymark"
+                fill
+                priority
+                sizes="(max-width: 600px) calc(100vw - 40px), 440px"
+              />
+            </figure>
+          </div>
+        </header>
+      }
     >
+      <section className="form-page-section">
+        <div className="section-shell form-page-grid">
+          <div>
+            <h2>Ways to help.</h2>
+            <nav
+              className="participation-options"
+              aria-label="Choose how to take part"
+            >
+              {[
+                [
+                  'volunteer',
+                  'Work With Us & Volunteer',
+                  'Hear about future openings and share your local knowledge.',
+                ],
+                [
+                  'collaborate',
+                  'Collaborate & Partner',
+                  'Connect your community or organisation with the project.',
+                ],
+                [
+                  'field-walks',
+                  'Walk With Us',
+                  'Register your interest in future field walks.',
+                ],
+                ['donate', 'Donate & Sponsor', websiteCopy.home.support],
+              ].map(([value, title, text]) => (
+                <a
+                  key={value}
+                  href={`/get-involved?interest=${value}#interest-form`}
+                  data-interest-choice={value}
+                  aria-controls="interest-form"
+                  aria-current={interest === value ? 'true' : undefined}
+                >
+                  <div>
+                    <h3>{title}</h3>
+                    <p>{text}</p>
+                  </div>
+                  <span data-interest-choice-label>
+                    {interest === value ? 'Selected' : 'Choose →'}
+                  </span>
+                </a>
+              ))}
+            </nav>
+            <p className="participation-note">
+              Field-walk dates and places are confirmed separately.
+            </p>
+            <a className="simple-link" href="#walk-with-us">
+              Read about our trail philosophy →
+            </a>
+          </div>
+          <div id="interest-form" className="enquiry-panel">
+            <h2>
+              {stage
+                ? `Report an issue at ${stage.name}.`
+                : 'Let’s hear from you.'}
+            </h2>
+            <p>
+              Tell us where you are based and how you would like to help. We
+              review enquiries and reply by email.
+            </p>
+            <InterestForm
+              kind="involved"
+              defaultInterest={interest}
+              defaultMessage={message}
+            />
+            <p className="enquiry-note">
+              Response times vary during private testing.
+            </p>
+          </div>
+        </div>
+      </section>
       <nav
         className="section-shell editorial-subnav"
         aria-label="Community sections"
@@ -176,30 +268,6 @@ export default async function Community({
               Become a Sponsor →
             </a>
           </div>
-        </div>
-      </section>
-      <section
-        className="section-shell form-page-grid programme-enquiry"
-        id="interest-form"
-      >
-        <div>
-          <p className="eyebrow">Your part in the journey</p>
-          <h2>
-            {stage
-              ? `Report an issue at ${stage.name}.`
-              : 'Let’s hear from you.'}
-          </h2>
-          <p>
-            Tell us where you are based and how you would like to help. We
-            review enquiries and reply by email.
-          </p>
-        </div>
-        <div className="enquiry-panel">
-          <InterestForm
-            kind="involved"
-            defaultInterest={interest}
-            defaultMessage={message}
-          />
         </div>
       </section>
     </EditorialPage>

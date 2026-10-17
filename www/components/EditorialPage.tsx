@@ -11,13 +11,19 @@ export function EditorialPage({
   introduction,
   image,
   imageAlt,
+  hero,
+  pageClass = '',
+  clientNavigation = false,
   children,
 }: {
-  eyebrow: string;
-  title: string;
-  introduction: string;
-  image: string;
-  imageAlt: string;
+  eyebrow?: string;
+  title?: string;
+  introduction?: string;
+  image?: string;
+  imageAlt?: string;
+  hero?: ReactNode;
+  pageClass?: string;
+  clientNavigation?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -29,26 +35,31 @@ export function EditorialPage({
       <PublicContent>
         <main
           id="main-content"
-          className="content-page editorial-page"
+          className={`content-page editorial-page ${pageClass}`.trim()}
           tabIndex={-1}
           {...publicHtmxNavigation}
+          {...(clientNavigation ? { 'hx-boost': 'false' } : {})}
         >
-          <header className="editorial-hero section-shell">
-            <div>
-              <p className="eyebrow">{eyebrow}</p>
-              <h1>{title}</h1>
-              <p className="editorial-lead">{introduction}</p>
-            </div>
-            <figure>
-              <Image
-                src={image}
-                alt={imageAlt}
-                fill
-                priority
-                sizes="(max-width: 760px) 100vw, 45vw"
-              />
-            </figure>
-          </header>
+          {hero || (
+            <header className="editorial-hero section-shell">
+              <div>
+                <p className="eyebrow">{eyebrow}</p>
+                <h1>{title}</h1>
+                <p className="editorial-lead">{introduction}</p>
+              </div>
+              {image && (
+                <figure>
+                  <Image
+                    src={image}
+                    alt={imageAlt || ''}
+                    fill
+                    priority
+                    sizes="(max-width: 760px) 100vw, 45vw"
+                  />
+                </figure>
+              )}
+            </header>
+          )}
           {children}
         </main>
       </PublicContent>

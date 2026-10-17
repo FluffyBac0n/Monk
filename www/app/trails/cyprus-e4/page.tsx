@@ -4,7 +4,6 @@ import { PublicContent } from '@/components/PublicContent';
 import { PublicFooter } from '@/components/PublicFooter';
 import { TrailFigures } from '@/components/TrailFigures';
 import { AppDownload } from '@/components/AppDownload';
-import { CyprusTrailSlideshow } from '@/components/CyprusTrailSlideshow';
 import {
   getPublicTrail,
   safePublicUrl,
@@ -113,12 +112,6 @@ export default async function CyprusE4({
     )
   );
   const shown = filtered.slice((page - 1) * 18, page * 18);
-  const sum = (key: 'elevationUpM' | 'elevationDownM') =>
-    trail.stages.slice(1).every((point) => point[key] !== null)
-      ? trail.stages.slice(1).reduce((total, point) => total + point[key]!, 0)
-      : null;
-  const ascent = sum('elevationUpM'),
-    descent = sum('elevationDownM');
   return (
     <>
       <a className="skip-link" href="#main-content">
@@ -133,69 +126,25 @@ export default async function CyprusE4({
           tabIndex={-1}
           {...publicHtmxNavigation}
         >
-          <header className="trail-guide-hero">
-            <div className="section-shell">
-              <div className="trail-guide-hero-grid">
-                <div className="trail-guide-intro">
-                  <p className="eyebrow">Explore Trails · {trail.country}</p>
-                  <h1>E4 Cyprus</h1>
-                  <p className="trail-guide-lead">
-                    General Info, Map, Elevation Map. Find your way from{' '}
-                    {first.name} to {last.name}, one walking day at a time.
-                  </p>
-                  <div className="editorial-actions">
-                    <a className="button button-primary" href="#planner">
-                      Plan your Journey
-                    </a>
-                    <a
-                      className="button button-secondary"
-                      href="#accommodations"
-                    >
-                      Accommodation Directory
-                    </a>
-                  </div>
-                  <p className="guide-freshness">
-                    Trail data updated {date(trail.updatedAt)}
-                  </p>
-                  <a
-                    className="simple-link"
-                    href="https://www.era-ewv-ferp.org/e-paths/e4/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    E4 information from the European Hiking Federation (ERA) ↗
-                  </a>
-                </div>
-                <CyprusTrailSlideshow />
-              </div>
-              <dl className="guide-stat-ribbon">
-                <div>
-                  <dt>Total distance</dt>
-                  <dd>
-                    {trail.distanceKm === null
-                      ? 'Not recorded'
-                      : `${trail.distanceKm.toFixed(1)} km`}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Reference points</dt>
-                  <dd>{trail.stages.length}</dd>
-                </div>
-                <div>
-                  <dt>Total ascent / descent</dt>
-                  <dd>
-                    {ascent === null || descent === null
-                      ? 'Not recorded'
-                      : `${Math.round(ascent).toLocaleString('en-GB')} / ${Math.round(descent).toLocaleString('en-GB')} m`}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Countries</dt>
-                  <dd>
-                    {trail.country ? '1 · ' + trail.country : 'Not recorded'}
-                  </dd>
-                </div>
-              </dl>
+          <header className="section-shell screenshot-trail-header">
+            <p className="eyebrow">Explore Trails · {trail.country}</p>
+            <h1>E4 Cyprus</h1>
+            <p>
+              General Info, Map, Elevation Map. Find your way from {first.name}{' '}
+              to {last.name}, one walking day at a time.
+            </p>
+            <div>
+              <span className="guide-freshness">
+                Trail data updated {date(trail.updatedAt)}
+              </span>
+              <a
+                className="simple-link"
+                href="https://www.era-ewv-ferp.org/e-paths/e4/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                E4 information from the European Hiking Federation (ERA) ↗
+              </a>
             </div>
           </header>
           <nav
@@ -210,6 +159,43 @@ export default async function CyprusE4({
             <a href="#app">Download App</a>
           </nav>
           <TrailFigures trail={trail} />
+          <section className="section-shell guide-journey">
+            <div className="guide-section-heading">
+              <div>
+                <p className="eyebrow">Five points across the island</p>
+                <h2>Follow the trail, one waypoint at a time.</h2>
+              </div>
+              <a className="guide-inline-link" href="/trails/cyprus-e4/stages">
+                View all {trail.stages.length} points →
+              </a>
+            </div>
+            <ol className="guide-waypoint-list">
+              {[0, 0.25, 0.5, 0.75, 1].map((part, index) => {
+                const point =
+                  trail.stages[Math.round(part * (trail.stages.length - 1))];
+                return (
+                  <li key={point.id}>
+                    <a href={`/trails/cyprus-e4/stages/${point.id}`}>
+                      <span className="guide-waypoint-dot" aria-hidden="true" />
+                      <small>
+                        {index === 0
+                          ? 'Start'
+                          : index === 4
+                            ? 'Finish'
+                            : `${point.accumulatedDistanceKm?.toFixed(0)} km`}
+                      </small>
+                      <strong>{point.name}</strong>
+                      <span>
+                        {point.altitudeM === null
+                          ? 'Altitude not recorded'
+                          : `${Math.round(point.altitudeM)} m altitude`}
+                      </span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
           <section className="section-shell planner-section" id="planner">
             <div className="editorial-split">
               <div>
@@ -233,203 +219,272 @@ export default async function CyprusE4({
                 geometry.
               </p>
             </div>
-            <form
-              className="planner-form"
-              action="/trails/cyprus-e4#planner"
-              method="get"
-              {...{
-                'hx-sync': 'this:replace',
-                'hx-disabled-elt': 'find button[type="submit"]',
-              }}
-            >
-              <input type="hidden" name="plan" value="yes" />
-              <label>
-                Start Point
-                <select name="start" defaultValue={start}>
-                  {trail.stages.map((point) => (
-                    <option key={point.id} value={point.id}>
-                      {point.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                End Point
-                <select name="end" defaultValue={end}>
-                  {trail.stages.map((point) => (
-                    <option key={point.id} value={point.id}>
-                      {point.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                No. of Days{' '}
-                <span className="optional-marker">(Auto if blank)</span>
-                <input
-                  name="days"
-                  type="number"
-                  min="1"
-                  max="90"
-                  defaultValue={value(params, 'days')}
-                  placeholder="Auto"
-                />
-              </label>
-              <label>
-                Max km per day
-                <input
-                  name="maxKm"
-                  type="number"
-                  min="5"
-                  max="80"
-                  step=".5"
-                  defaultValue={maxKm}
-                />
-              </label>
-              <label className="check-label">
-                <input
-                  name="camping"
-                  type="checkbox"
-                  value="yes"
-                  defaultChecked={camping}
-                />
-                <span>Include recorded camping stops</span>
-              </label>
-              <div className="editorial-actions">
-                <button className="button button-primary" type="submit">
-                  Build my itinerary
-                </button>
-                <a
-                  className="button button-secondary"
-                  href="/trails/cyprus-e4#planner"
-                >
-                  Reset
-                </a>
-              </div>
-            </form>
-            {itinerary.error ? (
-              <div className="trail-data-message" role="status">
-                <h3>Try a different walking plan.</h3>
-                <p>{itinerary.error}</p>
-              </div>
-            ) : (
-              <div className="itinerary-results" aria-live="polite">
-                <p className="itinerary-summary">
-                  <strong>
-                    {itinerary.days.length} walking{' '}
-                    {itinerary.days.length === 1 ? 'day' : 'days'} ·{' '}
-                    {itinerary.distanceKm.toFixed(1)} km
-                  </strong>
-                  <span>
-                    {itinerary.days[0].start.name} →{' '}
-                    {itinerary.days.at(-1)!.end.name}
-                  </span>
-                </p>
-                <ol className="itinerary-days">
-                  {itinerary.days.map((day) => (
-                    <li key={day.number}>
-                      <details>
-                        <summary>
-                          <span className="day-number">Day {day.number}</span>
-                          <span>
-                            <strong>
-                              {day.start.name} → {day.end.name}
-                            </strong>
-                            <small>
-                              {day.distanceKm.toFixed(1)} km · ↑{' '}
-                              {day.ascentM === null
-                                ? 'not recorded'
-                                : Math.round(day.ascentM) + ' m'}{' '}
-                              · ↓{' '}
-                              {day.descentM === null
-                                ? 'not recorded'
-                                : Math.round(day.descentM) + ' m'}
-                            </small>
-                          </span>
-                          <span className="day-expand" aria-hidden="true">
-                            +
-                          </span>
-                        </summary>
-                        <div className="day-details">
-                          <ol>
-                            {day.points.map((point) => (
-                              <li key={point.id}>
-                                <a
-                                  href={`/trails/cyprus-e4/stages/${point.id}`}
-                                >
-                                  {point.name}
-                                </a>
-                                <span>
-                                  {[
-                                    point.services.drinkableWater
-                                      ? 'Drinking water recorded'
-                                      : '',
-                                    point.services.food ? 'Food recorded' : '',
-                                    point.services.lodging
-                                      ? 'Lodging recorded'
-                                      : '',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' · ')}
-                                </span>
-                              </li>
-                            ))}
-                          </ol>
-                          <p>
-                            <strong>Overnight at {day.end.name}:</strong>{' '}
-                            {day.lodgings.length
-                              ? `${day.lodgings.length} recorded places to stay.`
-                              : day.end.services.lodging
-                                ? 'Lodging is recorded at this point.'
-                                : day.camping
-                                  ? 'Camping is recorded; confirm current access and permission.'
-                                  : 'Journey finish; arrange your onward plans.'}{' '}
-                            {day.lodgings.length > 0 && (
-                              <a
-                                href={pageUrl(
-                                  { ...params, stay: day.end.name },
-                                  1
+            <div className="planner-workspace">
+              <form
+                className="planner-form"
+                action="/trails/cyprus-e4#planner"
+                method="get"
+                {...{
+                  'hx-sync': 'this:replace',
+                  'hx-disabled-elt': 'find button[type="submit"]',
+                }}
+              >
+                <input type="hidden" name="plan" value="yes" />
+                <label>
+                  Start Point
+                  <select name="start" defaultValue={start}>
+                    {trail.stages.map((point) => (
+                      <option key={point.id} value={point.id}>
+                        {point.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  End Point
+                  <select name="end" defaultValue={end}>
+                    {trail.stages.map((point) => (
+                      <option key={point.id} value={point.id}>
+                        {point.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  No. of Days{' '}
+                  <span className="optional-marker">(Auto if blank)</span>
+                  <input
+                    name="days"
+                    type="number"
+                    min="1"
+                    max="90"
+                    defaultValue={value(params, 'days')}
+                    placeholder="Auto"
+                  />
+                </label>
+                <label>
+                  Max km per day
+                  <input
+                    name="maxKm"
+                    type="number"
+                    min="5"
+                    max="80"
+                    step=".5"
+                    defaultValue={maxKm}
+                  />
+                </label>
+                <label className="check-label">
+                  <input
+                    name="camping"
+                    type="checkbox"
+                    value="yes"
+                    defaultChecked={camping}
+                  />
+                  <span>Include recorded camping stops</span>
+                </label>
+                <div className="editorial-actions">
+                  <button className="button button-primary" type="submit">
+                    Build my itinerary
+                  </button>
+                  <a
+                    className="button button-secondary"
+                    href="/trails/cyprus-e4#planner"
+                  >
+                    Reset
+                  </a>
+                </div>
+              </form>
+              <div className="planner-stage-column">
+                {itinerary.error ? (
+                  <div className="trail-data-message" role="status">
+                    <h3>Try a different walking plan.</h3>
+                    <p>{itinerary.error}</p>
+                  </div>
+                ) : (
+                  <div className="itinerary-results" aria-live="polite">
+                    <p className="itinerary-summary">
+                      <strong>
+                        {itinerary.days.length} walking{' '}
+                        {itinerary.days.length === 1 ? 'day' : 'days'} ·{' '}
+                        {itinerary.distanceKm.toFixed(1)} km
+                      </strong>
+                      <span>
+                        {itinerary.days[0].start.name} →{' '}
+                        {itinerary.days.at(-1)!.end.name}
+                      </span>
+                    </p>
+                    <ol className="itinerary-days">
+                      {itinerary.days.map((day) => (
+                        <li key={day.number}>
+                          <details>
+                            <summary>
+                              <span className="day-number">
+                                Day {day.number}
+                              </span>
+                              <span>
+                                <strong>
+                                  {day.start.name} → {day.end.name}
+                                </strong>
+                                <small>
+                                  {day.distanceKm.toFixed(1)} km · ↑{' '}
+                                  {day.ascentM === null
+                                    ? 'not recorded'
+                                    : Math.round(day.ascentM) + ' m'}{' '}
+                                  · ↓{' '}
+                                  {day.descentM === null
+                                    ? 'not recorded'
+                                    : Math.round(day.descentM) + ' m'}
+                                </small>
+                              </span>
+                              <span className="day-expand" aria-hidden="true">
+                                +
+                              </span>
+                            </summary>
+                            <div className="day-details">
+                              <ol>
+                                {day.points.map((point) => (
+                                  <li key={point.id}>
+                                    <a
+                                      href={`/trails/cyprus-e4/stages/${point.id}`}
+                                    >
+                                      {point.name}
+                                    </a>
+                                    <span>
+                                      {[
+                                        point.services.drinkableWater
+                                          ? 'Drinking water recorded'
+                                          : '',
+                                        point.services.food
+                                          ? 'Food recorded'
+                                          : '',
+                                        point.services.lodging
+                                          ? 'Lodging recorded'
+                                          : '',
+                                      ]
+                                        .filter(Boolean)
+                                        .join(' · ')}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ol>
+                              <p>
+                                <strong>Overnight at {day.end.name}:</strong>{' '}
+                                {day.lodgings.length
+                                  ? `${day.lodgings.length} recorded places to stay.`
+                                  : day.end.services.lodging
+                                    ? 'Lodging is recorded at this point.'
+                                    : day.camping
+                                      ? 'Camping is recorded; confirm current access and permission.'
+                                      : 'Journey finish; arrange your onward plans.'}{' '}
+                                {day.lodgings.length > 0 && (
+                                  <a
+                                    href={pageUrl(
+                                      { ...params, stay: day.end.name },
+                                      1
+                                    )}
+                                  >
+                                    View stays →
+                                  </a>
                                 )}
-                              >
-                                View stays →
-                              </a>
-                            )}
-                          </p>
-                        </div>
-                      </details>
-                    </li>
-                  ))}
-                </ol>
+                              </p>
+                            </div>
+                          </details>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+                <section className="conditions-section" id="conditions">
+                  <p className="eyebrow">Live Trail Conditions Noticeboard</p>
+                  <h2>Know what lies ahead.</h2>
+                  <p>
+                    Reviewed reports and approved trail notices. Updates can lag
+                    behind conditions on the ground.
+                  </p>
+                  <div
+                    data-trail-notices
+                    {...{
+                      'hx-get': '/api/trail-notices',
+                      'hx-trigger': 'every 60s',
+                      'hx-target': 'this',
+                      'hx-swap': 'innerHTML',
+                      'hx-select': 'unset',
+                      'hx-push-url': 'false',
+                      'hx-boost': 'false',
+                    }}
+                    dangerouslySetInnerHTML={{
+                      __html: publicNoticeHtml(
+                        trail.issues,
+                        trail.issuesAvailable
+                      ),
+                    }}
+                  />
+                  <p className="data-caveat">
+                    Use the app to report a trail problem. Only reviewed public
+                    notices appear here; private reports and reporter contact
+                    details stay private.
+                  </p>
+                </section>
               </div>
-            )}
+            </div>
           </section>
-          <section className="section-shell conditions-section" id="conditions">
-            <p className="eyebrow">Live Trail Conditions Noticeboard</p>
-            <h2>Know what lies ahead.</h2>
-            <p>
-              Reviewed reports and approved trail notices. Updates can lag
-              behind conditions on the ground.
-            </p>
-            <div
-              data-trail-notices
-              {...{
-                'hx-get': '/api/trail-notices',
-                'hx-trigger': 'every 60s',
-                'hx-target': 'this',
-                'hx-swap': 'innerHTML',
-                'hx-select': 'unset',
-                'hx-push-url': 'false',
-                'hx-boost': 'false',
-              }}
-              dangerouslySetInnerHTML={{
-                __html: publicNoticeHtml(trail.issues, trail.issuesAvailable),
-              }}
-            />
-            <p className="data-caveat">
-              Use the app to report a trail problem. Only reviewed public
-              notices appear here; private reports and reporter contact details
-              stay private.
-            </p>
+          <AppDownload screenshots />
+          <section className="section-shell guide-essentials">
+            <article className="guide-plan-copy">
+              <p className="eyebrow">Shape your own walk</p>
+              <h2>A route, not one fixed itinerary.</h2>
+              <p>
+                Named points give you the building blocks. Compare distance and
+                elevation, then create walking days around your experience,
+                daylight, accommodation and water plan.
+              </p>
+              <dl className="guide-planning-list">
+                <div>
+                  <dt>Choose your rhythm</dt>
+                  <dd>
+                    Link short or long sections instead of following a
+                    prescribed schedule.
+                  </dd>
+                </div>
+                <div>
+                  <dt>Walk either way</dt>
+                  <dd>Choose either direction in the planner above.</dd>
+                </div>
+                <div>
+                  <dt>Check live conditions</dt>
+                  <dd>
+                    Use current local advice for weather, closures, water and
+                    transport before setting out.
+                  </dd>
+                </div>
+              </dl>
+            </article>
+            <aside className="guide-safety-panel">
+              <p className="eyebrow light">Before you walk</p>
+              <h2>
+                Check the present,
+                <br />
+                not only the plan.
+              </h2>
+              <ul>
+                <li>
+                  <span>01</span>Confirm official access advice and weather.
+                </li>
+                <li>
+                  <span>02</span>Carry enough water for changing conditions.
+                </li>
+                <li>
+                  <span>03</span>Download trail data before limited coverage.
+                </li>
+                <li>
+                  <span>04</span>Share your route and expected finish.
+                </li>
+              </ul>
+              <div className="guide-emergency">
+                <small>Emergency in Cyprus</small>
+                <strong>112</strong>
+              </div>
+            </aside>
           </section>
           <section
             className="section-shell accommodation-directory"
@@ -593,7 +648,6 @@ export default async function CyprusE4({
               </>
             )}
           </section>
-          <AppDownload screenshots />
         </main>
       </PublicContent>
       <PublicFooter />

@@ -99,6 +99,7 @@ export default function Home() {
               </div>
             </div>
           </section>
+          <AppDownload id="hero-app" />
           <section
             className="manifesto-section"
             aria-labelledby="manifesto-title"
@@ -124,9 +125,12 @@ export default function Home() {
           <section className="paths-section" id="paths">
             <div className="section-shell">
               <h2 className="section-title">Choose Your Path</h2>
-              <div className="path-grid feedback-path-grid">
-                {paths.map((path) => (
-                  <article className="path-card" key={path.title}>
+              <div className="path-grid screenshot-path-grid">
+                {paths.map((path, index) => (
+                  <article
+                    className={`path-card${index === 0 ? ' path-card-featured' : ''}`}
+                    key={path.title}
+                  >
                     <a className="path-card-link" href={path.href}>
                       <div className="path-image-wrap">
                         <Image
@@ -134,7 +138,11 @@ export default function Home() {
                           src={path.image}
                           alt={path.alt}
                           fill
-                          sizes="(max-width: 760px) 100vw, 33vw"
+                          sizes={
+                            index === 0
+                              ? '(max-width: 760px) 100vw, 64vw'
+                              : '(max-width: 760px) 100vw, 36vw'
+                          }
                         />
                       </div>
                       <div className="path-card-shade" />
@@ -168,7 +176,7 @@ export default function Home() {
               <span aria-hidden="true">→</span>
             </a>
           </section>
-          <AppDownload id="hikers" />
+          <AppDownload id="hikers" screenshots />
           <section
             className="section-shell community-links"
             aria-labelledby="community-links-title"

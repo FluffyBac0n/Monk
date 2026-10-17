@@ -13,71 +13,87 @@ const copy = websiteCopy.initiative;
 export default function About() {
   return (
     <EditorialPage
-      eyebrow="The Eurotrex Initiative"
-      title={copy.title}
-      introduction={copy.introduction}
-      image="/cyprus-e4-forest-1200.webp"
-      imageAlt="A forest path along the Cyprus E4"
+      pageClass="initiative-page"
+      hero={
+        <header className="initiative-vision">
+          <Image
+            src="/cyprus-e4-forest-1200.webp"
+            alt="Mountains and forest along the Cyprus E4"
+            fill
+            priority
+            sizes="100vw"
+          />
+          <div className="initiative-vision-copy section-shell">
+            <p className="eyebrow">The Eurotrex Initiative</p>
+            <h1>
+              Discover Europe,
+              <br />
+              One Path at a Time
+            </h1>
+            <p>{copy.introduction}</p>
+            <p>{copy.guide}</p>
+            <strong>{copy.closing}</strong>
+          </div>
+        </header>
+      }
     >
-      <section className="section-shell editorial-statement">
-        <p>{copy.guide}</p>
-        <h2>{copy.closing}</h2>
-      </section>
-      <section className="section-shell editorial-split">
+      <section className="section-shell initiative-origin">
+        <figure>
+          <Image
+            src="/involved-walk.webp"
+            alt="Hikers sharing a walk along the trail"
+            fill
+            sizes="(max-width: 760px) 100vw, 50vw"
+          />
+        </figure>
         <div>
-          <p className="eyebrow">Our Origin Story</p>
           <h2>
             Built by Hikers,
             <br />
             for Hikers
           </h2>
-        </div>
-        <div>
           <p>{copy.origin}</p>
           <p>{copy.experience}</p>
         </div>
       </section>
-      <section className="section-shell initiative-phases">
-        <h2 className="section-title">Project Phases</h2>
-        <ol>
-          {copy.phases.map((phase, index) => (
-            <li key={phase.title}>
-              <span>Phase {index + 1}</span>
-              <h3>{phase.title}</h3>
-              <p>{phase.text}</p>
-            </li>
-          ))}
-        </ol>
+      <section className="initiative-phase-band">
+        <div className="section-shell initiative-phases">
+          <h2>Project Phases</h2>
+          <ol>
+            {copy.phases.map((phase, index) => (
+              <li key={phase.title}>
+                <span>Phase {index + 1}</span>
+                <h3>{phase.title}</h3>
+                <p>{phase.text}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
       </section>
-      <section className="section-shell foundation-section">
-        <p className="eyebrow">Current Project Focus</p>
-        <h2>
-          Our Foundation:
-          <br />
-          The E4 Cyprus Trail
-        </h2>
+      <section className="section-shell foundation-section initiative-foundation">
+        <h2>Current Project Focus</h2>
+        <h3>Our Foundation: The E4 Cyprus Trail</h3>
         <p>{copy.focus}</p>
-        <a className="button button-primary" href="/trails/cyprus-e4">
-          Explore the E4 Cyprus Trail
+        <a className="simple-link" href="/trails/cyprus-e4">
+          Explore the E4 Cyprus Trail →
         </a>
       </section>
-      <section className="section-shell editorial-split funding-section">
-        <div>
-          <p className="eyebrow">Supported By</p>
-          <h2>Co-funded by the European Union &amp; Republic of Cyprus</h2>
-        </div>
-        <div>
-          <p>{copy.funding}</p>
-          <p>{copy.investment}</p>
-          <a
-            className="simple-link"
-            href="https://thalia.com.cy/en/home-en/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn More About the THALIA Programme ↗
-          </a>
-        </div>
+      <section className="section-shell initiative-funding">
+        <h2>
+          Co-funded by
+          <br />
+          the European Union &amp; Republic of Cyprus
+        </h2>
+        <p>{copy.funding}</p>
+        <p>{copy.investment}</p>
+        <a
+          className="button button-secondary"
+          href="https://thalia.com.cy/en/home-en/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Learn More About the THALIA Programme ↗
+        </a>
       </section>
       <section className="section-shell initiative-team">
         <h2 className="section-title">The Team</h2>
@@ -117,6 +133,72 @@ export default function About() {
               people discover and explore long-distance trails.
             </p>
           </article>
+        </div>
+      </section>
+      <section className="involved-section">
+        <div className="section-shell">
+          <h2 className="section-title">Join Us</h2>
+          <div className="involved-grid">
+            {[
+              [
+                'Walk with us',
+                websiteCopy.community.introduction,
+                'See Trail Schedule',
+                '/get-involved#expeditions',
+                '/involved-walk.webp',
+              ],
+              [
+                'Volunteer',
+                websiteCopy.home.volunteer,
+                'Apply to Volunteer',
+                '/get-involved?interest=volunteer#interest-form',
+                '/involved-volunteer.webp',
+              ],
+              [
+                'Collaborate',
+                'Work with us on responsible tourism, access and regional initiatives.',
+                'Start a collaboration',
+                '/get-involved?interest=collaborate#interest-form',
+                '/involved-collaborate.webp',
+              ],
+              [
+                'Support the vision',
+                websiteCopy.home.support,
+                'Explore partnerships',
+                '/partnerships',
+                '/involved-support.webp',
+              ],
+            ].map(([title, text, label, href, image], index) => (
+              <article
+                className={index === 0 ? 'involved-featured' : ''}
+                key={title}
+              >
+                <a className="involved-card-link" href={href}>
+                  <div className="involved-image">
+                    <Image
+                      src={image}
+                      alt=""
+                      fill
+                      sizes={
+                        index === 0
+                          ? '(max-width: 820px) 100vw, 58vw'
+                          : '(max-width: 820px) 100vw, 36vw'
+                      }
+                    />
+                  </div>
+                  <div className="involved-card-shade" />
+                  <div className="involved-card-body">
+                    <h3>{title}</h3>
+                    <p>{text}</p>
+                    <span className="editorial-link">
+                      {label}
+                      <i aria-hidden="true" />
+                    </span>
+                  </div>
+                </a>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
     </EditorialPage>

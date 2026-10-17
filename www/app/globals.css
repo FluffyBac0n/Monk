@@ -1436,3 +1436,119 @@ td small { color: var(--muted); margin-top: 5px; }
   .hiker-launch-copy h2 { font-size: 20px; }
 }
 .verified-stay { align-self: start; background: #e8f3ec; border: 1px solid #b7d7c2; border-radius: 8px; color: #276448; display: inline-block; font-size: 11px; font-weight: 750; line-height: 1.5; margin: 0 0 10px; padding: 6px 9px; }
+
+/* Visual-sheet corrections: reuse the original website compositions. */
+.screenshot-path-grid .path-card-body > p:not(.eyebrow) { display: block; }
+.screenshot-path-grid .path-card:not(.path-card-featured) .path-card-body { padding: 24px; }
+.screenshot-path-grid .path-card:not(.path-card-featured) p { font-size: 13px; line-height: 1.5; margin-bottom: 14px; }
+.compact-app-download { padding-block: 22px; }
+.compact-app-download .hiker-launch-band { margin: 0; }
+.screenshot-app-showcase .hiker-launch-band h2, .compact-app-download .hiker-launch-band h2 { font-size: 27px; margin: 0; }
+.initiative-vision { isolation: isolate; position: relative; padding: 70px 0 60px; text-align: center; overflow: hidden; background: #d9ebef; }
+.initiative-vision > img { object-fit: cover; object-position: center 65%; z-index: -2; }
+.initiative-vision::after { content: ''; position: absolute; inset: 0; background: linear-gradient(#e3f1f5f5 0%,#e3f1f5ed 60%,#e3f1f58c 100%); z-index: -1; }
+.initiative-vision-copy { max-width: 850px; }
+.initiative-vision h1 { color: var(--navy); font-size: clamp(42px,5vw,65px); font-weight: 550; line-height: 1.08; margin-bottom: 35px; }
+.initiative-vision p:not(.eyebrow) { color: var(--navy); font-size: 18px; line-height: 1.6; margin: 18px auto; max-width: 780px; }
+.initiative-vision strong { display: block; color: var(--navy); font-size: 24px; margin-top: 30px; }
+.initiative-origin { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; padding-top: 64px; }
+.initiative-origin figure { margin: 0; position: relative; min-height: 390px; overflow: hidden; }
+.initiative-origin img { object-fit: cover; }
+.initiative-origin h2 { font-weight: 500; border-bottom: 1px solid var(--line); padding-bottom: 22px; margin: 0 0 24px; }
+.initiative-origin p { color: var(--muted); font-size: 18px; }
+.initiative-phase-band { background: #e0edef; padding-block: 45px; }
+.initiative-phase-band h2, .initiative-funding h2, .initiative-foundation h2 { font-weight: 500; text-align: center; }
+.initiative-phase-band .initiative-phases ol { margin-bottom: 0; }
+.initiative-phase-band .initiative-phases li { border: 1px solid #d0dce0; background: #f9fbfb; border-radius: 14px; }
+.initiative-phase-band .initiative-phases h3 { border-bottom: 1px solid var(--line); font-size: 26px; font-weight: 500; padding-bottom: 22px; }
+.initiative-foundation { padding-block: 5px 35px; }
+.initiative-foundation h3 { font-weight: 500; font-size: 28px; margin-top: 30px; }
+.initiative-funding { padding-block: 20px 40px; text-align: center; }
+.initiative-funding h2 { font-size: clamp(30px,3.8vw,46px); margin-bottom: 32px; }
+.initiative-funding p { color: var(--muted); text-align: left; font-size: 17px; max-width: 1000px; margin: 20px auto; }
+.initiative-funding .button { margin-top: 24px; }
+.host-welcome { display: grid; grid-template-columns: 1fr 1fr; gap: 70px; padding-block: 60px; }
+.host-welcome h1 { color: var(--navy); font-size: clamp(66px,7.5vw,100px); font-weight: 500; text-align: center; margin: 0 0 44px; }
+.host-welcome p { color: var(--muted); font-size: 16px; line-height: 1.7; }
+.host-welcome .host-emotional-copy { color: var(--navy); font-size: 18px; }
+.host-welcome figure { position: relative; margin: 0; min-height: 530px; overflow: hidden; }
+.host-welcome img { object-fit: cover; }
+.host-landing-page .host-section { padding-block: 20px 30px; }
+.host-benefits-band { background: #b4dce5; padding-block: 40px; }
+.host-benefits-band h2 { text-align: center; font-weight: 500; font-size: 38px; margin-bottom: 30px; }
+.host-benefits-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 32px; }
+.host-benefits-grid article { padding: 28px; background: #f5f9f7c9; text-align: center; border-radius: 8px; }
+.host-benefits-grid h3 { font-size: 25px; font-weight: 500; margin: 18px 0 12px; }
+.host-benefits-grid p { color: var(--muted); font-size: 14px; margin: 0; }
+.host-benefit-icon { display: inline-flex; align-items: center; justify-content: center; background: #fffbe3; color: #52776a; width: 48px; height: 48px; font-size: 34px; }
+.host-badge-explanation { text-align: center; max-width: 780px; margin: 30px auto 0; }
+.host-badge-explanation p { color: #34535a; font-size: 14px; margin-block: 5px 12px; }
+.host-account-section .auth-card { margin: 0 auto; }
+.host-account-section .auth-card h2 { font-size: 34px; }
+.host-landing-page > .faq-section { display: grid; grid-template-columns: .62fr 1.38fr; gap: 75px; padding-block: 20px; }
+.screenshot-trail-header { padding-block: 34px 20px; }
+.screenshot-trail-header h1 { color: var(--navy); font-size: 46px; }
+.screenshot-trail-header > p:not(.eyebrow) { color: var(--muted); font-size: 17px; line-height: 1.6; max-width: 800px; }
+.screenshot-trail-header > div { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 30px; }
+.screenshot-trail-header .guide-freshness { margin: 0; }
+.trail-map-dashboard { display: grid; grid-template-columns: minmax(250px,.65fr) minmax(0,1.35fr); gap: 30px; align-items: stretch; }
+.trail-map-statistics { background: #fffef0; margin: 0; display: flex; flex-direction: column; }
+.trail-map-statistics > div { display: grid; grid-template-columns: minmax(0,1fr) minmax(110px,.7fr); gap: 20px; align-items: center; padding: 25px 22px; border-bottom: 1px solid #dcded0; flex: 1; }
+.trail-map-statistics dt { color: var(--muted); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; line-height: 1.6; }
+.trail-map-statistics dd { color: var(--navy); font-size: 23px; line-height: 1.3; margin: 0; }
+.trail-map-dashboard .live-route-map { margin: 0; display: flex; flex-direction: column; justify-content: center; }
+.recorded-geographic-map { display: block; width: 100%; height: auto; object-fit: contain; }
+.recorded-geographic-map[hidden], [data-route-map-fallback][hidden] { display: none; }
+.route-figures .guide-map-caption { padding: 15px; flex-wrap: wrap; }
+.route-figures .guide-map-caption small { white-space: nowrap; }
+.screenshot-elevation { background: #12191d; color: white; border: 0; border-radius: 0; padding: 15px 22px; margin-top: 28px; }
+.screenshot-elevation h3 { color: #e8f2f5; font-size: 16px; margin-bottom: 0; }
+.screenshot-elevation svg { max-height: 190px; }
+.screenshot-elevation svg text { fill: #d1dce1; }
+.screenshot-elevation figcaption { color: #aebfc8; }
+.planner-workspace { display: grid; grid-template-columns: minmax(250px,.6fr) minmax(0,1.4fr); gap: 38px; align-items: start; margin-top: 25px; }
+.planner-workspace .planner-form { grid-template-columns: 1fr; margin: 0; align-items: start; }
+.planner-workspace .planner-form .editorial-actions { justify-content: start; flex-direction: column; align-items: stretch; }
+.planner-stage-column { min-width: 0; }
+.planner-stage-column .trail-data-message { margin-top: 0; }
+.planner-stage-column .conditions-section h2 { font-size: 30px; }
+.planner-stage-column .notice-grid { grid-template-columns: 1fr; }
+@media (max-width: 900px) {
+  .initiative-origin, .host-welcome { gap: 30px; }
+  .trail-map-dashboard { grid-template-columns: 1fr; }
+  .trail-map-statistics { display: grid; grid-template-columns: 1fr 1fr; }
+  .trail-map-statistics > div { padding: 20px; }
+  .planner-workspace { gap: 24px; grid-template-columns: minmax(220px,.7fr) minmax(0,1.3fr); }
+  .host-benefits-grid { gap: 16px; }
+  .host-benefits-grid article { padding: 20px; }
+}
+@media (max-width: 760px) {
+  .screenshot-path-grid .path-card { min-height: 300px; }
+  .screenshot-path-grid .path-card-featured { min-height: 420px; }
+  .screenshot-path-grid .path-card-body > p:not(.eyebrow) { font-size: 15px; }
+  .initiative-origin, .host-welcome, .host-benefits-grid, .planner-workspace { grid-template-columns: 1fr; }
+  .initiative-origin { padding-top: 40px; }
+  .initiative-origin figure { min-height: 300px; }
+  .host-welcome { padding-block: 36px; }
+  .host-welcome h1 { font-size: 68px; margin-bottom: 30px; }
+  .host-welcome figure { min-height: 350px; }
+  .host-landing-page > .faq-section { grid-template-columns: 1fr; gap: 20px; }
+  .host-benefits-band h2 { font-size: 32px; }
+  .host-benefits-grid article { padding: 28px; }
+  .trail-map-statistics { grid-template-columns: 1fr; }
+  .trail-map-statistics > div { grid-template-columns: 1fr 1fr; padding: 18px; }
+  .trail-map-statistics dd { font-size: 22px; }
+  .planner-workspace .planner-form .editorial-actions { flex-direction: row; flex-wrap: wrap; }
+  .screenshot-elevation svg { min-height: 145px; }
+  .screenshot-app-showcase .hiker-launch-band h2, .compact-app-download .hiker-launch-band h2 { font-size: 22px; }
+}
+.host-benefit-icon svg { height: 29px; width: 29px; }
+.screenshot-elevation svg { height: 185px; }
+.initiative-vision > img { z-index: 0; }
+.initiative-vision::after { z-index: 1; background: linear-gradient(#e3f1f5f2 0%,#e3f1f5d9 45%,#e3f1f580 100%); }
+.initiative-vision-copy { position: relative; z-index: 2; }
+@media (max-width: 760px) {
+  .editorial-subnav[aria-label="Trail guide sections"] { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; gap: 24px; margin-bottom: 12px; padding-block: 8px; }
+  .trail-map-dashboard .live-route-map { order: -1; }
+  .route-figures { padding-top: 12px; }
+}

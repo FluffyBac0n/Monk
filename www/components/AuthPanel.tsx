@@ -14,6 +14,8 @@ import { auth } from '@/lib/firebase';
 type AuthPanelProps = {
   admin?: boolean;
   trailReports?: boolean;
+  embedded?: boolean;
+  initialMode?: AccountMode;
 };
 
 type AccountMode = 'signin' | 'register';
@@ -50,8 +52,10 @@ function authErrorMessage(caught: unknown) {
 export function AuthPanel({
   admin = false,
   trailReports = false,
+  embedded = false,
+  initialMode = 'signin',
 }: AuthPanelProps = {}) {
-  const [mode, setMode] = useState<AuthMode>('signin');
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -138,6 +142,7 @@ export function AuthPanel({
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
+      if (embedded) window.location.assign('/portal');
     } catch (caught) {
       setError(
         caught instanceof Error && caught.message === 'profile-create-failed'
@@ -213,7 +218,7 @@ export function AuthPanel({
             ? 'EUROTREX OPERATIONS'
             : 'ACCOMMODATION PARTNERS'}
       </p>
-      <h1>{heading}</h1>
+      {embedded ? <h2>{heading}</h2> : <h1>{heading}</h1>}
       <p>{introduction}</p>
 
       {!admin && mode !== 'reset' && (

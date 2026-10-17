@@ -1,8 +1,9 @@
+import Image from 'next/image';
+import { HostAccount } from '@/components/HostAccount';
 import type { Metadata } from 'next';
 import { EditorialPage } from '@/components/EditorialPage';
 import { InterestForm } from '@/components/InterestForm';
 import { websiteCopy } from '@/lib/website-copy';
-import { disableHtmxNavigation } from '@/lib/htmx';
 
 export const metadata: Metadata = {
   title: 'Become a Host',
@@ -28,86 +29,179 @@ export default async function BecomeHost({
     : 'host';
   return (
     <EditorialPage
-      eyebrow="A place along the path"
-      title="Become a Host"
-      introduction={websiteCopy.hosts.introduction}
-      image="/hosts-path.webp"
-      imageAlt="A stone guesthouse welcoming walkers near the trail"
+      pageClass="host-landing-page"
+      clientNavigation
+      hero={
+        <header className="section-shell host-welcome">
+          <div>
+            <h1>
+              Become a<br />
+              Host
+            </h1>
+            <p className="host-emotional-copy">
+              One of the main priorities of the long-distance hiker is to find a
+              suitable restful shelter to spend the night after a long day on
+              the trail. That is why we consider hosts to be an invaluable part
+              of the trail community. If you want to be part of this community
+              and let hikers know about your shelter, create an account to
+              upload details of your accommodation.
+            </p>
+            <p>{websiteCopy.hosts.introduction}</p>
+          </div>
+          <figure>
+            <Image
+              src="/hosts-path.webp"
+              alt="A welcoming guesthouse along the trail"
+              fill
+              priority
+              sizes="(max-width: 760px) 100vw, 50vw"
+            />
+          </figure>
+        </header>
+      }
     >
-      <section className="section-shell editorial-statement">
-        <h2>A warm welcome goes a long way.</h2>
-        <p>{websiteCopy.home.hosts}</p>
-        <div className="editorial-actions">
-          <a
-            className="button button-primary"
-            href="/portal?mode=register"
-            {...disableHtmxNavigation}
-          >
-            Create your host account
-          </a>
-          <a
-            className="button button-secondary"
-            href="/portal"
-            {...disableHtmxNavigation}
-          >
-            Sign in to Host Portal
-          </a>
+      <section className="host-section">
+        <div className="section-shell">
+          <h2 className="section-title">How It Works</h2>
+          <ol className="host-steps">
+            {[
+              [
+                'Create your host account',
+                'Add your name and verify your email. Company or organisation details are optional. We review your request before activating host access.',
+                '/host-step-account-photo.webp',
+                'A guesthouse owner creating an account on a laptop',
+              ],
+              [
+                'Prepare your listing',
+                'Once approved, add your location, nearest trail point, prices and contact details. Save a draft and preview the app card.',
+                '/host-step-details-photo.webp',
+                'A host checking accommodation details',
+              ],
+              [
+                'Submit for verification',
+                'We review representative authority, contact details and trail relevance before publication. Account and listing reviews are separate.',
+                '/host-step-verified-photo.webp',
+                'A hiker finding a guesthouse along the trail',
+              ],
+            ].map(([title, text, image, alt]) => (
+              <li className="host-moment" key={title}>
+                <div className="host-step-image">
+                  <Image
+                    src={image}
+                    alt={alt}
+                    fill
+                    sizes="(max-width: 760px) 100vw, 31vw"
+                  />
+                </div>
+                <div className="host-step-body">
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
-      <section className="section-shell initiative-phases">
-        <h2 className="section-title">How It Works</h2>
-        <ol>
-          <li>
-            <span>01 · Your account</span>
-            <h3>Introduce yourself.</h3>
+      <section className="host-benefits-band">
+        <div className="section-shell">
+          <h2>Why Host on Eurotrex?</h2>
+          <div className="host-benefits-grid">
+            {[
+              [
+                'Help Hikers',
+                'Welcome tired walkers to your doorstep, provide vital trail shelter, and increase your local booking traffic.',
+                'lodging',
+              ],
+              [
+                'Promote Trails',
+                'Put your local trails and village on the map and attract a respectful community of eco-tourists and hikers.',
+                'trail',
+              ],
+              [
+                'Community Access',
+                'Join a network of European hosts, build regional hospitality insight, and co-build the future of E-path tourism.',
+                'community',
+              ],
+            ].map(([title, text, icon]) => (
+              <article key={title}>
+                <span
+                  className={`host-benefit-icon ${icon}`}
+                  aria-hidden="true"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path
+                      d={
+                        icon === 'lodging'
+                          ? 'M7 3h6v9l6 3v5H4v-5h3V3Zm0 5h6M4 17h15M10 5h3M10 8h3'
+                          : icon === 'trail'
+                            ? 'm2 19 7-11 4 6 3-4 6 9H2Zm5-8 2 2 2-2M5 22c6-5 9 1 14-3'
+                            : 'M12 8v8M8 12h8M5 5l3 3m8 8 3 3M5 19l3-3m8-8 3-3M10 3h4v3h-4V3Zm0 15h4v3h-4v-3ZM3 10h3v4H3v-4Zm15 0h3v4h-3v-4Z'
+                      }
+                    />
+                  </svg>
+                </span>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </article>
+            ))}
+          </div>
+          <div className="host-badge-explanation">
+            <span className="verified-stay">Eurotrex Verified Stay</span>
             <p>
-              Add your name and email, with company or organisation details if
-              applicable. Verify your email, then wait for host access to be
-              reviewed.
+              Verified listings are reviewed for representative authority,
+              contact details and trail relevance. Verification is not a safety
+              certification, quality rating or booking guarantee.
             </p>
-          </li>
-          <li>
-            <span>02 · Your accommodation</span>
-            <h3>Prepare your listing.</h3>
-            <p>
-              Add your location, nearest trail point, prices and contact
-              details. Save a draft and preview how hikers will see it.
-            </p>
-          </li>
-          <li>
-            <span>03 · Our review</span>
-            <h3>Submit for verification.</h3>
-            <p>
-              We review your authority to represent the accommodation, its
-              contact details and trail relevance before publication. Account
-              and listing reviews are separate.
-            </p>
-          </li>
-        </ol>
-      </section>
-      <section className="section-shell host-verification">
-        <div>
-          <p className="eyebrow">What verification means</p>
-          <h2>
-            Clear information.
-            <br />A human review.
-          </h2>
-          <p>
-            Verified listings have been reviewed for representative authority,
-            contact details and relevance to the trail. Verification is not a
-            safety certification, quality rating or booking guarantee.
-          </p>
+            <a className="simple-link" href="/partner-terms">
+              Read our partner listing policy →
+            </a>
+          </div>
         </div>
-        <div>
-          <h3>Why Host on Eurotrex?</h3>
-          <p>
-            Help hikers find a place to rest, promote your local trail and join
-            a community of hosts along the path. Hikers contact and book with
-            you directly.
-          </p>
-          <a className="simple-link" href="/partner-terms">
-            Read our partner listing policy →
-          </a>
+      </section>
+      <section className="section-shell host-account-section" id="host-account">
+        <HostAccount />
+      </section>
+      <section className="section-shell faq-section">
+        <h2 className="section-title">Host Questions</h2>
+        <div className="faq-list">
+          <details>
+            <summary>Can I register without a company?</summary>
+            <p>
+              Yes. Hosts can be individuals or representatives of businesses,
+              organisations and public bodies. Company or organisation name is
+              optional.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Does creating an account publish my accommodation?
+            </summary>
+            <p>
+              No. Verify your email and wait for host access to be activated,
+              then prepare and submit a listing for its own review.
+            </p>
+          </details>
+          <details>
+            <summary>Are sponsorship and verification the same?</summary>
+            <p>
+              No. Sponsorship concerns programme participation and promotion.
+              Listing verification follows the review described above.
+            </p>
+          </details>
+          <details>
+            <summary>What happens when I change a published listing?</summary>
+            <p>
+              Your current listing remains visible while the proposed update is
+              reviewed. You can follow its status in the Host Portal.
+            </p>
+          </details>
         </div>
       </section>
       <section className="section-shell host-programmes" id="programmes">
@@ -152,42 +246,6 @@ export default async function BecomeHost({
         </div>
         <div className="enquiry-panel">
           <InterestForm kind="involved" defaultInterest={interest} />
-        </div>
-      </section>
-      <section className="section-shell faq-section">
-        <h2 className="section-title">Host Questions</h2>
-        <div className="faq-list">
-          <details>
-            <summary>Can I register without a company?</summary>
-            <p>
-              Yes. Hosts can be individuals or representatives of businesses,
-              organisations and public bodies. Company or organisation name is
-              optional.
-            </p>
-          </details>
-          <details>
-            <summary>
-              Does creating an account publish my accommodation?
-            </summary>
-            <p>
-              No. Verify your email and wait for host access to be activated,
-              then prepare and submit a listing for its own review.
-            </p>
-          </details>
-          <details>
-            <summary>Are sponsorship and verification the same?</summary>
-            <p>
-              No. Sponsorship concerns programme participation and promotion.
-              Listing verification follows the review described above.
-            </p>
-          </details>
-          <details>
-            <summary>What happens when I change a published listing?</summary>
-            <p>
-              Your current listing remains visible while the proposed update is
-              reviewed. You can follow its status in the Host Portal.
-            </p>
-          </details>
         </div>
       </section>
     </EditorialPage>

@@ -527,6 +527,20 @@ function startPublicRuntime(htmx) {
     const target = event.target;
     if (!(target instanceof Element)) return;
 
+    // The host landing page contains the live React authentication form.
+    // Enter/leave it with a document navigation so HTMX cannot strip its handlers.
+    const accountLink = target.closest('a[href]');
+    if (accountLink instanceof HTMLAnchorElement && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button === 0 && !accountLink.target && !accountLink.hasAttribute('download')) {
+      const destination = new URL(accountLink.href, window.location.href);
+      const involvesAccountPage = destination.pathname === '/become-a-host' || window.location.pathname === '/become-a-host';
+      if (destination.origin === window.location.origin && involvesAccountPage && (destination.pathname !== window.location.pathname || destination.search !== window.location.search)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        window.location.assign(destination.href);
+        return;
+      }
+    }
+
     const activeTrail = target.closest('.trail-switcher-item[aria-current="true"]');
     if (activeTrail && new URL(activeTrail.href, window.location.href).pathname === window.location.pathname) {
       event.preventDefault();
@@ -549,6 +563,13 @@ function startPublicRuntime(htmx) {
   window.__eurotrexHtmxPopState = handlePopState;
   window.addEventListener('pageshow', ensureHtmxHistoryBridge);
   document.addEventListener('click', prepareForPotentialNavigation, true);
+  document.addEventListener('error', (event) => {
+    const image = event.target;
+    if (!(image instanceof HTMLImageElement) || !image.matches('[data-route-map-image]')) return;
+    image.hidden = true;
+    const fallback = image.parentElement?.querySelector('[data-route-map-fallback]');
+    if (fallback instanceof HTMLElement) fallback.hidden = false;
+  }, true);
   document.addEventListener('input', handleInput);
   document.addEventListener('change', handleChange);
   document.addEventListener('click', handleDocumentClick);

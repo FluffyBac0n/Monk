@@ -24,6 +24,33 @@ function moduleAt(file, imports = {}, globals = {}) {
   return exports;
 }
 const { buildItinerary } = moduleAt('../lib/web-itinerary.ts');
+const { encodedMapPath, trailMapImageUrl } = moduleAt(
+  '../lib/trail-map-image.ts'
+);
+const mapFixture = [
+  [38.5, -120.2],
+  [40.7, -120.95],
+  [43.252, -126.453],
+].map(([lat, lng]) => ({ lat, lng }));
+assert.equal(
+  encodedMapPath(mapFixture),
+  '_p~iF~ps|U_ulLnnqC_mqNvxq`@',
+  'Precision-5 path encoding matches the standard fixture'
+);
+assert.throws(() => trailMapImageUrl([], 'pk.synthetic'), /unavailable/);
+const longRoute = Array.from({ length: 24000 }, (_, i) => ({
+  lat: 34.5 + i / 24000,
+  lng: 32 + Math.sin(i / 50),
+}));
+const imageUrl = trailMapImageUrl(longRoute, 'pk.synthetic');
+assert.ok(imageUrl.length <= 8000);
+assert.equal(new URL(imageUrl).hostname, 'api.mapbox.com');
+assert.ok(imageUrl.includes('pin-s-a+f2c94c(32,34.5)'));
+assert.ok(
+  imageUrl.includes(
+    `pin-s-b+303e4e(${longRoute.at(-1).lng},${longRoute.at(-1).lat})`
+  )
+);
 const stages = [0, 10, 20, 30, 40].map((km, index) => ({
   id: `point-${index}`,
   name: `Point ${index}`,
