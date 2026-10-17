@@ -112,7 +112,7 @@ export default async function CyprusE4StagePage({ params }: StagePageProps) {
           />
           <header className="simple-page-header section-shell">
             <a
-              className="button button-secondary cta-button"
+              className="button button-secondary fill-link cta-button"
               href="/trails/cyprus-e4/stages"
             >
               All stage points

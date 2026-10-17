@@ -160,7 +160,7 @@ export default async function BecomeHost({
               certification, quality rating or booking guarantee.
             </p>
             <a
-              className="button button-secondary cta-button"
+              className="button button-secondary fill-link cta-button"
               href="/partner-terms"
             >
               Read our partner listing policy
@@ -222,7 +222,7 @@ export default async function BecomeHost({
               <h3>{programme.title}</h3>
               <p>{programme.text}</p>
               <a
-                className="button button-secondary cta-button"
+                className="button button-secondary fill-link cta-button"
                 href={`/become-a-host?interest=${programme.id}#enquire`}
               >
                 Enquire about this programme

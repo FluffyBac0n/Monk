@@ -24,6 +24,67 @@ function moduleAt(file, imports = {}, globals = {}) {
   return exports;
 }
 const { buildItinerary } = moduleAt('../lib/web-itinerary.ts');
+const { buildElevationProfile, contourColor, axisTicks } = moduleAt(
+  '../lib/elevation-profile.ts'
+);
+const elevationPoints = [0, 0, 0, 700, 0, 0, 0].map(
+  (altitudeM, distanceKm) => ({ altitudeM, distanceKm, lat: 0, lng: 0 })
+);
+const elevationProfile = buildElevationProfile(elevationPoints, 6);
+assert.equal(
+  elevationProfile.segments[0][3].altitudeM,
+  100,
+  'The mobile seven-point average smooths a single spike before rendering'
+);
+assert.equal(
+  elevationProfile.segments[0][0].altitudeM,
+  175,
+  'Windows truncate at the route endpoints'
+);
+assert.equal(
+  elevationPoints[3].altitudeM,
+  700,
+  'Display smoothing leaves recorded route measurements intact'
+);
+assert.equal(contourColor(0), '#3e9ed0');
+assert.equal(contourColor(300), '#61af57');
+assert.equal(contourColor(700), '#d8aa35');
+assert.equal(contourColor(2200), '#d66b35');
+assert.equal(
+  contourColor(150),
+  '#50a794',
+  'Altitude colours interpolate between the mobile contour anchors'
+);
+assert.deepEqual(axisTicks(0, 558, 5), [0, 200, 400, 558]);
+assert.equal(buildElevationProfile([], null), null);
+const withGap = buildElevationProfile(
+  [
+    ...elevationPoints,
+    { ...elevationPoints[0], altitudeM: null, distanceKm: 7 },
+    ...elevationPoints.map((p) => ({ ...p, distanceKm: p.distanceKm + 8 })),
+  ],
+  14
+);
+assert.equal(
+  withGap.segments.length,
+  2,
+  'Missing measurements leave a visible break in the profile'
+);
+const longElevation = buildElevationProfile(
+  Array.from({ length: 10000 }, (_, i) => ({
+    lat: 0,
+    lng: 0,
+    altitudeM: i,
+    distanceKm: i / 10,
+  })),
+  null
+);
+assert.ok(longElevation.segments[0].length <= 901);
+assert.equal(
+  longElevation.segments[0].at(-1).distanceKm,
+  999.9,
+  'Downsampling retains the route endpoint'
+);
 const { encodedMapPath, trailMapImageUrl } = moduleAt(
   '../lib/trail-map-image.ts'
 );

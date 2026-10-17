@@ -75,7 +75,7 @@ export default function About() {
         <h3>Our Foundation: The E4 Cyprus Trail</h3>
         <p>{copy.focus}</p>
         <a
-          className="button button-secondary cta-button"
+          className="button button-secondary fill-link cta-button"
           href="/trails/cyprus-e4"
         >
           Explore the E4 Cyprus Trail
@@ -193,7 +193,7 @@ export default function About() {
                   <div className="involved-card-body">
                     <h3>{title}</h3>
                     <p>{text}</p>
-                    <span className="button button-secondary cta-button">
+                    <span className="button button-secondary fill-link cta-button">
                       {label}
                     </span>
                   </div>

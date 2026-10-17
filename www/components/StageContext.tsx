@@ -45,7 +45,7 @@ export function StageLocator({
     return (
       <p>
         <a
-          className="button button-secondary cta-button"
+          className="button button-secondary fill-link cta-button"
           href={`https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=15/${latitude}/${longitude}`}
           target="_blank"
           rel="noopener noreferrer"
@@ -95,7 +95,7 @@ export function StageLocator({
         <strong>{stage.name}</strong>
         <span>Route locator · not to scale</span>
         <a
-          className="button button-secondary cta-button"
+          className="button button-secondary fill-link cta-button"
           href={`https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=15/${latitude}/${longitude}`}
           target="_blank"
           rel="noopener noreferrer"
@@ -161,7 +161,7 @@ export function StageStays({
               <div>
                 {website && (
                   <a
-                    className="button button-secondary cta-button"
+                    className="button button-secondary fill-link cta-button"
                     href={website}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -171,7 +171,7 @@ export function StageStays({
                 )}
                 {map && (
                   <a
-                    className="button button-secondary cta-button"
+                    className="button button-secondary fill-link cta-button"
                     href={map}
                     target="_blank"
                     rel="noopener noreferrer"

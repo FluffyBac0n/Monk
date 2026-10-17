@@ -30,3 +30,13 @@ The user's subsequent review restores three equal Choose Your Path columns, repl
 Verified at desktop widths and 390 px mobile width: equal card sizes, mobile stacking, zero hero/strip gap, sand button fill, matching section-header class, CTA navigation, no CTA arrows and no horizontal overflow. The existing local 12-route/form integration smoke checks and TypeScript validation passed. This presentation change needs no database or Firestore-rule migration.
 
 The follow-up was privately published successfully on 17 October 2026, with owner-only access preserved. Published website source: `5bcff8b28889179083dca001126fee37ee6eda40`; deployment: `appgdep_6ad37d69e19881918fef5a483d45ac2c`. The production build passed. Live browser inspection confirmed the equal columns, sand buttons, updated heading, joined hero strip and absence of CTA arrows.
+
+## CTA restoration, coastal hero fade and mobile elevation
+
+The next user review supersedes the sand CTA treatment above: sand remains the page canvas, while buttons use the established blue, white and white-outline variants and original animated fill hover. Newly converted editorial buttons share that animation; CTA arrow removal, the three equal path cards and matching section headings remain.
+
+The coastal image now spans both the hero and its first mobile-app strip. A continuous sea-colour gradient fades into the strip, replacing the hard navy seam. Desktop and phone layouts keep the copy legible over the shared photograph.
+
+Explore Trails now uses the mobile app's elevation presentation: a white rounded card, navy profile line, subtle grid and the same blue/green/gold/orange contour colours at 0/300/700/1200 metres. Recorded database geometry is smoothed with the app's seven-point average before display downsampling. Endpoints are retained and missing measurements break the profile. Desktop and phone SVG layouts keep labels readable; displayed statistics still use the recorded database values.
+
+Validation: TypeScript; profile checks for smoothing, colour interpolation, tick spacing, gap handling and endpoint retention; the existing 12-route/form smoke checks; desktop (1280 px) and phone (390 px) browser inspection of the hero and elevation, with no horizontal overflow. No data, account access or Firestore-rule changes are required. The review branch remains unmerged.

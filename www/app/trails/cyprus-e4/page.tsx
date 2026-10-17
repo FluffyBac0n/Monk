@@ -138,7 +138,7 @@ export default async function CyprusE4({
                 Trail data updated {date(trail.updatedAt)}
               </span>
               <a
-                className="button button-secondary cta-button"
+                className="button button-secondary fill-link cta-button"
                 href="https://www.era-ewv-ferp.org/e-paths/e4/"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -166,7 +166,7 @@ export default async function CyprusE4({
                 <h2>Follow the trail, one waypoint at a time.</h2>
               </div>
               <a
-                className="button button-secondary cta-button"
+                className="button button-secondary fill-link cta-button"
                 href="/trails/cyprus-e4/stages"
               >
                 View all {trail.stages.length} points
@@ -381,7 +381,7 @@ export default async function CyprusE4({
                                       : 'Journey finish; arrange your onward plans.'}{' '}
                                 {day.lodgings.length > 0 && (
                                   <a
-                                    className="button button-secondary cta-button"
+                                    className="button button-secondary fill-link cta-button"
                                     href={pageUrl(
                                       { ...params, stay: day.end.name },
                                       1
@@ -591,7 +591,7 @@ export default async function CyprusE4({
                         )}
                         <p>{stay.village || stay.address}</p>
                         <a
-                          className="button button-secondary cta-button"
+                          className="button button-secondary fill-link cta-button"
                           href={`/trails/cyprus-e4/stages/${stay.stageId}`}
                         >
                           {stay.stageName || 'Trail reference point'}
@@ -605,7 +605,7 @@ export default async function CyprusE4({
                         <div className="stay-actions">
                           {stay.location && (
                             <a
-                              className="button button-secondary cta-button"
+                              className="button button-secondary fill-link cta-button"
                               href={`https://www.google.com/maps/search/?api=1&query=${stay.location.latitude},${stay.location.longitude}`}
                               target="_blank"
                               rel="noopener noreferrer"
@@ -615,7 +615,7 @@ export default async function CyprusE4({
                           )}
                           {phone && (
                             <a
-                              className="button button-secondary cta-button"
+                              className="button button-secondary fill-link cta-button"
                               href={phone}
                             >
                               Phone
@@ -623,7 +623,7 @@ export default async function CyprusE4({
                           )}
                           {email && (
                             <a
-                              className="button button-secondary cta-button"
+                              className="button button-secondary fill-link cta-button"
                               href={email}
                             >
                               Email
@@ -631,7 +631,7 @@ export default async function CyprusE4({
                           )}
                           {website && (
                             <a
-                              className="button button-secondary cta-button"
+                              className="button button-secondary fill-link cta-button"
                               href={website}
                               target="_blank"
                               rel="noopener noreferrer"

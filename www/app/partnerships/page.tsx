@@ -50,7 +50,7 @@ export default function Partnerships() {
               <h2 id="partnership-support-title">Where you can help.</h2>
               <dl><div><dt>Trail information</dt><dd>Field checks, route updates and practical details.</dd></div><div><dt>Access</dt><dd>Help hikers prepare well and walk responsibly.</dd></div><div><dt>Local communities</dt><dd>Connect hikers with people and services along the trail.</dd></div><div><dt>Equipment & expertise</dt><dd>Useful gear and knowledge for work in the field.</dd></div></dl>
               <p>We agree the contribution, recognition and reporting together before work begins.</p>
-              <a className="button button-secondary cta-button" href="/partner-terms">Read our partner policy</a>
+              <a className="button button-secondary fill-link cta-button" href="/partner-terms">Read our partner policy</a>
             </div>
             <div id="partnership-enquiry" className="enquiry-panel">
               <h2>Let’s work together.</h2>

@@ -1501,11 +1501,6 @@ td small { color: var(--muted); margin-top: 5px; }
 .recorded-geographic-map[hidden], [data-route-map-fallback][hidden] { display: none; }
 .route-figures .guide-map-caption { padding: 15px; flex-wrap: wrap; }
 .route-figures .guide-map-caption small { white-space: nowrap; }
-.screenshot-elevation { background: #12191d; color: white; border: 0; border-radius: 0; padding: 15px 22px; margin-top: 28px; }
-.screenshot-elevation h3 { color: #e8f2f5; font-size: 16px; margin-bottom: 0; }
-.screenshot-elevation svg { max-height: 190px; }
-.screenshot-elevation svg text { fill: #d1dce1; }
-.screenshot-elevation figcaption { color: #aebfc8; }
 .planner-workspace { display: grid; grid-template-columns: minmax(250px,.6fr) minmax(0,1.4fr); gap: 38px; align-items: start; margin-top: 25px; }
 .planner-workspace .planner-form { grid-template-columns: 1fr; margin: 0; align-items: start; }
 .planner-workspace .planner-form .editorial-actions { justify-content: start; flex-direction: column; align-items: stretch; }
@@ -1539,11 +1534,9 @@ td small { color: var(--muted); margin-top: 5px; }
   .trail-map-statistics > div { grid-template-columns: 1fr 1fr; padding: 18px; }
   .trail-map-statistics dd { font-size: 22px; }
   .planner-workspace .planner-form .editorial-actions { flex-direction: row; flex-wrap: wrap; }
-  .screenshot-elevation svg { min-height: 145px; }
   .screenshot-app-showcase .hiker-launch-band h2, .compact-app-download .hiker-launch-band h2 { font-size: 22px; }
 }
 .host-benefit-icon svg { height: 29px; width: 29px; }
-.screenshot-elevation svg { height: 185px; }
 .initiative-vision > img { z-index: 0; }
 .initiative-vision::after { z-index: 1; background: linear-gradient(#e3f1f5f2 0%,#e3f1f5d9 45%,#e3f1f580 100%); }
 .initiative-vision-copy { position: relative; z-index: 2; }
@@ -1553,7 +1546,7 @@ td small { color: var(--muted); margin-top: 5px; }
   .route-figures { padding-top: 12px; }
 }
 
-/* Homepage review: equal columns, sand CTAs and one connected hero banner. */
+/* Homepage review: equal columns, original CTAs and one connected hero banner. */
 .home-path-grid { grid-template-columns: repeat(3,minmax(0,1fr)); grid-template-rows: auto; min-height: 460px; }
 .home-path-grid .path-card { grid-row: auto; min-height: 460px; border-radius: 16px; }
 .home-path-grid .path-card-shade { background: linear-gradient(0deg,rgba(25,38,51,.97) 0%,rgba(28,44,59,.74) 54%,rgba(35,50,65,.08) 100%); }
@@ -1561,9 +1554,6 @@ td small { color: var(--muted); margin-top: 5px; }
 .home-path-grid .path-card-body { padding: 26px; }
 .home-path-grid .path-card-body > p:not(.eyebrow) { display: block; font-size: 15px; line-height: 1.6; }
 .home-path-grid .path-card-body .button { align-self: start; margin-top: 0; }
-#public-history main .button { background: var(--sand); border: 1px solid var(--navy); color: var(--navy); text-align: center; }
-#public-history main .button:hover { background: #e9e4d9; }
-#public-history main .button::before { background: #e9e4d9; }
 .cta-button { max-width: 100%; width: fit-content; text-transform: uppercase; }
 .manifesto-copy > .cta-button { margin-top: 22px; }
 .community-links article { display: flex; flex-direction: column; align-items: start; }
@@ -1573,16 +1563,15 @@ td small { color: var(--muted); margin-top: 5px; }
 .involved-card-body .cta-button { align-self: start; }
 .home-foundation > .section-title { text-align: left; }
 .home-foundation > h3 { color: var(--navy); font-size: clamp(31px,3.6vw,48px); font-weight: 750; line-height: 1.08; margin: 38px 0 0; }
-.hero-banner { background: var(--navy); }
-.hero-banner .compact-app-download { padding-block: 0; background: var(--navy); }
+.hero-banner { background: #304e59; isolation: isolate; overflow: hidden; position: relative; }
+.hero-banner .hero { background: transparent; }
+.hero-banner .hero-shade { background: linear-gradient(0deg,#304e59 0%,rgba(48,78,89,.92) 12%,rgba(48,78,89,.4) 36%,transparent 68%),linear-gradient(90deg,rgba(27,40,52,.97) 0%,rgba(32,47,61,.88) 24%,rgba(38,53,68,.56) 48%,rgba(38,53,68,.1) 78%,transparent 100%); }
+.hero-banner .compact-app-download { padding-block: 0; background: transparent; position: relative; z-index: 1; }
 .hero-banner .compact-app-download > .section-shell { max-width: 1240px; width: 100%; padding-inline: 30px; }
-.hero-banner .hiker-launch-band { border: 0; border-radius: 0; box-shadow: none; padding: 20px 0; }
+.hero-banner .hiker-launch-band { background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 20px 0; }
 .participation-options .cta-button { flex-shrink: 0; font-size: 11px; }
-.stage-pagination > a { background: var(--sand); border: 1px solid var(--navy); border-radius: 8px; padding: 14px 18px; }
 .stay-actions .button { font-size: 11px; min-height: 40px; padding: 8px 10px; }
 .recorded-stays .button, .stage-locator .button, .day-details > p .button { text-decoration: none; }
-.site-header .header-portal-button, .site-header .mobile-menu nav .header-portal-button { background: var(--sand); border-color: var(--navy); color: var(--navy); }
-.site-header .header-portal-button:hover, .site-header .mobile-menu nav .header-portal-button:hover { background: #e9e4d9; color: var(--navy); }
 @media (max-width: 900px) {
   .home-path-grid .path-card-body { padding: 22px; }
   .home-path-grid .path-card-body > p:not(.eyebrow) { font-size: 14px; }
@@ -1595,4 +1584,23 @@ td small { color: var(--muted); margin-top: 5px; }
   .hero-banner .compact-app-download > .section-shell { padding-inline: 20px; }
   .hero-banner .hiker-launch-band { padding-block: 22px; }
   .participation-options .cta-button { min-height: 40px; padding: 9px 10px; }
+}
+
+/* Match the mobile app's elevation card and altitude colour scale. */
+.mobile-elevation { border-color: #dce6e9; border-radius: 22px; box-shadow: 0 4px 18px rgba(48,62,78,.06); padding: 24px; }
+.mobile-elevation h3 { color: var(--navy); margin-bottom: 20px; }
+.elevation-plot { height: 286px; }
+.mobile-elevation .elevation-plot svg { height: 100%; width: 100%; overflow: visible; }
+.mobile-elevation .elevation-plot .elevation-mobile { display: none; }
+.elevation-legend { margin: 18px 0 20px 52px; max-width: 390px; }
+.elevation-legend-bar { height: 9px; border-radius: 8px; background: linear-gradient(90deg,#3e9ed0 0%,#61af57 30%,#d8aa35 65%,#d66b35 100%); }
+.elevation-legend-labels { display: flex; justify-content: space-between; margin-top: 6px; color: var(--muted); font-size: 11px; }
+.mobile-elevation figcaption { color: var(--muted); font-size: 12px; line-height: 1.6; }
+@media (max-width: 760px) {
+  .hero-banner .hero-shade { background: linear-gradient(0deg,#304e59 0%,rgba(48,78,89,.96) 25%,rgba(38,55,70,.8) 55%,rgba(38,55,70,.3) 85%,rgba(38,55,70,.15) 100%); }
+  .mobile-elevation { padding: 20px 12px; }
+  .elevation-plot { height: 250px; }
+  .mobile-elevation .elevation-plot .elevation-desktop { display: none; }
+  .mobile-elevation .elevation-plot .elevation-mobile { display: block; }
+  .elevation-legend { margin-left: 42px; }
 }

@@ -112,7 +112,7 @@ export default async function Community({
                     <p>{text}</p>
                   </div>
                   <span
-                    className="button button-secondary cta-button"
+                    className="button button-secondary fill-link cta-button"
                     data-interest-choice-label
                   >
                     {interest === value ? 'Selected' : 'Choose'}
@@ -124,7 +124,7 @@ export default async function Community({
               Field-walk dates and places are confirmed separately.
             </p>
             <a
-              className="button button-secondary cta-button"
+              className="button button-secondary fill-link cta-button"
               href="#walk-with-us"
             >
               Read about our trail philosophy
@@ -245,7 +245,7 @@ export default async function Community({
             collection, or ask about working together.
           </p>
           <a
-            className="button button-secondary cta-button"
+            className="button button-secondary fill-link cta-button"
             href="/get-involved?interest=collaborate#interest-form"
           >
             Start a collaboration
@@ -271,7 +271,7 @@ export default async function Community({
               Enquire about supporting Eurotrex
             </a>
             <a
-              className="button button-secondary cta-button"
+              className="button button-secondary fill-link cta-button"
               href="/partnerships"
             >
               Become a Sponsor

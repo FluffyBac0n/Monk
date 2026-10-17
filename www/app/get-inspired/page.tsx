@@ -87,7 +87,7 @@ export default async function Inspiration() {
             contributions will appear here.
           </p>
         )}
-        <a className="button button-secondary cta-button" href="#share-story">
+        <a className="button button-secondary fill-link cta-button" href="#share-story">
           Submit Your Trail Story
         </a>
       </section>

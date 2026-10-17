@@ -1,4 +1,5 @@
 import { env } from 'cloudflare:workers';
+import { ElevationProfile } from '@/components/ElevationProfile';
 import type { PublicTrail } from '@/lib/public-trail-data';
 
 export function TrailFigures({ trail }: { trail: PublicTrail }) {
@@ -31,19 +32,6 @@ export function TrailFigures({ trail }: { trail: PublicTrail }) {
     290 - ((lat - bounds.minLat) / (bounds.maxLat - bounds.minLat || 1)) * 235;
   const route = points
     .map((point) => `${x(point.lng).toFixed(1)},${y(point.lat).toFixed(1)}`)
-    .join(' ');
-  const elevation = points.filter(
-    (point) => point.altitudeM !== null && point.distanceKm !== null
-  );
-  const peak =
-    trail.highPointM ??
-    Math.max(...elevation.map((point) => point.altitudeM!), 1);
-  const total = trail.distanceKm || elevation.at(-1)?.distanceKm || 1;
-  const chart = elevation
-    .map(
-      (point) =>
-        `${(40 + (point.distanceKm! / total) * 820).toFixed(1)},${(220 - (Math.max(0, point.altitudeM!) / Math.max(peak, 1)) * 180).toFixed(1)}`
-    )
     .join(' ');
   const token = (env as unknown as Record<string, unknown>)
     .MAPBOX_PUBLIC_ACCESS_TOKEN;
@@ -180,54 +168,7 @@ export function TrailFigures({ trail }: { trail: PublicTrail }) {
           </figcaption>
         </figure>
       </div>
-      {elevation.length > 1 && (
-        <figure className="route-elevation screenshot-elevation">
-          <h3>Elevation Profile</h3>
-          <svg
-            viewBox="0 0 900 270"
-            preserveAspectRatio="none"
-            role="img"
-            aria-label={`Elevation along the Cyprus E4, with a recorded high point of ${Math.round(peak)} metres`}
-          >
-            <path
-              d={`M40 220 L${chart.replaceAll(' ', ' L')} L${40 + (elevation.at(-1)!.distanceKm! / total) * 820} 220Z`}
-              fill="#266487"
-            />
-            <polyline
-              points={chart}
-              fill="none"
-              stroke="#62b1dc"
-              strokeWidth="2.5"
-            />
-            {[0, 0.5, 1].map((part) => (
-              <g key={part}>
-                <line
-                  x1="40"
-                  y1={220 - part * 180}
-                  x2="860"
-                  y2={220 - part * 180}
-                  stroke="#ffffff"
-                  strokeOpacity=".15"
-                />
-                <text x="0" y={225 - part * 180}>
-                  {Math.round(peak * part)} m
-                </text>
-                <text
-                  x={40 + 820 * part}
-                  y="252"
-                  textAnchor={part === 1 ? 'end' : 'start'}
-                >
-                  {(total * part).toFixed(0)} km
-                </text>
-              </g>
-            ))}
-          </svg>
-          <figcaption>
-            Distances and elevations from the recorded route; vertical scale is
-            exaggerated.
-          </figcaption>
-        </figure>
-      )}
+      <ElevationProfile trail={trail} />
     </section>
   );
 }

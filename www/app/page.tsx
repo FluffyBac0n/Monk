@@ -65,24 +65,24 @@ export default function Home() {
       <PublicContent>
         <main id="main-content" tabIndex={-1} {...publicHtmxNavigation}>
           <div className="hero-banner">
+            <div className="hero-media">
+              <picture>
+                <source
+                  srcSet="/zapalo-coast-hero-640.webp 640w, /zapalo-coast-hero-960.webp 960w, /zapalo-coast-hero-1280.webp 1280w, /zapalo-coast-hero-1920.webp 1920w"
+                  sizes="100vw"
+                  type="image/webp"
+                />
+                <img
+                  className="hero-image"
+                  src="/zapalo-coast-hero-1280.webp"
+                  alt="Limestone cliffs and the Mediterranean at Zapalo Bay in Cyprus"
+                  decoding="async"
+                  fetchPriority="high"
+                />
+              </picture>
+            </div>
+            <div className="hero-shade" />
             <section className="hero">
-              <div className="hero-media">
-                <picture>
-                  <source
-                    srcSet="/zapalo-coast-hero-640.webp 640w, /zapalo-coast-hero-960.webp 960w, /zapalo-coast-hero-1280.webp 1280w, /zapalo-coast-hero-1920.webp 1920w"
-                    sizes="100vw"
-                    type="image/webp"
-                  />
-                  <img
-                    className="hero-image"
-                    src="/zapalo-coast-hero-1280.webp"
-                    alt="Limestone cliffs and the Mediterranean at Zapalo Bay in Cyprus"
-                    decoding="async"
-                    fetchPriority="high"
-                  />
-                </picture>
-              </div>
-              <div className="hero-shade" />
               <div className="hero-inner">
                 <div className="hero-content">
                   <h1>
@@ -93,7 +93,7 @@ export default function Home() {
                   <p className="hero-copy">{copy.introduction}</p>
                   <div className="hero-actions">
                     <a
-                      className="button button-outline"
+                      className="button button-outline fill-link"
                       href="/trails/cyprus-e4"
                     >
                       Explore the E4 Cyprus Trail
@@ -121,7 +121,7 @@ export default function Home() {
                   {copy.rhythm}
                 </p>
                 <a
-                  className="button button-secondary cta-button"
+                  className="button button-secondary fill-link cta-button"
                   href="/get-inspired"
                 >
                   Get Inspired
@@ -150,7 +150,7 @@ export default function Home() {
                         <h3>{path.title}</h3>
                         <p>{path.copy}</p>
                         <a
-                          className="button button-secondary cta-button"
+                          className="button button-secondary fill-link cta-button"
                           href={path.href}
                         >
                           {path.action}
@@ -192,7 +192,10 @@ export default function Home() {
                 <article key={title}>
                   <h3>{title}</h3>
                   <p>{text}</p>
-                  <a className="button button-secondary cta-button" href={href}>
+                  <a
+                    className="button button-secondary fill-link cta-button"
+                    href={href}
+                  >
                     {label}
                   </a>
                 </article>
@@ -226,7 +229,7 @@ export default function Home() {
                     account and accommodation listing are reviewed separately.
                   </p>
                   <a
-                    className="button button-secondary cta-button"
+                    className="button button-secondary fill-link cta-button"
                     href="/become-a-host"
                   >
                     Learn about hosting
@@ -239,7 +242,7 @@ export default function Home() {
                     walking with us.
                   </p>
                   <a
-                    className="button button-secondary cta-button"
+                    className="button button-secondary fill-link cta-button"
                     href="/get-involved#expeditions"
                   >
                     See Trail Schedule
