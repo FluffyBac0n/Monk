@@ -1074,6 +1074,13 @@ class _LodgingCard extends ConsumerWidget {
                 ],
               ],
             ),
+            if (facts.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _LodgingFactsRow(
+                key: ValueKey('lodging-facts-${lodging.id}'),
+                facts: facts,
+              ),
+            ],
             const SizedBox(height: 8),
             Row(
               key: ValueKey('lodging-contact-actions-${lodging.id}'),
@@ -1112,15 +1119,31 @@ class _LodgingCard extends ConsumerWidget {
                       ? null
                       : () => _openExternal(context, ref, emailUri),
                 ),
+                if (bookingUri != null) ...[
+                  const Spacer(),
+                  const SizedBox(width: 6),
+                  FilledButton.icon(
+                    key: ValueKey('book-lodging-${lodging.id}'),
+                    onPressed: () => _openExternal(context, ref, bookingUri),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: EurotrexPalette.blue,
+                      foregroundColor: Colors.white,
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      minimumSize: const Size(0, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      shape: const StadiumBorder(),
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                    label: Text(l10n.t('Book')),
+                  ),
+                ],
               ],
             ),
-            if (facts.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              _LodgingFactsRow(
-                key: ValueKey('lodging-facts-${lodging.id}'),
-                facts: facts,
-              ),
-            ],
             if (hasStaticLocation || hasWhatsapp) ...[
               const SizedBox(height: 8),
               SelectionArea(
@@ -1138,31 +1161,6 @@ class _LodgingCard extends ConsumerWidget {
                         value: whatsapp,
                       ),
                   ],
-                ),
-              ),
-            ],
-            if (bookingUri != null) ...[
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.icon(
-                  key: ValueKey('book-lodging-${lodging.id}'),
-                  onPressed: () => _openExternal(context, ref, bookingUri),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: EurotrexPalette.blue,
-                    foregroundColor: Colors.white,
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    minimumSize: const Size(0, 36),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    shape: const StadiumBorder(),
-                    textStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                  label: Text(l10n.t('Book')),
                 ),
               ),
             ],

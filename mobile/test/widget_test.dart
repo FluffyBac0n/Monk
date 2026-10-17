@@ -2994,7 +2994,7 @@ void main() {
     );
     expect(
       tester.getCenter(contactsRow).dy,
-      lessThan(tester.getCenter(factsRow).dy),
+      greaterThan(tester.getCenter(factsRow).dy),
     );
     expect(
       find.byKey(const ValueKey('cyprus-country-flag-forest-inn')),
