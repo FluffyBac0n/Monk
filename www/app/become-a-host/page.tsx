@@ -159,8 +159,11 @@ export default async function BecomeHost({
               contact details and trail relevance. Verification is not a safety
               certification, quality rating or booking guarantee.
             </p>
-            <a className="simple-link" href="/partner-terms">
-              Read our partner listing policy →
+            <a
+              className="button button-secondary cta-button"
+              href="/partner-terms"
+            >
+              Read our partner listing policy
             </a>
           </div>
         </div>
@@ -219,10 +222,10 @@ export default async function BecomeHost({
               <h3>{programme.title}</h3>
               <p>{programme.text}</p>
               <a
-                className="simple-link"
+                className="button button-secondary cta-button"
                 href={`/become-a-host?interest=${programme.id}#enquire`}
               >
-                Enquire about this programme →
+                Enquire about this programme
               </a>
             </article>
           ))}

@@ -22,3 +22,9 @@ Validation: TypeScript, production build, itinerary/data/authentication checks (
 The corrected version is intended for the existing private review site with its current audience. The application review branch remains unmerged.
 
 Published successfully to https://eurotrex.andreasmic332452.chatgpt.site on 17 October 2026. Website source commit: `b6c7247196c086cf23d8c63d293c7cb995f2679c`; deployment: `appgdep_6ad357e5d4d0819182ad9094551495b4`. The access policy immediately before this publication contained only the owner and no invited viewers; that existing owner-only access was preserved. No Firestore rules or application data were changed for this visual correction.
+
+## Homepage follow-up
+
+The user's subsequent review restores three equal Choose Your Path columns, replacing the large/stacked layout above. The cards stack on phones. Editorial CTAs use sand-filled buttons with dark text; arrow decorations were removed from CTA labels across the public pages. Navigation and route-direction information retain their separate purpose. Current Project Focus now uses the same uppercase section heading and yellow rule as Get Involved. The first app strip is joined directly to the hero in one continuous banner, with no intervening gap. Public account-action buttons also use the sand treatment.
+
+Verified at desktop widths and 390 px mobile width: equal card sizes, mobile stacking, zero hero/strip gap, sand button fill, matching section-header class, CTA navigation, no CTA arrows and no horizontal overflow. The existing local 12-route/form integration smoke checks and TypeScript validation passed. This presentation change needs no database or Firestore-rule migration.

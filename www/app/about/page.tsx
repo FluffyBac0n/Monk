@@ -74,8 +74,11 @@ export default function About() {
         <h2>Current Project Focus</h2>
         <h3>Our Foundation: The E4 Cyprus Trail</h3>
         <p>{copy.focus}</p>
-        <a className="simple-link" href="/trails/cyprus-e4">
-          Explore the E4 Cyprus Trail →
+        <a
+          className="button button-secondary cta-button"
+          href="/trails/cyprus-e4"
+        >
+          Explore the E4 Cyprus Trail
         </a>
       </section>
       <section className="section-shell initiative-funding">
@@ -92,7 +95,7 @@ export default function About() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Learn More About the THALIA Programme ↗
+          Learn More About the THALIA Programme
         </a>
       </section>
       <section className="section-shell initiative-team">
@@ -190,9 +193,8 @@ export default function About() {
                   <div className="involved-card-body">
                     <h3>{title}</h3>
                     <p>{text}</p>
-                    <span className="editorial-link">
+                    <span className="button button-secondary cta-button">
                       {label}
-                      <i aria-hidden="true" />
                     </span>
                   </div>
                 </a>

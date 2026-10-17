@@ -120,7 +120,7 @@ function startPublicRuntime(htmx) {
       if (selected) choice.setAttribute('aria-current', 'true');
       else choice.removeAttribute('aria-current');
       const label = choice.querySelector('[data-interest-choice-label]');
-      if (label) label.textContent = selected ? 'Selected' : 'Choose →';
+      if (label) label.textContent = selected ? 'Selected' : 'Choose';
     });
   }
 

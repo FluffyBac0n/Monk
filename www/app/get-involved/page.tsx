@@ -111,8 +111,11 @@ export default async function Community({
                     <h3>{title}</h3>
                     <p>{text}</p>
                   </div>
-                  <span data-interest-choice-label>
-                    {interest === value ? 'Selected' : 'Choose →'}
+                  <span
+                    className="button button-secondary cta-button"
+                    data-interest-choice-label
+                  >
+                    {interest === value ? 'Selected' : 'Choose'}
                   </span>
                 </a>
               ))}
@@ -120,8 +123,11 @@ export default async function Community({
             <p className="participation-note">
               Field-walk dates and places are confirmed separately.
             </p>
-            <a className="simple-link" href="#walk-with-us">
-              Read about our trail philosophy →
+            <a
+              className="button button-secondary cta-button"
+              href="#walk-with-us"
+            >
+              Read about our trail philosophy
             </a>
           </div>
           <div id="interest-form" className="enquiry-panel">
@@ -239,10 +245,10 @@ export default async function Community({
             collection, or ask about working together.
           </p>
           <a
-            className="simple-link"
+            className="button button-secondary cta-button"
             href="/get-involved?interest=collaborate#interest-form"
           >
-            Start a collaboration →
+            Start a collaboration
           </a>
         </div>
       </section>
@@ -264,8 +270,11 @@ export default async function Community({
             >
               Enquire about supporting Eurotrex
             </a>
-            <a className="simple-link" href="/partnerships">
-              Become a Sponsor →
+            <a
+              className="button button-secondary cta-button"
+              href="/partnerships"
+            >
+              Become a Sponsor
             </a>
           </div>
         </div>

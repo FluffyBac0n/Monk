@@ -111,8 +111,11 @@ export default async function CyprusE4StagePage({ params }: StagePageProps) {
             dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
           />
           <header className="simple-page-header section-shell">
-            <a className="stage-return-link" href="/trails/cyprus-e4/stages">
-              <span aria-hidden="true">←</span> All stage points
+            <a
+              className="button button-secondary cta-button"
+              href="/trails/cyprus-e4/stages"
+            >
+              All stage points
             </a>
             <p className="eyebrow">
               Point {index + 1} of {trail.stages.length}
@@ -233,7 +236,7 @@ export default async function CyprusE4StagePage({ params }: StagePageProps) {
             {previous ? (
               <a href={`/trails/cyprus-e4/stages/${previous.id}`}>
                 <small>Previous point</small>
-                <strong>← {previous.name}</strong>
+                <strong> {previous.name}</strong>
               </a>
             ) : (
               <span />
@@ -241,7 +244,7 @@ export default async function CyprusE4StagePage({ params }: StagePageProps) {
             {next ? (
               <a href={`/trails/cyprus-e4/stages/${next.id}`}>
                 <small>Next point</small>
-                <strong>{next.name} →</strong>
+                <strong>{next.name}</strong>
               </a>
             ) : (
               <span />

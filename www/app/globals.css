@@ -1552,3 +1552,47 @@ td small { color: var(--muted); margin-top: 5px; }
   .trail-map-dashboard .live-route-map { order: -1; }
   .route-figures { padding-top: 12px; }
 }
+
+/* Homepage review: equal columns, sand CTAs and one connected hero banner. */
+.home-path-grid { grid-template-columns: repeat(3,minmax(0,1fr)); grid-template-rows: auto; min-height: 460px; }
+.home-path-grid .path-card { grid-row: auto; min-height: 460px; border-radius: 16px; }
+.home-path-grid .path-card-shade { background: linear-gradient(0deg,rgba(25,38,51,.97) 0%,rgba(28,44,59,.74) 54%,rgba(35,50,65,.08) 100%); }
+.home-path-grid .path-card:not(.path-card-featured) .path-card-shade { background: linear-gradient(0deg,rgba(25,38,51,.97) 0%,rgba(28,44,59,.74) 54%,rgba(35,50,65,.08) 100%); }
+.home-path-grid .path-card-body { padding: 26px; }
+.home-path-grid .path-card-body > p:not(.eyebrow) { display: block; font-size: 15px; line-height: 1.6; }
+.home-path-grid .path-card-body .button { align-self: start; margin-top: 0; }
+#public-history main .button { background: var(--sand); border: 1px solid var(--navy); color: var(--navy); text-align: center; }
+#public-history main .button:hover { background: #e9e4d9; }
+#public-history main .button::before { background: #e9e4d9; }
+.cta-button { max-width: 100%; width: fit-content; text-transform: uppercase; }
+.manifesto-copy > .cta-button { margin-top: 22px; }
+.community-links article { display: flex; flex-direction: column; align-items: start; }
+.community-links .cta-button { margin-top: auto; }
+.faq-list .cta-button { margin-top: 18px; }
+.programme-grid .cta-button { margin-top: auto; }
+.involved-card-body .cta-button { align-self: start; }
+.home-foundation > .section-title { text-align: left; }
+.home-foundation > h3 { color: var(--navy); font-size: clamp(31px,3.6vw,48px); font-weight: 750; line-height: 1.08; margin: 38px 0 0; }
+.hero-banner { background: var(--navy); }
+.hero-banner .compact-app-download { padding-block: 0; background: var(--navy); }
+.hero-banner .compact-app-download > .section-shell { max-width: 1240px; width: 100%; padding-inline: 30px; }
+.hero-banner .hiker-launch-band { border: 0; border-radius: 0; box-shadow: none; padding: 20px 0; }
+.participation-options .cta-button { flex-shrink: 0; font-size: 11px; }
+.stage-pagination > a { background: var(--sand); border: 1px solid var(--navy); border-radius: 8px; padding: 14px 18px; }
+.stay-actions .button { font-size: 11px; min-height: 40px; padding: 8px 10px; }
+.recorded-stays .button, .stage-locator .button, .day-details > p .button { text-decoration: none; }
+.site-header .header-portal-button, .site-header .mobile-menu nav .header-portal-button { background: var(--sand); border-color: var(--navy); color: var(--navy); }
+.site-header .header-portal-button:hover, .site-header .mobile-menu nav .header-portal-button:hover { background: #e9e4d9; color: var(--navy); }
+@media (max-width: 900px) {
+  .home-path-grid .path-card-body { padding: 22px; }
+  .home-path-grid .path-card-body > p:not(.eyebrow) { font-size: 14px; }
+  .home-path-grid .path-card-body .button { font-size: 11px; padding-inline: 12px; }
+}
+@media (max-width: 760px) {
+  .home-path-grid { grid-template-columns: 1fr; min-height: 0; }
+  .home-path-grid .path-card { min-height: 370px; }
+  .home-path-grid .path-card-body > p:not(.eyebrow) { font-size: 15px; }
+  .hero-banner .compact-app-download > .section-shell { padding-inline: 20px; }
+  .hero-banner .hiker-launch-band { padding-block: 22px; }
+  .participation-options .cta-button { min-height: 40px; padding: 9px 10px; }
+}

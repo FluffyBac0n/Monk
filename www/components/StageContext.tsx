@@ -45,12 +45,12 @@ export function StageLocator({
     return (
       <p>
         <a
-          className="simple-link"
+          className="button button-secondary cta-button"
           href={`https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=15/${latitude}/${longitude}`}
           target="_blank"
           rel="noopener noreferrer"
         >
-          Open location map ↗
+          Open location map
         </a>
       </p>
     );
@@ -95,11 +95,12 @@ export function StageLocator({
         <strong>{stage.name}</strong>
         <span>Route locator · not to scale</span>
         <a
+          className="button button-secondary cta-button"
           href={`https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=15/${latitude}/${longitude}`}
           target="_blank"
           rel="noopener noreferrer"
         >
-          Open location map ↗
+          Open location map
         </a>
       </figcaption>
     </figure>
@@ -137,8 +138,8 @@ export function StageStays({
         {!available
           ? 'Accommodation directory unavailable.'
           : stays.length
-          ? 'Places recorded near this point.'
-          : 'No accommodation recorded yet.'}
+            ? 'Places recorded near this point.'
+            : 'No accommodation recorded yet.'}
       </h2>
       <p>
         {available
@@ -159,13 +160,23 @@ export function StageStays({
               </span>
               <div>
                 {website && (
-                  <a href={website} target="_blank" rel="noopener noreferrer">
-                    Contact / website ↗
+                  <a
+                    className="button button-secondary cta-button"
+                    href={website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Contact / website
                   </a>
                 )}
                 {map && (
-                  <a href={map} target="_blank" rel="noopener noreferrer">
-                    Location ↗
+                  <a
+                    className="button button-secondary cta-button"
+                    href={map}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Location
                   </a>
                 )}
               </div>

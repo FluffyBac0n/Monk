@@ -64,42 +64,46 @@ export default function Home() {
       <PublicHeader />
       <PublicContent>
         <main id="main-content" tabIndex={-1} {...publicHtmxNavigation}>
-          <section className="hero">
-            <div className="hero-media">
-              <picture>
-                <source
-                  srcSet="/zapalo-coast-hero-640.webp 640w, /zapalo-coast-hero-960.webp 960w, /zapalo-coast-hero-1280.webp 1280w, /zapalo-coast-hero-1920.webp 1920w"
-                  sizes="100vw"
-                  type="image/webp"
-                />
-                <img
-                  className="hero-image"
-                  src="/zapalo-coast-hero-1280.webp"
-                  alt="Limestone cliffs and the Mediterranean at Zapalo Bay in Cyprus"
-                  decoding="async"
-                  fetchPriority="high"
-                />
-              </picture>
-            </div>
-            <div className="hero-shade" />
-            <div className="hero-inner">
-              <div className="hero-content">
-                <h1>
-                  Find your way
-                  <br />
-                  with Eurotrex.
-                </h1>
-                <p className="hero-copy">{copy.introduction}</p>
-                <div className="hero-actions">
-                  <a className="button button-outline" href="/trails/cyprus-e4">
-                    Explore the E4 Cyprus Trail{' '}
-                    <span aria-hidden="true">→</span>
-                  </a>
+          <div className="hero-banner">
+            <section className="hero">
+              <div className="hero-media">
+                <picture>
+                  <source
+                    srcSet="/zapalo-coast-hero-640.webp 640w, /zapalo-coast-hero-960.webp 960w, /zapalo-coast-hero-1280.webp 1280w, /zapalo-coast-hero-1920.webp 1920w"
+                    sizes="100vw"
+                    type="image/webp"
+                  />
+                  <img
+                    className="hero-image"
+                    src="/zapalo-coast-hero-1280.webp"
+                    alt="Limestone cliffs and the Mediterranean at Zapalo Bay in Cyprus"
+                    decoding="async"
+                    fetchPriority="high"
+                  />
+                </picture>
+              </div>
+              <div className="hero-shade" />
+              <div className="hero-inner">
+                <div className="hero-content">
+                  <h1>
+                    Find your way
+                    <br />
+                    with Eurotrex.
+                  </h1>
+                  <p className="hero-copy">{copy.introduction}</p>
+                  <div className="hero-actions">
+                    <a
+                      className="button button-outline"
+                      href="/trails/cyprus-e4"
+                    >
+                      Explore the E4 Cyprus Trail
+                    </a>
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
-          <AppDownload id="hero-app" />
+            </section>
+            <AppDownload id="hero-app" />
+          </div>
           <section
             className="manifesto-section"
             aria-labelledby="manifesto-title"
@@ -116,8 +120,11 @@ export default function Home() {
                   <br />
                   {copy.rhythm}
                 </p>
-                <a className="simple-link" href="/get-inspired">
-                  Get Inspired <span aria-hidden="true">→</span>
+                <a
+                  className="button button-secondary cta-button"
+                  href="/get-inspired"
+                >
+                  Get Inspired
                 </a>
               </div>
             </div>
@@ -125,55 +132,51 @@ export default function Home() {
           <section className="paths-section" id="paths">
             <div className="section-shell">
               <h2 className="section-title">Choose Your Path</h2>
-              <div className="path-grid screenshot-path-grid">
-                {paths.map((path, index) => (
-                  <article
-                    className={`path-card${index === 0 ? ' path-card-featured' : ''}`}
-                    key={path.title}
-                  >
-                    <a className="path-card-link" href={path.href}>
+              <div className="path-grid home-path-grid">
+                {paths.map((path) => (
+                  <article className="path-card" key={path.title}>
+                    <div className="path-card-link">
                       <div className="path-image-wrap">
                         <Image
                           className="path-image"
                           src={path.image}
                           alt={path.alt}
                           fill
-                          sizes={
-                            index === 0
-                              ? '(max-width: 760px) 100vw, 64vw'
-                              : '(max-width: 760px) 100vw, 36vw'
-                          }
+                          sizes="(max-width: 760px) 100vw, 33vw"
                         />
                       </div>
                       <div className="path-card-shade" />
                       <div className="path-card-body">
                         <h3>{path.title}</h3>
                         <p>{path.copy}</p>
-                        <span className="editorial-link">
+                        <a
+                          className="button button-secondary cta-button"
+                          href={path.href}
+                        >
                           {path.action}
-                          <i aria-hidden="true" />
-                        </span>
+                        </a>
                       </div>
-                    </a>
+                    </div>
                   </article>
                 ))}
               </div>
             </div>
           </section>
           <section
-            className="section-shell foundation-section"
+            className="section-shell foundation-section home-foundation"
             aria-labelledby="foundation-title"
           >
-            <p className="eyebrow">Current Project Focus</p>
-            <h2 id="foundation-title">
+            <h2 className="section-title" id="foundation-title">
+              Current Project Focus
+            </h2>
+            <h3>
               Our Foundation:
               <br />
               The E4 Cyprus Trail
-            </h2>
+            </h3>
             <p>{copy.focus}</p>
             <a className="button button-secondary" href="/about">
-              Read about the Eurotrex Initiative{' '}
-              <span aria-hidden="true">→</span>
+              Read about the Eurotrex Initiative
             </a>
           </section>
           <AppDownload id="hikers" screenshots />
@@ -189,8 +192,8 @@ export default function Home() {
                 <article key={title}>
                   <h3>{title}</h3>
                   <p>{text}</p>
-                  <a className="simple-link" href={href}>
-                    {label} <span aria-hidden="true">→</span>
+                  <a className="button button-secondary cta-button" href={href}>
+                    {label}
                   </a>
                 </article>
               ))}
@@ -222,7 +225,12 @@ export default function Home() {
                     Individuals, businesses and organisations can apply. Your
                     account and accommodation listing are reviewed separately.
                   </p>
-                  <a href="/become-a-host">Learn about hosting →</a>
+                  <a
+                    className="button button-secondary cta-button"
+                    href="/become-a-host"
+                  >
+                    Learn about hosting
+                  </a>
                 </details>
                 <details>
                   <summary>When can I join a mapping expedition?</summary>
@@ -230,7 +238,12 @@ export default function Home() {
                     See our expedition schedule and register your interest in
                     walking with us.
                   </p>
-                  <a href="/get-involved#expeditions">See Trail Schedule →</a>
+                  <a
+                    className="button button-secondary cta-button"
+                    href="/get-involved#expeditions"
+                  >
+                    See Trail Schedule
+                  </a>
                 </details>
               </div>
             </div>
