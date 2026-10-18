@@ -76,3 +76,7 @@ The user clarified that the last section in Explore Trails - Visual is required.
 The restoration reuses the existing typography, planning rows, navy safety panel, four numbered items and emergency number from the screenshot. The Walk either way text also follows the reference. Desktop and 390 px phone inspection confirm two columns / stacked layout respectively, with no horizontal overflow. TypeScript passes. No search behaviour, data or access changes are required.
 
 Published privately with owner-only access preserved on 18 October 2026. Website source: `033ae4ef6ade84ca0cf64cdae8f67ac9bf7d2b5a`; deployment: `appgdep_6ad468104a148191910dd90dae59cfc9`. Production build passed. Live browser inspection confirms the restored final section and its reference text. The application branch remains unmerged.
+
+## Hero separator correction — 18 October 2026
+
+Removed only the first landing-page dotted divider, which collided with the connected hero/app banner. The five later landing-page dividers remain. Published privately with owner-only access preserved: website source `5de7877023cc3b4ec4028c1306e49ad88f9dc8f3`, deployment `appgdep_6ad468c905948191a68afb9bb662eae9`. Production build passed; live DOM inspection confirms the manifesto follows the hero directly, with five later dividers. The review branch remains unmerged.
