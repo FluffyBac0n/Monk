@@ -49,6 +49,30 @@ try {
     const text = await response.text();
     assert.ok(text.includes('<main'), `${path} includes page content`);
   }
+  const initialGuide = await (await fetch(`${origin}/trails/cyprus-e4`)).text();
+  assert.ok(
+    !initialGuide.includes('class="public-stay"'),
+    'Accommodation results stay absent before search'
+  );
+  assert.ok(
+    !initialGuide.includes('Showing 1–'),
+    'No result count is shown before search'
+  );
+  const searchedGuide = await (
+    await fetch(`${origin}/trails/cyprus-e4?findStays=yes&stay=777`)
+  ).text();
+  assert.ok(
+    searchedGuide.includes('class="public-stay"'),
+    'Submitting a search renders accommodation cards'
+  );
+  assert.ok(searchedGuide.includes('777 Beach Guesthouse'));
+  const emptyGuide = await (
+    await fetch(
+      `${origin}/trails/cyprus-e4?findStays=yes&stay=synthetic-no-matching-stay`
+    )
+  ).text();
+  assert.ok(emptyGuide.includes('No stays match your search.'));
+  assert.ok(!emptyGuide.includes('class="public-stay"'));
   const enquiry = {
     name: 'Local QA',
     email,

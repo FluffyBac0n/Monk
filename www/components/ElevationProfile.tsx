@@ -114,10 +114,6 @@ export function ElevationProfile({ trail }: { trail: PublicTrail }) {
           <span>1,200+ m</span>
         </div>
       </div>
-      <figcaption>
-        Distances and elevations from the recorded route, smoothed as in the
-        EuroTrex app. Vertical scale is exaggerated.
-      </figcaption>
     </figure>
   );
 }

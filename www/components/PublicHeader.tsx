@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import MobileMenu from '@/app/mobile-menu';
-import { NotifyButton, NotifyDialog } from '@/components/NotifyDialog';
+import { NotifyDialog } from '@/components/NotifyDialog';
 import { PublicHydrationBoundary } from '@/components/PublicHydrationBoundary';
 import { TrailGuideSwitcher } from '@/components/TrailGuideSwitcher';
 import { disableHtmxNavigation, publicHtmxNavigation } from '@/lib/htmx';
@@ -95,9 +95,6 @@ export function PublicHeader({ activeTrail }: { activeTrail?: string }) {
             >
               Trail Reports
             </a>
-            <NotifyButton className="header-portal-button desktop-header-action">
-              Notify Me
-            </NotifyButton>
             <LanguageControl />
             <MobileMenu />
           </div>

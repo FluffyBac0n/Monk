@@ -1492,10 +1492,11 @@ td small { color: var(--muted); margin-top: 5px; }
 .screenshot-trail-header > div { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 30px; }
 .screenshot-trail-header .guide-freshness { margin: 0; }
 .trail-map-dashboard { display: grid; grid-template-columns: minmax(250px,.65fr) minmax(0,1.35fr); gap: 30px; align-items: stretch; }
-.trail-map-statistics { background: #fffef0; margin: 0; display: flex; flex-direction: column; }
-.trail-map-statistics > div { display: grid; grid-template-columns: minmax(0,1fr) minmax(110px,.7fr); gap: 20px; align-items: center; padding: 25px 22px; border-bottom: 1px solid #dcded0; flex: 1; }
+.trail-map-statistics { background: white; border: 1px solid var(--line); border-radius: 18px; margin: 0; display: flex; flex-direction: column; overflow: hidden; }
+.trail-map-statistics > div { display: grid; grid-template-columns: minmax(0,1fr) minmax(110px,.7fr); gap: 20px; align-items: center; padding: 25px 22px; border-bottom: 1px solid var(--line); flex: 1; }
 .trail-map-statistics dt { color: var(--muted); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; line-height: 1.6; }
-.trail-map-statistics dd { color: var(--navy); font-size: 23px; line-height: 1.3; margin: 0; }
+.trail-map-statistics > div:last-child { border-bottom: 0; }
+.trail-map-statistics dd { color: var(--navy); font-weight: 750; font-size: 23px; line-height: 1.3; margin: 0; }
 .trail-map-dashboard .live-route-map { margin: 0; display: flex; flex-direction: column; justify-content: center; }
 .recorded-geographic-map { display: block; width: 100%; height: auto; object-fit: contain; }
 .recorded-geographic-map[hidden], [data-route-map-fallback][hidden] { display: none; }
@@ -1604,3 +1605,32 @@ td small { color: var(--muted); margin-top: 5px; }
   .mobile-elevation .elevation-plot .elevation-mobile { display: block; }
   .elevation-legend { margin-left: 42px; }
 }
+
+/* Explore Trails follows the landing page's section and control vocabulary. */
+[data-trail-guide] .explore-section { padding-block: 54px; }
+[data-trail-guide] .explore-section:first-child { padding-top: 38px; }
+[data-trail-guide] .explore-section + .explore-section { border-top: 1px solid var(--line); }
+.trail-overview-heading { margin-bottom: 30px; }
+.trail-overview-heading .section-title { margin-bottom: 14px; }
+.era-link { color: var(--blue); font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+.era-link:hover { color: var(--navy); }
+.geographic-map-image { position: relative; }
+.geographic-flags { position: absolute; inset: 0; pointer-events: none; }
+.geographic-map-image:has(img[hidden]) .geographic-flags { display: none; }
+.route-endpoint-flag { position: absolute; width: 36px; height: 36px; transform: translate(-50%,-50%); }
+.route-flag-icon { display: block; height: 100%; width: 100%; }
+.guide-map-frame .route-flag-icon { height: 100%; width: 100%; }
+[data-trail-guide] .guide-section-heading { gap: 24px; align-items: center; margin-bottom: 40px; }
+[data-trail-guide] .guide-section-heading .section-title { margin-bottom: 0; }
+[data-trail-guide] .planner-form, [data-trail-guide] .directory-filters { background: white; border: 1px solid var(--line); border-radius: 18px; }
+[data-trail-guide] .planner-form input:not([type=checkbox]), [data-trail-guide] .planner-form select, [data-trail-guide] .directory-filters input, [data-trail-guide] .directory-filters select { border-color: var(--line); border-radius: var(--radius-control); min-height: var(--control-height); }
+[data-trail-guide] .planner-form input:focus-visible, [data-trail-guide] .planner-form select:focus-visible, [data-trail-guide] .directory-filters input:focus-visible, [data-trail-guide] .directory-filters select:focus-visible { outline: 3px solid rgba(242,201,76,.55); outline-offset: 2px; }
+[data-trail-guide] .planner-form input[type=checkbox] { accent-color: var(--blue); }
+@media (max-width: 760px) {
+  [data-trail-guide] .explore-section { padding-block: 38px; }
+  [data-trail-guide] .guide-section-heading { grid-template-columns: 1fr; gap: 18px; }
+  [data-trail-guide] .guide-section-heading .button { justify-self: start; }
+  .route-endpoint-flag { height: 28px; width: 28px; }
+}
+
+[data-route-map-fallback] .fallback-map-flag, [data-route-map-fallback] .fallback-map-flag .route-flag-icon { height: 42px; width: 42px; }

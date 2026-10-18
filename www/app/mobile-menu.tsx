@@ -1,4 +1,3 @@
-import { NotifyButton } from '@/components/NotifyDialog';
 import { disableHtmxNavigation } from '@/lib/htmx';
 
 export default function MobileMenu() {
@@ -25,7 +24,6 @@ export default function MobileMenu() {
         >
           Trail Reports
         </a>
-        <NotifyButton className="header-portal-button">Notify Me</NotifyButton>
       </nav>
     </details>
   );

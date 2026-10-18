@@ -22,18 +22,12 @@ export const metadata: Metadata = {
 type Params = Record<string, string | string[] | undefined>;
 const value = (params: Params, key: string) =>
   typeof params[key] === 'string' ? (params[key] as string) : '';
-const date = (input: string) =>
-  input && Number.isFinite(Date.parse(input))
-    ? new Intl.DateTimeFormat('en-GB', {
-        dateStyle: 'medium',
-        timeZone: 'UTC',
-      }).format(new Date(input))
-    : 'Not recorded';
 
 function pageUrl(params: Params, page: number) {
   const query = new URLSearchParams();
   for (const [key, item] of Object.entries(params))
     if (typeof item === 'string') query.set(key, item);
+  query.set('findStays', 'yes');
   query.set('page', String(page));
   return `/trails/cyprus-e4?${query}#accommodations`;
 }
@@ -95,15 +89,18 @@ export default async function CyprusE4({
   });
   const search = value(params, 'stay').toLowerCase().trim(),
     type = value(params, 'type');
-  const filtered = trail.lodgings.filter(
-    (stay) =>
-      (!type || stay.type === type) &&
-      (!search ||
-        [stay.name, stay.village, stay.stageName]
-          .join(' ')
-          .toLowerCase()
-          .includes(search))
-  );
+  const hasStaySearch = params.findStays === 'yes' || Boolean(search || type);
+  const filtered = hasStaySearch
+    ? trail.lodgings.filter(
+        (stay) =>
+          (!type || stay.type === type) &&
+          (!search ||
+            [stay.name, stay.village, stay.stageName]
+              .join(' ')
+              .toLowerCase()
+              .includes(search))
+      )
+    : [];
   const page = Math.max(
     1,
     Math.min(
@@ -126,45 +123,15 @@ export default async function CyprusE4({
           tabIndex={-1}
           {...publicHtmxNavigation}
         >
-          <header className="section-shell screenshot-trail-header">
-            <p className="eyebrow">Explore Trails · {trail.country}</p>
-            <h1>E4 Cyprus</h1>
-            <p>
-              General Info, Map, Elevation Map. Find your way from {first.name}{' '}
-              to {last.name}, one walking day at a time.
-            </p>
-            <div>
-              <span className="guide-freshness">
-                Trail data updated {date(trail.updatedAt)}
-              </span>
-              <a
-                className="button button-secondary fill-link cta-button"
-                href="https://www.era-ewv-ferp.org/e-paths/e4/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                E4 information from the European Hiking Federation (ERA)
-              </a>
-            </div>
-          </header>
-          <nav
-            className="section-shell editorial-subnav"
-            aria-label="Trail guide sections"
-          >
-            <a href="#trail-map">Map &amp; Elevation</a>
-            <a href="/trails/cyprus-e4/stages">Facilities &amp; Waypoints</a>
-            <a href="#planner">Daily Stage Planner</a>
-            <a href="#conditions">Trail Conditions</a>
-            <a href="#accommodations">Accommodation</a>
-            <a href="#app">Download App</a>
-          </nav>
           <TrailFigures trail={trail} />
-          <section className="section-shell guide-journey">
+          <section
+            className="section-shell guide-journey explore-section"
+            aria-labelledby="stages-title"
+          >
             <div className="guide-section-heading">
-              <div>
-                <p className="eyebrow">Five points across the island</p>
-                <h2>Follow the trail, one waypoint at a time.</h2>
-              </div>
+              <h2 className="section-title" id="stages-title">
+                Daily Stage Planner
+              </h2>
               <a
                 className="button button-secondary fill-link cta-button"
                 href="/trails/cyprus-e4/stages"
@@ -199,29 +166,14 @@ export default async function CyprusE4({
               })}
             </ol>
           </section>
-          <section className="section-shell planner-section" id="planner">
-            <div className="editorial-split">
-              <div>
-                <p className="eyebrow">Smart Multi-Day Itinerary</p>
-                <h2>
-                  A walking rhythm
-                  <br />
-                  that fits you.
-                </h2>
-                <p>
-                  Adjust your pacing to recalculate walking days and recorded
-                  overnight stops. Each day includes the route points, water
-                  sources and elevation along the way.
-                </p>
-              </div>
-              <p className="data-caveat">
-                Reference points are not prescribed walking days. Suggested
-                stops use recorded accommodation and camping information;
-                confirm access, permission and availability directly. Distances
-                between reference points may differ slightly from the full route
-                geometry.
-              </p>
-            </div>
+          <section
+            className="section-shell planner-section explore-section"
+            id="planner"
+            aria-labelledby="planner-title"
+          >
+            <h2 className="section-title" id="planner-title">
+              Smart Multi-Day Itinerary
+            </h2>
             <div className="planner-workspace">
               <form
                 className="planner-form"
@@ -398,109 +350,41 @@ export default async function CyprusE4({
                     </ol>
                   </div>
                 )}
-                <section className="conditions-section" id="conditions">
-                  <p className="eyebrow">Live Trail Conditions Noticeboard</p>
-                  <h2>Know what lies ahead.</h2>
-                  <p>
-                    Reviewed reports and approved trail notices. Updates can lag
-                    behind conditions on the ground.
-                  </p>
-                  <div
-                    data-trail-notices
-                    {...{
-                      'hx-get': '/api/trail-notices',
-                      'hx-trigger': 'every 60s',
-                      'hx-target': 'this',
-                      'hx-swap': 'innerHTML',
-                      'hx-select': 'unset',
-                      'hx-push-url': 'false',
-                      'hx-boost': 'false',
-                    }}
-                    dangerouslySetInnerHTML={{
-                      __html: publicNoticeHtml(
-                        trail.issues,
-                        trail.issuesAvailable
-                      ),
-                    }}
-                  />
-                  <p className="data-caveat">
-                    Use the app to report a trail problem. Only reviewed public
-                    notices appear here; private reports and reporter contact
-                    details stay private.
-                  </p>
-                </section>
               </div>
             </div>
           </section>
-          <AppDownload screenshots />
-          <section className="section-shell guide-essentials">
-            <article className="guide-plan-copy">
-              <p className="eyebrow">Shape your own walk</p>
-              <h2>A route, not one fixed itinerary.</h2>
-              <p>
-                Named points give you the building blocks. Compare distance and
-                elevation, then create walking days around your experience,
-                daylight, accommodation and water plan.
-              </p>
-              <dl className="guide-planning-list">
-                <div>
-                  <dt>Choose your rhythm</dt>
-                  <dd>
-                    Link short or long sections instead of following a
-                    prescribed schedule.
-                  </dd>
-                </div>
-                <div>
-                  <dt>Walk either way</dt>
-                  <dd>Choose either direction in the planner above.</dd>
-                </div>
-                <div>
-                  <dt>Check live conditions</dt>
-                  <dd>
-                    Use current local advice for weather, closures, water and
-                    transport before setting out.
-                  </dd>
-                </div>
-              </dl>
-            </article>
-            <aside className="guide-safety-panel">
-              <p className="eyebrow light">Before you walk</p>
-              <h2>
-                Check the present,
-                <br />
-                not only the plan.
-              </h2>
-              <ul>
-                <li>
-                  <span>01</span>Confirm official access advice and weather.
-                </li>
-                <li>
-                  <span>02</span>Carry enough water for changing conditions.
-                </li>
-                <li>
-                  <span>03</span>Download trail data before limited coverage.
-                </li>
-                <li>
-                  <span>04</span>Share your route and expected finish.
-                </li>
-              </ul>
-              <div className="guide-emergency">
-                <small>Emergency in Cyprus</small>
-                <strong>112</strong>
-              </div>
-            </aside>
+          <section
+            className="section-shell conditions-section explore-section"
+            id="conditions"
+            aria-labelledby="conditions-title"
+          >
+            <h2 className="section-title" id="conditions-title">
+              Live Trail Conditions Noticeboard
+            </h2>
+            <div
+              data-trail-notices
+              {...{
+                'hx-get': '/api/trail-notices',
+                'hx-trigger': 'every 60s',
+                'hx-target': 'this',
+                'hx-swap': 'innerHTML',
+                'hx-select': 'unset',
+                'hx-push-url': 'false',
+                'hx-boost': 'false',
+              }}
+              dangerouslySetInnerHTML={{
+                __html: publicNoticeHtml(trail.issues, trail.issuesAvailable),
+              }}
+            />
           </section>
           <section
-            className="section-shell accommodation-directory"
+            className="section-shell accommodation-directory explore-section"
+            aria-labelledby="accommodations-title"
             id="accommodations"
           >
-            <p className="eyebrow">Accommodation Directory</p>
-            <h2>A place to rest along the way.</h2>
-            <p>
-              Recorded stays from the trail directory. Contact hosts directly to
-              confirm prices, access and availability; an imported entry is not
-              a claim of verification.
-            </p>
+            <h2 className="section-title" id="accommodations-title">
+              Accommodation Directory
+            </h2>
             <form
               className="directory-filters"
               {...{
@@ -510,6 +394,7 @@ export default async function CyprusE4({
               method="get"
               action="/trails/cyprus-e4#accommodations"
             >
+              <input type="hidden" name="findStays" value="yes" />
               {['plan', 'start', 'end', 'days', 'maxKm', 'camping'].map(
                 (key) =>
                   value(params, key) ? (
@@ -550,124 +435,126 @@ export default async function CyprusE4({
                 Find stays
               </button>
             </form>
-            {!trail.lodgingsAvailable ? (
-              <p className="trail-data-message">
-                The accommodation directory could not be refreshed.{' '}
-                <a href="/trails/cyprus-e4#accommodations">Try again</a>.
-              </p>
-            ) : (
-              <>
-                <p role="status">
-                  {filtered.length
-                    ? `Showing ${(page - 1) * 18 + 1}–${Math.min(page * 18, filtered.length)} of ${filtered.length} recorded stays`
-                    : 'No stays match your search.'}
+            {hasStaySearch &&
+              (!trail.lodgingsAvailable ? (
+                <p className="trail-data-message">
+                  The accommodation directory could not be refreshed.{' '}
+                  <a href="/trails/cyprus-e4#accommodations">Try again</a>.
                 </p>
-                <div className="public-stays-grid">
-                  {shown.map((stay) => {
-                    const phone = safePublicUrl(stay.phone, 'phone'),
-                      email = safePublicUrl(stay.email, 'email'),
-                      website = safePublicUrl(stay.website);
-                    return (
-                      <article className="public-stay" key={stay.id}>
-                        <p className="eyebrow">
-                          {stay.type || 'Accommodation'}
-                        </p>
-                        <h3>
-                          {stay.name ||
-                            [
-                              stay.type || 'Accommodation',
-                              stay.stageName || stay.village,
-                            ]
-                              .filter(Boolean)
-                              .join(' · ')}
-                        </h3>
-                        {stay.verified && (
-                          <span
-                            className="verified-stay"
-                            title="Reviewed representative authority, contact details and trail relevance"
+              ) : (
+                <>
+                  <p role="status">
+                    {filtered.length
+                      ? `Showing ${(page - 1) * 18 + 1}–${Math.min(page * 18, filtered.length)} of ${filtered.length} recorded stays`
+                      : 'No stays match your search.'}
+                  </p>
+                  <div className="public-stays-grid">
+                    {shown.map((stay) => {
+                      const phone = safePublicUrl(stay.phone, 'phone'),
+                        email = safePublicUrl(stay.email, 'email'),
+                        website = safePublicUrl(stay.website);
+                      return (
+                        <article className="public-stay" key={stay.id}>
+                          <p className="eyebrow">
+                            {stay.type || 'Accommodation'}
+                          </p>
+                          <h3>
+                            {stay.name ||
+                              [
+                                stay.type || 'Accommodation',
+                                stay.stageName || stay.village,
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                          </h3>
+                          {stay.verified && (
+                            <span
+                              className="verified-stay"
+                              title="Reviewed representative authority, contact details and trail relevance"
+                            >
+                              ✓ Eurotrex Verified Stay
+                            </span>
+                          )}
+                          <p>{stay.village || stay.address}</p>
+                          <a
+                            className="button button-secondary fill-link cta-button"
+                            href={`/trails/cyprus-e4/stages/${stay.stageId}`}
                           >
-                            ✓ Eurotrex Verified Stay
-                          </span>
-                        )}
-                        <p>{stay.village || stay.address}</p>
-                        <a
-                          className="button button-secondary fill-link cta-button"
-                          href={`/trails/cyprus-e4/stages/${stay.stageId}`}
-                        >
-                          {stay.stageName || 'Trail reference point'}
-                        </a>
-                        <p className="stay-price">
-                          {stay.priceMinEur !== null ||
-                          stay.priceMaxEur !== null
-                            ? `€${stay.priceMinEur ?? stay.priceMaxEur}${stay.priceMaxEur !== null && stay.priceMinEur !== null && stay.priceMaxEur !== stay.priceMinEur ? '–' + stay.priceMaxEur : ''} / night`
-                            : 'Ask the host for prices'}
-                        </p>
-                        <div className="stay-actions">
-                          {stay.location && (
-                            <a
-                              className="button button-secondary fill-link cta-button"
-                              href={`https://www.google.com/maps/search/?api=1&query=${stay.location.latitude},${stay.location.longitude}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              GPS
-                            </a>
-                          )}
-                          {phone && (
-                            <a
-                              className="button button-secondary fill-link cta-button"
-                              href={phone}
-                            >
-                              Phone
-                            </a>
-                          )}
-                          {email && (
-                            <a
-                              className="button button-secondary fill-link cta-button"
-                              href={email}
-                            >
-                              Email
-                            </a>
-                          )}
-                          {website && (
-                            <a
-                              className="button button-secondary fill-link cta-button"
-                              href={website}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              Book
-                            </a>
-                          )}
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-                <nav
-                  className="directory-pagination"
-                  aria-label="Accommodation pages"
-                >
-                  {page > 1 && (
-                    <a
-                      className="button button-secondary"
-                      href={pageUrl(params, page - 1)}
-                    >
-                      Previous
-                    </a>
-                  )}
-                  {page * 18 < filtered.length && (
-                    <a
-                      className="button button-secondary"
-                      href={pageUrl(params, page + 1)}
-                    >
-                      Next stays
-                    </a>
-                  )}
-                </nav>
-              </>
-            )}
+                            {stay.stageName || 'Trail reference point'}
+                          </a>
+                          <p className="stay-price">
+                            {stay.priceMinEur !== null ||
+                            stay.priceMaxEur !== null
+                              ? `€${stay.priceMinEur ?? stay.priceMaxEur}${stay.priceMaxEur !== null && stay.priceMinEur !== null && stay.priceMaxEur !== stay.priceMinEur ? '–' + stay.priceMaxEur : ''} / night`
+                              : 'Ask the host for prices'}
+                          </p>
+                          <div className="stay-actions">
+                            {stay.location && (
+                              <a
+                                className="button button-secondary fill-link cta-button"
+                                href={`https://www.google.com/maps/search/?api=1&query=${stay.location.latitude},${stay.location.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                GPS
+                              </a>
+                            )}
+                            {phone && (
+                              <a
+                                className="button button-secondary fill-link cta-button"
+                                href={phone}
+                              >
+                                Phone
+                              </a>
+                            )}
+                            {email && (
+                              <a
+                                className="button button-secondary fill-link cta-button"
+                                href={email}
+                              >
+                                Email
+                              </a>
+                            )}
+                            {website && (
+                              <a
+                                className="button button-secondary fill-link cta-button"
+                                href={website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                Book
+                              </a>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                  <nav
+                    className="directory-pagination"
+                    aria-label="Accommodation pages"
+                  >
+                    {page > 1 && (
+                      <a
+                        className="button button-secondary"
+                        href={pageUrl(params, page - 1)}
+                      >
+                        Previous
+                      </a>
+                    )}
+                    {page * 18 < filtered.length && (
+                      <a
+                        className="button button-secondary"
+                        href={pageUrl(params, page + 1)}
+                      >
+                        Next stays
+                      </a>
+                    )}
+                  </nav>
+                </>
+              ))}
           </section>
+          <AppDownload screenshots />
         </main>
       </PublicContent>
       <PublicFooter />

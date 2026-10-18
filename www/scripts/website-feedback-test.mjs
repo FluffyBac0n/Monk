@@ -85,7 +85,7 @@ assert.equal(
   999.9,
   'Downsampling retains the route endpoint'
 );
-const { encodedMapPath, trailMapImageUrl } = moduleAt(
+const { encodedMapPath, trailMapImageUrl, trailMapCamera } = moduleAt(
   '../lib/trail-map-image.ts'
 );
 const mapFixture = [
@@ -106,12 +106,38 @@ const longRoute = Array.from({ length: 24000 }, (_, i) => ({
 const imageUrl = trailMapImageUrl(longRoute, 'pk.synthetic');
 assert.ok(imageUrl.length <= 8000);
 assert.equal(new URL(imageUrl).hostname, 'api.mapbox.com');
-assert.ok(imageUrl.includes('pin-s-a+f2c94c(32,34.5)'));
 assert.ok(
-  imageUrl.includes(
-    `pin-s-b+303e4e(${longRoute.at(-1).lng},${longRoute.at(-1).lat})`
-  )
+  !imageUrl.includes('pin-s-'),
+  'Lettered endpoint pins are replaced by the app flags'
 );
+const camera = trailMapCamera(longRoute);
+assert.ok(
+  imageUrl.includes(`/${camera.lng},${camera.lat},${camera.zoom},0,0/1200x700`)
+);
+for (const endpoint of [camera.start, camera.finish]) {
+  assert.ok(
+    endpoint.x >= 44 &&
+      endpoint.x <= 1156 &&
+      endpoint.y >= 44 &&
+      endpoint.y <= 656,
+    'Endpoint flags remain inside the padded map viewport'
+  );
+}
+const symmetric = trailMapCamera([
+  { lat: 0, lng: -1 },
+  { lat: 0, lng: 1 },
+]);
+assert.ok(Math.abs(symmetric.start.y - 350) < 0.001);
+assert.ok(
+  Math.abs(symmetric.start.x + symmetric.finish.x - 1200) < 0.001,
+  'A shared Mercator camera aligns endpoints symmetrically around the centre'
+);
+const coincident = trailMapCamera([
+  { lat: 35, lng: 33 },
+  { lat: 35, lng: 33 },
+]);
+assert.ok(Number.isFinite(coincident.zoom));
+assert.ok(Math.abs(coincident.start.x - 600) < 0.001);
 const stages = [0, 10, 20, 30, 40].map((km, index) => ({
   id: `point-${index}`,
   name: `Point ${index}`,

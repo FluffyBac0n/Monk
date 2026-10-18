@@ -42,3 +42,17 @@ Explore Trails now uses the mobile app's elevation presentation: a white rounded
 Validation: TypeScript; profile checks for smoothing, colour interpolation, tick spacing, gap handling and endpoint retention; the existing 12-route/form smoke checks; desktop (1280 px) and phone (390 px) browser inspection of the hero and elevation, with no horizontal overflow. No data, account access or Firestore-rule changes are required. The review branch remains unmerged.
 
 Published successfully with owner-only access preserved on 17 October 2026. Website source: `2ba157e429166880bfd79536b643d748b08c0a45`; deployment: `appgdep_6ad38417d348819187b53efbb13c93c3`. The production build passed. Live inspection confirmed the shared hero photograph, transparent app strip and restored outline CTA.
+
+## Explore Trails simplification — 18 October 2026
+
+The user's next review removes Notify Me from desktop and mobile navigation, the trail intro/freshness/subnavigation block, the elevation caption, the five-points eyebrow and the planner caveat. ERA remains available as a plain text link. The extra planning/safety prose is removed so the page follows the supplied Explore Trails Text sheet without additional editorial filler.
+
+The five content sections now share the landing page's uppercase section-title typography, yellow rule and spacing: Trail Overview Dashboard, Daily Stage Planner, Smart Multi-Day Itinerary, Live Trail Conditions Noticeboard and Accommodation Directory. The shared app download section follows them. The noticeboard is a separate section rather than being nested inside planner results. White bordered statistic/form cards use the existing rounded controls and brand colours. The towns display as Paphos – Larnaca; numerical statistics still come from the database.
+
+The map uses the mobile app's white-ring green/red flag artwork and colours (#277653/#D14B45), replacing A/B pins. The static map and responsive flag overlays share an explicit Mercator camera, preserving endpoint alignment. Camera fitting follows the [Mapbox Static Images API](https://docs.mapbox.com/api/maps/static-images/). The recorded-route fallback also shows flags.
+
+Accommodation results and counts are absent until a search is submitted or a direct search link is followed. Search pagination and itinerary View stays links preserve the search state. An explicit empty-filter search can show all results; a non-matching query shows the existing empty-result message.
+
+The requested design/copy preference is recorded in the workspace AGENTS.md: new UI must reuse the existing look and feel and relevant Excel Text sheets, with no unnecessary explanatory text and no mock statistics.
+
+Validation: TypeScript; map camera alignment, padding, coincident endpoint and URL-length checks; existing profile/itinerary/auth checks; the 12-route/form integration suite plus initial/search/empty accommodation cases; desktop and 390 px mobile browser review with no horizontal overflow. Live data and Firestore rules are unchanged. The application review branch remains unmerged.

@@ -1,5 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { ElevationProfile } from '@/components/ElevationProfile';
+import { MapFlag } from '@/components/MapFlag';
+import { trailMapCamera } from '@/lib/trail-map-image';
 import type { PublicTrail } from '@/lib/public-trail-data';
 
 export function TrailFigures({ trail }: { trail: PublicTrail }) {
@@ -44,8 +46,26 @@ export function TrailFigures({ trail }: { trail: PublicTrail }) {
       : 'Not recorded';
   const first = trail.stages[0],
     last = trail.stages.at(-1)!;
+  const camera = trailMapCamera(trail.points);
   return (
-    <section className="section-shell route-figures" id="trail-map">
+    <section
+      className="section-shell route-figures explore-section"
+      id="trail-map"
+      aria-labelledby="overview-title"
+    >
+      <div className="trail-overview-heading">
+        <h1 className="section-title" id="overview-title">
+          Trail Overview Dashboard
+        </h1>
+        <a
+          className="era-link"
+          href="https://www.era-ewv-ferp.org/e-paths/e4/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          E4 information from the European Hiking Federation (ERA)
+        </a>
+      </div>
       <div className="trail-map-dashboard">
         <dl className="trail-map-statistics">
           <div>
@@ -68,22 +88,45 @@ export function TrailFigures({ trail }: { trail: PublicTrail }) {
           </div>
           <div>
             <dt>Start – end towns</dt>
-            <dd>
-              {first.name}
-              <br />→ {last.name}
-            </dd>
+            <dd>Paphos – Larnaca</dd>
           </div>
         </dl>
         <figure className="live-route-map guide-map-frame">
           {mapConfigured && (
-            <img
-              className="recorded-geographic-map"
-              data-route-map-image
-              src="/api/trail-map"
-              alt={`Map of Cyprus showing the recorded E4 from ${first.name} to ${last.name}`}
-              width="1200"
-              height="700"
-            />
+            <div className="geographic-map-image">
+              <img
+                className="recorded-geographic-map"
+                data-route-map-image
+                src="/api/trail-map"
+                alt={`Map of Cyprus showing the recorded E4 from ${first.name} to ${last.name}`}
+                width="1200"
+                height="700"
+              />
+              <div className="geographic-flags">
+                <span
+                  className="route-endpoint-flag"
+                  role="img"
+                  aria-label={`Start: ${first.name}`}
+                  style={{
+                    left: `${camera.start.x / 12}%`,
+                    top: `${camera.start.y / 7}%`,
+                  }}
+                >
+                  <MapFlag />
+                </span>
+                <span
+                  className="route-endpoint-flag"
+                  role="img"
+                  aria-label={`Finish: ${last.name}`}
+                  style={{
+                    left: `${camera.finish.x / 12}%`,
+                    top: `${camera.finish.y / 7}%`,
+                  }}
+                >
+                  <MapFlag finish />
+                </span>
+              </div>
+            </div>
           )}
           <div data-route-map-fallback hidden={mapConfigured}>
             <svg
@@ -150,6 +193,18 @@ export function TrailFigures({ trail }: { trail: PublicTrail }) {
                     </circle>
                   </a>
                 ))}
+              {[points[0], points.at(-1)!].map((point, index) => (
+                <svg
+                  key={index}
+                  className="fallback-map-flag"
+                  x={x(point.lng) - 21}
+                  y={y(point.lat) - 21}
+                  width="42"
+                  height="42"
+                >
+                  <MapFlag finish={index === 1} />
+                </svg>
+              ))}
               <text x="32" y="330">
                 {first.name} → {last.name}
               </text>
@@ -158,7 +213,7 @@ export function TrailFigures({ trail }: { trail: PublicTrail }) {
           <figcaption className="guide-map-caption">
             <span className="guide-map-legend">
               <i aria-hidden="true" />
-              Cyprus-E4 · Pafos to Larnaka
+              Cyprus-E4 · Paphos – Larnaca
             </span>
             <span>
               {trail.distanceKm?.toFixed(1)} km · {trail.stages.length}{' '}
