@@ -1609,7 +1609,6 @@ td small { color: var(--muted); margin-top: 5px; }
 /* Explore Trails follows the landing page's section and control vocabulary. */
 [data-trail-guide] .explore-section { padding-block: 54px; }
 [data-trail-guide] .explore-section:first-child { padding-top: 38px; }
-[data-trail-guide] .explore-section + .explore-section { border-top: 1px solid var(--line); }
 .trail-overview-heading { margin-bottom: 30px; }
 .trail-overview-heading .section-title { margin-bottom: 14px; }
 .era-link { color: var(--blue); font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
@@ -1634,3 +1633,18 @@ td small { color: var(--muted); margin-top: 5px; }
 }
 
 [data-route-map-fallback] .fallback-map-flag, [data-route-map-fallback] .fallback-map-flag .route-flag-icon { height: 42px; width: 42px; }
+
+/* Larger native dropdowns and section-local search actions. */
+[data-trail-guide] .planner-form select, [data-trail-guide] .directory-filters select { min-height: 56px; height: 56px; font-size: 16px; line-height: 1.4; padding: 14px 18px; }
+[data-trail-guide] .directory-filters input { min-height: 56px; font-size: 16px; padding: 14px 18px; }
+[data-trail-guide] .planner-workspace { grid-template-columns: minmax(320px,.8fr) minmax(0,1.2fr); }
+.directory-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.directory-actions .button { min-height: 56px; }
+.trail-switcher-item[aria-disabled="true"] { cursor: default; }
+.trail-switcher-item[aria-disabled="true"]:hover { background: transparent; transform: none; }
+@media (max-width: 900px) {
+  .directory-actions { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  [data-trail-guide] .planner-workspace { grid-template-columns: 1fr; }
+}

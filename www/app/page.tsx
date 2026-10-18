@@ -1,3 +1,4 @@
+import { TrailDivider } from '@/components/TrailDivider';
 import Image from 'next/image';
 import { PublicContent } from '@/components/PublicContent';
 import { PublicHeader } from '@/components/PublicHeader';
@@ -104,6 +105,7 @@ export default function Home() {
             </section>
             <AppDownload id="hero-app" />
           </div>
+          <TrailDivider />
           <section
             className="manifesto-section"
             aria-labelledby="manifesto-title"
@@ -129,6 +131,7 @@ export default function Home() {
               </div>
             </div>
           </section>
+          <TrailDivider />
           <section className="paths-section" id="paths">
             <div className="section-shell">
               <h2 className="section-title">Choose Your Path</h2>
@@ -162,6 +165,7 @@ export default function Home() {
               </div>
             </div>
           </section>
+          <TrailDivider />
           <section
             className="section-shell foundation-section home-foundation"
             aria-labelledby="foundation-title"
@@ -179,7 +183,9 @@ export default function Home() {
               Read about the Eurotrex Initiative
             </a>
           </section>
+          <TrailDivider />
           <AppDownload id="hikers" screenshots />
+          <TrailDivider />
           <section
             className="section-shell community-links"
             aria-labelledby="community-links-title"
@@ -202,6 +208,7 @@ export default function Home() {
               ))}
             </div>
           </section>
+          <TrailDivider />
           <section className="faq-section" id="faq">
             <div className="section-shell faq-layout">
               <h2 className="section-title">Quick Answers</h2>

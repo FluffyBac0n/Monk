@@ -336,6 +336,23 @@ function startPublicRuntime(htmx) {
     dialogOpener = undefined;
   }
 
+  function preserveTrailSectionParameters(event) {
+    const source = event.detail?.elt;
+    if (!(source instanceof Element)) return;
+    const section = source.closest('[data-trail-section-update]')?.dataset.trailSectionUpdate;
+    if (section !== 'planner' && section !== 'accommodations') return;
+    // A section swap leaves the other form intact. Preserve its last submitted
+    // state from the current URL instead of stale hidden fields or edited values.
+    const keys = section === 'accommodations'
+      ? ['plan', 'start', 'end', 'days', 'maxKm', 'camping']
+      : ['findStays', 'stay', 'type', 'page'];
+    const current = new URLSearchParams(window.location.search);
+    for (const key of keys) {
+      if (current.has(key)) event.detail.parameters[key] = current.get(key);
+      else delete event.detail.parameters[key];
+    }
+  }
+
   function handleBeforeRequest() {
     ensureHtmxHistoryBridge();
   }
@@ -576,6 +593,7 @@ function startPublicRuntime(htmx) {
   document.addEventListener('focusin', handleFocusIn);
   document.addEventListener('focusout', handleFocusOut);
   document.addEventListener('visibilitychange', handleVisibilityChange);
+  document.body.addEventListener('htmx:configRequest', preserveTrailSectionParameters);
   document.body.addEventListener('htmx:beforeRequest', handleBeforeRequest);
   document.body.addEventListener('htmx:beforeSwap', handleBeforeSwap);
   document.body.addEventListener('htmx:beforeHistoryUpdate', ensureHtmxHistoryBridge);

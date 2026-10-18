@@ -1,3 +1,4 @@
+import { TrailDivider } from '@/components/TrailDivider';
 import type { Metadata } from 'next';
 import { PublicHeader } from '@/components/PublicHeader';
 import { PublicContent } from '@/components/PublicContent';
@@ -11,7 +12,7 @@ import {
 } from '@/lib/public-trail-data';
 import { buildItinerary } from '@/lib/web-itinerary';
 import { publicNoticeHtml } from '@/lib/public-notices';
-import { publicHtmxNavigation } from '@/lib/htmx';
+import { publicHtmxNavigation, inPlaceTrailSection } from '@/lib/htmx';
 
 export const metadata: Metadata = {
   title: 'Explore the E4 Cyprus Trail',
@@ -124,6 +125,7 @@ export default async function CyprusE4({
           {...publicHtmxNavigation}
         >
           <TrailFigures trail={trail} />
+          <TrailDivider />
           <section
             className="section-shell guide-journey explore-section"
             aria-labelledby="stages-title"
@@ -166,6 +168,7 @@ export default async function CyprusE4({
               })}
             </ol>
           </section>
+          <TrailDivider />
           <section
             className="section-shell planner-section explore-section"
             id="planner"
@@ -177,6 +180,7 @@ export default async function CyprusE4({
             <div className="planner-workspace">
               <form
                 className="planner-form"
+                {...inPlaceTrailSection('planner')}
                 action="/trails/cyprus-e4#planner"
                 method="get"
                 {...{
@@ -244,6 +248,7 @@ export default async function CyprusE4({
                   <a
                     className="button button-secondary"
                     href="/trails/cyprus-e4#planner"
+                    {...inPlaceTrailSection('planner')}
                   >
                     Reset
                   </a>
@@ -353,6 +358,7 @@ export default async function CyprusE4({
               </div>
             </div>
           </section>
+          <TrailDivider />
           <section
             className="section-shell conditions-section explore-section"
             id="conditions"
@@ -377,6 +383,7 @@ export default async function CyprusE4({
               }}
             />
           </section>
+          <TrailDivider />
           <section
             className="section-shell accommodation-directory explore-section"
             aria-labelledby="accommodations-title"
@@ -387,6 +394,7 @@ export default async function CyprusE4({
             </h2>
             <form
               className="directory-filters"
+              {...inPlaceTrailSection('accommodations')}
               {...{
                 'hx-sync': 'this:replace',
                 'hx-disabled-elt': 'find button[type="submit"]',
@@ -431,9 +439,21 @@ export default async function CyprusE4({
                     ))}
                 </select>
               </label>
-              <button type="submit" className="button button-primary">
-                Find stays
-              </button>
+              <div className="directory-actions">
+                <button
+                  type="submit"
+                  className="button button-primary fill-link"
+                >
+                  Find stays
+                </button>
+                <a
+                  className="button button-secondary fill-link"
+                  href="/trails/cyprus-e4#accommodations"
+                  {...inPlaceTrailSection('accommodations')}
+                >
+                  Reset
+                </a>
+              </div>
             </form>
             {hasStaySearch &&
               (!trail.lodgingsAvailable ? (
@@ -538,6 +558,10 @@ export default async function CyprusE4({
                       <a
                         className="button button-secondary"
                         href={pageUrl(params, page - 1)}
+                        {...inPlaceTrailSection(
+                          'accommodations',
+                          pageUrl(params, page - 1)
+                        )}
                       >
                         Previous
                       </a>
@@ -546,6 +570,10 @@ export default async function CyprusE4({
                       <a
                         className="button button-secondary"
                         href={pageUrl(params, page + 1)}
+                        {...inPlaceTrailSection(
+                          'accommodations',
+                          pageUrl(params, page + 1)
+                        )}
                       >
                         Next stays
                       </a>
@@ -554,6 +582,7 @@ export default async function CyprusE4({
                 </>
               ))}
           </section>
+          <TrailDivider />
           <AppDownload screenshots />
         </main>
       </PublicContent>

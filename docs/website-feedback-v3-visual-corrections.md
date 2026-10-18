@@ -58,3 +58,11 @@ The requested design/copy preference is recorded in the workspace AGENTS.md: new
 Validation: TypeScript; map camera alignment, padding, coincident endpoint and URL-length checks; existing profile/itinerary/auth checks; the 12-route/form integration suite plus initial/search/empty accommodation cases; desktop and 390 px mobile browser review with no horizontal overflow. Live data and Firestore rules are unchanged. The application review branch remains unmerged.
 
 Published privately on 18 October 2026 with owner-only access preserved. Website source: `631b9535bddb4f5b3e4bd8ae8538e8835a3ccb91`; deployment: `appgdep_6ad463e9e6cc81919bbb7bf9fe54055f`. Production build passed. Live inspection confirms the five matching section titles, no navigation notification button, zero accommodation cards before search and no horizontal overflow. The restyled planner returns one walking day, 25.9 km, for Pafos Airport–Tsada.
+
+## Dropdowns, section separators and in-place searches — 18 October 2026
+
+The planner and accommodation dropdowns now use 56 px controls with 16 px text; the planner form column is wider on desktop. Accommodation search has a matching Reset action that clears filters and results. Search, reset and pagination update only their own section through HTMX, preserving scroll position. Planner calculation/reset likewise update in place. Partial requests preserve the other section's submitted parameters from the current URL, preventing a stale form from discarding an existing itinerary or accommodation search.
+
+The landing page and Explore Trails reuse the original trail-divider CSS: a dotted line with a yellow centre circle. Dividers separate the existing content sections; the hero and attached app strip remain one banner. Crete and Peloponnese retain their visible Coming soon labels as disabled, non-focusable text rather than links.
+
+Validation includes TypeScript, runtime syntax, existing data/profile/itinerary/auth checks and local route/form smoke checks. Desktop browser checks confirm all three dropdowns are 56 px high with 16 px text, both future trails have no href, five Explore dividers are present, accommodation search stays at the same scroll position, and Reset clears filters/results in place.
