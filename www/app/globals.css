@@ -1648,3 +1648,8 @@ td small { color: var(--muted); margin-top: 5px; }
 @media (max-width: 760px) {
   [data-trail-guide] .planner-workspace { grid-template-columns: 1fr; }
 }
+
+.guide-essentials { row-gap: 32px; }
+.guide-essentials > .section-title { grid-column: 1 / -1; margin-bottom: 0; }
+.guide-plan-title { font-size: clamp(31px,3.6vw,48px); font-weight: 750; line-height: 1.08; margin: 0; letter-spacing: -.028em; }
+.guide-safety-panel h3 { color: white; font-size: clamp(30px,3.7vw,44px); font-weight: 750; line-height: 1.08; margin: 0; letter-spacing: -.028em; }

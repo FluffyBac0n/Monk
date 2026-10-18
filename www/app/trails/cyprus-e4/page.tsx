@@ -590,11 +590,13 @@ export default async function CyprusE4({
             id="walking-essentials"
             aria-labelledby="walking-essentials-title"
           >
+            <h2 className="section-title" id="walking-essentials-title">
+              Shape your own walk
+            </h2>
             <article className="guide-plan-copy">
-              <p className="eyebrow">Shape your own walk</p>
-              <h2 id="walking-essentials-title">
+              <h3 className="guide-plan-title">
                 A route, not one fixed itinerary.
-              </h2>
+              </h3>
               <p>
                 Named points give you the building blocks. Compare distance and
                 elevation, then create walking days around your experience,
@@ -626,11 +628,11 @@ export default async function CyprusE4({
             </article>
             <aside className="guide-safety-panel">
               <p className="eyebrow light">Before you walk</p>
-              <h2>
+              <h3>
                 Check the present,
                 <br />
                 not only the plan.
-              </h2>
+              </h3>
               <ul>
                 <li>
                   <span>01</span>Confirm official access advice and weather.
