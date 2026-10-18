@@ -56,3 +56,5 @@ Accommodation results and counts are absent until a search is submitted or a dir
 The requested design/copy preference is recorded in the workspace AGENTS.md: new UI must reuse the existing look and feel and relevant Excel Text sheets, with no unnecessary explanatory text and no mock statistics.
 
 Validation: TypeScript; map camera alignment, padding, coincident endpoint and URL-length checks; existing profile/itinerary/auth checks; the 12-route/form integration suite plus initial/search/empty accommodation cases; desktop and 390 px mobile browser review with no horizontal overflow. Live data and Firestore rules are unchanged. The application review branch remains unmerged.
+
+Published privately on 18 October 2026 with owner-only access preserved. Website source: `631b9535bddb4f5b3e4bd8ae8538e8835a3ccb91`; deployment: `appgdep_6ad463e9e6cc81919bbb7bf9fe54055f`. Production build passed. Live inspection confirms the five matching section titles, no navigation notification button, zero accommodation cards before search and no horizontal overflow. The restyled planner returns one walking day, 25.9 km, for Pafos Airport–Tsada.
