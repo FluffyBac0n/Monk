@@ -584,6 +584,73 @@ export default async function CyprusE4({
           </section>
           <TrailDivider />
           <AppDownload screenshots />
+          <TrailDivider />
+          <section
+            className="section-shell guide-essentials"
+            id="walking-essentials"
+            aria-labelledby="walking-essentials-title"
+          >
+            <article className="guide-plan-copy">
+              <p className="eyebrow">Shape your own walk</p>
+              <h2 id="walking-essentials-title">
+                A route, not one fixed itinerary.
+              </h2>
+              <p>
+                Named points give you the building blocks. Compare distance and
+                elevation, then create walking days around your experience,
+                daylight, accommodation and water plan.
+              </p>
+              <dl className="guide-planning-list">
+                <div>
+                  <dt>Choose your rhythm</dt>
+                  <dd>
+                    Link short or long sections instead of following a
+                    prescribed schedule.
+                  </dd>
+                </div>
+                <div>
+                  <dt>Walk either way</dt>
+                  <dd>
+                    EuroTrex supports both directions; the public guide follows
+                    Pafos to Larnaka for consistency.
+                  </dd>
+                </div>
+                <div>
+                  <dt>Check live conditions</dt>
+                  <dd>
+                    Use current local advice for weather, closures, water and
+                    transport before setting out.
+                  </dd>
+                </div>
+              </dl>
+            </article>
+            <aside className="guide-safety-panel">
+              <p className="eyebrow light">Before you walk</p>
+              <h2>
+                Check the present,
+                <br />
+                not only the plan.
+              </h2>
+              <ul>
+                <li>
+                  <span>01</span>Confirm official access advice and weather.
+                </li>
+                <li>
+                  <span>02</span>Carry enough water for changing conditions.
+                </li>
+                <li>
+                  <span>03</span>Download trail data before limited coverage.
+                </li>
+                <li>
+                  <span>04</span>Share your route and expected finish.
+                </li>
+              </ul>
+              <div className="guide-emergency">
+                <small>Emergency in Cyprus</small>
+                <strong>112</strong>
+              </div>
+            </aside>
+          </section>
         </main>
       </PublicContent>
       <PublicFooter />

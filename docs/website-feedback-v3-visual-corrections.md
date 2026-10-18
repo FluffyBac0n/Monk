@@ -68,3 +68,9 @@ The landing page and Explore Trails reuse the original trail-divider CSS: a dott
 Validation includes TypeScript, runtime syntax, existing data/profile/itinerary/auth checks and local route/form smoke checks. Desktop browser checks confirm all three dropdowns are 56 px high with 16 px text, both future trails have no href, five Explore dividers are present, accommodation search stays at the same scroll position, and Reset clears filters/results in place.
 
 Published privately on 18 October 2026, preserving owner-only access. Website source: `37a0d118d35ae9a20e08e551979456928b551533`; deployment: `appgdep_6ad4673614d88191b88dbbebb560d671`. Production build passed. Browser checks also confirmed six landing-page dividers, no horizontal overflow at 390 px, unchanged accommodation search scroll position, and preservation of both the 25.9 km Pafos Airport–Tsada itinerary and accommodation search across independent updates. Live inspection confirmed the enlarged dropdown, Reset, separators and non-clickable future trail labels.
+
+## Restore the final visual-reference section — 18 October 2026
+
+The user clarified that the last section in Explore Trails - Visual is required. Image29.png, anchored at row 51, shows the final two-column Shape your own walk / Before you walk section. The earlier copy simplification removed it too broadly. It is restored after the app showcase as the final content section, preceded by the existing dotted separator.
+
+The restoration reuses the existing typography, planning rows, navy safety panel, four numbered items and emergency number from the screenshot. The Walk either way text also follows the reference. Desktop and 390 px phone inspection confirm two columns / stacked layout respectively, with no horizontal overflow. TypeScript passes. No search behaviour, data or access changes are required.
