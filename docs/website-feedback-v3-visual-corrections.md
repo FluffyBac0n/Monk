@@ -80,3 +80,9 @@ Published privately with owner-only access preserved on 18 October 2026. Website
 ## Hero separator correction — 18 October 2026
 
 Removed only the first landing-page dotted divider, which collided with the connected hero/app banner. The five later landing-page dividers remain. Published privately with owner-only access preserved: website source `5de7877023cc3b4ec4028c1306e49ad88f9dc8f3`, deployment `appgdep_6ad468c905948191a68afb9bb662eae9`. Production build passed; live DOM inspection confirms the manifesto follows the hero directly, with five later dividers. The review branch remains unmerged.
+
+## Shape Your Own Walk section heading — 18 October 2026
+
+Promoted Shape Your Own Walk to the shared uppercase section-title style with its yellow rule, spanning above the existing two-column content. The two content headings are now subordinate headings while retaining their previous sizes. TypeScript and the production build passed. The review branch remains unmerged.
+
+Published privately, preserving owner-only access. Website source: `787d9279fe8524ac77bac05f259a4c110728b808`; deployment: `appgdep_6ad469664a848191a1279964b78b96b8`. Live inspection confirms the h2 section-title, yellow rule, and no horizontal overflow at desktop and 390 px phone widths.
