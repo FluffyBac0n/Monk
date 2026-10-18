@@ -105,7 +105,6 @@ export default function Home() {
             </section>
             <AppDownload id="hero-app" />
           </div>
-          <TrailDivider />
           <section
             className="manifesto-section"
             aria-labelledby="manifesto-title"
