@@ -104,3 +104,5 @@ Desktop navigation and editorial card-action labels now use 12 px text. The land
 TypeScript and desktop/390 px browser checks pass: 12 px navigation/card labels, no horizontal overflow, no desktop navigation overlap, Get Inspired link styling, and the Hikers card staying on the homepage with #hikers visible beneath the header.
 
 Current Project Focus has not been redesigned in this correction. The suggested next direction is a split photo/copy feature with a panoramic Cyprus trail image, the supplied text, and a compact row of database trail statistics, preserving the established yellow heading and sand canvas.
+
+Published privately with owner-only access preserved on 19 October 2026. Website source: `63d7caad6e5890824a80582ef36db3abe6ab1bb2`; deployment: `appgdep_6ad66826e9688191846fa0c79e3b2365`. Production build passed. Live checks confirm 12 px navigation/card actions, Get Inspired as a link, and the Hikers card navigating to /#hikers without leaving the homepage. The review branch remains unmerged.
