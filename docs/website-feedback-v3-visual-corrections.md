@@ -86,3 +86,11 @@ Removed only the first landing-page dotted divider, which collided with the conn
 Promoted Shape Your Own Walk to the shared uppercase section-title style with its yellow rule, spanning above the existing two-column content. The two content headings are now subordinate headings while retaining their previous sizes. TypeScript and the production build passed. The review branch remains unmerged.
 
 Published privately, preserving owner-only access. Website source: `787d9279fe8524ac77bac05f259a4c110728b808`; deployment: `appgdep_6ad469664a848191a1279964b78b96b8`. Live inspection confirms the h2 section-title, yellow rule, and no horizontal overflow at desktop and 390 px phone widths.
+
+## Landing-page action hierarchy — 19 October 2026
+
+Notify Me now shares the hero Explore button's transparent outline, corner radius, size and fill animation throughout the shared app sections. Notification controls on light surfaces, including the notification form and future-trail previews, use the same outline treatment in navy for contrast. Loading text remains hidden until a submission is in progress.
+
+Choose Your Path restores the original full-card links with animated yellow lines and end dots; keyboard focus also expands the line. Get Involved uses plain underlined links with comfortable touch targets. The first and last remaining landing-page dividers were removed, leaving three internal separators. No editorial wording, form-submission behaviour or audience changed.
+
+Validation: TypeScript; existing local route/form integration checks; desktop and 390 px phone browser review; notification dialog opening/closing and idle submit label; three linked path cards; 28→46 px line animation on keyboard focus; three remaining dividers; Get Involved contains links rather than buttons; no horizontal overflow.

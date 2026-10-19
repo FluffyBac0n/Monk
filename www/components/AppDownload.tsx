@@ -167,7 +167,7 @@ export function AppDownload({
                 </span>
               )}
             </div>
-            <NotifyButton className="button button-primary">
+            <NotifyButton className="button button-outline">
               Notify Me
             </NotifyButton>
           </div>

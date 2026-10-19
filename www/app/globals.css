@@ -262,7 +262,7 @@ h3 { color: var(--navy); font-size: 23px; letter-spacing: -.018em; line-height: 
 .interest-form .button { border: 0; width: 100%; }
 .form-feedback:empty { display: none; }
 .form-feedback .interest-success { background: var(--sand); border-radius: 12px; padding: 18px; }
-.submit-loading { display: none; }
+.interest-form .submit-loading { display: none; }
 .interest-form.htmx-request .submit-idle { display: none; }
 .interest-form.htmx-request .submit-loading { display: inline; }
 .interest-form:has(.interest-success) > :not(.form-feedback) { display: none; }
@@ -1653,3 +1653,17 @@ td small { color: var(--muted); margin-top: 5px; }
 .guide-essentials > .section-title { grid-column: 1 / -1; margin-bottom: 0; }
 .guide-plan-title { font-size: clamp(31px,3.6vw,48px); font-weight: 750; line-height: 1.08; margin: 0; letter-spacing: -.028em; }
 .guide-safety-panel h3 { color: white; font-size: clamp(30px,3.7vw,44px); font-weight: 750; line-height: 1.08; margin: 0; letter-spacing: -.028em; }
+
+/* Landing-page actions reuse the original outline and editorial-link styles. */
+.button-outline, .button-outline-dark { background: transparent; }
+.button-outline-dark { border: 1px solid var(--navy); color: var(--navy); }
+.button-outline-dark::before { background: var(--navy); }
+.button-outline-dark:hover, .button-outline-dark:focus-visible { color: white; }
+.interest-form .button-outline-dark { border: 1px solid var(--navy); }
+.hiker-launch-actions .notify-trigger, .notify-dialog .interest-form .button-outline-dark { border-radius: var(--radius-control); font-size: 12px; height: 46px; min-height: 46px; }
+.community-links .simple-link { align-items: center; border: 0; font-size: 13px; line-height: 1.5; margin-top: auto; min-height: 44px; padding: 8px 0; text-decoration: underline; text-underline-offset: 4px; }
+.community-links .simple-link:hover { color: var(--navy); text-decoration-thickness: 2px; }
+.home-path-grid .editorial-link { line-height: 1.5; }
+.editorial-link i { flex-shrink: 0; }
+
+.interest-form .button-outline-dark > span { justify-content: center; }

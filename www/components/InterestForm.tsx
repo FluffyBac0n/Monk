@@ -193,7 +193,7 @@ export function InterestForm({
       <div id={feedbackId} className="form-feedback full" aria-live="polite" />
       <button
         type="submit"
-        className={`button ${kind === 'beta' ? 'button-yellow' : 'button-primary'} full`}
+        className={`button ${kind === 'beta' ? 'button-outline-dark fill-link' : 'button-primary'} full`}
       >
         <span className="submit-idle">
           {kind === 'beta'

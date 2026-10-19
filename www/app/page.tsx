@@ -130,14 +130,17 @@ export default function Home() {
               </div>
             </div>
           </section>
-          <TrailDivider />
           <section className="paths-section" id="paths">
             <div className="section-shell">
               <h2 className="section-title">Choose Your Path</h2>
               <div className="path-grid home-path-grid">
                 {paths.map((path) => (
                   <article className="path-card" key={path.title}>
-                    <div className="path-card-link">
+                    <a
+                      className="path-card-link"
+                      href={path.href}
+                      aria-label={`${path.title}: ${path.action}`}
+                    >
                       <div className="path-image-wrap">
                         <Image
                           className="path-image"
@@ -151,14 +154,12 @@ export default function Home() {
                       <div className="path-card-body">
                         <h3>{path.title}</h3>
                         <p>{path.copy}</p>
-                        <a
-                          className="button button-secondary fill-link cta-button"
-                          href={path.href}
-                        >
+                        <span className="editorial-link">
                           {path.action}
-                        </a>
+                          <i aria-hidden="true" />
+                        </span>
                       </div>
-                    </div>
+                    </a>
                   </article>
                 ))}
               </div>
@@ -198,7 +199,7 @@ export default function Home() {
                   <h3>{title}</h3>
                   <p>{text}</p>
                   <a
-                    className="button button-secondary fill-link cta-button"
+                    className="simple-link"
                     href={href}
                   >
                     {label}
@@ -207,7 +208,6 @@ export default function Home() {
               ))}
             </div>
           </section>
-          <TrailDivider />
           <section className="faq-section" id="faq">
             <div className="section-shell faq-layout">
               <h2 className="section-title">Quick Answers</h2>

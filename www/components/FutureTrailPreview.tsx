@@ -58,7 +58,7 @@ export function FutureTrailPreview({
                   <a className="button button-primary fill-link" href="/trails/cyprus-e4">
                     <span>Explore the live Cyprus-E4 guide</span>
                   </a>
-                  <NotifyButton className="button button-secondary" trail={activeTrail}>Notify me about {trailName}</NotifyButton>
+                  <NotifyButton className="button button-outline-dark" trail={activeTrail}>Notify me about {trailName}</NotifyButton>
                 </div>
               </div>
 
