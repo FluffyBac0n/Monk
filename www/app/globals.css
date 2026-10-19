@@ -143,7 +143,7 @@ h3 { color: var(--navy); font-size: 23px; letter-spacing: -.018em; line-height: 
 .path-card-featured h3 { font-size: clamp(26px, 2.5vw, 34px); }
 .path-card-body > p:not(.eyebrow) { color: rgba(255,255,255,.78); font-size: 13px; line-height: 1.55; margin: 0 0 20px; max-width: 520px; }
 .path-card-featured .path-card-body > p:not(.eyebrow) { font-size: 15px; max-width: 560px; }
-.editorial-link { align-items: center; color: white; display: inline-flex; font-size: 10px; font-weight: 800; gap: 12px; width: fit-content; }
+.editorial-link { align-items: center; color: white; display: inline-flex; font-size: 12px; font-weight: 800; gap: 12px; width: fit-content; }
 .editorial-link i { background: var(--gold); display: block; height: 2px; position: relative; transition: width .35s cubic-bezier(.2,.75,.2,1); width: 28px; }
 .editorial-link i::after { background: var(--gold); border-radius: 50%; content: ''; height: 6px; position: absolute; right: -1px; top: 50%; transform: translateY(-50%); width: 6px; }
 .path-card-link:hover .editorial-link i, .path-card-link:focus-visible .editorial-link i, .involved-card-link:hover .editorial-link i, .involved-card-link:focus-visible .editorial-link i { width: 46px; }
@@ -1391,7 +1391,7 @@ td small { color: var(--muted); margin-top: 5px; }
 .directory-pagination { display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; margin-top: 25px; }
 .guide-stat-ribbon dd { font-size: clamp(19px,2.4vw,29px); }
 .optional-marker { color: var(--muted); font-size: 12px; font-weight: 450; }
-.desktop-nav { gap: 14px; font-size: 10px; }
+.desktop-nav { gap: 14px; font-size: 12px; }
 @media (max-width: 1180px) {
   .desktop-nav, .desktop-header-action { display: none; }
   .mobile-menu { display: block; }
@@ -1667,3 +1667,6 @@ td small { color: var(--muted); margin-top: 5px; }
 .editorial-link i { flex-shrink: 0; }
 
 .interest-form .button-outline-dark > span { justify-content: center; }
+
+.manifesto-copy > .simple-link { border: 0; font-size: 12px; line-height: 1.5; margin-top: 22px; min-height: 44px; align-items: center; padding: 10px 0; text-decoration: underline; text-underline-offset: 4px; }
+.manifesto-copy > .simple-link:hover { color: var(--navy); text-decoration-thickness: 2px; }

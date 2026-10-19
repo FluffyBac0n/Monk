@@ -96,3 +96,11 @@ Choose Your Path restores the original full-card links with animated yellow line
 Validation: TypeScript; existing local route/form integration checks; desktop and 390 px phone browser review; notification dialog opening/closing and idle submit label; three linked path cards; 28→46 px line animation on keyboard focus; three remaining dividers; Get Involved contains links rather than buttons; no horizontal overflow.
 
 Published privately with owner-only access preserved on 19 October 2026. Website source: `ccf11c83f318b98005a9beacc518e3589e5f0592`; deployment: `appgdep_6ad6658f7f3481918d366ccf7187c217`. Production build passed. Live inspection confirms three remaining separators, three animated card links, four Get Involved text links and matching outline Notify Me controls. The application branch remains unmerged.
+
+## Landing text size and app-section navigation — 19 October 2026
+
+Desktop navigation and editorial card-action labels now use 12 px text. The landing manifesto's Get Inspired action is a plain underlined link. The entire For Hikers card targets the existing #hikers app showcase on the same page; HTMX boosting is disabled for this local anchor so it does not open Explore Trails.
+
+TypeScript and desktop/390 px browser checks pass: 12 px navigation/card labels, no horizontal overflow, no desktop navigation overlap, Get Inspired link styling, and the Hikers card staying on the homepage with #hikers visible beneath the header.
+
+Current Project Focus has not been redesigned in this correction. The suggested next direction is a split photo/copy feature with a panoramic Cyprus trail image, the supplied text, and a compact row of database trail statistics, preserving the established yellow heading and sand canvas.

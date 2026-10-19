@@ -5,7 +5,7 @@ import { PublicHeader } from '@/components/PublicHeader';
 import { PublicFooter } from '@/components/PublicFooter';
 import { AppDownload } from '@/components/AppDownload';
 import { websiteCopy } from '@/lib/website-copy';
-import { publicHtmxNavigation } from '@/lib/htmx';
+import { disableHtmxNavigation, publicHtmxNavigation } from '@/lib/htmx';
 
 const copy = websiteCopy.home;
 const paths = [
@@ -15,7 +15,7 @@ const paths = [
     image: '/cyprus-e4-forest-960.webp',
     alt: 'A marked forest path in Cyprus',
     action: 'Get the Eurotrex E4 App',
-    href: '/trails/cyprus-e4#app',
+    href: '#hikers',
   },
   {
     title: 'For Hosts',
@@ -122,7 +122,7 @@ export default function Home() {
                   {copy.rhythm}
                 </p>
                 <a
-                  className="button button-secondary fill-link cta-button"
+                  className="simple-link"
                   href="/get-inspired"
                 >
                   Get Inspired
@@ -139,6 +139,7 @@ export default function Home() {
                     <a
                       className="path-card-link"
                       href={path.href}
+                      {...(path.href.startsWith('#') ? disableHtmxNavigation : {})}
                       aria-label={`${path.title}: ${path.action}`}
                     >
                       <div className="path-image-wrap">
