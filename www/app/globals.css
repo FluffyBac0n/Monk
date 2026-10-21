@@ -1670,3 +1670,50 @@ td small { color: var(--muted); margin-top: 5px; }
 
 .manifesto-copy > .simple-link { border: 0; font-size: 12px; line-height: 1.5; margin-top: 22px; min-height: 44px; align-items: center; padding: 10px 0; text-decoration: underline; text-underline-offset: 4px; }
 .manifesto-copy > .simple-link:hover { color: var(--navy); text-decoration-thickness: 2px; }
+
+/* Shared trail-mark actions: the established yellow line and dot invite interaction. */
+.action-link { color: var(--navy); font-size: 12px; line-height: 1.5; min-height: 44px; padding: 10px 0; text-decoration: none; }
+.action-link:hover, .action-link:focus-visible { color: var(--blue); }
+.action-link:hover i, .action-link:focus-visible i { width: 46px; }
+.manifesto-copy > .action-link { margin-top: 22px; }
+.community-links .action-link { margin-top: auto; }
+.button-trail { gap: 16px; }
+.button-outline.button-trail { border-color: var(--gold); }
+.button-trail > i { background: var(--gold); display: block; flex: 0 0 auto; height: 2px; position: relative; transition: width .35s cubic-bezier(.2,.75,.2,1); width: 24px; }
+.button-trail > i::after { background: inherit; border-radius: 50%; content: ''; height: 6px; position: absolute; right: -1px; top: 50%; transform: translateY(-50%); width: 6px; }
+.button-trail:hover > i, .button-trail:focus-visible > i { width: 36px; }
+.button-outline.button-trail:hover > i, .button-outline.button-trail:focus-visible > i { background: var(--navy); }
+
+/* Both store badges are the signup actions; the last badge keeps the old CTA's right edge. */
+.hiker-launch-actions { grid-template-columns: repeat(2,minmax(0,150px)); justify-content: end; justify-self: end; width: min(100%,316px); }
+.hiker-launch-actions .store-badge-trigger { appearance: none; background: transparent; border: 0; border-radius: 8px; display: inline-flex; height: 50px; min-height: 50px; overflow: visible; padding: 0; transition: transform .25s ease, box-shadow .25s ease; width: 100%; }
+.hiker-launch-actions .store-badge-trigger::before { content: none; }
+.hiker-launch-actions .store-badge-trigger > span { height: 100%; justify-content: center; }
+.hiker-launch-actions .store-badge-trigger:hover { box-shadow: 0 0 0 2px var(--gold); transform: translateY(-3px); }
+.hiker-launch-actions .store-badge-trigger:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+
+/* Current Project Focus keeps the workbook copy beside its hidden-beach photograph. */
+.home-foundation { text-align: left; }
+.project-focus-layout { align-items: center; display: grid; gap: 50px; grid-template-columns: minmax(0,1.05fr) minmax(0,1fr); }
+.project-focus-photo { align-self: stretch; border-radius: 18px 68px 18px 18px; margin: 0; min-height: 490px; overflow: hidden; position: relative; }
+.project-focus-photo img { object-fit: cover; object-position: 44% center; }
+.project-focus-copy { min-width: 0; }
+.project-focus-copy h3 { color: var(--navy); font-size: clamp(30px,3.2vw,42px); font-weight: 750; line-height: 1.1; margin: 0 0 22px; }
+.project-focus-copy > p { color: var(--muted); font-size: 17px; line-height: 1.75; margin: 0; }
+.project-focus-stats { border-block: 1px solid var(--line); display: grid; gap: 20px; grid-template-columns: repeat(3,minmax(0,1fr)); margin: 26px 0; padding: 20px 0; }
+.project-focus-stats > div { display: flex; flex-direction: column; min-width: 0; }
+.project-focus-stats dt { color: var(--muted); font-size: 10px; font-weight: 750; letter-spacing: .06em; line-height: 1.5; margin-top: 6px; order: 2; text-transform: uppercase; }
+.project-focus-stats dd { color: var(--navy); font-size: clamp(24px,2.4vw,32px); font-weight: 800; line-height: 1.15; margin: 0; }
+.project-focus-stats dd small { font-size: 12px; font-weight: 650; }
+.project-focus-actions { align-items: start; display: flex; flex-direction: column; gap: 12px; margin-top: 26px; }
+@media (max-width: 900px) {
+  .project-focus-layout { gap: 30px; }
+  .project-focus-copy h3 { font-size: 30px; }
+}
+@media (max-width: 760px) {
+  .project-focus-layout { grid-template-columns: 1fr; gap: 28px; }
+  .project-focus-photo { aspect-ratio: 4 / 3; min-height: 0; }
+  .project-focus-stats { gap: 12px; }
+  .project-focus-stats dd { font-size: 26px; }
+  .hero-banner .hiker-launch-actions { justify-self: end; }
+}

@@ -74,7 +74,15 @@ export function InterestForm({
         </label>
       </div>
       {kind === 'beta' && (
-        <input type="hidden" name="trail" value={trail} data-notify-trail />
+        <>
+          <input type="hidden" name="trail" value={trail} data-notify-trail />
+          <input
+            type="hidden"
+            name="platform"
+            value="not-sure"
+            data-notify-platform
+          />
+        </>
       )}
       {kind === 'involved' && (
         <>

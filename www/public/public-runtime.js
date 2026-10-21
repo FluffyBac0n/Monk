@@ -316,8 +316,15 @@ function startPublicRuntime(htmx) {
     const names = { 'cyprus-e4': 'Cyprus-E4', 'crete-e4': 'Crete-E4', 'peloponnese-e4': 'Peloponnese-E4' };
     const field = dialog.querySelector('[data-notify-trail]');
     if (field) field.value = names[scope] ? scope : 'all';
+    const platform = ['ios', 'android'].includes(trigger.dataset.notifyPlatform) ? trigger.dataset.notifyPlatform : 'not-sure';
+    const platformField = dialog.querySelector('[data-notify-platform]');
+    if (platformField) platformField.value = platform;
     const label = dialog.querySelector('[data-notify-scope-label]');
-    if (label) label.textContent = names[scope] ? `${names[scope]} guide and app updates` : 'EuroTrex app updates';
+    if (label) {
+      const subject = names[scope] ? `${names[scope]} guide and app updates` : 'EuroTrex app updates';
+      const device = platform === 'ios' ? 'iPhone / iOS' : platform === 'android' ? 'Android' : '';
+      label.textContent = device ? `${subject} · ${device}` : subject;
+    }
     document.documentElement.classList.add('modal-open');
     dialog.showModal();
   }

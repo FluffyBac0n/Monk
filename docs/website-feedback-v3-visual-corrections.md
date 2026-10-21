@@ -106,3 +106,13 @@ TypeScript and desktop/390 px browser checks pass: 12 px navigation/card labels,
 Current Project Focus has not been redesigned in this correction. The suggested next direction is a split photo/copy feature with a panoramic Cyprus trail image, the supplied text, and a compact row of database trail statistics, preserving the established yellow heading and sand canvas.
 
 Published privately with owner-only access preserved on 19 October 2026. Website source: `63d7caad6e5890824a80582ef36db3abe6ab1bb2`; deployment: `appgdep_6ad66826e9688191846fa0c79e3b2365`. Production build passed. Live checks confirm 12 px navigation/card actions, Get Inspired as a link, and the Hikers card navigating to /#hikers without leaving the homepage. The review branch remains unmerged.
+
+## Store-badge notifications and Current Project Focus — 21 October 2026
+
+Removed the separate Notify Me opener from the shared app strips. Both official store badges now open the existing notification dialog with the selected iOS/Android preference and trail scope. The hero badges align to the right-hand edge previously occupied by Notify Me. Reopening the dialog resets any unfinished email entry and updates the platform; the form's Notify Me submission action remains.
+
+Current Project Focus now pairs the existing hidden-beach photograph with the supplied Excel copy, a compact database statistics row, Explore Cyprus-E4 and the Initiative link. A lightweight cached read of two public metadata documents supplies the distance, reference-point count and highest point; unavailable values are omitted. The homepage does not fetch route geometry, listings or trail reports for these statistics.
+
+Get Inspired, Get Involved and the Initiative action use the established animated yellow line and end dot, with 12 px labels and comfortable touch targets. The hero and project Explore actions echo this detail within the existing button style. The sand canvas, yellow section rule, fonts and three-column path cards are retained.
+
+Validation: TypeScript, public-runtime syntax, existing data/profile/itinerary/auth checks, metadata caching and partial-data tests, and the 12-route/form integration suite pass. Browser review at 1280 px and 390 px confirms no horizontal overflow, the responsive photo/copy layout, badge alignment and correct platform selection in the dialog. No production subscription was submitted during browser checks. The review branch remains unmerged.

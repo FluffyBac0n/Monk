@@ -27,8 +27,6 @@ export function AppDownload({
   screenshots?: boolean;
   id?: string;
 }) {
-  const appStore = process.env.NEXT_PUBLIC_APP_STORE_URL;
-  const playStore = process.env.NEXT_PUBLIC_PLAY_STORE_URL;
   return (
     <section
       className={
@@ -109,9 +107,8 @@ export function AppDownload({
             <p className="eyebrow">Eurotrex in your pocket</p>
             <h2 id={`${id}-title`}>Be first on the trail.</h2>
             <p>
-              {appStore || playStore
-                ? 'Find the app for your device, or ask about testing and availability.'
-                : 'Private testing: invites and launch updates for iPhone and Android.'}
+              Private testing: invites and launch updates for iPhone and
+              Android.
             </p>
           </div>
           <div
@@ -120,56 +117,33 @@ export function AppDownload({
             role="group"
           >
             <div className="store-item">
-              {appStore ? (
-                <a href={appStore} target="_blank" rel="noopener noreferrer">
-                  <Image
-                    src="/app-store-badge.svg"
-                    alt="Download on the App Store"
-                    width={180}
-                    height={60}
-                  />
-                </a>
-              ) : (
-                <span
-                  className="store-badge"
-                  aria-label="iPhone app in private testing"
-                >
-                  <Image
-                    src="/app-store-badge.svg"
-                    alt=""
-                    width={180}
-                    height={60}
-                  />
-                </span>
-              )}
+              <NotifyButton
+                className="store-badge store-badge-trigger"
+                platform="ios"
+                ariaLabel="Get iOS testing and launch updates"
+              >
+                <Image
+                  src="/app-store-badge.svg"
+                  alt="Download on the App Store"
+                  width={180}
+                  height={60}
+                />
+              </NotifyButton>
             </div>
             <div className="store-item store-item-google">
-              {playStore ? (
-                <a href={playStore} target="_blank" rel="noopener noreferrer">
-                  <Image
-                    src="/google-play-badge.png"
-                    alt="Get it on Google Play"
-                    width={194}
-                    height={75}
-                  />
-                </a>
-              ) : (
-                <span
-                  className="store-badge"
-                  aria-label="Android app in private testing"
-                >
-                  <Image
-                    src="/google-play-badge.png"
-                    alt=""
-                    width={194}
-                    height={75}
-                  />
-                </span>
-              )}
+              <NotifyButton
+                className="store-badge store-badge-trigger"
+                platform="android"
+                ariaLabel="Get Android testing and launch updates"
+              >
+                <Image
+                  src="/google-play-badge.png"
+                  alt="Get it on Google Play"
+                  width={194}
+                  height={75}
+                />
+              </NotifyButton>
             </div>
-            <NotifyButton className="button button-outline">
-              Notify Me
-            </NotifyButton>
           </div>
         </div>
       </div>

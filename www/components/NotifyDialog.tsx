@@ -6,9 +6,17 @@ type NotifyButtonProps = {
   children?: ReactNode;
   className?: string;
   trail?: string;
+  platform?: 'ios' | 'android';
+  ariaLabel?: string;
 };
 
-export function NotifyButton({ children = 'Notify Me', className = '', trail = 'all' }: NotifyButtonProps) {
+export function NotifyButton({
+  children = 'Notify Me',
+  className = '',
+  trail = 'all',
+  platform,
+  ariaLabel,
+}: NotifyButtonProps) {
   return (
     <button
       type="button"
@@ -16,6 +24,8 @@ export function NotifyButton({ children = 'Notify Me', className = '', trail = '
       aria-haspopup="dialog"
       data-notify-trigger
       data-notify-scope={trail}
+      data-notify-platform={platform}
+      aria-label={ariaLabel}
       className={`notify-trigger fill-link ${className}`.trim()}
     >
       <span>{children}</span>
@@ -32,16 +42,35 @@ export function NotifyDialog() {
       data-notify-dialog
     >
       <div className="notify-dialog-panel">
-        <button className="notify-dialog-close" type="button" data-notify-close aria-label="Close notification form">×</button>
+        <button
+          className="notify-dialog-close"
+          type="button"
+          data-notify-close
+          aria-label="Close notification form"
+        >
+          ×
+        </button>
         <div className="notify-dialog-heading">
-          <Image className="notify-dialog-icon" src="/eurotrex-app-icon-e4.webp" alt="" width={256} height={256} sizes="64px" />
+          <Image
+            className="notify-dialog-icon"
+            src="/eurotrex-app-icon-e4.webp"
+            alt=""
+            width={256}
+            height={256}
+            sizes="64px"
+          />
           <div>
             <p className="eyebrow">App updates</p>
             <h2 id="notify-dialog-title">Know when EuroTrex is ready.</h2>
           </div>
         </div>
-        <p className="notify-dialog-intro">Tell us where to reach you and we’ll share testing invitations and official store links when they are available.</p>
-        <p className="notify-scope" data-notify-scope-label>EuroTrex app updates</p>
+        <p className="notify-dialog-intro">
+          Tell us where to reach you and we’ll share testing invitations and
+          official store links when they are available.
+        </p>
+        <p className="notify-scope" data-notify-scope-label>
+          EuroTrex app updates
+        </p>
         <InterestForm kind="beta" compact />
       </div>
     </dialog>

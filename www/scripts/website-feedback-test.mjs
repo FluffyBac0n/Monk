@@ -261,6 +261,67 @@ assert.equal(
 );
 assert.equal(safePublicUrl('+357 99123456', 'phone'), 'tel:+35799123456');
 
+const overviewReads = [];
+const overviewSource = moduleAt(
+  '../lib/public-trail-data.ts',
+  {},
+  {
+    fetch: async (url) => {
+      overviewReads.push(String(url));
+      const metadata = String(url).includes('/routeMetadata/');
+      return new Response(
+        JSON.stringify({
+          name: 'trails/cyprus-e4',
+          fields: metadata
+            ? { maxAltitudeM: { doubleValue: 1872.4 } }
+            : {
+                totalDistanceKm: { doubleValue: 432.1 },
+                stageCount: { integerValue: '87' },
+              },
+        })
+      );
+    },
+  }
+);
+const [overviewA, overviewB] = await Promise.all([
+  overviewSource.getPublicTrailOverview(),
+  overviewSource.getPublicTrailOverview(),
+]);
+assert.deepEqual(overviewA, {
+  distanceKm: 432.1,
+  referencePoints: 87,
+  highPointM: 1872.4,
+});
+assert.deepEqual(overviewB, overviewA);
+assert.equal(
+  overviewReads.length,
+  2,
+  'Concurrent homepage requests share two lightweight metadata reads'
+);
+assert.ok(
+  overviewReads.every((url) => !/routeChunks|lodgings|trailIssues/.test(url))
+);
+const partialOverview = moduleAt(
+  '../lib/public-trail-data.ts',
+  {},
+  {
+    fetch: async (url) =>
+      String(url).includes('/routeMetadata/')
+        ? new Response('{}', { status: 503 })
+        : new Response(
+            JSON.stringify({
+              name: 'trails/cyprus-e4',
+              fields: { totalDistanceKm: { doubleValue: 0 } },
+            })
+          ),
+  }
+);
+assert.deepEqual(
+  await partialOverview.getPublicTrailOverview(),
+  { distanceKm: 0, referencePoints: null, highPointM: null },
+  'Unavailable metrics stay absent without invented fallback statistics'
+);
+
 const project = 'demo-test';
 const { publicNoticeHtml } = moduleAt('../lib/public-notices.ts');
 const notice = publicNoticeHtml(

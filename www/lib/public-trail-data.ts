@@ -105,9 +105,12 @@ function fields(document: Document): Fields {
     id: document.name.split('/').at(-1)!,
   };
 }
-async function read(path: string): Promise<Record<string, unknown>> {
+async function read(
+  path: string,
+  timeoutMs = 8000
+): Promise<Record<string, unknown>> {
   const response = await fetch(`${base}/${path}`, {
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok)
     throw new Error('Public trail data could not be refreshed.');
@@ -369,4 +372,37 @@ export function safePublicUrl(
   } catch {
     return null;
   }
+}
+
+export type PublicTrailOverview = {
+  distanceKm: number | null;
+  referencePoints: number | null;
+  highPointM: number | null;
+};
+let overviewCache: {
+  expires: number;
+  request: Promise<PublicTrailOverview>;
+} | null = null;
+
+// The homepage needs two public metadata documents, not route geometry or listings.
+export async function getPublicTrailOverview(): Promise<PublicTrailOverview> {
+  if (overviewCache && overviewCache.expires > Date.now())
+    return overviewCache.request;
+  const request = Promise.all([
+    read('trails/cyprus-e4', 2500).then((value) => fields(value as Document)),
+    read('trails/cyprus-e4/routeMetadata/main', 2500)
+      .then((value) => fields(value as Document))
+      .catch(() => null),
+  ])
+    .then(([root, metadata]) => ({
+      distanceKm: number(root.totalDistanceKm),
+      referencePoints: number(root.stageCount),
+      highPointM: number(metadata?.maxAltitudeM),
+    }))
+    .catch((error) => {
+      overviewCache = null;
+      throw error;
+    });
+  overviewCache = { expires: Date.now() + 60000, request };
+  return request;
 }

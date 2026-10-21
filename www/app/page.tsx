@@ -1,3 +1,5 @@
+import { ActionLink } from '@/components/ActionLink';
+import { getPublicTrailOverview } from '@/lib/public-trail-data';
 import { TrailDivider } from '@/components/TrailDivider';
 import Image from 'next/image';
 import { PublicContent } from '@/components/PublicContent';
@@ -56,7 +58,30 @@ const involvement = [
   ],
 ];
 
-export default function Home() {
+export default async function Home() {
+  const overview = await getPublicTrailOverview().catch(() => null);
+  const projectStats = [
+    {
+      label: 'Total distance',
+      value: overview?.distanceKm?.toLocaleString('en-GB', {
+        maximumFractionDigits: 1,
+      }),
+      unit: 'km',
+    },
+    {
+      label: 'Reference points',
+      value: overview?.referencePoints?.toLocaleString('en-GB'),
+      unit: '',
+    },
+    {
+      label: 'Highest point',
+      value:
+        overview?.highPointM == null
+          ? undefined
+          : Math.round(overview.highPointM).toLocaleString('en-GB'),
+      unit: 'm',
+    },
+  ].filter((stat) => stat.value !== undefined);
   return (
     <>
       <a className="skip-link" href="#main-content">
@@ -94,10 +119,11 @@ export default function Home() {
                   <p className="hero-copy">{copy.introduction}</p>
                   <div className="hero-actions">
                     <a
-                      className="button button-outline fill-link"
+                      className="button button-outline fill-link button-trail"
                       href="/trails/cyprus-e4"
                     >
-                      Explore the E4 Cyprus Trail
+                      <span>Explore the E4 Cyprus Trail</span>
+                      <i aria-hidden="true" />
                     </a>
                   </div>
                 </div>
@@ -121,12 +147,7 @@ export default function Home() {
                   <br />
                   {copy.rhythm}
                 </p>
-                <a
-                  className="simple-link"
-                  href="/get-inspired"
-                >
-                  Get Inspired
-                </a>
+                <ActionLink href="/get-inspired">Get Inspired</ActionLink>
               </div>
             </div>
           </section>
@@ -139,7 +160,9 @@ export default function Home() {
                     <a
                       className="path-card-link"
                       href={path.href}
-                      {...(path.href.startsWith('#') ? disableHtmxNavigation : {})}
+                      {...(path.href.startsWith('#')
+                        ? disableHtmxNavigation
+                        : {})}
                       aria-label={`${path.title}: ${path.action}`}
                     >
                       <div className="path-image-wrap">
@@ -174,15 +197,49 @@ export default function Home() {
             <h2 className="section-title" id="foundation-title">
               Current Project Focus
             </h2>
-            <h3>
-              Our Foundation:
-              <br />
-              The E4 Cyprus Trail
-            </h3>
-            <p>{copy.focus}</p>
-            <a className="button button-secondary" href="/about">
-              Read about the Eurotrex Initiative
-            </a>
+            <div className="project-focus-layout">
+              <figure className="project-focus-photo">
+                <Image
+                  src="/cyprus-e4-hidden-beach-1280.webp"
+                  alt="The hidden beach below Cyprus's limestone cliffs, beside the Mediterranean"
+                  fill
+                  sizes="(max-width: 760px) 100vw, 50vw"
+                />
+              </figure>
+              <div className="project-focus-copy">
+                <h3>
+                  Our Foundation:
+                  <br />
+                  The E4 Cyprus Trail
+                </h3>
+                <p>{copy.focus}</p>
+                {projectStats.length > 0 && (
+                  <dl className="project-focus-stats">
+                    {projectStats.map((stat) => (
+                      <div key={stat.label}>
+                        <dt>{stat.label}</dt>
+                        <dd>
+                          {stat.value}
+                          {stat.unit && <small> {stat.unit}</small>}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+                <div className="project-focus-actions">
+                  <a
+                    className="button button-primary fill-link button-trail"
+                    href="/trails/cyprus-e4"
+                  >
+                    <span>Explore Cyprus-E4</span>
+                    <i aria-hidden="true" />
+                  </a>
+                  <ActionLink href="/about">
+                    Read about the Eurotrex Initiative
+                  </ActionLink>
+                </div>
+              </div>
+            </div>
           </section>
           <TrailDivider />
           <AppDownload id="hikers" screenshots />
@@ -199,12 +256,7 @@ export default function Home() {
                 <article key={title}>
                   <h3>{title}</h3>
                   <p>{text}</p>
-                  <a
-                    className="simple-link"
-                    href={href}
-                  >
-                    {label}
-                  </a>
+                  <ActionLink href={href}>{label}</ActionLink>
                 </article>
               ))}
             </div>
