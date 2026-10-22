@@ -1678,7 +1678,9 @@ td small { color: var(--muted); margin-top: 5px; }
 
 /* Shared trail-mark actions: the established yellow line and dot invite interaction. */
 .action-link { color: var(--navy); font-size: 12px; line-height: 1.5; min-height: 44px; padding: 10px 0; text-decoration: none; }
+.action-link > span { text-decoration-line: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
 .action-link:hover, .action-link:focus-visible { color: var(--blue); }
+.action-link:hover > span, .action-link:focus-visible > span { text-decoration-thickness: 2px; }
 .action-link:hover i, .action-link:focus-visible i { width: 46px; }
 .manifesto-copy > .action-link { margin-top: 22px; }
 .community-links .action-link { margin-top: auto; }
