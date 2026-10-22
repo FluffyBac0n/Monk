@@ -124,3 +124,5 @@ Published privately with owner-only access preserved on 21 October 2026. Website
 Removed the private-testing sentence from the hero app strip only. The hero Explore action restores its original white-outline fill style, without the added yellow line/dot. Current Project Focus removes Explore Cyprus-E4, restores Read about the Eurotrex Initiative to the original white secondary button, and places the existing E4 icon beside the foundation heading. The hidden-beach photograph, supplied copy, database statistics and clickable store badges remain.
 
 TypeScript and desktop/390 px phone layout checks pass, including no horizontal overflow. Browser inspection confirms the hero sentence is absent and the Initiative button is the only action in Current Project Focus. The review branch remains unmerged.
+
+Published privately with owner-only access preserved on 22 October 2026. Website source: `cda35a721247469aff800c0172a95182c61c9796`; deployment: `appgdep_6ad99eec4a908191b3652d3308ff2eb3`. Production build passed. Live inspection confirms both restored button classes, the E4 icon, no hero testing sentence and only the Initiative action in Current Project Focus.
