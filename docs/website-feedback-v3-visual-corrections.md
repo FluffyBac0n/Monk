@@ -162,3 +162,5 @@ Published privately with owner-only access preserved. Website source: `01d71d44d
 ## Restore the previous screenshot behaviour — 22 October 2026
 
 Removed the screenshot enlargement buttons, plus overlays, zoom dialog, viewer runtime and related styles. The app showcase restores its original images, captions, desktop arrangement and horizontal phone gallery. The tighter mobile spacing, two-column phone footer and FAQ plus/minus controls remain.
+
+Published privately with owner-only access preserved. Website source: `00fbf7546515a02a24e7c32bce13f08e707f54c3`; deployment: `appgdep_6ada55dd21d881919518a60d7da521ce`. TypeScript, runtime syntax and the production build pass. Live inspection confirms three static screenshots, zero enlargement controls and no screenshot dialog. At 390 px the gallery scrolls horizontally within its section, the footer remains two columns and the page has no horizontal overflow. The review branch remains unmerged.
