@@ -35,7 +35,8 @@ export function AppDownload({
           : 'app-download-section compact-app-download'
       }
       id={id}
-      aria-labelledby={`${id}-title`}
+      aria-labelledby={id === 'hero-app' ? undefined : `${id}-title`}
+      aria-label={id === 'hero-app' ? 'EuroTrex app availability' : undefined}
     >
       <div className={`section-shell${screenshots ? ' hiker-layout' : ''}`}>
         {screenshots && (
@@ -105,22 +106,16 @@ export function AppDownload({
               height={256}
             />
           )}
-          <div className="hiker-launch-copy">
-            {id === 'hero-app' ? (
-              <h2 className="eyebrow" id={`${id}-title`}>
-                Eurotrex in your pocket
-              </h2>
-            ) : (
-              <>
-                <p className="eyebrow">Eurotrex in your pocket</p>
-                <h2 id={`${id}-title`}>Be first on the trail.</h2>
-                <p>
-                  Private testing: invites and launch updates for iPhone and
-                  Android.
-                </p>
-              </>
-            )}
-          </div>
+          {id !== 'hero-app' && (
+            <div className="hiker-launch-copy">
+              <p className="eyebrow">Eurotrex in your pocket</p>
+              <h2 id={`${id}-title`}>Be first on the trail.</h2>
+              <p>
+                Private testing: invites and launch updates for iPhone and
+                Android.
+              </p>
+            </div>
+          )}
           <div
             className="hiker-launch-actions"
             aria-label="EuroTrex app availability"

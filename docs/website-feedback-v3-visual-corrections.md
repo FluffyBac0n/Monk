@@ -140,3 +140,9 @@ Implemented the accepted hero proposal: the app logo and Be first on the trail h
 TypeScript and desktop/390 px browser layout checks pass, with no horizontal overflow. Store badges remain 150 by 50 px on the phone, and the iOS badge opens the correctly scoped Notify dialog. The review branch remains unmerged.
 
 Published privately with owner-only access preserved. Website source: `55f7ad78e08b66a7883719e0a8907c4fd5477e0f`; deployment: `appgdep_6ad9a185470481918e3e84843fab7e60`. Production build passed. Live inspection confirms the simplified hero app row and the unchanged full app showcase below.
+
+## Final landing removals and review — 22 October 2026
+
+Removed Eurotrex in your pocket from the hero, keeping its two store badges aligned right and its app region named for assistive technology. Removed Help from the shared footer and removed the yellow E4 marker from Current Project Focus. Unused marker styling is deleted; the photo, text, statistics and Initiative button remain.
+
+TypeScript and 1280/390 px browser review pass with no horizontal overflow. Reviewed the full section order, the path cards, loaded photography, app showcase, FAQ and footer. On phones the three path cards occupy about 1134 px, and the full page is about 6547 px. Follow-up suggestions, not implemented: modestly reduce repeated vertical spacing on phones; allow app screenshots to open at a readable size; make FAQ expansion cues clearer; simplify the busy desktop navigation by grouping utility links. Preserve the supplied text, three-column desktop cards and established sand/yellow visual language.

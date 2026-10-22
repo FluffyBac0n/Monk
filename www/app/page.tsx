@@ -206,20 +206,11 @@ export default async function Home() {
                 />
               </figure>
               <div className="project-focus-copy">
-                <div className="project-focus-heading">
-                  <span
-                    className="project-focus-icon"
-                    role="img"
-                    aria-label="Yellow E4 trail marker"
-                  >
-                    E4
-                  </span>
-                  <h3>
-                    Our Foundation:
-                    <br />
-                    The E4 Cyprus Trail
-                  </h3>
-                </div>
+                <h3>
+                  Our Foundation:
+                  <br />
+                  The E4 Cyprus Trail
+                </h3>
                 <p>{copy.focus}</p>
                 {projectStats.length > 0 && (
                   <dl className="project-focus-stats">

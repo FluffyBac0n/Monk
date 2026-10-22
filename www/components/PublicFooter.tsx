@@ -26,7 +26,6 @@ export function PublicFooter() {
             <a href="/about">The Eurotrex Initiative</a>
             <a href="/get-inspired">Get Inspired</a>
             <a href="/get-involved">Community &amp; Support</a>
-            <a href="/help">Help</a>
             <a href="/privacy">Privacy Policy</a>
           </div>
         </nav>
