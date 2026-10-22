@@ -138,3 +138,5 @@ Published privately with owner-only access preserved. Website source: `5eebfe50a
 Implemented the accepted hero proposal: the app logo and Be first on the trail heading are removed from the hero only. Its app row now contains the small Eurotrex in your pocket label and the two existing clickable store badges. The main headline, supplied introduction and original Explore button remain. A softer image fade exposes more coastline, and additional space separates the introduction from Explore. The full lower app showcase retains its existing content.
 
 TypeScript and desktop/390 px browser layout checks pass, with no horizontal overflow. Store badges remain 150 by 50 px on the phone, and the iOS badge opens the correctly scoped Notify dialog. The review branch remains unmerged.
+
+Published privately with owner-only access preserved. Website source: `55f7ad78e08b66a7883719e0a8907c4fd5477e0f`; deployment: `appgdep_6ad9a185470481918e3e84843fab7e60`. Production build passed. Live inspection confirms the simplified hero app row and the unchanged full app showcase below.
