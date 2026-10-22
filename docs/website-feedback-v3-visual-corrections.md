@@ -168,3 +168,5 @@ Published privately with owner-only access preserved. Website source: `00fbf7546
 ## Standalone link recognition — 22 October 2026
 
 Get Inspired and the four Get Involved action labels now have a subtle persistent underline, with a thicker underline on hover or keyboard focus. Only the text label is underlined; the established yellow line/dot animation remains. Existing buttons, navigation, footer and full-card links retain their styling.
+
+Published privately with owner-only access preserved. Website source: `6242db58f0947666695882741f7d41fa9da56b61`; deployment: `appgdep_6ada5766913481918318c40b71aafe07`. Production build passed. Live inspection confirms 1 px underlines on all five labels and a 2 px underline on keyboard focus. The review branch remains unmerged.
