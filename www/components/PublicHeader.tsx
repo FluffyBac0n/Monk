@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import MobileMenu from '@/app/mobile-menu';
 import { NotifyDialog } from '@/components/NotifyDialog';
+import { ScreenshotDialog } from '@/components/ScreenshotDialog';
 import { PublicHydrationBoundary } from '@/components/PublicHydrationBoundary';
 import { TrailGuideSwitcher } from '@/components/TrailGuideSwitcher';
 import { disableHtmxNavigation, publicHtmxNavigation } from '@/lib/htmx';
@@ -102,6 +103,7 @@ export function PublicHeader({ activeTrail }: { activeTrail?: string }) {
       </header>
       <TrailGuideSwitcher activeTrail={activeTrail} />
       <NotifyDialog />
+      <ScreenshotDialog />
     </>
   );
 }

@@ -148,3 +148,11 @@ Removed Eurotrex in your pocket from the hero, keeping its two store badges alig
 TypeScript and 1280/390 px browser review pass with no horizontal overflow. Reviewed the full section order, the path cards, loaded photography, app showcase, FAQ and footer. On phones the three path cards occupy about 1134 px, and the full page is about 6547 px. Follow-up suggestions, not implemented: modestly reduce repeated vertical spacing on phones; allow app screenshots to open at a readable size; make FAQ expansion cues clearer; use fewer footer columns on phones so longer labels wrap less. Preserve the supplied text, three-column desktop cards and established sand/yellow visual language.
 
 Published privately with owner-only access preserved. Website source: `89f386f08b7347d614eb745e4084486f797b3db8`; deployment: `appgdep_6ada51d582908191a6619412ddd0b83b`. Production build passed. Live inspection confirms all three removals. The review branch remains unmerged.
+
+## Implement the four UX refinements — 22 October 2026
+
+The landing page uses tighter phone-only section gaps and padding, retaining the supplied text, full path cards and desktop composition. The shared footer switches to two columns below 600 px. FAQ summaries retain native details/summary keyboard and expanded-state semantics, with right-aligned plus/minus marks replacing the small triangles.
+
+All three app showcase screenshots now open in a shared native dialog. The sand panel reuses established controls, supports larger zoom with internal scrolling, and closes through its button, Escape or the backdrop. Closing restores focus to the originating screenshot. Opening another screenshot resets zoom and uses that screenshot's description. The viewer is outside the HTMX content region and continues working after public page navigation. Hover/focus pauses the existing screenshot drift animation.
+
+Validation: TypeScript and runtime syntax pass. Desktop and 390 px browser checks confirm the named screenshot, zoom scrolling without page overflow, Escape/backdrop dismissal, focus containment/restoration, reset on a second screenshot, and working controls after navigation to Get Inspired and home. FAQ keyboard expansion produces the minus state. Phone footer columns measure 165 px each with a 24 px gap; the page has no horizontal overflow. The review branch remains unmerged.

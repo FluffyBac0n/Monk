@@ -89,7 +89,12 @@ export default async function Home() {
       </a>
       <PublicHeader />
       <PublicContent>
-        <main id="main-content" tabIndex={-1} {...publicHtmxNavigation}>
+        <main
+          className="landing-page"
+          id="main-content"
+          tabIndex={-1}
+          {...publicHtmxNavigation}
+        >
           <div className="hero-banner">
             <div className="hero-media">
               <picture>
@@ -226,10 +231,7 @@ export default async function Home() {
                   </dl>
                 )}
                 <div className="project-focus-actions">
-                  <a
-                    className="button button-secondary"
-                    href="/about"
-                  >
+                  <a className="button button-secondary" href="/about">
                     Read about the Eurotrex Initiative
                   </a>
                 </div>

@@ -26,6 +26,7 @@ function startPublicRuntime(htmx) {
   let bridgedPushState;
   let bridgedReplaceState;
   let dialogOpener;
+  let screenshotOpener;
 
   function isHtmxHistoryState(state) {
     return typeof state === 'object' && state !== null && state.htmx === true;
@@ -343,6 +344,35 @@ function startPublicRuntime(htmx) {
     dialogOpener = undefined;
   }
 
+  function openScreenshot(trigger) {
+    const dialog = document.querySelector('[data-screenshot-dialog]');
+    const image = dialog?.querySelector('[data-screenshot-image]');
+    const source = trigger.dataset.screenshotSrc;
+    if (!(dialog instanceof HTMLDialogElement) || dialog.open || !(image instanceof HTMLImageElement)) return;
+    if (!['/app-planner.webp', '/app-stages.webp', '/app-elevation.webp'].includes(source)) return;
+    screenshotOpener = trigger;
+    image.src = source;
+    image.alt = trigger.querySelector('img')?.alt || 'EuroTrex app screenshot';
+    dialog.querySelector('#screenshot-dialog-title').textContent = trigger.dataset.screenshotTitle || 'EuroTrex app';
+    dialog.classList.remove('is-zoomed');
+    const zoom = dialog.querySelector('[data-screenshot-zoom]');
+    zoom.textContent = 'Zoom in';
+    zoom.setAttribute('aria-pressed', 'false');
+    document.documentElement.classList.add('modal-open');
+    dialog.showModal();
+    dialog.querySelector('.screenshot-dialog-image').scrollTo(0, 0);
+  }
+
+  function closeScreenshot() {
+    document.querySelector('[data-screenshot-dialog]')?.close();
+  }
+
+  function handleScreenshotClose() {
+    document.documentElement.classList.remove('modal-open');
+    if (screenshotOpener instanceof HTMLElement && screenshotOpener.isConnected) screenshotOpener.focus({ preventScroll: true });
+    screenshotOpener = undefined;
+  }
+
   function preserveTrailSectionParameters(event) {
     const source = event.detail?.elt;
     if (!(source instanceof Element)) return;
@@ -460,6 +490,25 @@ function startPublicRuntime(htmx) {
   function handleDocumentClick(event) {
     const target = event.target;
     if (!(target instanceof Element)) return;
+
+    const screenshotTrigger = target.closest('[data-screenshot-trigger]');
+    if (screenshotTrigger instanceof HTMLElement) {
+      openScreenshot(screenshotTrigger);
+      return;
+    }
+    if (target.closest('[data-screenshot-close]') || target.matches('[data-screenshot-dialog]')) {
+      closeScreenshot();
+      return;
+    }
+    const screenshotZoom = target.closest('[data-screenshot-zoom]');
+    if (screenshotZoom) {
+      const dialog = screenshotZoom.closest('[data-screenshot-dialog]');
+      const zoomed = dialog.classList.toggle('is-zoomed');
+      screenshotZoom.textContent = zoomed ? 'Zoom out' : 'Zoom in';
+      screenshotZoom.setAttribute('aria-pressed', String(zoomed));
+      if (!zoomed) dialog.querySelector('.screenshot-dialog-image').scrollTo(0, 0);
+      return;
+    }
 
     if (target.closest('.mobile-menu nav a, .mobile-menu nav button')) closeMobileMenus();
 
@@ -612,6 +661,7 @@ function startPublicRuntime(htmx) {
 
   const notifyDialog = document.querySelector('[data-notify-dialog]');
   notifyDialog?.addEventListener('close', handleDialogClose);
+  document.querySelector('[data-screenshot-dialog]')?.addEventListener('close', handleScreenshotClose);
 
   initializeTrailSlideshows(document);
   syncTrailSwitcher();
