@@ -207,13 +207,13 @@ export default async function Home() {
               </figure>
               <div className="project-focus-copy">
                 <div className="project-focus-heading">
-                  <Image
+                  <span
                     className="project-focus-icon"
-                    src="/eurotrex-app-icon-e4.webp"
-                    alt="E4 trail icon"
-                    width={72}
-                    height={72}
-                  />
+                    role="img"
+                    aria-label="Yellow E4 trail marker"
+                  >
+                    E4
+                  </span>
                   <h3>
                     Our Foundation:
                     <br />

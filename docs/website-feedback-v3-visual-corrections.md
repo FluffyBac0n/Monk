@@ -126,3 +126,7 @@ Removed the private-testing sentence from the hero app strip only. The hero Expl
 TypeScript and desktop/390 px phone layout checks pass, including no horizontal overflow. Browser inspection confirms the hero sentence is absent and the Initiative button is the only action in Current Project Focus. The review branch remains unmerged.
 
 Published privately with owner-only access preserved on 22 October 2026. Website source: `cda35a721247469aff800c0172a95182c61c9796`; deployment: `appgdep_6ad99eec4a908191b3652d3308ff2eb3`. Production build passed. Live inspection confirms both restored button classes, the E4 icon, no hero testing sentence and only the Initiative action in Current Project Focus.
+
+## E4 waymark correction — 22 October 2026
+
+Replaced the app logo in Current Project Focus with the yellow E4 trail marker from the mobile app's stage timeline: yellow #F2C94C, dark #17201B border and E4 lettering. The mark is rendered directly in HTML/CSS and retains an accessible label. TypeScript and desktop/390 px layout checks pass; phone layout has no horizontal overflow. The section's other content is unchanged.
