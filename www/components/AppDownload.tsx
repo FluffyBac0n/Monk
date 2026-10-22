@@ -96,21 +96,29 @@ export function AppDownload({
           </>
         )}
         <div className="hiker-launch-band">
-          <Image
-            className="app-icon"
-            src="/eurotrex-app-icon-e4.webp"
-            alt="EuroTrex app icon"
-            width={256}
-            height={256}
-          />
+          {id !== 'hero-app' && (
+            <Image
+              className="app-icon"
+              src="/eurotrex-app-icon-e4.webp"
+              alt="EuroTrex app icon"
+              width={256}
+              height={256}
+            />
+          )}
           <div className="hiker-launch-copy">
-            <p className="eyebrow">Eurotrex in your pocket</p>
-            <h2 id={`${id}-title`}>Be first on the trail.</h2>
-            {id !== 'hero-app' && (
-              <p>
-                Private testing: invites and launch updates for iPhone and
-                Android.
-              </p>
+            {id === 'hero-app' ? (
+              <h2 className="eyebrow" id={`${id}-title`}>
+                Eurotrex in your pocket
+              </h2>
+            ) : (
+              <>
+                <p className="eyebrow">Eurotrex in your pocket</p>
+                <h2 id={`${id}-title`}>Be first on the trail.</h2>
+                <p>
+                  Private testing: invites and launch updates for iPhone and
+                  Android.
+                </p>
+              </>
             )}
           </div>
           <div

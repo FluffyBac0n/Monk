@@ -1566,10 +1566,13 @@ td small { color: var(--muted); margin-top: 5px; }
 .home-foundation > h3 { color: var(--navy); font-size: clamp(31px,3.6vw,48px); font-weight: 750; line-height: 1.08; margin: 38px 0 0; }
 .hero-banner { background: #304e59; isolation: isolate; overflow: hidden; position: relative; }
 .hero-banner .hero { background: transparent; }
-.hero-banner .hero-shade { background: linear-gradient(0deg,#304e59 0%,rgba(48,78,89,.92) 12%,rgba(48,78,89,.4) 36%,transparent 68%),linear-gradient(90deg,rgba(27,40,52,.97) 0%,rgba(32,47,61,.88) 24%,rgba(38,53,68,.56) 48%,rgba(38,53,68,.1) 78%,transparent 100%); }
+.hero-banner .hero-shade { background: linear-gradient(0deg,#304e59 0%,rgba(48,78,89,.72) 10%,rgba(48,78,89,.2) 30%,transparent 62%),linear-gradient(90deg,rgba(27,40,52,.88) 0%,rgba(32,47,61,.72) 24%,rgba(38,53,68,.28) 48%,rgba(38,53,68,.06) 78%,transparent 100%); }
+.hero-banner .hero-inner { padding-block: 56px; }
+.hero-banner .hero-copy { margin-bottom: 38px; }
 .hero-banner .compact-app-download { padding-block: 0; background: transparent; position: relative; z-index: 1; }
 .hero-banner .compact-app-download > .section-shell { max-width: 1240px; width: 100%; padding-inline: 30px; }
-.hero-banner .hiker-launch-band { background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 20px 0; }
+.hero-banner .hiker-launch-band { background: transparent; border: 0; border-radius: 0; box-shadow: none; grid-template-columns: minmax(0,1fr) auto; margin: 0; padding: 20px 0; }
+.hero-banner .hiker-launch-copy h2 { color: var(--gold); font-size: 12px; letter-spacing: .1em; line-height: 1.5; margin: 0; }
 .participation-options .cta-button { flex-shrink: 0; font-size: 11px; }
 .stay-actions .button { font-size: 11px; min-height: 40px; padding: 8px 10px; }
 .recorded-stays .button, .stage-locator .button, .day-details > p .button { text-decoration: none; }
@@ -1584,6 +1587,9 @@ td small { color: var(--muted); margin-top: 5px; }
   .home-path-grid .path-card-body > p:not(.eyebrow) { font-size: 15px; }
   .hero-banner .compact-app-download > .section-shell { padding-inline: 20px; }
   .hero-banner .hiker-launch-band { padding-block: 22px; }
+  .hero-banner .hero-inner { padding-block: 44px 36px; }
+  .hero-banner .hero-copy { margin-bottom: 32px; }
+  .hero-banner .hiker-launch-band { gap: 16px; grid-template-columns: 1fr; }
   .participation-options .cta-button { min-height: 40px; padding: 9px 10px; }
 }
 
@@ -1598,7 +1604,7 @@ td small { color: var(--muted); margin-top: 5px; }
 .elevation-legend-labels { display: flex; justify-content: space-between; margin-top: 6px; color: var(--muted); font-size: 11px; }
 .mobile-elevation figcaption { color: var(--muted); font-size: 12px; line-height: 1.6; }
 @media (max-width: 760px) {
-  .hero-banner .hero-shade { background: linear-gradient(0deg,#304e59 0%,rgba(48,78,89,.96) 25%,rgba(38,55,70,.8) 55%,rgba(38,55,70,.3) 85%,rgba(38,55,70,.15) 100%); }
+  .hero-banner .hero-shade { background: linear-gradient(0deg,#304e59 0%,rgba(48,78,89,.86) 20%,rgba(38,55,70,.66) 52%,rgba(38,55,70,.2) 85%,rgba(38,55,70,.1) 100%); }
   .mobile-elevation { padding: 20px 12px; }
   .elevation-plot { height: 250px; }
   .mobile-elevation .elevation-plot .elevation-desktop { display: none; }

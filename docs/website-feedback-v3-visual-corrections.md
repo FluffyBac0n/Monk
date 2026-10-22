@@ -132,3 +132,9 @@ Published privately with owner-only access preserved on 22 October 2026. Website
 Replaced the app logo in Current Project Focus with the yellow E4 trail marker from the mobile app's stage timeline: yellow #F2C94C, dark #17201B border and E4 lettering. The mark is rendered directly in HTML/CSS and retains an accessible label. TypeScript and desktop/390 px layout checks pass; phone layout has no horizontal overflow. The section's other content is unchanged.
 
 Published privately with owner-only access preserved. Website source: `5eebfe50a52d868a3aa0703f44ee52fd4391298e`; deployment: `appgdep_6ad9a07a183c8191927211bcb8ffd888`. Production build passed; live inspection confirms the yellow E4 trail-marker label. The review branch remains unmerged.
+
+## Simplify the hero — 22 October 2026
+
+Implemented the accepted hero proposal: the app logo and Be first on the trail heading are removed from the hero only. Its app row now contains the small Eurotrex in your pocket label and the two existing clickable store badges. The main headline, supplied introduction and original Explore button remain. A softer image fade exposes more coastline, and additional space separates the introduction from Explore. The full lower app showcase retains its existing content.
+
+TypeScript and desktop/390 px browser layout checks pass, with no horizontal overflow. Store badges remain 150 by 50 px on the phone, and the iOS badge opens the correctly scoped Notify dialog. The review branch remains unmerged.
