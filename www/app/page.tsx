@@ -119,11 +119,10 @@ export default async function Home() {
                   <p className="hero-copy">{copy.introduction}</p>
                   <div className="hero-actions">
                     <a
-                      className="button button-outline fill-link button-trail"
+                      className="button button-outline fill-link"
                       href="/trails/cyprus-e4"
                     >
-                      <span>Explore the E4 Cyprus Trail</span>
-                      <i aria-hidden="true" />
+                      Explore the E4 Cyprus Trail
                     </a>
                   </div>
                 </div>
@@ -207,11 +206,20 @@ export default async function Home() {
                 />
               </figure>
               <div className="project-focus-copy">
-                <h3>
-                  Our Foundation:
-                  <br />
-                  The E4 Cyprus Trail
-                </h3>
+                <div className="project-focus-heading">
+                  <Image
+                    className="project-focus-icon"
+                    src="/eurotrex-app-icon-e4.webp"
+                    alt="E4 trail icon"
+                    width={72}
+                    height={72}
+                  />
+                  <h3>
+                    Our Foundation:
+                    <br />
+                    The E4 Cyprus Trail
+                  </h3>
+                </div>
                 <p>{copy.focus}</p>
                 {projectStats.length > 0 && (
                   <dl className="project-focus-stats">
@@ -228,15 +236,11 @@ export default async function Home() {
                 )}
                 <div className="project-focus-actions">
                   <a
-                    className="button button-primary fill-link button-trail"
-                    href="/trails/cyprus-e4"
+                    className="button button-secondary"
+                    href="/about"
                   >
-                    <span>Explore Cyprus-E4</span>
-                    <i aria-hidden="true" />
-                  </a>
-                  <ActionLink href="/about">
                     Read about the Eurotrex Initiative
-                  </ActionLink>
+                  </a>
                 </div>
               </div>
             </div>

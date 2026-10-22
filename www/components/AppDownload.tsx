@@ -106,10 +106,12 @@ export function AppDownload({
           <div className="hiker-launch-copy">
             <p className="eyebrow">Eurotrex in your pocket</p>
             <h2 id={`${id}-title`}>Be first on the trail.</h2>
-            <p>
-              Private testing: invites and launch updates for iPhone and
-              Android.
-            </p>
+            {id !== 'hero-app' && (
+              <p>
+                Private testing: invites and launch updates for iPhone and
+                Android.
+              </p>
+            )}
           </div>
           <div
             className="hiker-launch-actions"

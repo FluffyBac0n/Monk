@@ -118,3 +118,9 @@ Get Inspired, Get Involved and the Initiative action use the established animate
 Validation: TypeScript, public-runtime syntax, existing data/profile/itinerary/auth checks, metadata caching and partial-data tests, and the 12-route/form integration suite pass. Browser review at 1280 px and 390 px confirms no horizontal overflow, the responsive photo/copy layout, badge alignment and correct platform selection in the dialog. No production subscription was submitted during browser checks. The review branch remains unmerged.
 
 Published privately with owner-only access preserved on 21 October 2026. Website source: `3e3ffd26470e2e0f685115938d2607bf7d6cf529`; deployment: `appgdep_6ad8edb8465c8191b100594a727dd083`. Production build passed. Live review confirms four clickable store badges, no separate Notify Me opener in the app strips, the Android dialog preference, the hidden-beach feature and database statistics. Desktop and phone widths have no horizontal overflow.
+
+## Restore button styling and add the E4 icon — 22 October 2026
+
+Removed the private-testing sentence from the hero app strip only. The hero Explore action restores its original white-outline fill style, without the added yellow line/dot. Current Project Focus removes Explore Cyprus-E4, restores Read about the Eurotrex Initiative to the original white secondary button, and places the existing E4 icon beside the foundation heading. The hidden-beach photograph, supplied copy, database statistics and clickable store badges remain.
+
+TypeScript and desktop/390 px phone layout checks pass, including no horizontal overflow. Browser inspection confirms the hero sentence is absent and the Initiative button is the only action in Current Project Focus. The review branch remains unmerged.
