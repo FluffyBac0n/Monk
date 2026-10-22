@@ -130,3 +130,5 @@ Published privately with owner-only access preserved on 22 October 2026. Website
 ## E4 waymark correction — 22 October 2026
 
 Replaced the app logo in Current Project Focus with the yellow E4 trail marker from the mobile app's stage timeline: yellow #F2C94C, dark #17201B border and E4 lettering. The mark is rendered directly in HTML/CSS and retains an accessible label. TypeScript and desktop/390 px layout checks pass; phone layout has no horizontal overflow. The section's other content is unchanged.
+
+Published privately with owner-only access preserved. Website source: `5eebfe50a52d868a3aa0703f44ee52fd4391298e`; deployment: `appgdep_6ad9a07a183c8191927211bcb8ffd888`. Production build passed; live inspection confirms the yellow E4 trail-marker label. The review branch remains unmerged.
