@@ -69,27 +69,13 @@ export function AppDownload({
                   ],
                 ].map(([file, label, alt]) => (
                   <figure className={`phone-shot phone-${file}`} key={file}>
-                    <button
-                      type="button"
-                      className="screenshot-trigger"
-                      aria-label={`Enlarge app screenshot: ${label}`}
-                      aria-haspopup="dialog"
-                      aria-controls="screenshot-dialog"
-                      data-screenshot-trigger
-                      data-screenshot-src={`/app-${file}.webp`}
-                      data-screenshot-title={label}
-                    >
-                      <Image
-                        src={`/app-${file}.webp`}
-                        alt={`EuroTrex iPhone app: ${alt}`}
-                        width={720}
-                        height={1565}
-                        sizes="(max-width: 760px) 72vw, 250px"
-                      />
-                      <span className="screenshot-enlarge" aria-hidden="true">
-                        +
-                      </span>
-                    </button>
+                    <Image
+                      src={`/app-${file}.webp`}
+                      alt={`EuroTrex iPhone app: ${alt}`}
+                      width={720}
+                      height={1565}
+                      sizes="(max-width: 760px) 72vw, 250px"
+                    />
                     <figcaption>{label}</figcaption>
                   </figure>
                 ))}

@@ -1717,21 +1717,6 @@ td small { color: var(--muted); margin-top: 5px; }
   .hero-banner .hiker-launch-actions { justify-self: end; }
 }
 
-/* Readable screenshot previews, using the existing sand canvas and controls. */
-.screenshot-trigger { appearance: none; background: transparent; border: 0; border-radius: 25px; cursor: zoom-in; display: block; padding: 0; position: relative; width: 100%; }
-.screenshot-trigger:hover img, .screenshot-trigger:focus-visible img { animation-play-state: paused; }
-.phone-shot figcaption { pointer-events: none; }
-.screenshot-enlarge { align-items: center; background: var(--gold); border: 1px solid rgba(48,62,78,.2); border-radius: 50%; color: var(--navy); display: flex; font-size: 24px; font-weight: 600; height: 32px; justify-content: center; line-height: 1; position: absolute; right: 12px; top: 16px; width: 32px; }
-.screenshot-dialog { background: var(--sand); border: 1px solid var(--line); border-radius: 16px; color: var(--navy); margin: auto; max-height: 92svh; max-width: calc(100% - 32px); overflow: hidden; padding: 0; width: 760px; }
-.screenshot-dialog::backdrop { background: rgba(27,40,52,.8); }
-.screenshot-dialog-toolbar { align-items: center; display: flex; gap: 12px; padding: 16px; }
-.screenshot-dialog-toolbar h2 { flex: 1; font-size: 20px; letter-spacing: -.02em; line-height: 1.25; min-width: 0; }
-.screenshot-zoom { flex: 0 0 auto; font-size: 12px; min-height: 44px; padding: 10px 12px; }
-.screenshot-close { background: white; border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--navy); flex: 0 0 44px; font-size: 27px; height: 44px; line-height: 1; padding: 0; }
-.screenshot-dialog-image { height: min(1100px,calc(92svh - 92px)); margin: 0 16px 16px; overflow: auto; overscroll-behavior: contain; }
-.screenshot-dialog-image img { display: block; height: auto; max-width: 100%; width: 100%; }
-.screenshot-dialog.is-zoomed .screenshot-dialog-image img { max-width: none; width: 1080px; }
-
 /* Keep native details semantics, with clearer decorative plus/minus markers. */
 .faq-list summary { display: block; list-style: none; padding-right: 48px; position: relative; }
 .faq-list summary::-webkit-details-marker { display: none; }
@@ -1751,9 +1736,6 @@ td small { color: var(--muted); margin-top: 5px; }
   .landing-page .faq-section { padding-block: 36px; }
   .landing-page .faq-layout { gap: 24px; }
   .landing-page .faq-list details { padding: 12px 0; }
-  .screenshot-dialog-toolbar { gap: 8px; padding: 12px; }
-  .screenshot-dialog-toolbar h2 { font-size: 18px; }
-  .screenshot-dialog-image { margin: 0 12px 12px; }
 }
 @media (max-width: 600px) {
   .footer-nav { gap: 22px 24px; grid-template-columns: repeat(2,minmax(0,1fr)); }

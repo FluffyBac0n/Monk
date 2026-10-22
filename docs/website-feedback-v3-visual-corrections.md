@@ -158,3 +158,7 @@ All three app showcase screenshots now open in a shared native dialog. The sand 
 Validation: TypeScript and runtime syntax pass. Desktop and 390 px browser checks confirm the named screenshot, zoom scrolling without page overflow, Escape/backdrop dismissal, focus containment/restoration, reset on a second screenshot, and working controls after navigation to Get Inspired and home. FAQ keyboard expansion produces the minus state. Phone footer columns measure 165 px each with a 24 px gap; the page has no horizontal overflow. The review branch remains unmerged.
 
 Published privately with owner-only access preserved. Website source: `01d71d44d85b18b9d7b69ab3f51ba13b8e43b383`; deployment: `appgdep_6ada547dc6fc819194c6f0e5db752104`. Production build passed. Live browser checks confirm the screenshot viewer, two-column footer, plus/minus FAQ styling and no phone horizontal overflow.
+
+## Restore the previous screenshot behaviour — 22 October 2026
+
+Removed the screenshot enlargement buttons, plus overlays, zoom dialog, viewer runtime and related styles. The app showcase restores its original images, captions, desktop arrangement and horizontal phone gallery. The tighter mobile spacing, two-column phone footer and FAQ plus/minus controls remain.
