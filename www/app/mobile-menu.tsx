@@ -19,10 +19,10 @@ export default function MobileMenu() {
         </a>
         <a
           className="header-portal-button"
-          href="/trail-reports"
+          href="/era"
           {...disableHtmxNavigation}
         >
-          Trail Reports
+          ERA Login
         </a>
       </nav>
     </details>

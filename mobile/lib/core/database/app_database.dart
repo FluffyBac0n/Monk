@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
@@ -6,7 +7,7 @@ import '../../features/stages/domain/stage.dart';
 import 'stage_database_codec.dart';
 
 class AppDatabase {
-  static const schemaVersion = 5;
+  static const schemaVersion = 6;
 
   Database? _database;
 
@@ -17,7 +18,7 @@ class AppDatabase {
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE stages (
-            id TEXT PRIMARY KEY,
+            id TEXT NOT NULL,
             trail_id TEXT NOT NULL,
             sequence INTEGER NOT NULL,
             name TEXT NOT NULL,
@@ -27,7 +28,8 @@ class AppDatabase {
             elevation_up_m REAL,
             elevation_down_m REAL,
             altitude_m REAL,
-            services_json TEXT NOT NULL
+            services_json TEXT NOT NULL,
+            PRIMARY KEY (trail_id, id)
           )
         ''');
         await db.execute(
@@ -42,6 +44,20 @@ class AppDatabase {
         if (oldVersion < 3) await _createSettingsTable(db);
         if (oldVersion < 4) await _addStageElevationColumns(db);
         if (oldVersion < 5) await _addStageDistanceFromPathColumn(db);
+        if (oldVersion < 6) {
+          await db.execute('ALTER TABLE stages RENAME TO stages_legacy');
+          await db.execute(
+            'CREATE TABLE stages AS SELECT * FROM stages_legacy WHERE 0',
+          );
+          await db.execute(
+            'CREATE UNIQUE INDEX stages_trail_id ON stages (trail_id, id)',
+          );
+          await db.execute('INSERT INTO stages SELECT * FROM stages_legacy');
+          await db.execute('DROP TABLE stages_legacy');
+          await db.execute(
+            'CREATE INDEX stages_trail_sequence ON stages (trail_id, sequence DESC)',
+          );
+        }
       },
     );
   }
@@ -177,6 +193,48 @@ class AppDatabase {
     });
   }
 
+  Future<void> replaceTrailRelease(
+    String trailId,
+    String releaseId,
+    List<RoutePoint> points,
+    List<TrailStage> stages, {
+    Map<String, Object?> metadata = const {},
+  }) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete(
+        'route_points',
+        where: 'trail_id = ?',
+        whereArgs: [trailId],
+      );
+      await txn.delete('stages', where: 'trail_id = ?', whereArgs: [trailId]);
+      final batch = txn.batch();
+      for (final p in points) {
+        batch.insert('route_points', {
+          'trail_id': trailId,
+          'point_index': p.pointIndex,
+          'lat': p.lat,
+          'lng': p.lng,
+          'altitude_m': p.altitudeM,
+          'distance_km': p.distanceKm,
+          'reverse_distance_km': p.reverseDistanceKm,
+        });
+      }
+      for (final s in stages) {
+        batch.insert('stages', encodeTrailStageRow(trailId, s));
+      }
+      batch.insert('app_settings', {
+        'key': 'trailRelease:$trailId',
+        'value': releaseId,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert('app_settings', {
+        'key': 'trailReleaseMeta:$trailId',
+        'value': jsonEncode(metadata),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await batch.commit(noResult: true);
+    });
+  }
+
   Future<void> deleteTrailData(String trailId) async {
     final db = await database;
     await db.transaction((txn) async {
@@ -185,6 +243,16 @@ class AppDatabase {
         'route_points',
         where: 'trail_id = ?',
         whereArgs: [trailId],
+      );
+      await txn.delete(
+        'app_settings',
+        where: 'key = ?',
+        whereArgs: ['trailRelease:$trailId'],
+      );
+      await txn.delete(
+        'app_settings',
+        where: 'key = ?',
+        whereArgs: ['trailReleaseMeta:$trailId'],
       );
     });
   }

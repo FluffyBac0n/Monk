@@ -31,7 +31,42 @@ service cloud.firestore {
     function canReviewTrailReports(trailId) {
       return isAdmin() || (hasVerifiedEmail()
         && exists(/databases/$(database)/documents/trailReportAccess/$(request.auth.uid))
-        && trailId in get(/databases/$(database)/documents/trailReportAccess/$(request.auth.uid)).data.trailIds);
+        && trailId in get(/databases/$(database)/documents/trailReportAccess/$(request.auth.uid)).data.trailIds)
+        || hasEraRole(trailId, ['incident_manager']);
+    }
+
+    function hasEraRole(trailId, roles) {
+      let member = get(/databases/$(database)/documents/eraMembers/$(request.auth.uid));
+      let organisation = get(/databases/$(database)/documents/eraOrganisations/$(member.data.organisationId));
+      return hasVerifiedEmail() && organisation.data.active == true
+        && trailId in organisation.data.trailIds
+        && member.data.trailRoles[trailId].hasAny(roles);
+    }
+    function canReadEra(trailId) {
+      return isAdmin() || hasEraRole(trailId, ['organisation_admin', 'editor', 'verifier', 'incident_manager', 'viewer'])
+        || canReviewTrailReports(trailId);
+    }
+    match /eraMembers/{uid} {
+      allow get: if isAdmin() || (hasVerifiedEmail() && request.auth.uid == uid);
+      allow list: if isAdmin();
+      allow write: if false;
+    }
+    match /eraOrganisations/{organisationId} {
+      allow read: if isAdmin() || (hasVerifiedEmail()
+        && get(/databases/$(database)/documents/eraMembers/$(request.auth.uid)).data.organisationId == organisationId);
+      allow write: if false;
+    }
+    match /eraWorkspaces/{trailId} {
+      allow read: if canReadEra(trailId);
+      allow write: if false;
+      match /revisions/{revisionId} {
+        allow read: if canReadEra(trailId);
+        allow write: if false;
+      }
+    }
+    match /eraAudit/{eventId} {
+      allow read: if isAdmin() || canReadEra(resource.data.trailId);
+      allow write: if false;
     }
 
     match /trailReportAccess/{uid} {
@@ -226,12 +261,22 @@ service cloud.firestore {
 
     match /trails/{trailId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create: if isAdmin() && !request.resource.data.keys().hasAny(['publishedReleaseId']);
+      allow update: if isAdmin() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['publishedReleaseId', 'totalDistanceKm', 'stageCount']);
+      allow delete: if false;
     }
 
-    match /trails/{trailId}/{document=**} {
-      allow read: if true;
-      allow write: if isAdmin();
+    match /trails/{trailId}/{collectionId}/{document=**} {
+      allow read: if collectionId != 'releases';
+      allow write: if isAdmin() && !(collectionId in ['releases', 'stages', 'routeMetadata', 'routeChunks']);
+    }
+    match /trails/{trailId}/releases/{releaseId} {
+      allow read: if resource.data.published == true;
+      allow write: if false;
+      match /{document=**} {
+        allow read: if get(/databases/$(database)/documents/trails/$(trailId)/releases/$(releaseId)).data.published == true;
+        allow write: if false;
+      }
     }
 
     // Administrators query published lodgings across all trails.

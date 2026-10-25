@@ -1,3 +1,4 @@
+import '../../trails/presentation/selected_trail.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../elevation/domain/route_point.dart';
@@ -5,7 +6,7 @@ import '../data/offline_map_repository.dart';
 import '../domain/offline_map_state.dart';
 
 final offlineMapRepositoryProvider = Provider<OfflineMapRepository>(
-  (ref) => OfflineMapRepository(),
+  (ref) => OfflineMapRepository(trailId: ref.watch(selectedTrailIdProvider)),
 );
 
 final offlineMapProvider =

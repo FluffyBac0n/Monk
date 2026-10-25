@@ -202,11 +202,12 @@ export function decodeTrailPoints(
 
 async function fetchTrail(id: string): Promise<PublicTrail> {
   const prefix = `trails/${id}`;
-  const [root, stageRows, metadata, lodgingRows, issueRows] = await Promise.all(
+  const root = await read(prefix).then(value => fields(value as Document));
+  const releasePrefix = root.publishedReleaseId ? `${prefix}/releases/${encodeURIComponent(text(root.publishedReleaseId))}` : prefix;
+  const [stageRows, metadata, lodgingRows, issueRows] = await Promise.all(
     [
-      read(prefix).then((value) => fields(value as Document)),
-      collection(`${prefix}/stages`),
-      read(`${prefix}/routeMetadata/main`)
+      collection(`${releasePrefix}/stages`),
+      read(`${releasePrefix}/routeMetadata/main`)
         .then((value) => fields(value as Document))
         .catch(() => null),
       collection(`${prefix}/lodgings`).catch(() => null),
@@ -295,13 +296,14 @@ async function fetchTrail(id: string): Promise<PublicTrail> {
       const revision = JSON.stringify([
         project,
         id,
+        root.publishedReleaseId,
         metadata.version,
         metadata.updatedAt,
         metadata.pointCount,
         metadata.chunkCount,
       ]);
       if (geometryCache?.revision !== revision) {
-        const request = collection(`${prefix}/routeChunks`).then((chunks) =>
+        const request = collection(`${releasePrefix}/routeChunks`).then((chunks) =>
           decodeTrailPoints(metadata, chunks)
         );
         geometryCache = { revision, request };
@@ -388,17 +390,12 @@ let overviewCache: {
 export async function getPublicTrailOverview(): Promise<PublicTrailOverview> {
   if (overviewCache && overviewCache.expires > Date.now())
     return overviewCache.request;
-  const request = Promise.all([
-    read('trails/cyprus-e4', 2500).then((value) => fields(value as Document)),
-    read('trails/cyprus-e4/routeMetadata/main', 2500)
-      .then((value) => fields(value as Document))
-      .catch(() => null),
-  ])
-    .then(([root, metadata]) => ({
-      distanceKm: number(root.totalDistanceKm),
-      referencePoints: number(root.stageCount),
-      highPointM: number(metadata?.maxAltitudeM),
-    }))
+  const request = read('trails/cyprus-e4', 2500).then(value => fields(value as Document))
+    .then(async root => {
+      const prefix = root.publishedReleaseId ? `trails/cyprus-e4/releases/${encodeURIComponent(text(root.publishedReleaseId))}` : 'trails/cyprus-e4';
+      const metadata = await read(`${prefix}/routeMetadata/main`, 2500).then(value => fields(value as Document)).catch(() => null);
+      return {distanceKm: number(root.totalDistanceKm), referencePoints: number(root.stageCount), highPointM: number(metadata?.maxAltitudeM)};
+    })
     .catch((error) => {
       overviewCache = null;
       throw error;

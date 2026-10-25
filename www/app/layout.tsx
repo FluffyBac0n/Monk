@@ -4,7 +4,7 @@ import { deploymentRecovery } from '@/lib/deployment-recovery';
 import './globals.css';
 
 const publicRuntimeBootstrap = `(() => {
-  if (/^\\/(?:portal|admin|trail-reports)(?:\\/|$)/.test(window.location.pathname)) return;
+  if (/^\\/(?:portal|admin|era|trail-reports)(?:\\/|$)/.test(window.location.pathname)) return;
 
   window.addEventListener('popstate', (event) => {
     if (!event.state || event.state.htmx !== true) return;

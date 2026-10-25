@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/trail_release_repository.dart';
 import '../domain/stage.dart';
 
 class FirebaseNotConfiguredException implements Exception {
@@ -22,6 +23,11 @@ class StageRepository {
     final firestore = _firestore;
     if (firestore == null) throw const FirebaseNotConfiguredException();
 
+    final release = await TrailReleaseRepository(
+      _database,
+      firestore,
+    ).sync(trailId);
+    if (release != null) return release.stages;
     final snapshot = await firestore
         .collection('trails')
         .doc(trailId)

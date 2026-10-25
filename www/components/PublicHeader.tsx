@@ -90,10 +90,10 @@ export function PublicHeader({ activeTrail }: { activeTrail?: string }) {
             </a>
             <a
               className="header-portal-button desktop-header-action"
-              href="/trail-reports"
+              href="/era"
               {...disableHtmxNavigation}
             >
-              Trail Reports
+              ERA Login
             </a>
             <LanguageControl />
             <MobileMenu />

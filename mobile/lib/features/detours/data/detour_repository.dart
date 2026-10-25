@@ -1,3 +1,4 @@
+import '../../../core/database/app_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../elevation/data/elevation_repository.dart';
@@ -13,10 +14,27 @@ abstract interface class DetourRepository {
 }
 
 class FirestoreDetourRepository implements DetourRepository {
-  const FirestoreDetourRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore;
+  const FirestoreDetourRepository({
+    FirebaseFirestore? firestore,
+    AppDatabase? database,
+  }) : _firestore = firestore,
+       _database = database;
 
   final FirebaseFirestore? _firestore;
+  final AppDatabase? _database;
+
+  Future<DocumentReference<Map<String, dynamic>>> _trailRoot(
+    String trailId,
+  ) async {
+    final firestore = _firestore;
+    if (firestore == null) {
+      throw StateError('Firebase is not configured for this build.');
+    }
+    final root = firestore.collection('trails').doc(trailId);
+    final settings = await _database?.readSettings();
+    final id = settings?['trailRelease:$trailId'];
+    return id == null ? root : root.collection('releases').doc(id);
+  }
 
   @override
   Future<List<TrailDetour>> loadForTrail({required String trailId}) async {
@@ -24,11 +42,9 @@ class FirestoreDetourRepository implements DetourRepository {
     if (firestore == null) {
       throw StateError('Firebase is not configured for this build.');
     }
-    final snapshot = await firestore
-        .collection('trails')
-        .doc(trailId)
-        .collection('detours')
-        .get();
+    final snapshot = await (await _trailRoot(
+      trailId,
+    )).collection('detours').get();
     final detours = snapshot.docs
         .map(
           (document) => TrailDetour.fromFirestore(document.id, document.data()),
@@ -63,9 +79,7 @@ class FirestoreDetourRepository implements DetourRepository {
     if (firestore == null) {
       throw StateError('Firebase is not configured for this build.');
     }
-    final snapshot = await firestore
-        .collection('trails')
-        .doc(trailId)
+    final snapshot = await (await _trailRoot(trailId))
         .collection('detours')
         .doc(detour.id)
         .collection('routeChunks')

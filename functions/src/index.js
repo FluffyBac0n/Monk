@@ -6,7 +6,8 @@ import {onCall, HttpsError} from 'firebase-functions/v2/https';
 import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {createHash} from 'node:crypto';
 import sharp from 'sharp';
-import {requireId, validateReport, validateReview, mayReview, validatePhotoChecksums, officialTrailIssue} from './report-model.js';
+import {requireId, validateReport, validateReview, validatePhotoChecksums, officialTrailIssue} from './report-model.js';
+import {createEraService} from './era-service.js';
 
 initializeApp();
 const db = getFirestore();
@@ -28,6 +29,15 @@ const callable = (handler) => onCall(options, async (request) => {
     throw new HttpsError('internal', 'The request could not be completed. Please retry.');
   }
 });
+const era = createEraService({db,bucket,authService:getAuth()});
+export const getEraAccess = callable(era.getEraAccess);
+export const configureEraOrganisation = callable(era.configureEraOrganisation);
+export const setEraMember = callable(era.setEraMember);
+export const saveEraRevision = callable(era.saveEraRevision);
+export const getEraRevision = callable(era.getEraRevision);
+export const transitionEraRevision = callable(era.transitionEraRevision);
+export const rollbackEraRelease = callable(era.rollbackEraRelease);
+export const createEraIncident = callable(era.createEraIncident);
 function validate(fn) { try { return fn(); } catch (e) { throw new HttpsError('invalid-argument', e.message); } }
 async function access(auth) {
   const verified = auth.token.email_verified === true;
@@ -41,7 +51,8 @@ async function assertAdmin(auth) {
 async function readableReport(request) {
   const reportId = validate(() => requireId(request.data.reportId));
   const snapshot = await db.doc(`trailReports/${reportId}`).get();
-  if (!snapshot.exists || !mayReview(await access(request.auth), snapshot.data().trailId)) throw new HttpsError('permission-denied', 'You cannot access this report.');
+  if (!snapshot.exists) throw new HttpsError('permission-denied', 'You cannot access this report.');
+  await db.runTransaction(tx=>era.permission(tx,request.auth,snapshot.data().trailId,['incident_manager']));
   return snapshot;
 }
 
@@ -50,7 +61,9 @@ export const beginTrailReport = callable(async ({auth, data}) => {
   const body = validate(() => validateReport(data));
   const trail = await db.doc(`trails/${body.trailId}`).get();
   if (!trail.exists) throw new HttpsError('invalid-argument', 'This trail is unavailable.');
-  if (body.stageId && !(await db.doc(`trails/${body.trailId}/stages/${body.stageId}`).get()).exists) body.stageId = null;
+  if (body.routeReleaseId && !(await db.doc(`trails/${body.trailId}/releases/${body.routeReleaseId}`).get()).data()?.published) throw new HttpsError('invalid-argument','Unknown published trail release.');
+  const stagePrefix=body.routeReleaseId ? `trails/${body.trailId}/releases/${body.routeReleaseId}` : `trails/${body.trailId}`;
+  if (body.stageId && !(await db.doc(`${stagePrefix}/stages/${body.stageId}`).get()).exists) body.stageId = null;
   const fingerprint = createHash('sha256').update(JSON.stringify(body)).digest('hex');
   const report = db.doc(`trailReports/${reportId}`);
   const day = new Date().toISOString().slice(0, 10);
@@ -65,7 +78,7 @@ export const beginTrailReport = callable(async ({auth, data}) => {
     if ((own.data()?.count || 0) >= 10 || (global.data()?.count || 0) >= 1000) throw new HttpsError('resource-exhausted', 'The daily report limit has been reached. Please try tomorrow.');
     const expiresAt = Timestamp.fromMillis(Date.now() + 3 * 86400000);
     for (const [ref, snap] of [[userQuota, own], [globalQuota, global]]) tx.set(ref, {count: (snap.data()?.count || 0) + 1, expiresAt});
-    tx.create(report, {...body, location: new GeoPoint(body.latitude, body.longitude), reporterUid: auth.uid,
+    tx.create(report, {...body, location: new GeoPoint(body.latitude, body.longitude), reporterUid: auth.uid,origin:'hiker',routeReleaseId:body.routeReleaseId || trail.data().publishedReleaseId || null,
       fingerprint, uploadState: 'uploading', status: 'new', priority: 'normal', photos: [],
       createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), receivedAt: null,
       authority: '', forwardingReference: '', duplicateOf: null});
@@ -92,7 +105,8 @@ export const finalizeTrailReport = callable(async ({auth, data}) => {
     const [bytes] = await bucket.file(source.name, {generation: meta.generation}).download();
     const expected = checksums?.get(id);
     if (expected && (bytes.length !== expected.byteLength
-      || createHash('md5').update(bytes).digest('base64') !== expected.md5Hash)) {
+      || (expected.md5Hash && createHash('md5').update(bytes).digest('base64') !== expected.md5Hash)
+      || (expected.sha256Hash && createHash('sha256').update(bytes).digest('hex') !== expected.sha256Hash))) {
       // Keep originals on the device and the report pending. Only the owning
       // reporter's mismatched staging generation is removed for a clean retry.
       // Storage rules still deny client overwrite/delete, including on retries.
@@ -120,6 +134,7 @@ export const finalizeTrailReport = callable(async ({auth, data}) => {
     if (latest.data()?.uploadState !== 'uploading') throw new HttpsError('failed-precondition', 'This draft expired.');
     tx.update(ref, {photos, uploadState: 'complete', receivedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()});
     tx.create(ref.collection('events').doc('submitted'), {action: 'submitted', actorId: auth.uid, createdAt: FieldValue.serverTimestamp()});
+    era.audit(tx,auth,report.trailId,'incident_received',reportId);
   });
   await bucket.deleteFiles({prefix: `trail-report-uploads/${auth.uid}/${reportId}/`}).catch(() => {});
   return {reportId, received: true};
@@ -139,6 +154,7 @@ export const trailReportPhoto = callable(async (request) => {
   const photo = snap.data().photos.find((item) => item.id === photoId);
   if (!photo || snap.data().uploadState !== 'complete') throw new HttpsError('not-found', 'Photo unavailable.');
   const [bytes] = await bucket.file(request.data.thumbnail === true ? photo.thumbnailPath : photo.path).download();
+  await db.runTransaction(async tx=>{await era.permission(tx,request.auth,snap.data().trailId,['incident_manager']);era.audit(tx,request.auth,snap.data().trailId,'incident_photo_accessed',snap.id,{photoId});});
   return {data: bytes.toString('base64'), contentType: 'image/jpeg'};
 });
 
@@ -148,8 +164,8 @@ export const reviewTrailReport = callable(async (request) => {
   const event = snap.ref.collection('events').doc();
   // Recheck membership in the transaction so revocation cannot race a review.
   await db.runTransaction(async (tx) => {
-    const [current, member, admin] = await tx.getAll(snap.ref, db.doc(`trailReportAccess/${request.auth.uid}`), db.doc(`admins/${request.auth.uid}`));
-    if (!mayReview({verified: request.auth.token.email_verified === true, admin: request.auth.token.admin === true || admin.exists, trailIds: member.data()?.trailIds}, current.data()?.trailId)) throw new HttpsError('permission-denied', 'Trail access was removed.');
+    const current = await tx.get(snap.ref);
+    await era.permission(tx,request.auth,current.data()?.trailId,['incident_manager']);
     if (current.data().uploadState !== 'complete') throw new HttpsError('failed-precondition', 'Report is not ready for review.');
     if (change.duplicateOf) {
       const other = await tx.get(db.doc(`trailReports/${change.duplicateOf}`));
@@ -164,6 +180,7 @@ export const reviewTrailReport = callable(async (request) => {
     else tx.delete(issueRef);
     tx.create(event, {action: 'review', ...change, previousStatus: current.data().status,
       actorId: request.auth.uid, actorEmail: request.auth.token.email, createdAt: FieldValue.serverTimestamp()});
+    era.audit(tx,request.auth,current.data().trailId,'incident_reviewed',snap.id,{previousStatus:current.data().status,...change});
   });
   return {saved: true};
 });
@@ -175,12 +192,13 @@ export const setTrailReportAccess = callable(async ({auth, data}) => {
   if (!(await db.doc(`trails/${trailId}`).get()).exists) throw new HttpsError('invalid-argument', 'Unknown trail.');
   let user;
   try { user = await getAuth().getUserByEmail(data.email.trim()); }
-  catch { throw new HttpsError('not-found', 'Ask this user to create an account at /trail-reports and verify their email first.'); }
+  catch { throw new HttpsError('not-found', 'Ask this user to create an account at /era and verify their email first.'); }
   if (data.grant && (!user.emailVerified || user.disabled)) throw new HttpsError('failed-precondition', 'The user must verify their email first.');
   const batch = db.batch();
   batch.set(db.doc(`trailReportAccess/${user.uid}`), {email: user.email,
     trailIds: data.grant ? FieldValue.arrayUnion(trailId) : FieldValue.arrayRemove(trailId), updatedAt: FieldValue.serverTimestamp()}, {merge: true});
   batch.create(db.collection('trailReportAccessAudit').doc(), {trailId, userId: user.uid, action: data.grant ? 'granted' : 'revoked', actorId: auth.uid, createdAt: FieldValue.serverTimestamp()});
+  era.audit(batch,auth,trailId,data.grant?'incident_access_granted':'incident_access_revoked',user.uid);
   await batch.commit();
   return {saved: true};
 });

@@ -33,15 +33,18 @@ async function routeCache(key: string, value?: CachedRoute): Promise<CachedRoute
 }
 
 async function fetchTrailRoute(trailId: string): Promise<Coordinates> {
-  const metadata = await getDoc(doc(db, 'trails', trailId, 'routeMetadata', 'main'));
+  const trail = await getDoc(doc(db, 'trails', trailId));
+  const releaseId = trail.data()?.publishedReleaseId as string | undefined;
+  const prefix = releaseId ? `trails/${trailId}/releases/${releaseId}` : `trails/${trailId}`;
+  const metadata = await getDoc(doc(db, `${prefix}/routeMetadata/main`));
   if (!metadata.exists()) throw new Error('Trail geometry unavailable');
   const data = metadata.data();
-  const revision = JSON.stringify([data.version, data.updatedAt?.toMillis?.(), data.pointCount, data.chunkCount]);
+  const revision = JSON.stringify([releaseId, data.version, data.updatedAt?.toMillis?.(), data.pointCount, data.chunkCount]);
   const key = `${db.app.options.projectId}:${trailId}`;
   const cached = await routeCache(key);
   if (cached?.revision === revision && Array.isArray(cached.coordinates) && cached.coordinates.length === data.pointCount
     && cached.coordinates.every(p => Array.isArray(p) && p.length === 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]) && Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90)) return cached.coordinates;
-  const chunks = await getDocs(query(collection(db, 'trails', trailId, 'routeChunks'), orderBy('chunkIndex')));
+  const chunks = await getDocs(query(collection(db, `${prefix}/routeChunks`), orderBy('chunkIndex')));
   if (data.chunkCount != null && chunks.size !== Number(data.chunkCount)) throw new Error('Incomplete trail geometry');
   const coordinates = decodeRouteChunks(data, chunks.docs.map(chunk => chunk.data()));
   void routeCache(key, {revision, coordinates});
@@ -53,6 +56,7 @@ export function loadTrailRoute(trailId: string): Promise<Coordinates> {
   if (!route) {
     route = fetchTrailRoute(trailId).catch(error => {routes.delete(trailId); throw error;});
     routes.set(trailId, route);
+    void route.finally(() => {if (routes.get(trailId) === route) routes.delete(trailId);}).catch(() => {});
   }
   return route;
 }

@@ -188,10 +188,10 @@ export function AuthPanel({
 
   const heading = trailReports
     ? mode === 'register'
-      ? 'Create your trail team account.'
+      ? 'Create your ERA account.'
       : mode === 'reset'
         ? 'Reset your password.'
-        : 'Trail team sign in.'
+        : 'ERA Login.'
     : admin
       ? 'Administrator sign in.'
       : mode === 'register'
@@ -200,7 +200,7 @@ export function AuthPanel({
           ? 'Reset your password.'
           : 'Welcome back.';
   const introduction = trailReports
-    ? 'Verify your email, then ask a EuroTrex administrator to assign your trails. Only assigned trail teams and administrators can open reports.'
+    ? 'Verify your email, then ask your administrator to assign your trails.'
     : admin
       ? 'Sign in with your authorised EuroTrex administrator account.'
       : mode === 'register'
@@ -213,7 +213,7 @@ export function AuthPanel({
     <section className="auth-card">
       <p className="eyebrow">
         {trailReports
-          ? 'TRAIL REPORTS'
+          ? 'ERA WORKSPACE'
           : admin
             ? 'EUROTREX OPERATIONS'
             : 'ACCOMMODATION PARTNERS'}

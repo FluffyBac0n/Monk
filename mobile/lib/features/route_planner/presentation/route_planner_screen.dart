@@ -1,3 +1,5 @@
+import '../../../core/database/database_provider.dart';
+import '../../trails/presentation/selected_trail.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -398,7 +400,11 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
   }) async {
     if (saving) return;
     final id = draftRouteId ?? DateTime.now().microsecondsSinceEpoch.toString();
+    final trailId = ref.read(selectedTrailIdProvider);
+    final settings = await ref.read(appDatabaseProvider).readSettings();
     final saved = SavedRoute.fromPlan(
+      trailId: trailId,
+      routeReleaseId: settings['trailRelease:$trailId'],
       id: id,
       createdAt: DateTime.now(),
       style: style,
@@ -639,6 +645,30 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
     required List<TrailStage> stages,
     required List<Lodging> lodgings,
   }) async {
+    final currentTrail = ref.read(selectedTrailIdProvider);
+    final settings = await ref.read(appDatabaseProvider).readSettings();
+    if (!mounted) return;
+    if (route.trailId != currentTrail ||
+        route.routeReleaseId != settings['trailRelease:$currentTrail']) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.t('Route changed')),
+          content: Text(
+            context.l10n.t(
+              'This saved plan uses another trail release. Create a new plan with the current trail data.',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(context.l10n.t('Close')),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     final request = RoutePlanRequest(
       startStageId: route.startStageId,
       finishStageId: route.finishStageId,

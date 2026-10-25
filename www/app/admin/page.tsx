@@ -207,8 +207,8 @@ function AdminSession({ user }: { user: User }) {
           <div>
             <p className="eyebrow">EUROTREX OPERATIONS</p>
             <h1>Accommodation review.</h1>
-            <a className="button button-secondary" href="/trail-reports">
-              Trail reports &amp; trail access →
+            <a className="button button-secondary" href="/era">
+              ERA workspace →
             </a>
             <p>
               Verify ownership, protect trail quality and control every listing

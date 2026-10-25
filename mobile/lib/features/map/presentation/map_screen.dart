@@ -1,3 +1,4 @@
+import '../../trails/presentation/selected_trail.dart';
 import '../domain/stage_preview.dart';
 import 'stage_preview_screen.dart';
 import '../../reports/data/trail_issues.dart';
@@ -310,7 +311,7 @@ class MapScreen extends ConsumerWidget {
           ],
         ),
         actions: [
-          const ReportMenu(trailId: cyprusE4TrailId),
+          ReportMenu(trailId: ref.watch(selectedTrailIdProvider)),
           if (offlineMap != null)
             _OfflineMapAppBarButton(
               state: offlineMap,
@@ -754,7 +755,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
     _directions = PoiDirectionsController(
       ref.read(poiDirectionsServiceProvider(widget.accessToken)),
     )..addListener(_directionsChanged);
-    _session = ref.read(mapSessionProvider(cyprusE4TrailId));
+    _session = ref.read(mapSessionProvider(ref.read(selectedTrailIdProvider)));
     _background = _session.background;
     _stagesVisible = _session.stagesVisible;
     _stagesExplicitlyHidden = _session.stagesExplicitlyHidden;
@@ -862,7 +863,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
       );
     });
     await _issueLayer!.update(
-      ref.read(trailIssuesProvider(cyprusE4TrailId)).value ?? const [],
+      ref.read(trailIssuesProvider(ref.read(selectedTrailIdProvider))).value ??
+          const [],
     );
     await _drawEndpoints(map);
     await _drawStages(map, animate: true);
@@ -2268,7 +2270,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
   Future<void> _refreshStyleMarkers(MapboxMap map) async {
     await _issueLayer?.update(
-      ref.read(trailIssuesProvider(cyprusE4TrailId)).value ?? const [],
+      ref.read(trailIssuesProvider(ref.read(selectedTrailIdProvider))).value ??
+          const [],
     );
     await _drawStages(map);
     if (!mounted) return;
@@ -2642,10 +2645,13 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(trailIssuesProvider(cyprusE4TrailId), (_, next) {
+    ref.listen(trailIssuesProvider(ref.read(selectedTrailIdProvider)), (
+      _,
+      next,
+    ) {
       if (next.hasValue) unawaited(_issueLayer?.update(next.requireValue));
     });
-    ref.watch(trailIssuesProvider(cyprusE4TrailId));
+    ref.watch(trailIssuesProvider(ref.read(selectedTrailIdProvider)));
 
     return LayoutBuilder(
       builder: (context, constraints) {

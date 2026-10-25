@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/trail_release_repository.dart';
 import '../domain/route_point.dart';
 
 class ElevationRepository {
@@ -23,6 +24,11 @@ class ElevationRepository {
       throw StateError('Firebase is not configured for this build.');
     }
 
+    final release = await TrailReleaseRepository(
+      _database,
+      firestore,
+    ).sync(trailId);
+    if (release != null) return release.points;
     final trail = firestore.collection('trails').doc(trailId);
     final results = await Future.wait([
       trail.collection('routeMetadata').doc('main').get(),

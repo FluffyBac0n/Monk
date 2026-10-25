@@ -11,6 +11,10 @@ typedef OfflineProgressCallback =
     void Function(double progress, int completedBytes);
 
 class OfflineMapRepository {
+  OfflineMapRepository({this.trailId = 'cyprus-e4'});
+  final String trailId;
+  String get regionId =>
+      trailId == 'cyprus-e4' ? cyprusE4OfflineRegionId : '$trailId-outdoors-v1';
   TileStore? _tileStore;
   OfflineManager? _offlineManager;
 
@@ -27,7 +31,7 @@ class OfflineMapRepository {
 
     TileRegion? region;
     for (final candidate in regions) {
-      if (candidate.id == cyprusE4OfflineRegionId) {
+      if (candidate.id == regionId) {
         region = candidate;
         break;
       }
@@ -95,7 +99,7 @@ class OfflineMapRepository {
       StylePackLoadOptions(
         glyphsRasterizationMode:
             GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY,
-        metadata: const {'trailId': 'cyprus-e4', 'version': 1},
+        metadata: {'trailId': trailId, 'version': 1},
         acceptExpired: true,
       ),
       (progress) {
@@ -109,7 +113,7 @@ class OfflineMapRepository {
     onProgress(0.12, styleBytes);
 
     await _tileStore!.loadTileRegion(
-      cyprusE4OfflineRegionId,
+      regionId,
       TileRegionLoadOptions(
         geometry: buildOfflineCorridorGeometry(points),
         descriptorsOptions: [
@@ -120,7 +124,7 @@ class OfflineMapRepository {
           ),
         ],
         metadata: {
-          'trailId': 'cyprus-e4',
+          'trailId': trailId,
           'version': 1,
           'coverage': 'route-corridor',
           _downloadedAtMetadataKey: downloadedAt,
@@ -145,11 +149,12 @@ class OfflineMapRepository {
   Future<void> delete() async {
     await _initialize();
     final regions = await _tileStore!.allTileRegions();
-    if (regions.any((region) => region.id == cyprusE4OfflineRegionId)) {
-      await _tileStore!.removeRegion(cyprusE4OfflineRegionId);
+    if (regions.any((region) => region.id == regionId)) {
+      await _tileStore!.removeRegion(regionId);
     }
     final styles = await _offlineManager!.allStylePacks();
-    if (styles.any((style) => style.styleURI == cyprusE4OfflineStyleUri)) {
+    if (regions.every((region) => region.id == regionId) &&
+        styles.any((style) => style.styleURI == cyprusE4OfflineStyleUri)) {
       await _offlineManager!.removeStylePack(cyprusE4OfflineStyleUri);
     }
   }

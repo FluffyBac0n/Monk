@@ -1743,3 +1743,31 @@ td small { color: var(--muted); margin-top: 5px; }
   .footer-nav { gap: 22px 24px; grid-template-columns: repeat(2,minmax(0,1fr)); }
   .footer-nav div:last-child { grid-column: auto; }
 }
+
+/* ERA workspace uses the portal's existing canvas, typography and controls. */
+.era-tabs, .era-actions { display:flex; gap:12px; flex-wrap:wrap; margin:20px 0; }
+.era-trail-choice { display:flex; align-items:center; gap:24px; justify-content:space-between; }
+.era-trail-choice > label, .era-trail-choice > div { min-width:240px; }
+.era-route-editor { display:grid; gap:24px; }
+.era-page fieldset { border:0; padding:0; margin:0; min-width:0; }
+.era-page fieldset:disabled { opacity:.65; }
+.era-page .form-panel > h2::after, .era-page .form-panel > h3::after { content:''; display:block; width:48px; height:4px; background:var(--gold); margin:12px 0 20px; }
+.era-page input[type=checkbox] { width:18px; height:18px; flex:none; }
+.era-page .checkbox-row { display:flex; align-items:center; gap:10px; margin:12px 0; }
+.era-table-scroll { overflow:auto; }
+.era-table { width:100%; border-collapse:collapse; text-align:left; }
+.era-table th, .era-table td { padding:16px 12px; border-bottom:1px solid #d9d5c9; vertical-align:top; }
+.era-table small { display:block; max-width:300px; }
+.era-table td:last-child { min-width:220px; }
+.era-incidents .portal-page { min-height:0; background:transparent; }
+.era-incidents .dashboard-shell { width:100%; max-width:none; padding:0; margin:0; }
+.era-page .report-members li > div { min-width:0; overflow-wrap:anywhere; }
+.era-page details { margin-bottom:24px; }
+.era-page summary { cursor:pointer; font-weight:700; margin:16px 0; }
+@media(max-width:700px) { .era-trail-choice { display:block; } .era-tabs { gap:8px; } .era-tabs .button { font-size:.85rem; padding:10px 12px; } .era-page .report-members li { flex-wrap:wrap; } }
+
+.era-page label:not(.checkbox-row) { color:var(--navy); display:flex; flex-direction:column; font-size:13px; font-weight:800; gap:8px; }
+.era-page .form-panel > label { margin:16px 0; }
+.era-page input:not([type=checkbox]), .era-page textarea { background:#fbfcfa; border:1px solid #cbd2ce; border-radius:var(--radius-control); color:var(--ink); font:inherit; min-height:var(--control-height); padding:13px 14px; width:100%; }
+.era-page input:focus, .era-page textarea:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(45,93,211,.13); outline:none; }
+.era-page input[type=file] { font-weight:400; }

@@ -67,6 +67,8 @@ class SavedRouteDay {
 
 class SavedRoute {
   const SavedRoute({
+    this.trailId = 'cyprus-e4',
+    this.routeReleaseId,
     required this.id,
     required this.createdAt,
     required this.style,
@@ -92,6 +94,8 @@ class SavedRoute {
     required this.unknownPriceNights,
   });
 
+  final String trailId;
+  final String? routeReleaseId;
   final String id;
   final DateTime createdAt;
   final RoutePlanStyle style;
@@ -127,6 +131,8 @@ class SavedRoute {
   };
 
   factory SavedRoute.fromPlan({
+    String trailId = 'cyprus-e4',
+    String? routeReleaseId,
     required String id,
     required DateTime createdAt,
     required RoutePlanStyle style,
@@ -134,6 +140,8 @@ class SavedRoute {
     required RoutePlanRequest request,
     required RoutePlan plan,
   }) => SavedRoute(
+    trailId: trailId,
+    routeReleaseId: routeReleaseId,
     id: id,
     createdAt: createdAt,
     style: style,
@@ -180,6 +188,8 @@ class SavedRoute {
   Map<String, Object?> toJson() => {
     'id': id,
     'createdAt': createdAt.toIso8601String(),
+    'trailId': trailId,
+    'routeReleaseId': routeReleaseId,
     'style': style.name,
     'direction': direction.name,
     'startStageId': startStageId,
@@ -204,6 +214,8 @@ class SavedRoute {
   };
 
   factory SavedRoute.fromJson(Map<String, Object?> json) => SavedRoute(
+    trailId: json['trailId'] as String? ?? 'cyprus-e4',
+    routeReleaseId: json['routeReleaseId'] as String?,
     id: json['id']! as String,
     createdAt: DateTime.parse(json['createdAt']! as String),
     style: switch (json['style']! as String) {

@@ -1,3 +1,4 @@
+import '../../../core/database/app_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../elevation/data/elevation_repository.dart';
@@ -13,14 +14,33 @@ abstract interface class ExcursionRepository {
 }
 
 class FirestoreExcursionRepository implements ExcursionRepository {
-  const FirestoreExcursionRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore;
+  const FirestoreExcursionRepository({
+    FirebaseFirestore? firestore,
+    AppDatabase? database,
+  }) : _firestore = firestore,
+       _database = database;
 
   final FirebaseFirestore? _firestore;
+  final AppDatabase? _database;
+
+  Future<DocumentReference<Map<String, dynamic>>> _trailRoot(
+    String trailId,
+  ) async {
+    final firestore = _firestore;
+    if (firestore == null) {
+      throw StateError('Firebase is not configured for this build.');
+    }
+    final root = firestore.collection('trails').doc(trailId);
+    final settings = await _database?.readSettings();
+    final id = settings?['trailRelease:$trailId'];
+    return id == null ? root : root.collection('releases').doc(id);
+  }
 
   @override
   Future<List<TrailExcursion>> loadForTrail({required String trailId}) async {
-    final snapshot = await _excursionsCollection(trailId).get();
+    final snapshot = await (await _trailRoot(
+      trailId,
+    )).collection('excursions').get();
     final excursions = snapshot.docs
         .map(
           (document) =>
@@ -52,9 +72,12 @@ class FirestoreExcursionRepository implements ExcursionRepository {
     required String trailId,
     required TrailExcursion excursion,
   }) async {
-    final snapshot = await _excursionsCollection(
-      trailId,
-    ).doc(excursion.id).collection('routeChunks').orderBy('chunkIndex').get();
+    final snapshot = await (await _trailRoot(trailId))
+        .collection('excursions')
+        .doc(excursion.id)
+        .collection('routeChunks')
+        .orderBy('chunkIndex')
+        .get();
     final points = expandRoutePointValues(
       snapshot.docs.map(
         (chunk) => (chunk.data()['points'] as List).cast<num>(),
@@ -62,15 +85,5 @@ class FirestoreExcursionRepository implements ExcursionRepository {
       stride: excursion.pointStride,
     );
     return TrailExcursionRoute(excursion: excursion, points: points);
-  }
-
-  CollectionReference<Map<String, dynamic>> _excursionsCollection(
-    String trailId,
-  ) {
-    final firestore = _firestore;
-    if (firestore == null) {
-      throw StateError('Firebase is not configured for this build.');
-    }
-    return firestore.collection('trails').doc(trailId).collection('excursions');
   }
 }

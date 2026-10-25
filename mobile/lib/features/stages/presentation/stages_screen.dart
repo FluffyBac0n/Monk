@@ -1,3 +1,4 @@
+import '../../trails/presentation/selected_trail.dart';
 import '../../map/domain/stage_preview.dart';
 import '../../map/presentation/stage_preview_screen.dart';
 import '../../reports/presentation/report_screen.dart';
@@ -3887,7 +3888,12 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
         onElevation: _openElevation,
       ),
       appBar: EurotrexChromeTheme.appBar(
-        actions: [ReportMenu(trailId: cyprusE4TrailId, stageId: stage.id)],
+        actions: [
+          ReportMenu(
+            trailId: ref.read(selectedTrailIdProvider),
+            stageId: stage.id,
+          ),
+        ],
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -1,3 +1,4 @@
+import 'selected_trail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -141,16 +142,27 @@ class TrailsScreen extends ConsumerWidget {
                   _LegalAcceptanceRequiredBanner(onReview: openTerms),
                   const SizedBox(height: 14),
                 ],
-                for (final trail in availableTrails)
+                for (final trail
+                    in (ref.watch(publishedTrailsProvider).value ??
+                        availableTrails))
                   _TrailCard(
                     trail: trail,
                     formatter: formatter,
-                    elevationUpM: stageElevationUp ?? elevationTotals?.ascentM,
+                    elevationUpM: trail.id == ref.watch(selectedTrailIdProvider)
+                        ? stageElevationUp ?? elevationTotals?.ascentM
+                        : null,
                     elevationDownM:
-                        stageElevationDown ?? elevationTotals?.descentM,
-                    isOffline: trailDataReady,
+                        trail.id == ref.watch(selectedTrailIdProvider)
+                        ? stageElevationDown ?? elevationTotals?.descentM
+                        : null,
+                    isOffline:
+                        trail.id == ref.watch(selectedTrailIdProvider) &&
+                        trailDataReady,
                     isEnabled: canExploreTrails,
                     onExplore: () {
+                      ref
+                          .read(selectedTrailIdProvider.notifier)
+                          .select(trail.id);
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           settings: const RouteSettings(
@@ -167,15 +179,21 @@ class TrailsScreen extends ConsumerWidget {
                     },
                   ),
                 const SizedBox(height: 16),
-                const _ComingSoonTrailCard(
-                  trailId: 'crete-e4',
-                  trailName: 'Crete-E4',
-                ),
+                if (!(ref.watch(publishedTrailsProvider).value ?? []).any(
+                  (t) => t.id == 'crete-e4',
+                ))
+                  const _ComingSoonTrailCard(
+                    trailId: 'crete-e4',
+                    trailName: 'Crete-E4',
+                  ),
                 const SizedBox(height: 10),
-                const _ComingSoonTrailCard(
-                  trailId: 'peloponnese-e4',
-                  trailName: 'Peloponnese-E4',
-                ),
+                if (!(ref.watch(publishedTrailsProvider).value ?? []).any(
+                  (t) => t.id == 'peloponnese-e4',
+                ))
+                  const _ComingSoonTrailCard(
+                    trailId: 'peloponnese-e4',
+                    trailName: 'Peloponnese-E4',
+                  ),
               ],
             ),
           ),

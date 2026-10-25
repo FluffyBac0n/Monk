@@ -1,3 +1,5 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../trails/presentation/selected_trail.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_localizations.dart';
@@ -9,14 +11,63 @@ const _green = Color(0xFF277653);
 const _sand = Color(0xFFF4F2EC);
 const _yellow = Color(0xFFF2C94C);
 
-class TrailInformationScreen extends StatelessWidget {
+class TrailInformationScreen extends ConsumerWidget {
   const TrailInformationScreen({super.key});
 
   static const routeName = '/trails/cyprus-e4/information';
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final id = ref.watch(selectedTrailIdProvider);
+    final metadata =
+        ref.watch(activeReleaseMetadataProvider).value ?? <String, dynamic>{};
+    final sourceCard = metadata.isEmpty
+        ? const SizedBox.shrink()
+        : Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${l10n.t('Route source')}: ${metadata['source'] ?? ''}',
+                  ),
+                  Text('${metadata['attribution'] ?? ''}'),
+                  Text(
+                    '${l10n.t('Verified by')}: ${metadata['verifiedBy'] ?? ''}',
+                  ),
+                  if (metadata['publishedAtMs'] is int)
+                    Text(
+                      '${l10n.t('Published')}: ${DateTime.fromMillisecondsSinceEpoch(metadata['publishedAtMs'] as int).toLocal()}',
+                    ),
+                ],
+              ),
+            ),
+          );
+    if (id != 'cyprus-e4') {
+      final trail = (ref.watch(publishedTrailsProvider).value ?? [])
+          .where((t) => t.id == id)
+          .firstOrNull;
+      return Scaffold(
+        backgroundColor: _sand,
+        appBar: EurotrexChromeTheme.appBar(
+          title: Text(l10n.t('Trail information')),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Text(
+              trail?.name ?? id,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            if (trail?.description.isNotEmpty ?? false)
+              Text(trail!.description),
+            sourceCard,
+          ],
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: _sand,
       appBar: EurotrexChromeTheme.appBar(
@@ -41,6 +92,7 @@ class TrailInformationScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
         children: [
+          sourceCard,
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: SizedBox(

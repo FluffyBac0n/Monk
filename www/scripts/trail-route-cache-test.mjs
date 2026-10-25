@@ -5,7 +5,7 @@ import ts from 'typescript';
 
 const files = Object.fromEntries(['trail-route', 'route-geometry'].map(name => [name, ts.transpileModule(readFileSync(new URL(`../lib/${name}.ts`, import.meta.url), 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText]));
 const cache = new Map();
-let reads = 0, chunkReads = 0, revision = 1, failNext = false;
+let reads = 0, chunkReads = 0, revision = 1, releaseId = null, failNext = false;
 const later = callback => queueMicrotask(callback);
 const indexedDB = {open() {
   const request = {};
@@ -23,7 +23,7 @@ const indexedDB = {open() {
 }};
 const firestore = {
   doc: (...args) => args, collection: (...args) => args, orderBy: value => value, query: (...args) => args,
-  async getDoc() {reads++; if (failNext) {failNext = false; throw new Error('Temporary failure');} return {exists: () => true, data: () => ({version: revision, updatedAt: {toMillis: () => revision}, pointFormat: ['lat','lng'], pointStride: 2, pointCount: 2, chunkCount: 1})};},
+  async getDoc(path) {reads++; if (failNext) {failNext = false; throw new Error('Temporary failure');} if (/^trails\/[^/]+$/.test(path.slice(1).join('/'))) return {data: () => ({publishedReleaseId: releaseId})}; return {exists: () => true, data: () => ({version: revision, updatedAt: {toMillis: () => revision}, pointFormat: ['lat','lng'], pointStride: 2, pointCount: 2, chunkCount: 1})};},
   async getDocs() {chunkReads++; return {size: 1, docs: [{data: () => ({points: [34, 32, 35, 33]})}]};},
 };
 function loadModule(name, diskCache = indexedDB) {
@@ -38,10 +38,10 @@ function loadModule(name, diskCache = indexedDB) {
 }
 let loader = loadModule('trail-route');
 const [one, two] = await Promise.all([loader.loadTrailRoute('trail'), loader.loadTrailRoute('trail')]);
-assert.equal(one, two); assert.equal(reads, 1); assert.equal(chunkReads, 1);
+assert.equal(one, two); assert.equal(reads, 2); assert.equal(chunkReads, 1);
 await new Promise(resolve => setImmediate(resolve));
 loader = loadModule('trail-route');
-await loader.loadTrailRoute('trail'); assert.equal(reads, 2); assert.equal(chunkReads, 1, 'A page reload reuses unchanged public geometry');
+await loader.loadTrailRoute('trail'); assert.equal(reads, 4); assert.equal(chunkReads, 1, 'A page reload reuses unchanged public geometry');
 revision++;
 await loadModule('trail-route').loadTrailRoute('trail'); assert.equal(chunkReads, 2, 'A changed route version downloads fresh geometry');
 loader = loadModule('trail-route'); failNext = true;
@@ -49,5 +49,8 @@ await assert.rejects(loader.loadTrailRoute('retry'), /Temporary/);
 await loader.loadTrailRoute('retry'); assert.equal(chunkReads, 3, 'Failed preloads can be retried');
 await loadModule('trail-route', null).loadTrailRoute('uncached');
 assert.equal(chunkReads, 4);
+releaseId = 'new-release';
+await loadModule('trail-route').loadTrailRoute('trail');
+assert.equal(chunkReads, 5, 'A new published release invalidates geometry even if metadata counts match');
 assert.deepEqual(Object.keys(cache.get('test-project:trail')).sort(), ['coordinates', 'revision']);
 console.log('Passed: concurrent preload deduplication, reload cache reuse, version invalidation, failed-load retry, cache fallback and public-geometry-only storage.');

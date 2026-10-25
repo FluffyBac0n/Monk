@@ -1,3 +1,4 @@
+import '../../trails/presentation/selected_trail.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/database_provider.dart';
@@ -12,13 +13,19 @@ final trailDataLastUpdatedProvider =
     );
 
 class TrailDataMetadataController extends AsyncNotifier<DateTime?> {
+  String get _settingKey {
+    final id = ref.read(selectedTrailIdProvider);
+    return id == 'cyprus-e4'
+        ? cyprusE4TrailDataUpdatedAtSetting
+        : 'trailDataUpdated:$id';
+  }
+
   @override
   Future<DateTime?> build() async {
+    ref.watch(selectedTrailIdProvider);
     try {
       final settings = await ref.read(appDatabaseProvider).readSettings();
-      return DateTime.tryParse(
-        settings[cyprusE4TrailDataUpdatedAtSetting] ?? '',
-      );
+      return DateTime.tryParse(settings[_settingKey] ?? '');
     } catch (_) {
       return null;
     }
@@ -30,10 +37,7 @@ class TrailDataMetadataController extends AsyncNotifier<DateTime?> {
     try {
       await ref
           .read(appDatabaseProvider)
-          .writeSetting(
-            cyprusE4TrailDataUpdatedAtSetting,
-            updatedAt.toIso8601String(),
-          );
+          .writeSetting(_settingKey, updatedAt.toIso8601String());
     } catch (_) {
       // Keep the timestamp for this session if local metadata cannot be saved.
     }
@@ -71,9 +75,7 @@ class TrailDataMetadataController extends AsyncNotifier<DateTime?> {
   Future<void> clear() async {
     state = const AsyncData(null);
     try {
-      await ref
-          .read(appDatabaseProvider)
-          .writeSetting(cyprusE4TrailDataUpdatedAtSetting, '');
+      await ref.read(appDatabaseProvider).writeSetting(_settingKey, '');
     } catch (_) {
       // The cleared trail state remains authoritative for this session.
     }

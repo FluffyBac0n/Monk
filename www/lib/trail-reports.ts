@@ -6,7 +6,7 @@ export const reportCategories: Record<string, string> = {signpost: 'Signpost', v
 export const reportStatuses = ['new', 'reviewed', 'forwarded', 'resolved', 'duplicate', 'dismissed'];
 export type ReportPhoto = {id: string; path: string; thumbnailPath: string};
 export type TrailReport = {
-  id: string; trailId: string; stageId?: string; category: string; description: string;
+  id: string; trailId: string; origin?: string; routeReleaseId?: string; publicWarning?: boolean; stageId?: string; category: string; description: string;
   passability: string; latitude: number; longitude: number; accuracyM?: number;
   locationSource: string; contactEmail?: string; observedAtMs: number;
   receivedAt: Timestamp; updatedAt: Timestamp; status: string; priority: string;
@@ -31,7 +31,7 @@ export async function reportPhoto(reportId: string, photoId: string, thumbnail: 
   const result = await httpsCallable<{reportId: string; photoId: string; thumbnail: boolean}, {data: string; contentType: string}>(reportFunctions, 'trailReportPhoto')({reportId, photoId, thumbnail});
   return `data:image/jpeg;base64,${result.data.data}`;
 }
-export async function reviewReport(report: TrailReport, changes: Record<string, string>) {
+export async function reviewReport(report: TrailReport, changes: Record<string, string | boolean>) {
   await httpsCallable(reportFunctions, 'reviewTrailReport')({reportId: report.id, updatedAtMs: report.updatedAt.toMillis(), ...changes});
 }
 export async function setReportAccess(email: string, trailId: string, grant: boolean) {

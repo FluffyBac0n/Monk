@@ -4,6 +4,7 @@ import { getApp, getApps, initializeApp } from 'firebase/app';
 import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
 import { connectAuthEmulator, getAuth } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
+import {connectStorageEmulator,getStorage} from 'firebase/storage';
 import {
   initializeAppCheck,
   ReCaptchaEnterpriseProvider,
@@ -49,6 +50,7 @@ if (
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const reportStorage = getStorage(app);
 
 export const reportFunctions = getFunctions(app, 'europe-west1');
 if (
@@ -61,5 +63,6 @@ if (
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
   connectFunctionsEmulator(reportFunctions, '127.0.0.1', 5001);
+  connectStorageEmulator(reportStorage, '127.0.0.1', 9199);
   appCheckScope.eurotrexEmulators = true;
 }

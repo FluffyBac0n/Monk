@@ -30,7 +30,8 @@ export function validateReport(data) {
     latitude, longitude, locationSource: data.locationSource, accuracyM: accuracyM ?? null,
     observedAtMs, photoIds: data.photoIds, contactEmail, appVersion: text(data.appVersion || '', 80),
     // Context is a suggestion from the selected stage, never an authorization input.
-    stageId: data.stageId ? requireId(data.stageId) : null};
+    stageId: data.stageId ? requireId(data.stageId) : null,
+    ...(data.routeReleaseId ? {routeReleaseId:requireId(data.routeReleaseId)} : {})};
 }
 export function mayReview({verified, admin, trailIds}, trailId) {
   return verified === true && (admin === true || (Array.isArray(trailIds) && trailIds.includes(trailId)));
@@ -45,7 +46,9 @@ export function validateReview(data, reportId) {
   if (duplicateOf === reportId) throw new Error('A report cannot duplicate itself.');
   if (data.status === 'forwarded' && !authority) throw new Error('Enter the authority before marking as forwarded.');
   if (['resolved', 'dismissed'].includes(data.status) && !note) throw new Error('Add a resolution or dismissal note.');
-  return {status: data.status, priority: data.priority, authority, forwardingReference, note, duplicateOf};
+  if (data.publicWarning !== undefined && typeof data.publicWarning !== 'boolean') throw new Error('Invalid warning publication choice.');
+  return {status: data.status, priority: data.priority, authority, forwardingReference, note, duplicateOf,
+    ...(data.publicWarning===undefined?{}:{publicWarning:data.publicWarning})};
 }
 
 // Older app builds omit this manifest. New builds must describe every original
@@ -58,17 +61,18 @@ export function validatePhotoChecksums(value, photoIds) {
     if (!item || typeof item !== 'object') throw new Error('Invalid photo checksum.');
     const id = requireId(item.id);
     if (!photoIds.includes(id) || checksums.has(id)) throw new Error('Invalid photo identifier.');
-    if (typeof item.md5Hash !== 'string' || !/^[A-Za-z0-9+/]{22}==$/.test(item.md5Hash)
-      || Buffer.from(item.md5Hash, 'base64').toString('base64') !== item.md5Hash) throw new Error('Invalid photo checksum.');
+    const md5=typeof item.md5Hash==='string' && /^[A-Za-z0-9+/]{22}==$/.test(item.md5Hash) && Buffer.from(item.md5Hash,'base64').toString('base64')===item.md5Hash;
+    const sha256=typeof item.sha256Hash==='string' && /^[a-f0-9]{64}$/.test(item.sha256Hash);
+    if (!md5 && !sha256) throw new Error('Invalid photo checksum.');
     if (!Number.isSafeInteger(item.byteLength) || item.byteLength <= 0 || item.byteLength >= 2 * 1024 * 1024) throw new Error('Invalid photo size.');
-    checksums.set(id, {md5Hash: item.md5Hash, byteLength: item.byteLength});
+    checksums.set(id, {...(md5?{md5Hash:item.md5Hash}:{}),...(sha256?{sha256Hash:item.sha256Hash}:{}),byteLength: item.byteLength});
   }
   return checksums;
 }
 
 // Public map projection. Never spread a private report into this document.
 export function officialTrailIssue(report) {
-  if (report.uploadState !== 'complete' || !['reviewed', 'forwarded'].includes(report.status)) return null;
+  if (report.publicWarning === false || report.uploadState !== 'complete' || !['reviewed', 'forwarded'].includes(report.status)) return null;
   return {
     trailId: report.trailId,
     category: report.category,

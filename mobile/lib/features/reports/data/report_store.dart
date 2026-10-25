@@ -7,6 +7,7 @@ class ReportDraft {
   ReportDraft({
     required this.id,
     required this.trailId,
+    this.routeReleaseId,
     required this.createdAt,
     this.stageId,
     this.description = '',
@@ -26,6 +27,7 @@ class ReportDraft {
     this.locationConfirmed = false,
   });
   final String id, trailId;
+  String? routeReleaseId;
   final DateTime createdAt;
   String? stageId, ownerUid, remoteStatus;
   String description, category, passability, locationSource, contactEmail;
@@ -48,6 +50,7 @@ class ReportDraft {
   Map<String, dynamic> toJson() => {
     'id': id,
     'trailId': trailId,
+    'routeReleaseId': routeReleaseId,
     'stageId': stageId,
     'createdAt': createdAt.toIso8601String(),
     'description': description,
@@ -69,6 +72,7 @@ class ReportDraft {
   factory ReportDraft.fromJson(Map<String, dynamic> j) => ReportDraft(
     id: j['id'],
     trailId: j['trailId'],
+    routeReleaseId: j['routeReleaseId'],
     stageId: j['stageId'],
     createdAt: DateTime.parse(j['createdAt']),
     description: j['description'],
@@ -90,6 +94,7 @@ class ReportDraft {
   Map<String, dynamic> submission() => {
     'reportId': id,
     'trailId': trailId,
+    'routeReleaseId': routeReleaseId,
     'stageId': stageId,
     'description': description.trim(),
     'category': category,

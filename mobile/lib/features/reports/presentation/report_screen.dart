@@ -1,3 +1,5 @@
+import '../../../core/database/database_provider.dart';
+import '../../trails/presentation/selected_trail.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -225,6 +227,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     contact = TextEditingController(text: draft.contactEmail);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (widget.draft == null) {
+        draft.routeReleaseId = (await ref
+            .read(appDatabaseProvider)
+            .readSettings())['trailRelease:${widget.trailId}'];
         await save();
         if (mounted) await locate();
       }
@@ -288,7 +293,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
   }
 
   void matchStage() {
-    if (draft.trailId != cyprusE4TrailId || draft.latitude == null) return;
+    if (draft.trailId != ref.read(selectedTrailIdProvider) ||
+        draft.latitude == null) {
+      return;
+    }
     final points = ref.read(elevationProvider).value;
     final stages = ref.read(stagesProvider).value;
     if (points == null || stages == null) return;

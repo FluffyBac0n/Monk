@@ -1,3 +1,4 @@
+import '../../trails/presentation/selected_trail.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -811,7 +812,7 @@ Future<void> _confirmDeleteTrailData(
   final metadataController = ref.read(trailDataLastUpdatedProvider.notifier);
 
   try {
-    await database.deleteTrailData(cyprusE4TrailId);
+    await database.deleteTrailData(ref.read(selectedTrailIdProvider));
     stagesController.clearOfflineState();
     elevationController.clearOfflineState();
     await metadataController.clear();
