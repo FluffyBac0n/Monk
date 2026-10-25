@@ -252,3 +252,27 @@ a grey All statuses option and yellow Received trigger/option/map marker. TypeSc
 whitespace and production-build checks passed. Website source:
 `9489f4f7cd9bb864acf43a708b34d79a65bfb3d6`; private deployment
 `appgdep_6ade08f6bf28819190e891478a14e32a` succeeded with owner-only access preserved.
+
+## Single-tab trail editing (25 October 2026)
+
+Trail Data now contains the existing trail map, GPX upload, point editing and save
+in one view. The separate Verification and Published Versions tabs are removed.
+Review/publish and revision/release history remain collapsed within Trail Data;
+existing independent-verifier permissions and publication rules are unchanged.
+Opening Trail Data loads the published route, preserving altitude when available.
+Editors can drag a selected point, enter coordinates/elevation, insert/delete
+points, undo/redo, and save a draft. Current trail and latest saved changes can be
+selected without leaving the tab. GPX track segments and routes are supported,
+including XML namespaces, optional elevations and provenance. GeoJSON remains
+supported. Invalid coordinates/XML are rejected; file/point limits are enforced.
+Distance totals exclude gaps between sections. Concurrent revision/release changes
+block saving over newer data. Unsaved edits disable review/publish actions.
+
+Validation: TypeScript, route cache regression, editable-geometry tests and source
+whitespace checks passed. Browser QA against demo-eurotrex verified current-route
+loading, coordinate edits, map dragging, undo/redo, save/reopen with altitude,
+invalid GPX rejection, multi-section GPX and the 23,234-point/five-section Cyprus E4
+test GPX. Missing elevations remain blank. The 611px layout has no horizontal
+overflow. All browser mutations used the emulator; no production route was changed.
+Build/package succeeded. Site source: 8a8f2dc54d1c9fc83e322b89038deea22b92ed41.
+Owner-only deployment succeeded: appgdep_6ade53cc0180819187d120341128cc4d.

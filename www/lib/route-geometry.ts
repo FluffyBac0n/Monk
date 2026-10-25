@@ -17,3 +17,25 @@ export function decodeRouteChunks(metadata: Record<string, unknown>, chunks: Rec
   return coordinates;
 }
 
+/** Preserve elevations when preparing published geometry for editing. */
+export function decodeEditableRouteChunks(metadata:Record<string,unknown>,chunks:Record<string,unknown>[]):number[][] {
+  const coordinates:number[][]=decodeRouteChunks(metadata,chunks);
+  const format=Array.isArray(metadata.pointFormat)?metadata.pointFormat:['lat','lng'];
+  const stride=Number(metadata.pointStride ?? format.length),altitudeIndex=format.indexOf('altitudeM');
+  if (altitudeIndex<0) return coordinates;
+  if (altitudeIndex>=stride) throw new Error('Unsupported trail elevation format');
+  let index=0;
+  for (const chunk of chunks) {
+    const points=chunk.points as unknown[];
+    for (let i=0;i<points.length;i+=stride) {
+      const altitude=points[i+altitudeIndex];
+      if (altitude!=null) {
+        if (typeof altitude!=='number' || !Number.isFinite(altitude) || altitude< -500 || altitude>9000) throw new Error('Invalid trail elevation');
+        coordinates[index].push(altitude);
+      }
+      index++;
+    }
+  }
+  return coordinates;
+}
+

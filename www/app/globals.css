@@ -1777,6 +1777,24 @@ td small { color: var(--muted); margin-top: 5px; }
 .era-trail-choice .report-select-menu { max-width:calc(100vw - 48px); min-width:240px; width:max-content; }
 .era-page .dashboard-title .section-title { letter-spacing:inherit; margin:0; text-transform:none; }
 .era-route-editor { display:grid; gap:24px; }
+.era-editor-toolbar { align-items:end; display:flex; flex-wrap:wrap; gap:16px 24px; justify-content:space-between; }
+.era-editor-view { display:grid; gap:8px; min-width:200px; }
+.era-editor-stats { color:var(--muted); font-size:13px; }
+.era-editor-tools { align-items:center; display:flex; flex-wrap:wrap; gap:10px; }
+.era-editor-tools .button { white-space:nowrap; }
+.era-simple-editor .report-map-panel { margin:0; }
+.era-simple-editor .trail-report-map { height:500px; }
+.era-point-toolbar { align-items:center; display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; }
+.era-point-toolbar p { color:var(--muted); font-size:13px; margin:0; }
+.era-point-editor .form-grid { grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }
+.era-point-editor .era-editor-tools { margin-top:16px; }
+.era-selected-point { background:var(--blue); border:3px solid #fff; border-radius:50%; box-shadow:0 0 0 2px var(--blue); height:22px; width:22px; }
+.era-selected-point.is-draggable { cursor:grab; }
+.era-selected-point.is-draggable:active { cursor:grabbing; }
+.era-page .era-editor-details { border-top:1px solid var(--line); margin:0; padding:0; }
+.era-editor-details > summary { color:var(--navy); font-size:14px; padding:4px 0; }
+.era-editor-details .form-panel { margin:16px 0; }
+@media(max-width:700px) { .era-editor-toolbar { align-items:stretch; } .era-editor-view { flex:1; } .era-simple-editor .trail-report-map { height:400px; } .era-editor-tools .button { padding-inline:14px; } }
 .era-page fieldset { border:0; padding:0; margin:0; min-width:0; }
 .era-page fieldset:disabled { opacity:.65; }
 .era-page .form-panel > h2::after, .era-page .form-panel > h3::after { content:''; display:block; width:48px; height:4px; background:var(--gold); margin:12px 0 20px; }

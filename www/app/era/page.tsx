@@ -11,7 +11,7 @@ import {ReportSelect} from '@/components/ReportSelect';
 import {ReportWorkspace} from '@/components/IncidentWorkspace';
 import {EraRouteEditor} from '@/components/EraRouteEditor';
 import {EraAccessManager} from '@/components/EraAccessManager';
-import {eraCall,watchEraAudit,watchReleases,type EraAccess,type EraEvent,type Release} from '@/lib/era';
+import {eraCall,watchEraAudit,type EraAccess,type EraEvent} from '@/lib/era';
 
 export default function EraPage() {
   const {user,loading}=useAuthState();
@@ -36,7 +36,7 @@ function EraWorkspace({user}:{user:User}) {
   const trail=access?.trails.find(t=>t.id===trailId);
   const roles=trail?.roles || [];
   const incidentAccess=useMemo(()=>({admin:access?.admin || false,trails:trail?[{id:trail.id,name:trail.name}]:[]}),[access?.admin,trail]);
-  const tabs=['Incidents','Trail Data','Verification','Published Versions','Audit Log',...((access?.admin || roles.includes('organisation_admin'))?['Access']:[])];
+  const tabs=['Incidents','Trail Data','Audit Log',...((access?.admin || roles.includes('organisation_admin'))?['Access']:[])];
   return <main className="portal-page era-page"><PortalHeader user={user} canAccessAdmin={access?.admin}/><div className="dashboard-shell wide">
     <section className="dashboard-title"><div><h1 className="section-title">Trail Management</h1>{access?.organisation && <p>{access.organisation.name}</p>}</div>{access?.admin && <span className="admin-badge">EuroTrex administrator</span>}</section>
     {error && <div className="notice error" role="alert"><p>{error}</p><button className="button button-secondary" onClick={()=>void refresh()}>Try again</button></div>}
@@ -46,20 +46,11 @@ function EraWorkspace({user}:{user:User}) {
       <nav className="trail-switcher era-tabs" aria-label="Trail management"><ul className="trail-switcher-list" role="list">{tabs.map(t=><li key={t}><button type="button" className={`trail-switcher-item${tab===t?' active':''}`} aria-current={tab===t?'true':undefined} onClick={event=>{if(t!==tab && document.querySelector('[data-era-dirty=true]') && !window.confirm('Discard unsaved changes?'))return;setTab(t);event.currentTarget.scrollIntoView({block:'nearest',inline:'nearest'});}}><strong>{t}</strong></button></li>)}</ul></nav></div>
       {trail && <div key={trail.id}>
         {tab==='Incidents' && (roles.includes('incident_manager')?<div className="era-incidents"><ReportWorkspace key={trail.id} user={user} embeddedAccess={incidentAccess} initialTrailId={trail.id}/></div>:<p className="notice">Incident manager access is required to open private incidents.</p>)}
-        {['Trail Data','Verification'].includes(tab) && <EraRouteEditor key={`${trail.id}:${tab}`} trail={trail} user={user} verification={tab==='Verification'}/>}
-        {tab==='Published Versions' && <PublishedVersions trailId={trail.id} canRestore={roles.includes('verifier')} onChanged={refresh}/>}
+        {tab==='Trail Data' && <EraRouteEditor key={trail.id} trail={trail} user={user} onPublished={refresh}/>}
         {tab==='Audit Log' && <AuditLog trailId={trail.id}/>}
       </div>}
       {tab==='Access' && <EraAccessManager key={trailId} access={access} trailId={trailId} onChanged={refresh}/>}</>}
   </div></main>;
-}
-function PublishedVersions({trailId,canRestore,onChanged}:{trailId:string;canRestore:boolean;onChanged:()=>Promise<void>}) {
-  const [rows,setRows]=useState<Release[]>([]),[active,setActive]=useState<string|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[reason,setReason]=useState('');
-  useEffect(()=>{const a=watchReleases(trailId,setRows,e=>setError(e.message));const b=onSnapshot(doc(db,'trails',trailId),s=>setActive(s.data()?.publishedReleaseId || null),e=>setError(e.message));return()=>{a();b();};},[trailId]);
-  return <section className="form-panel" aria-label="Published versions">{error && <p className="notice error" role="alert">{error}</p>}{!rows.length && <p>No releases published yet.</p>}
-    {canRestore && <label>Reason for restoring a version<input value={reason} maxLength={1500} onChange={e=>setReason(e.target.value)}/></label>}
-    <ul className="report-members">{rows.map(r=><li key={r.id}><div><strong>{r.id===active?'Current release':r.id}</strong><p>{r.publishedAt?.toDate().toLocaleString()} · {r.totalDistanceKm.toFixed(1)} km · {r.pointCount.toLocaleString()} points</p><p>{r.source} · {r.attribution}</p><small>Approved by {r.approvedBy} · Published by {r.publishedBy}</small></div>{canRestore && r.id!==active && <button className="button button-secondary" disabled={busy || !reason.trim()} onClick={async()=>{setBusy(true);setError('');try{await eraCall('rollbackEraRelease',{trailId,releaseId:r.id,expectedReleaseId:active,note:reason});setReason('');await onChanged();}catch(e){setError(e instanceof Error?e.message:'Could not restore release.');}finally{setBusy(false);}}}>Restore version</button>}</li>)}</ul>
-  </section>;
 }
 function AuditLog({trailId}:{trailId:string}) {
   const [rows,setRows]=useState<EraEvent[]>([]),[error,setError]=useState(''),[count,setCount]=useState(100);
