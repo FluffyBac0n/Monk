@@ -1,14 +1,15 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
 import type {Map as MapboxMap, Marker} from 'mapbox-gl';
-import {reportCategories, type TrailReport} from '@/lib/trail-reports';
+import {reportCategories, reportStatuses, type TrailReport} from '@/lib/trail-reports';
+import {reportStatusLabels} from '@/components/ReportReview';
 import {loadTrailRoute} from '@/lib/trail-route';
 import {preloadReportMap} from '@/lib/report-map-runtime';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const warningIcon = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M21 6a3.5 3.5 0 0 1 6 0l18 31a3.5 3.5 0 0 1-3 5H6a3.5 3.5 0 0 1-3-5Z"/><text x="24" y="34" text-anchor="middle">!</text></svg>';
-type Props = {visible: boolean; trailId: string; trailName: string; reports: TrailReport[]; selectedId: string; onSelect: (id: string) => void};
-export function TrailReportMap({visible, trailId, trailName, reports, selectedId, onSelect}: Props) {
+type Props = {visible: boolean; trailId: string; trailName: string; reports: TrailReport[]; selectedId: string; onSelect: (id: string) => void; status: string; onStatusChange: (status: string) => void};
+export function TrailReportMap({visible, trailId, trailName, reports, selectedId, onSelect, status, onStatusChange}: Props) {
   const element = useRef<HTMLDivElement>(null), map = useRef<MapboxMap | null>(null);
   const markers = useRef(new Map<string, Marker>());
   const latest = useRef({reports, selectedId, onSelect});
@@ -93,8 +94,9 @@ export function TrailReportMap({visible, trailId, trailName, reports, selectedId
         }
         marker.setLngLat([report.longitude, report.latitude]);
         const button = marker.getElement();
-        button.setAttribute('aria-label', `Open report: ${reportCategories[report.category] || report.category} — ${report.description}`);
-        button.title = `${reportCategories[report.category] || report.category}: ${report.description}`;
+        button.setAttribute('aria-label', `Open report: ${reportStatusLabels[report.status] || report.status} · ${reportCategories[report.category] || report.category} — ${report.description}`);
+        button.title = `${reportStatusLabels[report.status] || report.status} · ${reportCategories[report.category] || report.category}: ${report.description}`;
+        reportStatuses.forEach(value => button.classList.toggle(`status-${value}`, report.status === value));
         button.classList.toggle('is-selected', report.id === selectedId);
         button.setAttribute('aria-pressed', String(report.id === selectedId));
       }
@@ -123,12 +125,12 @@ export function TrailReportMap({visible, trailId, trailName, reports, selectedId
 
   const chosen = reports.find(r => r.id === selectedId);
   return <section className={`report-map-panel ${visible ? '' : 'is-preloading'}`} aria-hidden={!visible} inert={!visible} aria-label={`${trailName} report map`}>
-    <div className="report-map-toolbar"><div className="report-map-legend"><span><i className="report-map-line" />{trailName}</span><span><i className="report-map-warning" aria-hidden="true">▲</i>Reports</span></div><button className="button button-secondary" disabled={!ready || !!error} onClick={() => fit.current()}>Fit trail</button></div>
-    <div className="trail-report-map" ref={element} aria-label="Map of reported trail problems" />
+    <div className="report-map-canvas"><div className="trail-report-map" ref={element} aria-label="Map of reported trail problems" /><button type="button" className="button button-secondary report-map-fit" disabled={!ready || !!error} onClick={() => fit.current()}>Fit trail</button></div>
+    <div className="report-map-legend report-map-legend-bottom" aria-label="Map legend"><span><i className="report-map-line" aria-hidden="true" />{trailName}</span><div className="report-map-statuses" role="group" aria-label="Filter map and reports by status"><button type="button" className="report-map-status" aria-pressed={!status} onClick={() => onStatusChange('')}>All statuses</button>{reportStatuses.map(value => <button key={value} type="button" className={`report-map-status status-${value}`} aria-pressed={status === value} onClick={() => onStatusChange(status === value ? '' : value)}><i className="report-map-status-symbol" aria-hidden="true">▲</i>{reportStatusLabels[value]}</button>)}</div></div>
     {!ready && !error && <p className="report-map-message" role="status">Loading trail map…</p>}
     {error && <div className="report-map-message" role="alert"><p>{error}</p><button className="button button-secondary" onClick={() => setAttempt(n => n + 1)}>Retry map</button></div>}
     {ready && routeLoading && <p className="report-map-caption" role="status">Loading the trail line… You can already explore report locations.</p>}
     {routeNotice && <div className="report-map-caption" role="status"><p>{routeNotice}</p><button className="button button-secondary" onClick={() => setAttempt(n => n + 1)}>Retry trail</button></div>}
-    <p className="report-map-caption" role="status">{chosen ? `Selected: ${reportCategories[chosen.category] || chosen.category} · ${chosen.description}` : 'Select a warning triangle or a report to see its details.'}</p>
+    <p className="report-map-caption" role="status">{chosen ? `Selected: ${reportCategories[chosen.category] || chosen.category} · ${chosen.description}` : 'Select a map marker or a report to see its details.'}</p>
   </section>;
 }

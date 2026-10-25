@@ -1,7 +1,7 @@
 // Emulator-only fixture for manual browser QA. Never connects to a live project.
 import {initializeApp} from 'firebase-admin/app';
 import {getAuth} from 'firebase-admin/auth';
-import {getFirestore} from 'firebase-admin/firestore';
+import {getFirestore,Timestamp} from 'firebase-admin/firestore';
 import {getStorage} from 'firebase-admin/storage';
 import {createEraService} from '../src/era-service.js';
 import {distanceKm} from '../src/era-model.js';
@@ -21,4 +21,12 @@ for(const [id,sequence,longitude] of [['start',1,32.87],['finish',2,32.89]])awai
 const era=createEraService({db,bucket:getStorage().bucket(),authService:auth});
 const workspace=await db.doc(`eraWorkspaces/${trailId}`).get();
 if(!workspace.exists)await era.saveEraRevision({auth:{uid:user.uid,token:{email:user.email,email_verified:true}},data:{trailId,expectedRevisionId:null,segments:[{kind:'main',coordinates:[[32.87,34.89,800],[32.88,34.89,850],[32.89,34.89,820]]}],source:'Isolated browser fixture',attribution:'QA fixture',elevationSource:'Synthetic test elevation',stageDecisions:{start:{confirmed:true},finish:{confirmed:true}}}});
+// One isolated marker for every review status, for map/filter browser QA.
+for(const [index,status] of ['new','reviewed','forwarded','resolved','duplicate','dismissed'].entries())await db.doc(`trailReports/preview-status-${status}`).set({
+  trailId,origin:'organisation',category:'signpost',description:`Synthetic ${status} signpost report`,
+  passability:'unsure',latitude:34.89+(index%2?0.001:-0.001),longitude:32.872+index*0.003,
+  locationSource:'map',observedAtMs:Date.now(),receivedAt:Timestamp.now(),updatedAt:Timestamp.now(),
+  status,priority:'normal',authority:'',forwardingReference:'',photos:[],uploadState:'complete',
+  publicWarning:['reviewed','forwarded'].includes(status),createdBy:user.uid
+});
 console.log('ERA emulator browser fixture ready.');

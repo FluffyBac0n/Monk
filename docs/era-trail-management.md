@@ -185,3 +185,25 @@ confirmed the corrected heading; its signed-in account has no assigned trails.
 Published privately with owner-only access preserved. Website source:
 `5f1ba53c085782011c1d37c06af51813d8e2d11a`; deployment:
 `appgdep_6addf9e66dac81919263d4927122b4ae` (succeeded).
+
+## Status-linked map and concise tab content — 25 October 2026
+
+Removed repeated Trail Data, Verification, Published Versions and Audit Log headings,
+and the redundant Organisation & access title. Named sections and useful subheadings
+remain. Both incident and route maps place Fit trail inside the map and their legends
+below it. Route fitting also supports the published line when no draft is present.
+
+Incident markers now use the existing status-badge palette and include status in their
+accessible labels and tooltips. Selection keeps the status colour. The bottom legend
+filters the map and report list through the same state as the Status selector; selecting
+the current legend entry or All statuses clears the status filter.
+
+TypeScript, whitespace checks and the production build passed. Browser QA on isolated
+demo-eurotrex fixtures verified all six status colours, legend-to-selector and
+selector-to-legend synchronisation, filtered marker/list counts, marker selection,
+bottom legend placement, in-map Fit trail controls, no horizontal page overflow, and
+removal of repeated titles across all ERA tabs. No live incident data was modified.
+
+Published privately with owner-only access preserved. Website source:
+`40858582b9f8ca7138d7d187c39ed940dc196717`; deployment:
+`appgdep_6addfe887ed08191b1dfff770aad6a87` (succeeded).

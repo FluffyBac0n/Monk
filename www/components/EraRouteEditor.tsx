@@ -33,7 +33,7 @@ export function EraRouteEditor({trail,user,verification}:{trail:EraTrail;user:Us
     if(!segments.length || segments.length>100 || segments.some(s=>s.coordinates.length<2 || s.coordinates.some(p=>!Array.isArray(p)||p.length<2||p.length>3||!p.every(Number.isFinite)||Math.abs(p[0])>180||Math.abs(p[1])>85)) || segments.reduce((n,s)=>n+s.coordinates.length,0)>100000)throw new Error('Invalid route coordinates or too many points.');
     edit({...payload,segments,stageDecisions:{},relatedRoutesReviewed:false,changesReviewed:false});setRaw(source);setSegment(0);setPoint(0);
   });}
-  return <section className="era-route-editor" data-era-dirty={dirty?'true':'false'}><section className="form-panel"><h2>{verification?'Verification':'Trail data'}</h2>
+  return <section className="era-route-editor" data-era-dirty={dirty?'true':'false'}><section className="form-panel" aria-label={verification?'Verification':'Trail data'}>
     {loaded && !revisions.length && <p>No route revisions yet.</p>}
     {!!revisions.length && <ReportSelect label="Revision" value={selected} disabled={busy} onChange={id=>{if(!dirty || window.confirm('Discard unsaved route changes?'))setSelected(id);}} options={revisions.map(r=>({value:r.id,label:`${r.createdAt?.toDate().toLocaleString() || r.id} · ${r.state.replaceAll('_',' ')}`}))}/>}
     {revision && <p>{revision.state.replaceAll('_',' ')} · {revision.pointCount.toLocaleString()} points · {revision.totalDistanceKm.toFixed(1)} km{revision.id!==latest && ' · A newer revision exists'}</p>}

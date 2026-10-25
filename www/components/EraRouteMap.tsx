@@ -7,12 +7,12 @@ import type {Segment,StageLink} from '@/lib/era';
 import 'mapbox-gl/dist/mapbox-gl.css';
 type Props={trailId:string;segments:Segment[];links:StageLink[];segmentIndex:number;pointIndex:number;onPoint:(p:number[])=>void;onSelect:(segment:number,point:number)=>void;editable:boolean;pin?:number[]};
 export function EraRouteMap(props:Props) {
-  const element=useRef<HTMLDivElement>(null),map=useRef<MapboxMap|null>(null),latest=useRef(props);
+  const element=useRef<HTMLDivElement>(null),map=useRef<MapboxMap|null>(null),latest=useRef(props),published=useRef<number[][]>([]);
   latest.current=props;
   const [ready,setReady]=useState(false),[error,setError]=useState(''),[attempt,setAttempt]=useState(0);
   useEffect(()=>{
     let alive=true;
-    setReady(false);setError('');
+    setReady(false);setError('');published.current=[];
     const timer=setTimeout(()=>{if(alive)setError('Map loading timed out. Retry the map.');},30000);
     void (async()=>{try{
       const {gl,accessToken}=await preloadReportMap();if(!alive || !element.current)return;
@@ -33,7 +33,7 @@ export function EraRouteMap(props:Props) {
           if(latest.current.editable)latest.current.onPoint([e.lngLat.lng,e.lngLat.lat]);
         });
         setReady(true);
-        void loadTrailRoute(props.trailId).then(coords=>{if(alive){(m.getSource('published') as GeoJSONSource)?.setData({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:coords}});if(!latest.current.segments.length){const bounds=new gl.LngLatBounds();coords.forEach(p=>bounds.extend(p));m.fitBounds(bounds,{padding:45,maxZoom:15});}}},()=>{});
+        void loadTrailRoute(props.trailId).then(coords=>{if(alive){published.current=coords;(m.getSource('published') as GeoJSONSource)?.setData({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:coords}});if(!latest.current.segments.length){const bounds=new gl.LngLatBounds();coords.forEach(p=>bounds.extend(p));m.fitBounds(bounds,{padding:45,maxZoom:15});}}},()=>{});
       });
     }catch{if(alive)setError('Map unavailable. Retry the map.');}})();
     return()=>{alive=false;clearTimeout(timer);map.current?.remove();map.current=null;};
@@ -48,7 +48,7 @@ export function EraRouteMap(props:Props) {
     const pins=[...props.links.flatMap(s=>s.location?[[s.location.longitude,s.location.latitude]]:[]),...(props.pin?[props.pin]:[])];
     (m.getSource('pins') as GeoJSONSource).setData({type:'FeatureCollection',features:pins.map(p=>({type:'Feature',properties:{},geometry:{type:'Point',coordinates:p}}))});
   },[ready,props.segments,props.links,props.segmentIndex,props.pointIndex,props.pin]);
-  function fit(){const points=props.segments.flatMap(s=>s.coordinates);if(!points.length || !map.current)return;const lng=points.map(p=>p[0]),lat=points.map(p=>p[1]);map.current.fitBounds([[Math.min(...lng),Math.min(...lat)],[Math.max(...lng),Math.max(...lat)]],{padding:45,maxZoom:15});}
+  function fit(){const points=props.segments.length?props.segments.flatMap(s=>s.coordinates):published.current;if(!points.length || !map.current)return;const lng=points.map(p=>p[0]),lat=points.map(p=>p[1]);map.current.fitBounds([[Math.min(...lng),Math.min(...lat)],[Math.max(...lng),Math.max(...lat)]],{padding:45,maxZoom:15});}
   useEffect(()=>{if(ready)fit();},[ready,props.segments.length]); // Preserve camera while moving individual points.
-  return <section className="report-map-panel"><div className="report-map-toolbar"><span>Blue: published · Yellow: draft · Grey: alternative</span><button type="button" className="button button-secondary" disabled={!ready} onClick={fit}>Fit route</button></div><div ref={element} className="trail-report-map" aria-label="Published and proposed trail map"/>{error && <p className="notice error" role="alert">{error} <button type="button" className="button button-secondary" onClick={()=>setAttempt(a=>a+1)}>Retry map</button></p>}{!ready && !error && <p role="status">Loading map…</p>}</section>;
+  return <section className="report-map-panel"><div className="report-map-canvas"><div ref={element} className="trail-report-map" aria-label="Published and proposed trail map"/><button type="button" className="button button-secondary report-map-fit" disabled={!ready || !!error} onClick={fit}>Fit trail</button></div><div className="report-map-legend report-map-legend-bottom" aria-label="Map legend"><span><i className="report-map-line" aria-hidden="true"/>Published</span><span><i className="report-map-line era-map-draft" aria-hidden="true"/>Draft</span><span><i className="report-map-line era-map-alternative" aria-hidden="true"/>Alternative</span></div>{error && <p className="notice error" role="alert">{error} <button type="button" className="button button-secondary" onClick={()=>setAttempt(a=>a+1)}>Retry map</button></p>}{!ready && !error && <p role="status">Loading map…</p>}</section>;
 }

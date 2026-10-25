@@ -1160,23 +1160,39 @@ td small { color: var(--muted); margin-top: 5px; }
 
 /* Trail care map and date controls share the portal's spacing and control sizes. */
 .report-map-panel { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; overflow: hidden; }
-.report-map-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; }
 .report-map-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; font-size: 13px; font-weight: 700; color: var(--navy); }
 .report-map-legend span { display: inline-flex; gap: 8px; align-items: center; }
 .report-map-line { width: 26px; height: 4px; border-radius: 4px; background: var(--blue); }
-.report-map-warning { color: #b78c16; font-style: normal; font-size: 22px; }
 .report-map-panel .trail-report-map { height: 420px; border: 0; border-radius: 0; margin: 0; }
+.report-map-canvas { position: relative; }
+.report-map-fit { position: absolute; top: 12px; left: 12px; z-index: 2; min-height: 40px; padding: 10px 14px; background: #fff; box-shadow: 0 2px 8px #26354420; }
+.report-map-legend-bottom { padding: 14px 20px; border-top: 1px solid var(--line); gap: 12px 20px; }
+.report-map-statuses { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.report-map-status { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 2px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--navy); font: inherit; cursor: pointer; }
+.report-map-status:hover { background: var(--sand); }
+.report-map-status[aria-pressed="true"] { border-bottom-color: var(--blue); }
+.report-map-status:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.report-map-status-symbol { color: var(--report-color, var(--navy)); font-size: 19px; font-style: normal; }
+.status-new { --report-color: #725300; --report-fill: #fff0c6; }
+.status-reviewed { --report-color: #254b9a; --report-fill: #e2ebfa; }
+.status-forwarded { --report-color: #67458a; --report-fill: #ede6f4; }
+.status-resolved { --report-color: #17583a; --report-fill: #dcefe4; }
+.status-duplicate, .status-dismissed { --report-color: #4e5a60; --report-fill: #e9ebec; }
+.era-map-draft { background: #d08c16; }
+.era-map-alternative { background: #898275; }
+.era-access-actions { justify-content: flex-end; }
+.era-access-actions:empty { display: none; }
+
 .report-map-caption { margin: 0; padding: 14px 20px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); overflow-wrap: anywhere; }
 .report-map-message { position: absolute; top: 100px; left: 20px; right: 70px; background: #fff; padding: 20px; border-radius: 14px; box-shadow: 0 4px 18px #26354420; color: var(--navy); }
 .report-map-message p { margin: 0 0 14px; }
 .report-map-marker { width: 46px; height: 46px; padding: 0; border: 0; background: transparent; cursor: pointer; z-index: 1; }
 .report-map-marker svg { display: block; width: 46px; height: 46px; overflow: visible; filter: drop-shadow(0 2px 2px #26354455); transition: scale .15s; }
-.report-map-marker path { fill: var(--gold); stroke: var(--navy); stroke-width: 2; }
-.report-map-marker text { fill: var(--navy); font: 900 29px system-ui, sans-serif; }
+.report-map-marker path { fill: var(--report-fill, var(--gold)); stroke: var(--report-color, var(--navy)); stroke-width: 2; }
+.report-map-marker text { fill: var(--report-color, var(--navy)); font: 900 29px system-ui, sans-serif; }
 .report-map-marker.is-selected { z-index: 3; }
-.report-map-marker.is-selected path { fill: #d56825; stroke: #fff; stroke-width: 3; }
-.report-map-marker.is-selected text { fill: #fff; }
-.report-map-marker.is-selected svg { scale: 1.2; filter: drop-shadow(0 0 4px #263544aa); }
+.report-map-marker.is-selected path { stroke: var(--report-color, var(--navy)); stroke-width: 3; }
+.report-map-marker.is-selected svg { scale: 1.2; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 4px #263544aa); }
 .report-map-marker:focus-visible { outline: 3px solid var(--blue); outline-offset: 5px; border-radius: 10px; }
 .report-date-field { position: relative; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .report-date-label { font-size: 13px; font-weight: 800; color: var(--navy); }
@@ -1197,15 +1213,13 @@ td small { color: var(--muted); margin-top: 5px; }
 .report-calendar-day:focus-visible { outline: 2px solid var(--navy); outline-offset: -3px; }
 .report-calendar-footer { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); margin-top: 14px; padding-top: 14px; }
 @media (max-width: 520px) {
-  .report-map-toolbar { padding: 14px; gap: 10px; }
   .report-map-legend { gap: 4px 14px; }
   .report-map-panel .trail-report-map { height: 360px; }
-  .report-map-caption { padding: 14px; }
+  .report-map-caption, .report-map-legend-bottom { padding: 14px; }
   .report-calendar { left: 0; right: auto; width: 100%; padding: 12px; }
 }
 
 .report-map-panel.is-preloading { height: 0; margin: 0; border: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
-.report-map-toolbar .button { flex-shrink: 0; white-space: nowrap; }
 .report-action-choices { display: flex; flex-wrap: wrap; gap: 12px; }
 .report-location-actions { display: flex; flex-wrap: nowrap; align-items: center; gap: 12px; max-width: 100%; overflow-x: auto; padding: 4px 3px 12px; }
 .report-location-actions .button { flex: 0 0 auto; white-space: nowrap; min-height: var(--control-height); gap: 9px; }

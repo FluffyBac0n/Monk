@@ -75,7 +75,7 @@ export function EraAccessManager({access,trailId,onChanged}:{access:EraAccess;tr
   }
   return <section className="era-access" data-era-dirty={dirty?'true':'false'}>
     <section className="form-panel">
-      <div className="era-section-heading"><h2>Organisation & access</h2>{access.admin && <button type="button" className="button button-secondary" disabled={busy} onClick={()=>beginOrganisation()}>Add organisation</button>}</div>
+      <div className="era-section-heading era-access-actions">{access.admin && <button type="button" className="button button-secondary" disabled={busy} onClick={()=>beginOrganisation()}>Add organisation</button>}</div>
       {error && <p className="notice error" role="alert">{error}</p>}{message && <p className="notice" role="status">{message}</p>}
       {organisation?<div className="era-organisation-summary">
         {organisations.length>1?<ReportSelect label="Organisation" value={organisation.id} disabled={busy} onChange={id=>{if(!discard())return;setOrganisationId(id);setOrganisationForm(null);setMemberForm(null);setRemoval(null);setError('');setMessage('');}} options={organisations.map(o=>({value:o.id,label:`${o.name}${o.active?'':' · Inactive'}`}))}/>:<div><p className="era-field-caption">Organisation</p><h3>{organisation.name}</h3></div>}
