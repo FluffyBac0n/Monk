@@ -207,3 +207,31 @@ removal of repeated titles across all ERA tabs. No live incident data was modifi
 Published privately with owner-only access preserved. Website source:
 `40858582b9f8ca7138d7d187c39ed940dc196717`; deployment:
 `appgdep_6addfe887ed08191b1dfff770aad6a87` (succeeded).
+
+## Mobile fit control and visual status selector — 25 October 2026
+
+Fit trail is now an icon control below the zoom buttons on the right, aligned to their
+width. It reuses the exact Material fit_screen_rounded glyph used by the Flutter app.
+The incident legend retains only the trail name and line swatch; status buttons and the
+selection helper caption are removed. Status-selector choices use the same warning
+symbol and palette as map markers, and the selected control border reflects the status.
+Filtering still updates the map and incident list together.
+
+TypeScript, whitespace and production-build checks passed. Browser QA confirmed right
+alignment below zoom, colour equality between the selected status icon and its marker,
+a single matching filtered marker/report, legend removal, no overflow and working Fit.
+
+Downloaded the unmodified Cyprus E4 GeoJSON through Waymarked Trails' route download:
+https://hiking.waymarkedtrails.org/#route?id=2376091&type=relation
+The source identifies Cyprus as E4 rather than the requested E5. The export contains
+five MultiLineString features and 23,234 two-dimensional points (551,807 bytes), with
+OpenStreetMap attribution/licence in its metadata. File: output/era/cyprus-e4-waymarked.geojson.
+
+The actual browser upload and Save & validate revision were tested only in the loopback
+demo-eurotrex trail. The saved draft has 23,232 normalised points and 601.8 km; validation
+correctly flags missing elevation, gaps before segments 4/5, a leg over 5 km, and the
+synthetic fixture's unconfirmed stage connections. No live route was imported or released.
+
+Published privately with owner-only access preserved. Website source:
+`9567409ee283f041e6ea3cd786319983d9e3a01e`; deployment:
+`appgdep_6ade02058af481918922f58c365f022d` (succeeded).

@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import type {Map as MapboxMap,GeoJSONSource} from 'mapbox-gl';
+import {FitTrailButton} from '@/components/FitTrailButton';
 import {preloadReportMap} from '@/lib/report-map-runtime';
 import {loadTrailRoute} from '@/lib/trail-route';
 import type {Segment,StageLink} from '@/lib/era';
@@ -17,7 +18,7 @@ export function EraRouteMap(props:Props) {
     void (async()=>{try{
       const {gl,accessToken}=await preloadReportMap();if(!alive || !element.current)return;
       const m=new gl.Map({container:element.current,accessToken,style:'mapbox://styles/mapbox/outdoors-v12',center:[33,34.9],zoom:8,scrollZoom:false});map.current=m;
-      m.addControl(new gl.NavigationControl());
+      m.addControl(new gl.NavigationControl({showCompass:false}));
       m.on('error',()=>{if(alive && !m.isStyleLoaded())setError('The map background could not load.');});
       m.on('load',()=>{
         if(!alive)return;clearTimeout(timer);setError('');
@@ -50,5 +51,5 @@ export function EraRouteMap(props:Props) {
   },[ready,props.segments,props.links,props.segmentIndex,props.pointIndex,props.pin]);
   function fit(){const points=props.segments.length?props.segments.flatMap(s=>s.coordinates):published.current;if(!points.length || !map.current)return;const lng=points.map(p=>p[0]),lat=points.map(p=>p[1]);map.current.fitBounds([[Math.min(...lng),Math.min(...lat)],[Math.max(...lng),Math.max(...lat)]],{padding:45,maxZoom:15});}
   useEffect(()=>{if(ready)fit();},[ready,props.segments.length]); // Preserve camera while moving individual points.
-  return <section className="report-map-panel"><div className="report-map-canvas"><div ref={element} className="trail-report-map" aria-label="Published and proposed trail map"/><button type="button" className="button button-secondary report-map-fit" disabled={!ready || !!error} onClick={fit}>Fit trail</button></div><div className="report-map-legend report-map-legend-bottom" aria-label="Map legend"><span><i className="report-map-line" aria-hidden="true"/>Published</span><span><i className="report-map-line era-map-draft" aria-hidden="true"/>Draft</span><span><i className="report-map-line era-map-alternative" aria-hidden="true"/>Alternative</span></div>{error && <p className="notice error" role="alert">{error} <button type="button" className="button button-secondary" onClick={()=>setAttempt(a=>a+1)}>Retry map</button></p>}{!ready && !error && <p role="status">Loading map…</p>}</section>;
+  return <section className="report-map-panel"><div className="report-map-canvas"><div ref={element} className="trail-report-map" aria-label="Published and proposed trail map"/><FitTrailButton disabled={!ready || !!error} onClick={fit}/></div><div className="report-map-legend report-map-legend-bottom" aria-label="Map legend"><span><i className="report-map-line" aria-hidden="true"/>Published</span><span><i className="report-map-line era-map-draft" aria-hidden="true"/>Draft</span><span><i className="report-map-line era-map-alternative" aria-hidden="true"/>Alternative</span></div>{error && <p className="notice error" role="alert">{error} <button type="button" className="button button-secondary" onClick={()=>setAttempt(a=>a+1)}>Retry map</button></p>}{!ready && !error && <p role="status">Loading map…</p>}</section>;
 }

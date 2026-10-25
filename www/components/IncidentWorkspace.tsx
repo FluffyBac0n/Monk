@@ -6,6 +6,7 @@ import {AccountVerificationGate} from '@/components/AccountVerificationGate';
 import {AuthPanel} from '@/components/AuthPanel';
 import {PortalHeader} from '@/components/PortalHeader';
 import {ReportSelect} from '@/components/ReportSelect';
+import {ReportStatusIcon} from '@/components/ReportStatusIcon';
 import {ReportDatePicker} from '@/components/ReportDatePicker';
 import {TrailReportMap} from '@/components/TrailReportMap';
 import {EraIncidentForm} from '@/components/EraIncidentForm';
@@ -79,13 +80,13 @@ export function ReportWorkspace({user, embeddedAccess, initialTrailId}: {user: U
     {!access ? (accessState.status === 'loading' ? <p role="status">Checking your assigned trails…</p> : null) : !access.trails.length ? <section className="access-card"><h2>No trails assigned yet.</h2><p>Your email is verified. Ask a EuroTrex administrator to grant trail access to {user.email}.</p></section> : <>
       <section className="form-panel form-grid report-filters" aria-label="Filter reports">
         {!embeddedAccess && <ReportSelect label="Trail" value={trailId} onChange={setTrailId} options={access.trails.map(t => ({value: t.id, label: t.name}))} />}
-        <ReportSelect label="Status" value={status} onChange={setStatus} options={[{value: '', label: 'All statuses'}, ...reportStatuses.map(s => ({value: s, label: reportStatusLabels[s]}))]} />
+        <ReportSelect className={`report-status-select${status?` status-${status}`:''}`} label="Status" value={status} onChange={setStatus} options={[{value: '', label: 'All statuses', indicator: <ReportStatusIcon status=""/>}, ...reportStatuses.map(s => ({value: s, label: reportStatusLabels[s], indicator: <ReportStatusIcon status={s}/>}))]} />
         <ReportSelect label="Problem" value={category} onChange={setCategory} options={[{value: '', label: 'All problems'}, ...Object.entries(reportCategories).map(([value, label]) => ({value, label}))]} />
         <ReportDatePicker value={fromDate} onChange={setFromDate} />
         {embeddedAccess && <div className="era-filter-action"><button type="button" className="era-icon-button" aria-label={creatingIncident ? 'Close incident form' : 'Create incident'} title={creatingIncident ? 'Close incident form' : 'Create incident'} aria-expanded={creatingIncident} aria-controls="era-incident-form" onClick={() => setCreatingIncident(open => !open)}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d={creatingIncident ? 'm6 6 12 12M6 18 18 6' : 'M12 5v14M5 12h14'}/></svg></button></div>}
       </section>
       {embeddedAccess && <EraIncidentForm trailId={trailId} open={creatingIncident} onClose={() => setCreatingIncident(false)} />}
-      {trailId && <TrailReportMap visible key={trailId} trailId={trailId} trailName={trailName} reports={rows} selectedId={selected} onSelect={choose} status={status} onStatusChange={setStatus} />}
+      {trailId && <TrailReportMap visible key={trailId} trailId={trailId} trailName={trailName} reports={rows} selectedId={selected} onSelect={choose} />}
       {reviewMessage && <p className="notice" role="status">{reviewMessage}</p>}
       <p className="report-list-caption" role="status">{loading ? 'Loading reports…' : error ? 'Reports are unavailable.' : `${rows.length} reports loaded · newest first`}</p>
       <div className="report-workspace"><section className="report-inbox" aria-label="Reports">

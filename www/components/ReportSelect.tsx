@@ -1,11 +1,11 @@
 'use client';
-import {useEffect, useId, useRef, useState} from 'react';
+import {useEffect, useId, useRef, useState, type ReactNode} from 'react';
 
-type Option = {value: string; label: string};
+type Option = {value: string; label: string; indicator?: ReactNode};
 
 /** A select-only combobox with the same surface and controls as the report calendar. */
-export function ReportSelect({label, value, options, onChange, disabled = false, appearance = 'control'}: {
-  label: string; value: string; options: Option[]; onChange: (value: string) => void; disabled?: boolean; appearance?: 'control' | 'tab';
+export function ReportSelect({label, value, options, onChange, disabled = false, appearance = 'control', className = ''}: {
+  label: string; value: string; options: Option[]; onChange: (value: string) => void; disabled?: boolean; appearance?: 'control' | 'tab'; className?: string;
 }) {
   const id = useId(), root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false), [active, setActive] = useState(0), [above, setAbove] = useState(false);
@@ -29,7 +29,7 @@ export function ReportSelect({label, value, options, onChange, disabled = false,
   useEffect(() => {
     if (open) root.current?.querySelector(`#${CSS.escape(id)}-option-${active}`)?.scrollIntoView({block: 'nearest'});
   }, [open, active, id]);
-  return <div className={`report-select-field${appearance === 'tab' ? ' report-select-tab' : ''}`} ref={root} onBlur={event => {
+  return <div className={`report-select-field${appearance === 'tab' ? ' report-select-tab' : ''} ${className}`} ref={root} onBlur={event => {
     if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
   }}>
     <span className={appearance === 'tab' ? 'sr-only' : 'report-date-label'} id={`${id}-label`}>{label}</span>
@@ -57,14 +57,14 @@ export function ReportSelect({label, value, options, onChange, disabled = false,
           if (match >= 0) {if (open) setActive(match); else show(match);}
         }
       }}>
-      <span>{options[selected]?.label ?? 'Choose an option'}</span>
+      <span className={options[selected]?.indicator?'report-select-value':undefined}>{options[selected]?.indicator}<span className="report-select-text">{options[selected]?.label ?? 'Choose an option'}</span></span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
     </button>
     {open && <div id={`${id}-list`} className={`report-select-menu ${above ? 'opens-above' : ''}`} role="listbox" aria-labelledby={`${id}-label`}>
       {options.map((option, index) => <div key={option.value} id={`${id}-option-${index}`} role="option"
         aria-selected={option.value === value} className={`report-select-option ${index === active ? 'active' : ''}`}
         onPointerDown={event => event.preventDefault()} onPointerMove={() => setActive(index)} onClick={() => choose(index)}>
-        <span>{option.label}</span><span aria-hidden="true">{option.value === value ? '✓' : ''}</span>
+        <span className={option.indicator?'report-select-value':undefined}>{option.indicator}<span>{option.label}</span></span><span aria-hidden="true">{option.value === value ? '✓' : ''}</span>
       </div>)}
     </div>}
   </div>;

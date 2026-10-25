@@ -1165,14 +1165,18 @@ td small { color: var(--muted); margin-top: 5px; }
 .report-map-line { width: 26px; height: 4px; border-radius: 4px; background: var(--blue); }
 .report-map-panel .trail-report-map { height: 420px; border: 0; border-radius: 0; margin: 0; }
 .report-map-canvas { position: relative; }
-.report-map-fit { position: absolute; top: 12px; left: 12px; z-index: 2; min-height: 40px; padding: 10px 14px; background: #fff; box-shadow: 0 2px 8px #26354420; }
+.report-map-fit { position: absolute; top: 78px; right: 10px; z-index: 2; display: grid; place-items: center; width: 29px; height: 29px; padding: 3px; border: 0; border-radius: 4px; background: #fff; color: #333; box-shadow: 0 0 0 2px #0000001a; cursor: pointer; }
+.report-map-fit:hover { background: #f2f2f2; }
+.report-map-fit:disabled { opacity: .5; cursor: default; }
+.report-map-fit:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.report-status-icon { flex-shrink: 0; }
+.report-status-icon path { fill: var(--report-fill, #edf1f5); stroke: var(--report-color, #4e5a60); stroke-width: 2; }
+.report-status-icon text { fill: var(--report-color, #4e5a60); font: 900 29px system-ui, sans-serif; }
+.report-select-value { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+.report-select-trigger .report-select-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-status-select .report-select-trigger { border-color: var(--report-color, var(--line)); }
+.report-status-select .report-select-option[aria-selected='true'] .report-status-icon { filter: drop-shadow(0 0 1px #fff); }
 .report-map-legend-bottom { padding: 14px 20px; border-top: 1px solid var(--line); gap: 12px 20px; }
-.report-map-statuses { display: flex; flex-wrap: wrap; gap: 4px 12px; }
-.report-map-status { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 2px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--navy); font: inherit; cursor: pointer; }
-.report-map-status:hover { background: var(--sand); }
-.report-map-status[aria-pressed="true"] { border-bottom-color: var(--blue); }
-.report-map-status:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
-.report-map-status-symbol { color: var(--report-color, var(--navy)); font-size: 19px; font-style: normal; }
 .status-new { --report-color: #725300; --report-fill: #fff0c6; }
 .status-reviewed { --report-color: #254b9a; --report-fill: #e2ebfa; }
 .status-forwarded { --report-color: #67458a; --report-fill: #ede6f4; }
