@@ -211,13 +211,9 @@ export function AuthPanel({
 
   return (
     <section className="auth-card">
-      <p className="eyebrow">
-        {trailReports
-          ? 'ERA WORKSPACE'
-          : admin
-            ? 'EUROTREX OPERATIONS'
-            : 'ACCOMMODATION PARTNERS'}
-      </p>
+      {!trailReports && <p className="eyebrow">
+        {admin ? 'EUROTREX OPERATIONS' : 'ACCOMMODATION PARTNERS'}
+      </p>}
       {embedded ? <h2>{heading}</h2> : <h1>{heading}</h1>}
       <p>{introduction}</p>
 

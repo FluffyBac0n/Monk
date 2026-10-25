@@ -1746,10 +1746,11 @@ td small { color: var(--muted); margin-top: 5px; }
 
 /* ERA workspace uses the portal's existing canvas, typography and controls. */
 .era-actions { display:flex; gap:12px; flex-wrap:wrap; margin:20px 0; }
-.era-tabs { background:rgba(244,242,236,.96); border-bottom:1px solid rgba(48,62,78,.14); margin:20px 0; }
+.era-tabs { background:rgba(244,242,236,.96); border-bottom:1px solid rgba(48,62,78,.14); margin:0; flex:1; min-width:0; }
 .era-tabs button { background:transparent; border:0; border-radius:0; font:inherit; }
-.era-trail-choice { display:flex; align-items:center; gap:24px; justify-content:space-between; }
-.era-trail-choice > label, .era-trail-choice > div { min-width:240px; }
+.era-navigation { align-items:flex-end; display:flex; gap:24px; margin:24px 0; min-width:0; }
+.era-trail-choice { flex:0 0 200px; min-width:0; }
+.era-trail-choice .report-date-trigger { width:100%; }
 .era-route-editor { display:grid; gap:24px; }
 .era-page fieldset { border:0; padding:0; margin:0; min-width:0; }
 .era-page fieldset:disabled { opacity:.65; }
@@ -1766,10 +1767,60 @@ td small { color: var(--muted); margin-top: 5px; }
 .era-page .report-members li > div { min-width:0; overflow-wrap:anywhere; }
 .era-page details { margin-bottom:24px; }
 .era-page summary { cursor:pointer; font-weight:700; margin:16px 0; }
-@media(max-width:700px) { .era-trail-choice { display:block; } .era-page .report-members li { flex-wrap:wrap; } }
+@media(max-width:700px) { .era-page .report-members li { flex-wrap:wrap; } }
 
 .era-page label:not(.checkbox-row) { color:var(--navy); display:flex; flex-direction:column; font-size:13px; font-weight:800; gap:8px; }
 .era-page .form-panel > label { margin:16px 0; }
 .era-page input:not([type=checkbox]), .era-page textarea { background:#fbfcfa; border:1px solid #cbd2ce; border-radius:var(--radius-control); color:var(--ink); font:inherit; min-height:var(--control-height); padding:13px 14px; width:100%; }
 .era-page input:focus, .era-page textarea:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(45,93,211,.13); outline:none; }
 .era-page input[type=file] { font-weight:400; }
+
+.era-incident-create { margin:20px 0 12px; }
+.era-incident-toggle { display:flex; justify-content:flex-end; }
+.era-icon-button { align-items:center; background:var(--blue); border:1px solid var(--blue); border-radius:50%; color:white; display:inline-flex; height:44px; justify-content:center; padding:0; width:44px; flex:none; }
+.era-icon-button:hover { background:var(--navy); border-color:var(--navy); }
+.era-icon-button:focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
+.era-incident-create.is-open .era-incident-toggle { margin-bottom:20px; }
+.era-section-heading { align-items:center; display:flex; gap:16px; justify-content:space-between; margin-bottom:24px; }
+.era-section-heading h2, .era-section-heading p { margin:0; }
+.era-section-heading h2 { font-size:clamp(24px,3vw,32px); }
+.era-section-heading h2::after { background:var(--gold); content:''; display:block; height:4px; margin:12px 0 0; width:48px; }
+.era-section-heading p { color:var(--muted); font-size:13px; margin-top:12px; }
+.era-organisation-summary { align-items:center; display:flex; flex-wrap:wrap; gap:20px 32px; justify-content:space-between; }
+.era-organisation-summary .report-select-field { flex:1; max-width:420px; min-width:200px; }
+.era-field-caption { color:var(--muted); font-size:12px; font-weight:800; margin:0 0 6px; }
+.era-organisation-summary h3 { font-size:22px; margin:0; }
+.era-organisation-status { align-items:center; display:flex; flex-wrap:wrap; gap:12px; color:var(--muted); font-size:13px; }
+.era-status { background:#e8f1e9; border-radius:999px; color:#2b6040; font-size:11px; font-weight:800; padding:6px 10px; }
+.era-status.is-inactive { background:var(--sand); color:var(--muted); }
+.era-access-form { border-top:1px solid var(--line); margin:24px 0; padding-top:24px; }
+.era-access-form h3 { font-size:22px; margin:0 0 22px; }
+.era-access-empty { padding:24px 0 8px; }
+.era-access-empty h3 { font-size:21px; margin:0 0 8px; }
+.era-access-empty p { color:var(--muted); margin:0; }
+.era-access .era-trail-assignments, .era-access .era-role-options { margin-top:24px; }
+.era-access legend { color:var(--navy); font-size:13px; font-weight:800; margin-bottom:12px; }
+.era-role-grid { display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.era-access .era-role-option { align-items:flex-start; background:#fbfcfa; border:1px solid var(--line); border-radius:12px; cursor:pointer; gap:12px; margin:0; padding:16px; }
+.era-role-option:has(input:checked) { border-color:var(--blue); background:rgba(45,93,211,.04); }
+.era-role-option:focus-within { outline:2px solid var(--blue); outline-offset:2px; }
+.era-role-option input { margin-top:2px; }
+.era-role-option span { display:grid; gap:5px; }
+.era-role-option strong { color:var(--navy); font-size:13px; }
+.era-role-option small { color:var(--muted); font-size:12px; font-weight:400; line-height:1.5; }
+.era-member-list { list-style:none; margin:20px 0 0; padding:0; }
+.era-member-list > li { align-items:center; border-top:1px solid var(--line); display:flex; gap:20px; justify-content:space-between; padding:20px 0; }
+.era-member-list > li > div:first-child { min-width:0; overflow-wrap:anywhere; }
+.era-member-roles { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.era-member-roles span { background:var(--sand); border-radius:6px; color:var(--navy); font-size:11px; padding:5px 8px; }
+.era-member-actions { align-items:center; display:flex; flex:none; gap:16px; }
+.era-removal { margin-top:20px; }
+.era-removal .era-actions { margin-bottom:0; }
+@media(max-width:700px) {
+  .era-navigation { gap:12px; }
+  .era-trail-choice { flex-basis:155px; }
+  .era-tabs .trail-switcher-item { padding-inline:12px; }
+  .era-section-heading { align-items:flex-start; flex-wrap:wrap; }
+  .era-role-grid { grid-template-columns:1fr; }
+  .era-member-list > li { align-items:flex-start; flex-direction:column; gap:14px; }
+}

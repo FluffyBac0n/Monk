@@ -39,19 +39,19 @@ function EraWorkspace({user}:{user:User}) {
   const incidentAccess=useMemo(()=>({admin:access?.admin || false,trails:trail?[{id:trail.id,name:trail.name}]:[]}),[access?.admin,trail]);
   const tabs=['Incidents','Trail Data','Verification','Published Versions','Audit Log',...((access?.admin || roles.includes('organisation_admin'))?['Access']:[])];
   return <main className="portal-page era-page"><PortalHeader user={user} canAccessAdmin={access?.admin}/><div className="dashboard-shell wide">
-    <section className="dashboard-title"><div><p className="eyebrow">ERA WORKSPACE</p><h1>Trail management.</h1>{access?.organisation && <p>{access.organisation.name}</p>}</div>{access?.admin && <span className="admin-badge">EuroTrex administrator</span>}</section>
+    <section className="dashboard-title"><div><h1>Trail management.</h1>{access?.organisation && <p>{access.organisation.name}</p>}</div>{access?.admin && <span className="admin-badge">EuroTrex administrator</span>}</section>
     {error && <div className="notice error" role="alert"><p>{error}</p><button className="button button-secondary" onClick={()=>void refresh()}>Try again</button></div>}
     {!access && !error && <p role="status">Checking your assigned trails…</p>}
     {access && !access.trails.length && <section className="access-card"><h2>No trails assigned yet.</h2><p>Ask your administrator to assign trail access to {user.email}.</p></section>}
-    {access && <>{access.trails.length>0 && <section className="form-panel era-trail-choice"><ReportSelect label="Trail" value={trailId} onChange={id=>{if(document.querySelector('[data-era-dirty=true]') && !window.confirm('Discard unsaved route changes?'))return;setTrailId(id);setTab('Incidents');}} options={access.trails.map(t=>({value:t.id,label:t.name}))}/><span>{roles.map(r=>r.replaceAll('_',' ')).join(' · ')}</span></section>}
-      <nav className="trail-switcher era-tabs" aria-label="Trail management"><ul className="trail-switcher-list" role="list">{tabs.map(t=><li key={t}><button type="button" className={`trail-switcher-item${tab===t?' active':''}`} aria-current={tab===t?'true':undefined} onClick={event=>{if(t!==tab && document.querySelector('[data-era-dirty=true]') && !window.confirm('Discard unsaved route changes?'))return;setTab(t);event.currentTarget.scrollIntoView({block:'nearest',inline:'nearest'});}}><strong>{t}</strong></button></li>)}</ul></nav>
+    {access && <><div className="era-navigation">{access.trails.length>0 && <div className="era-trail-choice"><ReportSelect label="Trail" value={trailId} onChange={id=>{if(document.querySelector('[data-era-dirty=true]') && !window.confirm('Discard unsaved changes?'))return;setTrailId(id);setTab('Incidents');}} options={access.trails.map(t=>({value:t.id,label:t.name}))}/></div>}
+      <nav className="trail-switcher era-tabs" aria-label="Trail management"><ul className="trail-switcher-list" role="list">{tabs.map(t=><li key={t}><button type="button" className={`trail-switcher-item${tab===t?' active':''}`} aria-current={tab===t?'true':undefined} onClick={event=>{if(t!==tab && document.querySelector('[data-era-dirty=true]') && !window.confirm('Discard unsaved changes?'))return;setTab(t);event.currentTarget.scrollIntoView({block:'nearest',inline:'nearest'});}}><strong>{t}</strong></button></li>)}</ul></nav></div>
       {trail && <div key={trail.id}>
         {tab==='Incidents' && (roles.includes('incident_manager')?<><EraIncidentForm trailId={trail.id}/><div className="era-incidents"><ReportWorkspace key={trail.id} user={user} embeddedAccess={incidentAccess} initialTrailId={trail.id}/></div></>:<p className="notice">Incident manager access is required to open private incidents.</p>)}
         {['Trail Data','Verification'].includes(tab) && <EraRouteEditor key={`${trail.id}:${tab}`} trail={trail} user={user} verification={tab==='Verification'}/>}
         {tab==='Published Versions' && <PublishedVersions trailId={trail.id} canRestore={roles.includes('verifier')} onChanged={refresh}/>}
         {tab==='Audit Log' && <AuditLog trailId={trail.id}/>}
       </div>}
-      {tab==='Access' && <EraAccessManager access={access} trailId={trailId} onChanged={refresh}/>}</>}
+      {tab==='Access' && <EraAccessManager key={trailId} access={access} trailId={trailId} onChanged={refresh}/>}</>}
   </div></main>;
 }
 function PublishedVersions({trailId,canRestore,onChanged}:{trailId:string;canRestore:boolean;onChanged:()=>Promise<void>}) {

@@ -144,3 +144,26 @@ selection, a 3 px active underline, square corners and no page overflow.
 Published privately with owner-only access preserved. Website source:
 `ff35585e695b709e05d3103c225729b4da291013`; deployment:
 `appgdep_6addbffc8bb481919c319a5042f3650e` (succeeded).
+
+## Header and organisation access UX — 25 October 2026
+
+Removed the ERA WORKSPACE eyebrow from the workspace and ERA sign-in screen. The trail
+selector now sits to the left of the horizontally scrolling tabs, and the repeated role
+summary is removed. Incident creation uses a labelled, circular plus control; expanding
+the form changes it to a close control.
+
+Access now has an organisation overview and a separate member list scoped to the selected
+organisation and trail. Organisation IDs are generated internally rather than entered by
+the user. Organisation and member forms open only when adding/editing, member responsibilities
+have concise explanations, and removal has a clear confirmation that focuses Cancel.
+Unsaved form changes are guarded when changing trail, tab or organisation. Existing server
+permission checks are unchanged.
+
+TypeScript and the production build passed. Isolated browser QA verified selector placement,
+no page overflow, plus/close behaviour, organisation creation, member addition/edit/removal,
+and removal-confirmation focus. The live page confirms the workspace label and role summary
+are absent. Test accounts and organisation records were confined to demo-eurotrex emulators.
+
+Published privately with owner-only access preserved. Website source:
+`95865545b3e5e7e0a5097eff08875ff4642bbf88`; deployment:
+`appgdep_6addf38aef148191be9a6961500e8d95` (succeeded).
