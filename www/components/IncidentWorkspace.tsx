@@ -8,9 +8,9 @@ import {PortalHeader} from '@/components/PortalHeader';
 import {ReportSelect} from '@/components/ReportSelect';
 import {ReportDatePicker} from '@/components/ReportDatePicker';
 import {TrailReportMap} from '@/components/TrailReportMap';
+import {EraIncidentForm} from '@/components/EraIncidentForm';
 import {ReportProgress, ReportReview, reportStatusLabels} from '@/components/ReportReview';
 import {preloadTrailRoutes} from '@/lib/trail-route';
-import {preloadReportMap} from '@/lib/report-map-runtime';
 import {watchReportAccess, reportLoadError, type AccessState, type ReportAccess} from '@/lib/report-access';
 import {useAuthState} from '@/lib/use-auth';
 import {db} from '@/lib/firebase';
@@ -29,12 +29,11 @@ export function ReportWorkspace({user, embeddedAccess, initialTrailId}: {user: U
   const [accessState, setAccessState] = useState<AccessState>({status: 'loading'});
   const [attempt, setAttempt] = useState(0);
   const access = accessState.status === 'ready' ? accessState.access : null;
-  const [mapPrepared, setMapPrepared] = useState(false);
   const [trailId, setTrailId] = useState(initialTrailId || '');
   const [reviewMessage, setReviewMessage] = useState('');
   const [status, setStatus] = useState(''), [category, setCategory] = useState(''), [fromDate, setFromDate] = useState('');
   const [count, setCount] = useState(50), [rows, setRows] = useState<TrailReport[]>([]);
-  const [selected, setSelected] = useState(''), [mapView, setMapView] = useState(false);
+  const [selected, setSelected] = useState(''), [creatingIncident, setCreatingIncident] = useState(false);
   const [error, setError] = useState(''), [loading, setLoading] = useState(true);
   useEffect(() => {
     if (embeddedAccess) {setAccessState({status: 'ready', access: embeddedAccess}); return;}
@@ -44,12 +43,10 @@ export function ReportWorkspace({user, embeddedAccess, initialTrailId}: {user: U
       setTrailId(current => state.access.trails.some(t => t.id === current) ? current : state.access.trails[0]?.id || '');
     } else {setRows([]); setSelected(''); setError('');}
   });}, [user, attempt, embeddedAccess]);
-  // Let access checks and the first report list finish before warming map geometry.
+  // Warm other assigned trail routes after the visible map and report list start.
   useEffect(() => {
     if (!access || !trailId || loading || error) return;
     const timer = window.setTimeout(() => {
-      void preloadReportMap().catch(() => {});
-      setMapPrepared(true);
       preloadTrailRoutes([trailId, ...access.trails.map(t => t.id).filter(id => id !== trailId)]);
     }, 300);
     return () => window.clearTimeout(timer);
@@ -85,9 +82,10 @@ export function ReportWorkspace({user, embeddedAccess, initialTrailId}: {user: U
         <ReportSelect label="Status" value={status} onChange={setStatus} options={[{value: '', label: 'All statuses'}, ...reportStatuses.map(s => ({value: s, label: reportStatusLabels[s]}))]} />
         <ReportSelect label="Problem" value={category} onChange={setCategory} options={[{value: '', label: 'All problems'}, ...Object.entries(reportCategories).map(([value, label]) => ({value, label}))]} />
         <ReportDatePicker value={fromDate} onChange={setFromDate} />
-        <button className="button button-secondary" aria-pressed={mapView} onClick={() => setMapView(v => !v)}>{mapView ? 'Hide map' : 'Show map'}</button>
+        {embeddedAccess && <div className="era-filter-action"><button type="button" className="era-icon-button" aria-label={creatingIncident ? 'Close incident form' : 'Create incident'} title={creatingIncident ? 'Close incident form' : 'Create incident'} aria-expanded={creatingIncident} aria-controls="era-incident-form" onClick={() => setCreatingIncident(open => !open)}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d={creatingIncident ? 'm6 6 12 12M6 18 18 6' : 'M12 5v14M5 12h14'}/></svg></button></div>}
       </section>
-      {trailId && (mapPrepared || mapView) && <TrailReportMap visible={mapView} key={trailId} trailId={trailId} trailName={trailName} reports={rows} selectedId={selected} onSelect={choose} />}
+      {embeddedAccess && <EraIncidentForm trailId={trailId} open={creatingIncident} onClose={() => setCreatingIncident(false)} />}
+      {trailId && <TrailReportMap visible key={trailId} trailId={trailId} trailName={trailName} reports={rows} selectedId={selected} onSelect={choose} />}
       {reviewMessage && <p className="notice" role="status">{reviewMessage}</p>}
       <p className="report-list-caption" role="status">{loading ? 'Loading reports…' : error ? 'Reports are unavailable.' : `${rows.length} reports loaded · newest first`}</p>
       <div className="report-workspace"><section className="report-inbox" aria-label="Reports">

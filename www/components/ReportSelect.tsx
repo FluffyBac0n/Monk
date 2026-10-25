@@ -4,8 +4,8 @@ import {useEffect, useId, useRef, useState} from 'react';
 type Option = {value: string; label: string};
 
 /** A select-only combobox with the same surface and controls as the report calendar. */
-export function ReportSelect({label, value, options, onChange, disabled = false}: {
-  label: string; value: string; options: Option[]; onChange: (value: string) => void; disabled?: boolean;
+export function ReportSelect({label, value, options, onChange, disabled = false, appearance = 'control'}: {
+  label: string; value: string; options: Option[]; onChange: (value: string) => void; disabled?: boolean; appearance?: 'control' | 'tab';
 }) {
   const id = useId(), root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false), [active, setActive] = useState(0), [above, setAbove] = useState(false);
@@ -29,10 +29,10 @@ export function ReportSelect({label, value, options, onChange, disabled = false}
   useEffect(() => {
     if (open) root.current?.querySelector(`#${CSS.escape(id)}-option-${active}`)?.scrollIntoView({block: 'nearest'});
   }, [open, active, id]);
-  return <div className="report-select-field" ref={root} onBlur={event => {
+  return <div className={`report-select-field${appearance === 'tab' ? ' report-select-tab' : ''}`} ref={root} onBlur={event => {
     if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
   }}>
-    <span className="report-date-label" id={`${id}-label`}>{label}</span>
+    <span className={appearance === 'tab' ? 'sr-only' : 'report-date-label'} id={`${id}-label`}>{label}</span>
     <button type="button" ref={trigger} className="report-date-trigger report-select-trigger" role="combobox"
       aria-labelledby={`${id}-label`} aria-expanded={open} aria-controls={`${id}-list`}
       aria-haspopup="listbox" aria-activedescendant={open ? `${id}-option-${active}` : undefined}

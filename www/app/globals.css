@@ -1746,11 +1746,17 @@ td small { color: var(--muted); margin-top: 5px; }
 
 /* ERA workspace uses the portal's existing canvas, typography and controls. */
 .era-actions { display:flex; gap:12px; flex-wrap:wrap; margin:20px 0; }
-.era-tabs { background:rgba(244,242,236,.96); border-bottom:1px solid rgba(48,62,78,.14); margin:0; flex:1; min-width:0; }
+.era-tabs { background:transparent; border:0; margin:0; flex:1; min-width:0; }
 .era-tabs button { background:transparent; border:0; border-radius:0; font:inherit; }
-.era-navigation { align-items:flex-end; display:flex; gap:24px; margin:24px 0; min-width:0; }
-.era-trail-choice { flex:0 0 200px; min-width:0; }
-.era-trail-choice .report-date-trigger { width:100%; }
+.era-navigation { align-items:stretch; background:rgba(244,242,236,.96); border-bottom:1px solid rgba(48,62,78,.14); display:flex; gap:0; margin:24px 0; min-width:0; }
+.era-trail-choice { border-right:1px solid rgba(48,62,78,.1); flex:0 1 220px; min-width:140px; position:relative; z-index:15; }
+.era-trail-choice .report-select-field { gap:0; height:100%; }
+.era-trail-choice .report-date-trigger { background:transparent; border:0; border-radius:0; color:var(--navy); font-size:12px; font-weight:800; height:54px; min-height:54px; padding:0 18px; text-transform:uppercase; width:100%; }
+.era-trail-choice .report-date-trigger:hover, .era-trail-choice .report-date-trigger[aria-expanded=true] { background:rgba(255,255,255,.46); color:var(--blue); }
+.era-trail-choice .report-date-trigger:focus-visible { outline-offset:-3px; }
+.era-trail-choice .report-date-trigger svg { height:16px; width:16px; }
+.era-trail-choice .report-select-menu { max-width:calc(100vw - 48px); min-width:240px; width:max-content; }
+.era-page .dashboard-title .section-title { letter-spacing:inherit; margin:0; text-transform:none; }
 .era-route-editor { display:grid; gap:24px; }
 .era-page fieldset { border:0; padding:0; margin:0; min-width:0; }
 .era-page fieldset:disabled { opacity:.65; }
@@ -1775,12 +1781,12 @@ td small { color: var(--muted); margin-top: 5px; }
 .era-page input:focus, .era-page textarea:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(45,93,211,.13); outline:none; }
 .era-page input[type=file] { font-weight:400; }
 
-.era-incident-create { margin:20px 0 12px; }
-.era-incident-toggle { display:flex; justify-content:flex-end; }
+.era-incident-create { margin:0 0 24px; }
+.era-filter-action { align-items:flex-end; display:flex; justify-content:flex-end; min-height:48px; }
+.era-incidents .report-filters { grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr) 44px; }
 .era-icon-button { align-items:center; background:var(--blue); border:1px solid var(--blue); border-radius:50%; color:white; display:inline-flex; height:44px; justify-content:center; padding:0; width:44px; flex:none; }
 .era-icon-button:hover { background:var(--navy); border-color:var(--navy); }
 .era-icon-button:focus-visible { outline:3px solid var(--gold); outline-offset:3px; }
-.era-incident-create.is-open .era-incident-toggle { margin-bottom:20px; }
 .era-section-heading { align-items:center; display:flex; gap:16px; justify-content:space-between; margin-bottom:24px; }
 .era-section-heading h2, .era-section-heading p { margin:0; }
 .era-section-heading h2 { font-size:clamp(24px,3vw,32px); }
@@ -1817,10 +1823,13 @@ td small { color: var(--muted); margin-top: 5px; }
 .era-removal { margin-top:20px; }
 .era-removal .era-actions { margin-bottom:0; }
 @media(max-width:700px) {
-  .era-navigation { gap:12px; }
-  .era-trail-choice { flex-basis:155px; }
+  .era-trail-choice { flex-basis:180px; }
+  .era-trail-choice .report-date-trigger { font-size:11px; height:50px; min-height:50px; padding-inline:14px; }
   .era-tabs .trail-switcher-item { padding-inline:12px; }
   .era-section-heading { align-items:flex-start; flex-wrap:wrap; }
   .era-role-grid { grid-template-columns:1fr; }
   .era-member-list > li { align-items:flex-start; flex-direction:column; gap:14px; }
 }
+
+@media(max-width:1100px) { .era-incidents .report-filters { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:520px) { .era-incidents .report-filters { grid-template-columns:minmax(0,1fr); } }

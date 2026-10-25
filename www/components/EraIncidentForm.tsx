@@ -20,8 +20,8 @@ async function preparePhotos(files:File[]):Promise<Photo[]> {
     return {id:`photo_${i}`,bytes,sha256Hash:Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,'0')).join(''),byteLength:bytes.byteLength};
   }));
 }
-export function EraIncidentForm({trailId}:{trailId:string}) {
-  const [open,setOpen]=useState(false),[category,setCategory]=useState('signpost'),[passability,setPassability]=useState('unsure'),[priority,setPriority]=useState('normal');
+export function EraIncidentForm({trailId,open,onClose}:{trailId:string;open:boolean;onClose:()=>void}) {
+  const [category,setCategory]=useState('signpost'),[passability,setPassability]=useState('unsure'),[priority,setPriority]=useState('normal');
   const [description,setDescription]=useState(''),[latitude,setLatitude]=useState(''),[longitude,setLongitude]=useState(''),[stageId,setStageId]=useState(''),[date,setDate]=useState(()=>{const now=new Date();return new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,16);});
   const [files,setFiles]=useState<File[]>([]),[mapOpen,setMapOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
   const pending=useRef<{reportId:string;photos:Photo[];body:Record<string,unknown>;created?:boolean}|null>(null);
@@ -40,16 +40,16 @@ export function EraIncidentForm({trailId}:{trailId:string}) {
         if(!uploaded)await uploadBytes(destination,p.bytes,{contentType:'image/jpeg',customMetadata:{sha256Hash:p.sha256Hash}});
       }
       if(photos.length && !receipt.received)await eraCall('finalizeTrailReport',{reportId,photoChecksums:photos.map(({id,sha256Hash,byteLength})=>({id,sha256Hash,byteLength}))});
-      pending.current=null;setDescription('');setFiles([]);setOpen(false);setMessage('Organisation incident created. Review it to publish a public warning.');
+      pending.current=null;setDescription('');setFiles([]);onClose();setMessage('Organisation incident created. Review it to publish a public warning.');
     }catch(e){if(!pending.current?.created)pending.current=null;setError(e instanceof Error?e.message:'Could not create incident. Retry to finish the same submission.');}
     finally{setBusy(false);}
   }
   const pin=latitude!=='' && longitude!=='' && Math.abs(Number(latitude))<=85 && Math.abs(Number(longitude))<=180?[Number(longitude),Number(latitude)]:undefined;
-  return <section className={`era-incident-create${open?' form-panel is-open':''}`}><div className="era-incident-toggle"><button type="button" className="era-icon-button" aria-label={open?'Close incident form':'Create incident'} title={open?'Close incident form':'Create incident'} aria-expanded={open} aria-controls="era-incident-form" onClick={()=>setOpen(o=>!o)}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d={open?'m6 6 12 12M6 18 18 6':'M12 5v14M5 12h14'}/></svg></button></div>{message && <p className="notice" role="status">{message}</p>}{open && <form id="era-incident-form" onSubmit={e=>{e.preventDefault();void submit();}}><fieldset disabled={busy || !!pending.current}><div className="form-grid">
+  return <>{message && <p className="notice" role="status">{message}</p>}{open && <section className="form-panel era-incident-create"><h2>New incident</h2><form id="era-incident-form" onSubmit={e=>{e.preventDefault();void submit();}}><fieldset disabled={busy || !!pending.current}><div className="form-grid">
     <ReportSelect label="Problem" value={category} onChange={setCategory} options={Object.entries(reportCategories).map(([value,label])=>({value,label}))}/><ReportSelect label="Trail access" value={passability} onChange={setPassability} options={['passable','difficult','blocked','unsure'].map(value=>({value,label:value}))}/><ReportSelect label="Priority" value={priority} onChange={setPriority} options={['normal','high','urgent'].map(value=>({value,label:value}))}/>
     <label>Description<textarea required maxLength={500} value={description} onChange={e=>setDescription(e.target.value)}/></label><label>Latitude<input required type="number" step="any" min={-85} max={85} value={latitude} onChange={e=>setLatitude(e.target.value)}/></label><label>Longitude<input required type="number" step="any" min={-180} max={180} value={longitude} onChange={e=>setLongitude(e.target.value)}/></label><label>Observed<input required type="datetime-local" value={date} onChange={e=>setDate(e.target.value)}/></label><label>Stage ID (optional)<input value={stageId} onChange={e=>setStageId(e.target.value)}/></label><label>Photos (up to three)<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={e=>{const next=Array.from(e.target.files || []);if(next.length>3){setError('Choose up to three photos.');e.target.value='';setFiles([]);}else{setFiles(next);setError('');}}}/></label>
     </div><button type="button" className="button button-secondary" onClick={()=>setMapOpen(v=>!v)}>{mapOpen?'Hide location map':'Choose location on map'}</button></fieldset>
     {mapOpen && <EraRouteMap trailId={trailId} segments={[]} links={[]} segmentIndex={0} pointIndex={0} pin={pin} editable={!busy && !pending.current} onSelect={()=>{}} onPoint={p=>{setLongitude(p[0].toFixed(6));setLatitude(p[1].toFixed(6));}}/>}
     <div className="era-actions"><button className="button button-primary" disabled={busy}>{busy?'Saving incident…':pending.current?'Retry incident upload':'Create incident'}</button></div>{error && <p className="notice error" role="alert">{error}</p>}
-  </form>}</section>;
+  </form></section>}</>;
 }

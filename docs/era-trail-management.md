@@ -167,3 +167,21 @@ are absent. Test accounts and organisation records were confined to demo-eurotre
 Published privately with owner-only access preserved. Website source:
 `95865545b3e5e7e0a5097eff08875ff4642bbf88`; deployment:
 `appgdep_6addf38aef148191be9a6961500e8d95` (succeeded).
+
+## Integrated navigation and visible incident map — 25 October 2026
+
+The trail selector now uses a flat tab appearance within the shared navigation strip,
+with matching height, typography and separators. The Trail Management heading uses
+the existing yellow section rule and Title Case. The incident map opens automatically
+and stays visible; a circular incident-creation control occupies the former map-toggle
+position in the filter panel. Incident creation remains scoped to the ERA workspace.
+
+TypeScript, whitespace checks and the production build passed. Isolated emulator browser
+QA verified the dropdown, matching selector/tab heights, no page overflow, plus/close
+behaviour, and successful incident creation while the main map remained visible. Route
+geometry and the incident were synthetic demo-eurotrex fixtures only. The live page
+confirmed the corrected heading; its signed-in account has no assigned trails.
+
+Published privately with owner-only access preserved. Website source:
+`5f1ba53c085782011c1d37c06af51813d8e2d11a`; deployment:
+`appgdep_6addf9e66dac81919263d4927122b4ae` (succeeded).
