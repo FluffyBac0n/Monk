@@ -1177,6 +1177,7 @@ td small { color: var(--muted); margin-top: 5px; }
 .report-status-select .report-select-trigger { border-color: var(--report-color, var(--line)); }
 .report-status-select .report-select-option[aria-selected='true'] .report-status-icon { filter: drop-shadow(0 0 1px #fff); }
 .report-map-legend-bottom { padding: 14px 20px; border-top: 1px solid var(--line); gap: 12px 20px; }
+.status-all { --report-color: #4e5a60; --report-fill: #edf1f5; }
 .status-new { --report-color: #725300; --report-fill: #fff0c6; }
 .status-reviewed { --report-color: #254b9a; --report-fill: #e2ebfa; }
 .status-forwarded { --report-color: #67458a; --report-fill: #ede6f4; }

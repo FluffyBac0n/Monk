@@ -243,3 +243,12 @@ their right inset and a 10 px gap below the zoom group. Browser measurements con
 zero difference at both left and right edges; the production build passed.
 Website source: `f9721d9fc35ace1d7448db2579cfc6cddbbb5043`; private deployment
 `appgdep_6ade0388ee808191aa103501b5e76021` succeeded with owner-only access preserved.
+
+## Neutral All statuses option — 25 October 2026
+
+Gave the All statuses icon an explicit neutral palette so it cannot inherit the selected
+status's colour from the selector wrapper. Browser QA with Received selected confirmed
+a grey All statuses option and yellow Received trigger/option/map marker. TypeScript,
+whitespace and production-build checks passed. Website source:
+`9489f4f7cd9bb864acf43a708b34d79a65bfb3d6`; private deployment
+`appgdep_6ade08f6bf28819190e891478a14e32a` succeeded with owner-only access preserved.
