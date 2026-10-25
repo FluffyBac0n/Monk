@@ -1745,7 +1745,9 @@ td small { color: var(--muted); margin-top: 5px; }
 }
 
 /* ERA workspace uses the portal's existing canvas, typography and controls. */
-.era-tabs, .era-actions { display:flex; gap:12px; flex-wrap:wrap; margin:20px 0; }
+.era-actions { display:flex; gap:12px; flex-wrap:wrap; margin:20px 0; }
+.era-tabs { background:rgba(244,242,236,.96); border-bottom:1px solid rgba(48,62,78,.14); margin:20px 0; }
+.era-tabs button { background:transparent; border:0; border-radius:0; font:inherit; }
 .era-trail-choice { display:flex; align-items:center; gap:24px; justify-content:space-between; }
 .era-trail-choice > label, .era-trail-choice > div { min-width:240px; }
 .era-route-editor { display:grid; gap:24px; }
@@ -1764,7 +1766,7 @@ td small { color: var(--muted); margin-top: 5px; }
 .era-page .report-members li > div { min-width:0; overflow-wrap:anywhere; }
 .era-page details { margin-bottom:24px; }
 .era-page summary { cursor:pointer; font-weight:700; margin:16px 0; }
-@media(max-width:700px) { .era-trail-choice { display:block; } .era-tabs { gap:8px; } .era-tabs .button { font-size:.85rem; padding:10px 12px; } .era-page .report-members li { flex-wrap:wrap; } }
+@media(max-width:700px) { .era-trail-choice { display:block; } .era-page .report-members li { flex-wrap:wrap; } }
 
 .era-page label:not(.checkbox-row) { color:var(--navy); display:flex; flex-direction:column; font-size:13px; font-weight:800; gap:8px; }
 .era-page .form-panel > label { margin:16px 0; }

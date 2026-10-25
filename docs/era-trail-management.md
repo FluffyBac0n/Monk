@@ -132,3 +132,15 @@ manually. All eight indexes, including `eraAudit` and `releases`, were subsequen
 Configure the real organisation and its initial administrator in Access.
 Use separate editor/verifier accounts for the Cyprus pilot. Missing elevations and unresolved
 stage/related-route connections remain publishing blockers until the team resolves them.
+
+## ERA tab styling — 25 October 2026
+
+Replaced the pill-style navigation with the existing Explore Trails tab strip classes:
+sand background, separators, flat labels and the blue active underline. The strip uses
+horizontal scrolling on narrow screens. Tab switching and unsaved-change confirmation
+are preserved. TypeScript and the production build passed; live checks confirmed tab
+selection, a 3 px active underline, square corners and no page overflow.
+
+Published privately with owner-only access preserved. Website source:
+`ff35585e695b709e05d3103c225729b4da291013`; deployment:
+`appgdep_6addbffc8bb481919c319a5042f3650e` (succeeded).
