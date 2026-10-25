@@ -1165,7 +1165,7 @@ td small { color: var(--muted); margin-top: 5px; }
 .report-map-line { width: 26px; height: 4px; border-radius: 4px; background: var(--blue); }
 .report-map-panel .trail-report-map { height: 420px; border: 0; border-radius: 0; margin: 0; }
 .report-map-canvas { position: relative; }
-.report-map-fit { position: absolute; top: 78px; right: 10px; z-index: 2; display: grid; place-items: center; width: 29px; height: 29px; padding: 3px; border: 0; border-radius: 4px; background: #fff; color: #333; box-shadow: 0 0 0 2px #0000001a; cursor: pointer; }
+.report-map-fit { position: absolute; top: 84px; right: 10px; z-index: 2; display: grid; place-items: center; width: 32px; height: 32px; padding: 3px; border: 0; border-radius: 4px; background: #fff; color: #333; box-shadow: 0 0 0 2px #0000001a; cursor: pointer; }
 .report-map-fit:hover { background: #f2f2f2; }
 .report-map-fit:disabled { opacity: .5; cursor: default; }
 .report-map-fit:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }

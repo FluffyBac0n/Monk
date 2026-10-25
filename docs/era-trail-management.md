@@ -235,3 +235,11 @@ synthetic fixture's unconfirmed stage connections. No live route was imported or
 Published privately with owner-only access preserved. Website source:
 `9567409ee283f041e6ea3cd786319983d9e3a01e`; deployment:
 `appgdep_6ade02058af481918922f58c365f022d` (succeeded).
+
+## Map-control edge alignment — 25 October 2026
+
+Matched Fit trail to the installed Mapbox zoom controls at 32 × 32 px, preserving
+their right inset and a 10 px gap below the zoom group. Browser measurements confirmed
+zero difference at both left and right edges; the production build passed.
+Website source: `f9721d9fc35ace1d7448db2579cfc6cddbbb5043`; private deployment
+`appgdep_6ade0388ee808191aa103501b5e76021` succeeded with owner-only access preserved.
