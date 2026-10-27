@@ -1,29 +1,49 @@
 'use client';
 import {collection,doc,getDoc,getDocs,orderBy,query} from 'firebase/firestore';
-import {db} from './firebase';
-import {eraCall,type RevisionDetail,type RevisionPayload} from './era';
+import {auth,db} from './firebase';
+import {eraCall,type RevisionPayload} from './era';
 import {decodeEditableRouteChunks} from './route-geometry';
 
-export async function loadCurrentEraRoute(trailId:string) {
-  const root=await getDoc(doc(db,'trails',trailId));
-  if (!root.exists()) throw new Error('Trail unavailable.');
-  const releaseId=(root.data().publishedReleaseId as string) || null;
-  const prefix=releaseId?`trails/${trailId}/releases/${releaseId}`:`trails/${trailId}`;
-  const release=releaseId?await getDoc(doc(db,prefix)):root;
-  if (release.data()?.revisionId) {
-    const detail=await eraCall<RevisionDetail>('getEraRevision',{trailId,revisionId:release.data()!.revisionId});
-    return {payload:detail.payload,detail,releaseId};
-  }
-  const metadata=await getDoc(doc(db,`${prefix}/routeMetadata/main`));
-  const body:RevisionPayload={segments:[],source:release.data()?.source || '',attribution:release.data()?.attribution || '',elevationSource:release.data()?.elevationSource || '',stageDecisions:{},relatedRoutesReviewed:false,changesReviewed:false};
-  if (metadata.exists()) {
-    const chunks=await getDocs(query(collection(db,`${prefix}/routeChunks`),orderBy('chunkIndex')));
-    if (metadata.data().chunkCount!=null && chunks.size!==Number(metadata.data().chunkCount)) throw new Error('The trail download is incomplete. Try again.');
-    const coordinates=decodeEditableRouteChunks(metadata.data(),chunks.docs.map(chunk=>chunk.data()));
-    body.segments=[{kind:'main',coordinates}];
-    body.source ||= metadata.data().source || `Current trail: ${root.data().name || trailId}`;
-    body.attribution ||= metadata.data().attribution || '';
-    body.elevationSource ||= metadata.data().elevationSource || (coordinates.every(point=>point.length===3)?'Current trail data':'');
-  }
-  return {payload:body,detail:null,releaseId};
+type CurrentRoute={payload:RevisionPayload;releaseId:string|null};
+const pending=new Map<string,Promise<CurrentRoute>>();
+const snapshots=new Map<string,CurrentRoute>();
+let generation=0;
+export function clearCurrentEraRoutes(){generation++;pending.clear();snapshots.clear();}
+
+/** Session-only cache, keyed by account and the current immutable release/geometry version. */
+export function loadCurrentEraRoute(trailId:string):Promise<CurrentRoute> {
+  const epoch=generation,account=auth.currentUser?.uid || '',key=`${account}:${trailId}`;
+  const existing=pending.get(key);if(existing)return existing;
+  const load=(async()=>{
+    const root=await getDoc(doc(db,'trails',trailId));
+    if(!root.exists())throw new Error('Trail unavailable.');
+    const releaseId=(root.data().publishedReleaseId as string) || null;
+    const prefix=releaseId?`trails/${trailId}/releases/${releaseId}`:`trails/${trailId}`;
+    if(releaseId){
+      const cached=snapshots.get(`${key}:${releaseId}`);if(cached)return cached;
+      const release=await getDoc(doc(db,prefix));
+      if(release.data()?.revisionId){
+        const {payload}=await eraCall<{payload:RevisionPayload}>('getEraRevision',{trailId,revisionId:release.data()!.revisionId,payloadOnly:true});
+        const value={payload,releaseId};if(generation===epoch && auth.currentUser?.uid===account)snapshots.set(`${key}:${releaseId}`,value);return value;
+      }
+    }
+    const metadata=await getDoc(doc(db,`${prefix}/routeMetadata/main`));
+    const data=metadata.data();
+    const revision=JSON.stringify([releaseId,data?.version,data?.updatedAt?.toMillis?.(),data?.pointCount,data?.chunkCount]);
+    const cached=snapshots.get(`${key}:${revision}`);if(cached)return cached;
+    const payload:RevisionPayload={segments:[],source:root.data().source || '',attribution:root.data().attribution || '',elevationSource:root.data().elevationSource || '',stageDecisions:{},relatedRoutesReviewed:false,changesReviewed:false};
+    if(data){
+      const chunks=await getDocs(query(collection(db,`${prefix}/routeChunks`),orderBy('chunkIndex')));
+      if(data.chunkCount!=null && chunks.size!==Number(data.chunkCount))throw new Error('The trail download is incomplete. Try again.');
+      const coordinates=decodeEditableRouteChunks(data,chunks.docs.map(chunk=>chunk.data()));
+      payload.segments=[{kind:'main',coordinates}];
+      payload.source ||= data.source || `Current trail: ${root.data().name || trailId}`;
+      payload.attribution ||= data.attribution || '';
+      payload.elevationSource ||= data.elevationSource || (coordinates.every(point=>point.length===3)?'Current trail data':'');
+    }
+    const value={payload,releaseId};if(generation===epoch && auth.currentUser?.uid===account)snapshots.set(`${key}:${revision}`,value);return value;
+  })();
+  pending.set(key,load);
+  void load.finally(()=>{if(pending.get(key)===load)pending.delete(key);}).catch(()=>{});
+  return load;
 }

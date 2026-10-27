@@ -188,10 +188,10 @@ export function AuthPanel({
 
   const heading = trailReports
     ? mode === 'register'
-      ? 'Create your ERA account.'
+      ? 'Create your account.'
       : mode === 'reset'
         ? 'Reset your password.'
-        : 'ERA Login.'
+        : 'Login.'
     : admin
       ? 'Administrator sign in.'
       : mode === 'register'

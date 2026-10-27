@@ -1,12 +1,12 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import type {Map as MapboxMap,GeoJSONSource,Marker} from 'mapbox-gl';
 import {FitTrailButton} from '@/components/FitTrailButton';
 import {preloadReportMap} from '@/lib/report-map-runtime';
 import {loadTrailRoute} from '@/lib/trail-route';
 import type {Segment,StageLink} from '@/lib/era';
 import 'mapbox-gl/dist/mapbox-gl.css';
-type Props={trailId:string;segments:Segment[];links:StageLink[];segmentIndex:number;pointIndex:number;onPoint:(p:number[])=>void;onSelect:(segment:number,point:number)=>void;editable:boolean;pin?:number[];editing?:boolean;draggable?:boolean;current?:boolean;fitKey?:number;onMove?:(p:number[])=>void};
+type Props={trailId:string;segments:Segment[];referenceSegments?:Segment[];links:StageLink[];segmentIndex:number;pointIndex:number;onPoint:(p:number[])=>void;onSelect:(segment:number,point:number)=>void;editable:boolean;pin?:number[];editing?:boolean;draggable?:boolean;current?:boolean;fitKey?:number;onMove?:(p:number[])=>void};
 export function EraRouteMap(props:Props) {
   const element=useRef<HTMLDivElement>(null),map=useRef<MapboxMap|null>(null),latest=useRef(props),published=useRef<number[][]>([]);
   latest.current=props;
@@ -42,20 +42,32 @@ export function EraRouteMap(props:Props) {
           if(latest.current.editing){let best=144,selection:null|[number,number]=null;latest.current.segments.forEach((section,si)=>section.coordinates.forEach((point,pi)=>{const pixel=m.project([point[0],point[1]]),distance=(pixel.x-e.point.x)**2+(pixel.y-e.point.y)**2;if(distance<best){best=distance;selection=[si,pi];}}));if(selection)latest.current.onSelect(selection[0],selection[1]);}
         });
         setReady(true);
-        void loadTrailRoute(props.trailId).then(coords=>{if(alive){published.current=coords;(m.getSource('published') as GeoJSONSource)?.setData({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:coords}});if(!latest.current.segments.length){const bounds=new gl.LngLatBounds();coords.forEach(p=>bounds.extend(p));m.fitBounds(bounds,{padding:45,maxZoom:15});}}},()=>{});
+        if(!latest.current.referenceSegments)void loadTrailRoute(props.trailId).then(coords=>{if(alive){published.current=coords;(m.getSource('published') as GeoJSONSource)?.setData({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:coords}});if(!latest.current.segments.length){const bounds=new gl.LngLatBounds();coords.forEach(p=>bounds.extend(p));m.fitBounds(bounds,{padding:45,maxZoom:15});}}},()=>{});
       });
     }catch{if(alive)setError('Map unavailable. Retry the map.');}})();
     return()=>{alive=false;clearTimeout(timer);selectedMarker.current?.remove();selectedMarker.current=null;map.current?.remove();map.current=null;};
   },[props.trailId,attempt]);
+  const lineData=useMemo(()=>({type:'FeatureCollection' as const,features:props.segments.map(s=>({type:'Feature' as const,properties:{kind:s.kind},geometry:{type:'LineString' as const,coordinates:s.coordinates}}))}),[props.segments]);
+  const pointData=useMemo(()=>{
+    const stride=Math.max(1,Math.ceil(props.segments.reduce((sum,s)=>sum+s.coordinates.length,0)/3000));
+    return {type:'FeatureCollection' as const,features:props.editing===false?[]:props.segments.flatMap((s,si)=>s.coordinates.flatMap((p,pi)=>pi%stride===0?[{type:'Feature' as const,properties:{segment:si,point:pi,selected:false},geometry:{type:'Point' as const,coordinates:p}}]:[]))};
+  },[props.segments,props.editing]);
+  useEffect(()=>{
+    if(!ready || !map.current || !props.referenceSegments)return;
+    published.current=props.referenceSegments.flatMap(s=>s.coordinates);
+    (map.current.getSource('published') as GeoJSONSource).setData({type:'FeatureCollection',features:props.referenceSegments.map(s=>({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:s.coordinates}}))});
+  },[ready,props.referenceSegments]);
+  useEffect(()=>{
+    if(!ready || !map.current)return;
+    (map.current.getSource('draft') as GeoJSONSource).setData(lineData);
+    (map.current.getSource('points') as GeoJSONSource).setData(pointData);
+  },[ready,lineData,pointData]);
   useEffect(()=>{
     if(!ready || !map.current)return;
     const m=map.current;
-    (m.getSource('draft') as GeoJSONSource).setData({type:'FeatureCollection',features:props.segments.map(s=>({type:'Feature',properties:{kind:s.kind},geometry:{type:'LineString',coordinates:s.coordinates}}))});
     m.setPaintProperty('draft-line','line-color',props.current?'#2d5dd3':['case',['==',['get','kind'],'alternative'],'#898275','#d08c16']);
     m.setLayoutProperty('published-line','visibility',props.current && props.segments.length?'none':'visible');
     m.setLayoutProperty('route-points','visibility',props.editing===false?'none':'visible');
-    // Keep the whole line, but limit clickable point features for very large imports.
-    (m.getSource('points') as GeoJSONSource).setData({type:'FeatureCollection',features:props.segments.flatMap((s,si)=>s.coordinates.flatMap((p,pi)=>pi%Math.max(1,Math.ceil(s.coordinates.length/5000))===0 || (si===props.segmentIndex && pi===props.pointIndex)?[{type:'Feature' as const,properties:{segment:si,point:pi,selected:si===props.segmentIndex && pi===props.pointIndex},geometry:{type:'Point' as const,coordinates:p}}]:[]))});
     (m.getSource('links') as GeoJSONSource).setData({type:'FeatureCollection',features:props.links.flatMap(s=>s.location && s.coordinates?[{type:'Feature' as const,properties:{},geometry:{type:'LineString' as const,coordinates:[[s.location.longitude,s.location.latitude],s.coordinates]}}]:[])});
     const pins=[...props.links.flatMap(s=>s.location?[[s.location.longitude,s.location.latitude]]:[]),...(props.pin?[props.pin]:[])];
     (m.getSource('pins') as GeoJSONSource).setData({type:'FeatureCollection',features:pins.map(p=>({type:'Feature',properties:{},geometry:{type:'Point',coordinates:p}}))});

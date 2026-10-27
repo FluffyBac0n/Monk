@@ -29,6 +29,8 @@ test('ERA independent approval, immutable release, explicit warnings, stale writ
     assert.equal((await db.doc(`trails/${trailId}`).get()).data().publishedReleaseId,undefined);
     await assert.rejects(editor.call('saveEraRevision',payload),{code:'functions/aborted'});
     await assert.rejects(outsider.call('getEraRevision',{trailId,revisionId}),{code:'functions/permission-denied'});
+    await assert.rejects(outsider.call('getEraRevision',{trailId,revisionId,payloadOnly:true}),{code:'functions/permission-denied'});
+    const quick=await editor.call('getEraRevision',{trailId,revisionId,payloadOnly:true});assert.deepEqual(quick.payload.segments,payload.segments);assert.equal(quick.validation,undefined);
     const detail=await verifier.call('getEraRevision',{trailId,revisionId});assert.deepEqual(detail.validation.errors,[]);
     const transition=(who,action,id=revisionId)=>who.call('transitionEraRevision',{trailId,revisionId:id,action});
     await transition(editor,'submit');

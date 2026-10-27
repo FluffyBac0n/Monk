@@ -1870,3 +1870,31 @@ td small { color: var(--muted); margin-top: 5px; }
 
 @media(max-width:1100px) { .era-incidents .report-filters { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:520px) { .era-incidents .report-filters { grid-template-columns:minmax(0,1fr); } }
+
+/* Compact trail editing: one integrated toolbar and contextual map tools. */
+.era-simple-editor { gap:0; }
+.era-simple-editor .era-editor-toolbar { align-items:center; background:rgba(255,255,255,.5); border:1px solid var(--line); border-bottom:0; border-radius:20px 20px 0 0; gap:12px 20px; padding:14px 18px; }
+.era-simple-editor .era-editor-view { gap:3px; min-width:160px; }
+.era-editor-view .report-date-trigger { background:transparent; border:0; font-weight:700; min-height:32px; padding:0; }
+.era-editor-view .report-select-field { gap:0; }
+.era-simple-editor .era-editor-tools { gap:16px; }
+.era-tool-text,.era-map-tool { align-items:center; background:transparent; border:0; color:var(--navy); cursor:pointer; display:inline-flex; font:inherit; font-size:13px; font-weight:700; gap:7px; justify-content:center; padding:8px 2px; white-space:nowrap; }
+.era-tool-text svg,.era-map-tool svg { flex:none; height:18px; width:18px; }
+.era-tool-text:hover,.era-map-tool:hover,.era-tool-text.is-active { color:var(--blue); }
+.era-tool-text:disabled,.era-map-tool:disabled { cursor:default; opacity:.4; }
+.era-tool-text:focus-visible,.era-map-tool:focus-visible { outline:2px solid var(--blue); outline-offset:3px; border-radius:4px; }
+.era-map-tool { height:32px; width:32px; padding:6px; }
+.era-simple-editor .era-editor-tools .button { min-height:36px; padding:8px 14px; }
+.era-simple-editor .report-map-panel { border-top-left-radius:0; border-top-right-radius:0; }
+.era-simple-editor .report-map-canvas,.era-simple-editor .trail-report-map { border-top-left-radius:0; border-top-right-radius:0; }
+.era-simple-editor .era-point-toolbar { background:rgba(255,255,255,.5); border:1px solid var(--line); border-bottom:0; gap:8px 16px; padding:8px 18px; }
+.era-simple-editor .era-point-toolbar p { flex:1; min-width:180px; }
+.era-simple-editor .era-point-editor { padding:18px 0; }
+.era-simple-editor .era-point-editor .era-editor-tools { margin-top:8px; }
+.era-simple-editor .era-editor-details { margin-top:20px; }
+.era-simple-editor > .notice { margin:0; border-radius:0; padding:10px 18px; font-size:13px; }
+.era-page .era-audit-search { position:relative; display:block; }
+.era-audit-search svg { position:absolute; left:16px; top:15px; height:20px; width:20px; color:var(--muted); pointer-events:none; }
+.era-page .era-audit-search input { padding-left:46px; }
+.era-audit > p { color:var(--muted); font-size:13px; }
+@media(max-width:700px) { .era-simple-editor .era-editor-toolbar { padding:12px 14px; } .era-simple-editor .era-editor-view { flex:1 1 100%; } .era-simple-editor .era-editor-tools { gap:18px; } .era-simple-editor .era-point-toolbar { padding:8px 14px; } }

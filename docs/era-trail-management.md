@@ -276,3 +276,43 @@ test GPX. Missing elevations remain blank. The 611px layout has no horizontal
 overflow. All browser mutations used the emulator; no production route was changed.
 Build/package succeeded. Site source: 8a8f2dc54d1c9fc83e322b89038deea22b92ed41.
 Owner-only deployment succeeded: appgdep_6ade53cc0180819187d120341128cc4d.
+
+## Streamlined controls and loading (27 October 2026)
+
+Renamed ERA Login to Login across the public/portal navigation and account screen.
+Trail Management now shows only its heading: the organisation subtitle and
+EuroTrex administrator badge are removed. Removed the public-warning checkbox
+and choice-related copy from incident review; existing warning visibility is
+preserved when an incident is updated.
+
+Trail Data has a single integrated map toolbar with compact Upload GPX/Edit points
+actions. Save appears only for unsaved changes. Undo/redo and point insertion are
+contextual; point fields appear only in edit mode. Review and history remain
+collapsed. The editor preloads selected-trail geometry and uses a session cache
+keyed by account, release and geometry version. Access changes invalidate it.
+The map uses the editor's reference geometry instead of downloading it again;
+view mode creates no point-marker collection, and selecting a point no longer
+rebuilds the whole GeoJSON source. The geometry-only getEraRevision mode performs
+the same permission checks but skips review-context loading and validation.
+Full review loads on expansion; save and publish continue to validate server-side.
+Saving no longer immediately downloads/revalidates the same payload again.
+
+Audit Log has one search bar across stored event fields, names/emails, action,
+record and notes, with readable local/ISO dates and timestamp variants. It supports
+accent-insensitive matching, misspellings/transposed letters and combined terms.
+Numeric tokens are not typo-matched. Search covers the loaded event history;
+Load older events extends that history without additional filter controls.
+
+Validation: TypeScript, source whitespace checks, route cache regression, editable
+geometry tests, fuzzy-search/cache-isolation tests, and full ERA emulator flow
+passed (including geometry-only permission denial, independent approval, stale
+writes, rollback and revocation). Browser QA checked Login naming, no header badge,
+compact edit/save/undo/redo, lazy review, GPX upload/save/reopen of 23,234 points,
+fuzzy email/date search, exact time search, no-match results and removal of the
+incident publication checkbox. The 611px layout has no horizontal overflow. Only
+synthetic emulator records were modified. Production function update is limited
+to getEraRevision; security rules and production trail data were not changed.
+Site source: 6325a6ab32ac6667e50fdff9ca17a3e311965fa7.
+Production getEraRevision update succeeded. Firebase reported a non-blocking build-image
+cleanup warning after deployment. Owner-only website deployment succeeded:
+appgdep_6ae0bd1aad208191bd11ce2dbab0b39d.

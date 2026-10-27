@@ -93,7 +93,7 @@ export function PublicHeader({ activeTrail }: { activeTrail?: string }) {
               href="/era"
               {...disableHtmxNavigation}
             >
-              ERA Login
+              Login
             </a>
             <LanguageControl />
             <MobileMenu />

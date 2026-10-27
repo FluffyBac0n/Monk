@@ -134,6 +134,9 @@ export function createEraService({db,bucket,authService}) {
       const revision=await db.runTransaction(async tx=>{await permission(tx,auth,trailId);return tx.get(revisionRef(trailId,id));});
       if(!revision.exists) throw new HttpsError('not-found','Revision unavailable.');
       const body=await payloadFor(revision.data());
+      // Viewing/editing geometry does not need an expensive context-wide review.
+      // Permission checks above are identical for both modes; publishing always revalidates.
+      if(data.payloadOnly===true)return {payload:body};
       const ctx=await context(trailId);
       const validation=check(()=>validateRevision(body,ctx));
       return {payload:body,validation:{errors:validation.errors,warnings:validation.warnings,stageLinks:validation.stageLinks,pointCount:validation.pointCount,totalDistanceKm:validation.totalDistanceKm},relatedRoutes:{excursions:ctx.excursions.map(v=>({id:v.id,name:v.name || v.id})),detours:ctx.detours.map(v=>({id:v.id,name:v.name || v.id}))}};

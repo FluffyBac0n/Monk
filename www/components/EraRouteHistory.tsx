@@ -2,9 +2,10 @@ import {useEffect,useState} from 'react';
 import {eraCall,watchReleases,type Release,type Revision} from '@/lib/era';
 
 export function EraRouteHistory({trailId,revisions,activeReleaseId,canRestore,busy,onLoad,onRestore}:{trailId:string;revisions:Revision[];activeReleaseId:string|null;canRestore:boolean;busy:boolean;onLoad:(id:string)=>void;onRestore:()=>Promise<void>}) {
+  const [open,setOpen]=useState(false);
   const [releases,setReleases]=useState<Release[]>([]),[error,setError]=useState(''),[reason,setReason]=useState(''),[restoring,setRestoring]=useState(false);
-  useEffect(()=>watchReleases(trailId,setReleases,e=>setError(e.message)),[trailId]);
-  return <details className="era-editor-details"><summary>History</summary>
+  useEffect(()=>{if(open)return watchReleases(trailId,setReleases,e=>setError(e.message));},[trailId,open]);
+  return <details className="era-editor-details" onToggle={event=>setOpen(event.currentTarget.open)}><summary>History</summary>
     {error && <p className="notice error" role="alert">{error}</p>}
     <ul className="report-members">{revisions.map(revision=><li key={revision.id}><div><strong>{revision.createdAt?.toDate().toLocaleString() || 'Saved changes'}</strong><p>{revision.state.replaceAll('_',' ')} · {revision.pointCount.toLocaleString()} points</p></div><button type="button" className="button button-secondary" disabled={busy || restoring} onClick={()=>onLoad(revision.id)}>Open</button></li>)}</ul>
     {!revisions.length && <p>No saved changes yet.</p>}

@@ -7,16 +7,18 @@ import {EraRouteMap} from './EraRouteMap';
 import {ReportSelect} from './ReportSelect';
 import {EraRouteReview} from './EraRouteReview';
 import {EraRouteHistory} from './EraRouteHistory';
-import {loadCurrentEraRoute} from '@/lib/era-current-route';
+import {loadCurrentEraRoute,clearCurrentEraRoutes} from '@/lib/era-current-route';
 import {parseRouteFile,routeSummary,validateRouteSegments} from '@/lib/era-route-file';
 import {eraCall,watchRevisions,type EraTrail,type Revision,type RevisionPayload,type RevisionDetail} from '@/lib/era';
+const noLinks:never[]=[];
+function ToolIcon({name}:{name:'upload'|'edit'|'undo'|'redo'|'plus'|'check'}){const paths={upload:'M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5',edit:'m4 16-1 5 5-1L20 8l-4-4L4 16m10-10 4 4',undo:'M8 4 3 9l5 5M3 9h10a7 7 0 0 1 0 14',redo:'m16 4 5 5-5 5m5-5h-10a7 7 0 0 0 0 14',plus:'M12 5v14M5 12h14',check:'m5 12 4 4L19 6'};return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>;}
 const empty:RevisionPayload={segments:[],source:'',attribution:'',elevationSource:'',stageDecisions:{},relatedRoutesReviewed:false,changesReviewed:false};
 type Snapshot={payload:RevisionPayload;raw:string|null};
 export function EraRouteEditor({trail,user,onPublished}:{trail:EraTrail;user:User;onPublished:()=>Promise<void>}) {
   const [revisions,setRevisions]=useState<Revision[]>([]),[selected,setSelected]=useState('current'),[payload,setPayload]=useState<RevisionPayload>(empty),[detail,setDetail]=useState<RevisionDetail|null>(null);
   const [dirty,setDirty]=useState(false),[busy,setBusy]=useState(true),[loaded,setLoaded]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[raw,setRaw]=useState<string|null>(null);
   const [editing,setEditing]=useState(false),[adding,setAdding]=useState(false),[segment,setSegment]=useState(0),[point,setPoint]=useState(0);
-  const [fitVersion,setFitVersion]=useState(0);
+  const [fitVersion,setFitVersion]=useState(0),[reference,setReference]=useState<RevisionPayload['segments']>([]),[reviewOpen,setReviewOpen]=useState(false),[reviewBusy,setReviewBusy]=useState(false);
   const [undo,setUndo]=useState<Snapshot[]>([]),[redo,setRedo]=useState<Snapshot[]>([]);
   const [baseHead,setBaseHead]=useState<string|null>(null),[baseRelease,setBaseRelease]=useState<string|null>(trail.publishedReleaseId),[activeRelease,setActiveRelease]=useState<string|null>(trail.publishedReleaseId);
   const fileInput=useRef<HTMLInputElement>(null),request=useRef(0),initialised=useRef(false),revisionRows=useRef<Revision[]>([]);
@@ -31,21 +33,29 @@ export function EraRouteEditor({trail,user,onPublished}:{trail:EraTrail;user:Use
     setBusy(true);setError('');setMessage('');
     try {
       const result=selection==='current'?await loadCurrentEraRoute(trail.id):null;
-      const next=result?.detail || (selection!=='current'?await eraCall<RevisionDetail>('getEraRevision',{trailId:trail.id,revisionId:selection}):null);
+      const next=selection!=='current'?await eraCall<{payload:RevisionPayload}>('getEraRevision',{trailId:trail.id,revisionId:selection,payloadOnly:true}):null;
       if(version!==request.current)return;
       const savedRow=revisionRows.current.find(row=>row.id===selection);
       const release=result?result.releaseId:savedRow?savedRow.baseReleaseId:activeRelease;
-      setPayload(result?.payload || next!.payload);setDetail(next);setSelected(selection);setBaseHead(head);setBaseRelease(release);
+      if(result)setReference(result.payload.segments);
+      setPayload(result?.payload || next!.payload);setDetail(null);setSelected(selection);setBaseHead(selection==='current' && head===null ? revisionRows.current[0]?.id || null : head);setBaseRelease(release);
       setDirty(false);setRaw(null);setUndo([]);setRedo([]);setSegment(0);setPoint(0);setEditing(false);setAdding(false);setLoaded(true);setFitVersion(value=>value+1);
     } catch(e) {if(version===request.current)setError(e instanceof Error?e.message:'Could not load this trail.');}
     finally {if(version===request.current)setBusy(false);}
   }
   useEffect(()=>{
     initialised.current=false;
-    const stop=watchRevisions(trail.id,rows=>{revisionRows.current=rows;setRevisions(rows);if(!initialised.current){initialised.current=true;void load('current',rows[0]?.id || null);}},e=>{setError(e.message);setBusy(false);});
+    void load('current');
+    const stop=watchRevisions(trail.id,rows=>{revisionRows.current=rows;setRevisions(rows);if(!initialised.current){initialised.current=true;setBaseHead(rows[0]?.id || null);}},e=>{setError(e.message);setBusy(false);});
     const current=onSnapshot(doc(db,'trails',trail.id),snapshot=>setActiveRelease(snapshot.data()?.publishedReleaseId || null),e=>setError(e.message));
     return()=>{request.current++;stop();current();};
   },[trail.id]);
+  useEffect(()=>{
+    if(!reviewOpen || selected==='current' || dirty || busy)return;
+    const version=request.current;let alive=true;setReviewBusy(true);
+    void eraCall<RevisionDetail>('getEraRevision',{trailId:trail.id,revisionId:selected}).then(value=>{if(alive && version===request.current)setDetail(value);},e=>{if(alive && version===request.current)setError(e.message);}).finally(()=>{if(alive)setReviewBusy(false);});
+    return()=>{alive=false;};
+  },[reviewOpen,selected,dirty,busy,trail.id]);
   useEffect(()=>{const warn=(event:BeforeUnloadEvent)=>{if(dirty){event.preventDefault();event.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
   function choose(selection:string){if(dirty && !window.confirm('Discard unsaved trail changes?'))return;void load(selection);}
   function edit(next:RevisionPayload,nextRaw=raw) {
@@ -80,7 +90,7 @@ export function EraRouteEditor({trail,user,onPublished}:{trail:EraTrail;user:Use
       const current=await getDoc(doc(db,'trails',trail.id));
       if((current.data()?.publishedReleaseId || null)!==baseRelease)throw new Error('The published trail changed. Open the current trail before saving.');
       const result=await eraCall<{revisionId:string}>('saveEraRevision',{trailId:trail.id,expectedRevisionId:baseHead,...payload,...(raw?{originalGeoJSON:raw}:{})});
-      await load(result.revisionId,result.revisionId);setMessage('Changes saved as a draft.');
+      setSelected(result.revisionId);setBaseHead(result.revisionId);setDetail(null);setDirty(false);setRaw(null);setUndo([]);setRedo([]);setEditing(false);setAdding(false);setMessage('Changes saved.');
     } catch(e){setError(e instanceof Error?e.message:'Could not save changes.');}
     finally{setBusy(false);}
   }
@@ -88,7 +98,7 @@ export function EraRouteEditor({trail,user,onPublished}:{trail:EraTrail;user:Use
     setBusy(true);setError('');setMessage('');
     try {
       await eraCall('transitionEraRevision',{trailId:trail.id,revisionId:selected,action,note});
-      if(action==='publish'){await load('current');await onPublished();}
+      if(action==='publish'){clearCurrentEraRoutes();await load('current');await onPublished();}
       setMessage(action==='publish'?'Trail published.':action==='approve'?'Changes approved.':action==='submit'?'Changes sent for review.':'Changes requested.');
     } catch(e){setError(e instanceof Error?e.message:'Could not complete this action.');}
     finally{setBusy(false);}
@@ -96,21 +106,21 @@ export function EraRouteEditor({trail,user,onPublished}:{trail:EraTrail;user:Use
   const viewOptions=[{value:'current',label:'Current trail'},...((latest && revisions[0].state!=='published')?[{value:latest,label:'Latest saved changes'}]:[]),...(selected!=='current' && selected!==latest?[{value:selected,label:'Earlier saved changes'}]:[]),...(selected===latest && revision?.state==='published'?[{value:selected,label:'Published changes'}]:[])];
   return <section className="era-route-editor era-simple-editor" data-era-dirty={dirty?'true':'false'}>
     <div className="era-editor-toolbar">
-      <div className="era-editor-view">{viewOptions.length>1?<ReportSelect label="Viewing" value={selected} options={viewOptions} disabled={busy} onChange={choose}/>:<strong>Current trail</strong>}<span className="era-editor-stats">{loaded?`${stats.distanceKm.toFixed(1)} km · ${stats.pointCount.toLocaleString()} points${dirty?' · Unsaved changes':''}`:'Loading trail…'}</span></div>
-      {canEdit && <div className="era-editor-tools"><input ref={fileInput} type="file" hidden style={{display:'none'}} tabIndex={-1} aria-label="GPX route file" accept=".gpx,.geojson,.json,application/gpx+xml,application/geo+json,application/json" disabled={busy} onChange={event=>{const file=event.target.files?.[0];if(file)void upload(file);event.target.value='';}}/><button type="button" className="button button-secondary" disabled={busy} onClick={()=>fileInput.current?.click()}>Upload GPX</button><button type="button" className={`button ${editing?'button-primary':'button-secondary'}`} disabled={busy || !payload.segments.length} aria-pressed={editing} onClick={()=>{setEditing(value=>!value);setAdding(false);}}>{editing?'Done editing':'Edit points'}</button><button type="button" className="button button-primary" disabled={busy || !dirty || stale || !payload.segments.length} onClick={()=>void save()}>{busy && dirty?'Saving…':'Save changes'}</button></div>}
+      <div className="era-editor-view">{viewOptions.length>1?<ReportSelect appearance="tab" label="Viewing" value={selected} options={viewOptions} disabled={busy} onChange={choose}/>:<strong>Current trail</strong>}<span className="era-editor-stats">{loaded?`${stats.distanceKm.toFixed(1)} km · ${stats.pointCount.toLocaleString()} points${dirty?' · Unsaved changes':''}`:'Loading trail…'}</span></div>
+      {canEdit && <div className="era-editor-tools"><input ref={fileInput} type="file" hidden style={{display:'none'}} tabIndex={-1} aria-label="GPX route file" accept=".gpx,.geojson,.json,application/gpx+xml,application/geo+json,application/json" disabled={busy} onChange={event=>{const file=event.target.files?.[0];if(file)void upload(file);event.target.value='';}}/><button type="button" className="era-tool-text" disabled={busy} onClick={()=>fileInput.current?.click()}><ToolIcon name="upload"/>Upload GPX</button><button type="button" className={`era-tool-text ${editing?'is-active':''}`} disabled={busy || !payload.segments.length} aria-pressed={editing} onClick={()=>{setEditing(value=>!value);setAdding(false);}}><ToolIcon name={editing?'check':'edit'}/>{editing?'Done':'Edit points'}</button>{dirty && <button type="button" className="button button-primary" disabled={busy || !dirty || stale || !payload.segments.length} onClick={()=>void save()}>{busy && dirty?'Saving…':'Save changes'}</button>}</div>}
     </div>
     {error && <div className="notice error" role="alert"><p>{error}</p>{!loaded && <button type="button" className="button button-secondary" disabled={busy} onClick={()=>void load('current')}>Retry</button>}</div>}
     {message && <p className="notice" role="status">{message}</p>}
     {stale && !busy && <p className="notice">Newer trail data is available. <button type="button" className="text-button" disabled={busy} onClick={()=>choose(baseRelease!==activeRelease?'current':latest || 'current')}>Load latest</button></p>}
-    {editing && <div className="era-point-toolbar"><p>{adding?'Click the map to insert a point after the selected point.':'Select a point on the trail, then drag it to move it.'}</p><div className="era-editor-tools"><button type="button" className="button button-secondary" disabled={busy || !undo.length} onClick={()=>{setRedo(rows=>[{payload,raw},...rows]);restore(undo.at(-1)!);setUndo(rows=>rows.slice(0,-1));}}>Undo</button><button type="button" className="button button-secondary" disabled={busy || !redo.length} onClick={()=>{setUndo(rows=>[...rows,{payload,raw}]);restore(redo[0]);setRedo(rows=>rows.slice(1));}}>Redo</button><button type="button" className={`button ${adding?'button-primary':'button-secondary'}`} disabled={busy || !selectedPoint} aria-pressed={adding} onClick={()=>setAdding(value=>!value)}>Add point</button></div></div>}
-    <EraRouteMap fitKey={fitVersion} trailId={trail.id} segments={payload.segments} links={[]} segmentIndex={segment} pointIndex={point} editable={editing && adding && !busy} editing={editing} draggable={editing && !adding && !busy && canEdit} current={selected==='current' && !dirty} onMove={position=>changePoint(selectedPoint?.length===3?[...position,selectedPoint[2]]:position)} onSelect={(section,index)=>{setSegment(section);setPoint(index);}} onPoint={position=>{if(!editing || !adding || busy || !canEdit || !selectedPoint)return;const next=[...coordinates];next.splice(point+1,0,position);edit({...payload,segments:payload.segments.map((section,index)=>index===segment?{...section,coordinates:next}:section)});setPoint(point+1);setAdding(false);}}/>
+    {editing && <div className="era-point-toolbar"><p>{adding?'Click the map to insert a point after the selected point.':'Select a point on the trail, then drag it to move it.'}</p><div className="era-editor-tools"><button type="button" className="era-map-tool" title="Undo" aria-label="Undo" disabled={busy || !undo.length} onClick={()=>{setRedo(rows=>[{payload,raw},...rows]);restore(undo.at(-1)!);setUndo(rows=>rows.slice(0,-1));}}><ToolIcon name="undo"/></button><button type="button" className="era-map-tool" title="Redo" aria-label="Redo" disabled={busy || !redo.length} onClick={()=>{setUndo(rows=>[...rows,{payload,raw}]);restore(redo[0]);setRedo(rows=>rows.slice(1));}}><ToolIcon name="redo"/></button><button type="button" className={`era-tool-text ${adding?'is-active':''}`} disabled={busy || !selectedPoint} aria-pressed={adding} onClick={()=>setAdding(value=>!value)}><ToolIcon name="plus"/>Add point</button></div></div>}
+    <EraRouteMap fitKey={fitVersion} trailId={trail.id} segments={payload.segments} referenceSegments={reference} links={noLinks} segmentIndex={segment} pointIndex={point} editable={editing && adding && !busy} editing={editing} draggable={editing && !adding && !busy && canEdit} current={selected==='current' && !dirty} onMove={position=>changePoint(selectedPoint?.length===3?[...position,selectedPoint[2]]:position)} onSelect={(section,index)=>{setSegment(section);setPoint(index);}} onPoint={position=>{if(!editing || !adding || busy || !canEdit || !selectedPoint)return;const next=[...coordinates];next.splice(point+1,0,position);edit({...payload,segments:payload.segments.map((section,index)=>index===segment?{...section,coordinates:next}:section)});setPoint(point+1);setAdding(false);}}/>
     {loaded && !payload.segments.length && <p className="notice">No trail geometry yet.{canEdit?' Upload a GPX file to get started.':''}</p>}
-    {editing && selectedPoint && <section className="form-panel era-point-editor" aria-label="Selected point"><fieldset disabled={busy || !canEdit}><div className="form-grid">
+    {editing && selectedPoint && <section className="era-point-editor" aria-label="Selected point"><fieldset disabled={busy || !canEdit}><div className="form-grid">
       {payload.segments.length>1 && <ReportSelect label="Section" value={String(segment)} options={payload.segments.map((section,index)=>({value:String(index),label:`${index+1} · ${section.coordinates.length.toLocaleString()} points`}))} onChange={value=>{setSegment(Number(value));setPoint(0);}}/>}
       <label>Point<input type="number" min={1} max={coordinates.length} value={point+1} onChange={event=>{if(event.target.value)setPoint(Math.max(0,Math.min(coordinates.length-1,Math.trunc(Number(event.target.value)-1))));}}/></label>
       {['Longitude','Latitude','Elevation (m)'].map((label,index)=><label key={label}>{label}<input type="number" step="any" value={selectedPoint[index] ?? ''} onChange={event=>{if(index<2 && !event.target.value)return;const next=[...selectedPoint];if(index===2 && !event.target.value)next.splice(2);else next[index]=Number(event.target.value);changePoint(next);}}/></label>)}
     </div><div className="era-editor-tools"><button type="button" className="text-button" disabled={coordinates.length<=2} onClick={()=>{edit({...payload,segments:payload.segments.map((section,index)=>index===segment?{...section,coordinates:coordinates.filter((_,number)=>number!==point)}:section)});setPoint(Math.max(0,point-1));}}>Delete point</button></div></fieldset></section>}
-    <EraRouteReview payload={payload} detail={detail} revision={revision} canEdit={canEdit && !busy} canVerify={canVerify} busy={busy || stale} dirty={dirty} latest={latest} userId={user.uid} edit={edit} transition={transition}/>
-    <EraRouteHistory trailId={trail.id} revisions={revisions} activeReleaseId={activeRelease} canRestore={trail.roles.includes('verifier')} busy={busy || dirty} onLoad={choose} onRestore={async()=>{await load('current');await onPublished();}}/>
+    <EraRouteReview onOpen={setReviewOpen} loading={reviewBusy} payload={payload} detail={detail} revision={revision} canEdit={canEdit && !busy} canVerify={canVerify} busy={busy || stale || reviewBusy} dirty={dirty} latest={latest} userId={user.uid} edit={edit} transition={transition}/>
+    <EraRouteHistory trailId={trail.id} revisions={revisions} activeReleaseId={activeRelease} canRestore={trail.roles.includes('verifier')} busy={busy || dirty} onLoad={choose} onRestore={async()=>{clearCurrentEraRoutes();await load('current');await onPublished();}}/>
   </section>;
 }
