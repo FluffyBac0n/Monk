@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app.dart';
@@ -58,7 +59,10 @@ class TrailReleaseRepository {
       return null; // Legacy trails keep their existing readers.
     }
     final settings = await database.readSettings();
-    if (settings['trailRelease:$trailId'] == releaseId) {
+    final cachedMetadata =
+        jsonDecode(settings['trailReleaseMeta:$trailId'] ?? '{}') as Map;
+    if (settings['trailRelease:$trailId'] == releaseId &&
+        cachedMetadata['verificationSchema'] == 1) {
       final points = await database.readRoutePoints(trailId);
       final stages = await database.readStages(trailId);
       if (points.length >= 2 && stages.length >= 2) {
@@ -107,13 +111,7 @@ class TrailReleaseRepository {
       releaseId,
       points,
       stages,
-      metadata: {
-        'source': manifest['source'],
-        'attribution': manifest['attribution'],
-        'verifiedBy': manifest['verifyingOrganisationName'],
-        'publishedAtMs':
-            (manifest['publishedAt'] as Timestamp?)?.millisecondsSinceEpoch,
-      },
+      metadata: releaseProvenance(manifest),
     );
     return TrailReleaseData(releaseId, points, stages);
   }
@@ -177,4 +175,35 @@ List<RoutePoint> decodeReleasePoints(
     throw const FormatException('Incomplete release points.');
   }
   return points;
+}
+
+/// Older approval fields do not establish member-organisation verification.
+Map<String, Object?> releaseProvenance(Map<String, dynamic> manifest) {
+  final raw = manifest['verification'];
+  final verification = raw is Map ? raw : <String, dynamic>{};
+  final verified =
+      verification['status'] == 'verified' &&
+      verification['organisationId'] is String &&
+      verification['organisationName'] is String &&
+      verification['verifiedAt'] is Timestamp &&
+      verification['revisionId'] == manifest['revisionId'] &&
+      verification['payloadHash'] is String &&
+      verification['payloadHash'] == manifest['payloadHash'];
+  return {
+    'verificationSchema': 1,
+    'source': manifest['source'],
+    'sourceType': manifest['sourceType'] ?? 'unknown',
+    'sourceUrl': manifest['sourceUrl'],
+    'attribution': manifest['attribution'],
+    'organisationVerified': verified,
+    'verifiedBy': verified ? verification['organisationName'] : null,
+    'verifierName': verified ? verification['verifierName'] : null,
+    'verificationCountry': verified ? verification['country'] : null,
+    'verificationScope': verified ? verification['scope'] : null,
+    'verifiedAtMs': verified
+        ? (verification['verifiedAt'] as Timestamp).millisecondsSinceEpoch
+        : null,
+    'publishedAtMs':
+        (manifest['publishedAt'] as Timestamp?)?.millisecondsSinceEpoch,
+  };
 }

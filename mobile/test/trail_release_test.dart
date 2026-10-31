@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -6,6 +7,35 @@ import 'package:eurotrex/core/database/app_database.dart';
 import 'package:eurotrex/core/database/trail_release_repository.dart';
 
 void main() {
+  test(
+    'verification is tied to the release; legacy approvals do not establish it',
+    () {
+      final manifest = <String, dynamic>{
+        'revisionId': 'revision',
+        'payloadHash': 'hash',
+        'sourceType': 'community',
+        'verifyingOrganisationName': 'EuroTrex',
+      };
+      expect(releaseProvenance(manifest)['organisationVerified'], false);
+      manifest['verification'] = {
+        'status': 'verified',
+        'organisationId': 'member',
+        'organisationName': 'Responsible member',
+        'revisionId': 'revision',
+        'payloadHash': 'hash',
+        'verifiedAt': Timestamp.fromMillisecondsSinceEpoch(1000),
+        'country': 'Cyprus',
+        'scope': 'National section',
+      };
+      final metadata = releaseProvenance(manifest);
+      expect(metadata['organisationVerified'], true);
+      expect(metadata['sourceType'], 'community');
+      expect(metadata['verifiedBy'], 'Responsible member');
+      expect(metadata['verifiedAtMs'], 1000);
+      manifest['payloadHash'] = 'different';
+      expect(releaseProvenance(manifest)['organisationVerified'], false);
+    },
+  );
   late Directory directory;
   late AppDatabase database;
   setUpAll(() {

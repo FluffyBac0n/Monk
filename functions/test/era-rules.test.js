@@ -28,6 +28,7 @@ test('ERA rules protect drafts, staged chunks, immutable releases and trail-scop
     await assertFails(getDoc(doc(user('rule-editor'),'eraAudit/rules-other')));
     await assertFails(setDoc(doc(user('rule-admin'),'eraAudit/forged'),{trailId:'rules-era'}));
     await assertFails(updateDoc(doc(user('rule-admin'),'trails/rules-era'),{publishedReleaseId:'staging'}));
+    await assertFails(updateDoc(doc(user('rule-admin'),'trails/rules-era'),{verificationAuthority:{organisationId:'forged'}}));
     await assertFails(updateDoc(doc(user('rule-admin'),'trails/rules-era/releases/live'),{published:false}));
     await assertFails(setDoc(doc(user('rule-editor'),'eraMembers/rule-editor'),{trailRoles:{'rules-era':['verifier']}}));
     await env.withSecurityRulesDisabled(c=>updateDoc(doc(c.firestore(),'eraOrganisations/rules-org'),{active:false}));

@@ -35,8 +35,25 @@ class TrailInformationScreen extends ConsumerWidget {
                   ),
                   Text('${metadata['attribution'] ?? ''}'),
                   Text(
-                    '${l10n.t('Verified by')}: ${metadata['verifiedBy'] ?? ''}',
+                    l10n.t(
+                      metadata['sourceType'] == 'community'
+                          ? 'Community / open data'
+                          : metadata['sourceType'] == 'member_organisation'
+                          ? 'Member organisation source'
+                          : 'Other / unclassified source',
+                    ),
                   ),
+                  if (metadata['organisationVerified'] == true) ...[
+                    Text('${l10n.t('Verified by')}: ${metadata['verifiedBy']}'),
+                    Text(
+                      '${metadata['verificationCountry'] ?? ''} · ${metadata['verificationScope'] ?? ''}',
+                    ),
+                    if (metadata['verifiedAtMs'] is int)
+                      Text(
+                        '${l10n.t('Last verified')}: ${MaterialLocalizations.of(context).formatMediumDate(DateTime.fromMillisecondsSinceEpoch(metadata['verifiedAtMs'] as int).toLocal())}',
+                      ),
+                  ] else
+                    Text(l10n.t('No organisation verification recorded')),
                   if (metadata['publishedAtMs'] is int)
                     Text(
                       '${l10n.t('Published')}: ${DateTime.fromMillisecondsSinceEpoch(metadata['publishedAtMs'] as int).toLocal()}',

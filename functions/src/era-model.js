@@ -2,6 +2,26 @@ import {createHash} from 'node:crypto';
 import {requireId, text} from './report-model.js';
 
 export const eraRoles = ['organisation_admin', 'editor', 'verifier', 'incident_manager', 'viewer'];
+export const verificationCriteriaVersion = 'era-e-path-article7-2024-09';
+export const verificationCriteria = ['marking','maintenance','authority_acceptance','mapped_description','public_transport','identity','sustainability','recreational_value'];
+export function hasVerificationAuthority(member, organisation, trailId, authority) {
+  return !!authority?.organisationId && authority.organisationId === organisation?.id
+    && hasEraRole(member, organisation, trailId, ['verifier']);
+}
+export function verificationAttestation(value) {
+  if (value?.criteriaVersion !== verificationCriteriaVersion || !verificationCriteria.every(key=>value.criteria?.[key] === true)) {
+    throw new Error('Confirm each ERA criterion on behalf of the responsible organisation.');
+  }
+  return {criteriaVersion:verificationCriteriaVersion,criteria:Object.fromEntries(verificationCriteria.map(key=>[key,true]))};
+}
+function provenance(data) {
+  // Omit new fields on old payloads to preserve their immutable content hashes.
+  if(data.sourceType===undefined && data.sourceUrl===undefined)return {};
+  if(!['member_organisation','community','other','unknown'].includes(data.sourceType))throw new Error('Choose a route source type.');
+  const sourceUrl=text(data.sourceUrl || '',1000);
+  if(sourceUrl){let url;try{url=new URL(sourceUrl);}catch{throw new Error('Enter a valid source link.');}if(!['https:','http:'].includes(url.protocol) || url.username || url.password)throw new Error('Use a public HTTP or HTTPS source link.');}
+  return {sourceType:data.sourceType,sourceUrl};
+}
 export function hasEraRole(member, organisation, trailId, roles) {
   return organisation?.active === true && organisation.trailIds?.includes(trailId)
     && member?.organisationId === organisation.id
@@ -98,7 +118,10 @@ export function validateRevision(payload, context) {
   const area=known.length ? [Math.min(...known.map(l=>l.longitude))-2,Math.max(...known.map(l=>l.longitude))+2,Math.min(...known.map(l=>l.latitude))-2,Math.max(...known.map(l=>l.latitude))+2] : null;
   if(area && route.some(p=>p[0]<area[0] || p[0]>area[1] || p[1]<area[2] || p[1]>area[3]))warnings.push('Route extends substantially beyond the existing trail area.');
   if ((context.excursions?.length || context.detours?.length) && !payload.relatedRoutesReviewed) errors.push('Review affected excursions and detours.');
-  const stageLinks = context.stages.map(stage => {
+  const editedStages = new Map(context.stages.map(stage=>[stage.id,stage]));
+  for(const stage of normaliseStageEdits(payload.stageEdits || [])) editedStages.set(stage.id,{...editedStages.get(stage.id),...stage});
+  const stageRows = [...editedStages.values()];
+  const stageLinks = stageRows.map(stage => {
     const decision = payload.stageDecisions?.[stage.id] || {};
     const marker = context.markers.find(m=>m.stageId===stage.id);
     const location = decision.location || stage.location || marker?.location;
@@ -117,15 +140,15 @@ export function validateRevision(payload, context) {
   });
   const ordered = [...stageLinks].filter(s=>s.accumulatedDistanceKm!=null).sort((a,b)=>a.accumulatedDistanceKm-b.accumulatedDistanceKm);
   const stages = ordered.map((link,i)=> {
-    const original = context.stages.find(s=>s.id===link.stageId);
+    const original = stageRows.find(s=>s.id===link.stageId);
     const prior = ordered[i-1];
     const at = s => Math.min(route.length-1,s.pointIndex+(s.fraction>=0.5?1:0));
     return {...original, location:link.location, sequence:i+1, accumulatedDistanceKm:link.accumulatedDistanceKm,
       distanceFromPathKm:link.distanceFromPathKm, altitudeM:link.altitudeM, segmentLengthKm:link.accumulatedDistanceKm-(prior?.accumulatedDistanceKm || 0),
       elevationUpM:ascent[at(link)]-(prior ? ascent[at(prior)] : 0), elevationDownM:descent[at(link)]-(prior ? descent[at(prior)] : 0)};
   });
-  if (!context.stages.length) errors.push('Add at least two stage records before publishing.');
-  if (context.stages.length===1) errors.push('At least two stages are required.');
+  if (!stageRows.length) errors.push('Add at least two stage records before publishing.');
+  if (stageRows.length===1) errors.push('At least two stages are required.');
   const related = {excursions:[],detours:[]};
   function matchRelated(location,label,index) {
     if(!location || !Number.isFinite(location.longitude) || !Number.isFinite(location.latitude) || route.length<2) {errors.push(`${label}: missing connection location.`);return null;}
@@ -163,6 +186,18 @@ export function validateRevision(payload, context) {
   return {errors:[...new Set(errors)], warnings, stageLinks, stages, related, route, distances, totalDistanceKm, pointCount:route.length,
     contextHash:fingerprint(context), payloadHash:fingerprint(payload)};
 }
+export function normaliseStageEdits(value) {
+  if (!Array.isArray(value) || value.length>500) throw new Error('Use at most 500 stages.');
+  const seen=new Set();
+  return value.map(stage=>{
+    const id=requireId(stage.id);
+    if(seen.has(id))throw new Error('Stage IDs must be unique.');
+    seen.add(id);
+    const {longitude,latitude}=stage.location || {};
+    if(!Number.isFinite(longitude) || !Number.isFinite(latitude) || Math.abs(longitude)>180 || Math.abs(latitude)>85)throw new Error('Enter a valid stage location.');
+    return {id,name:text(stage.name,160,true),description:text(stage.description || '',3000),location:{longitude,latitude}};
+  });
+}
 export function revisionPayload(data) {
   const stageDecisions = {};
   for (const [id,value] of Object.entries(data.stageDecisions || {})) {
@@ -176,11 +211,8 @@ export function revisionPayload(data) {
     if(!/^(excursions|detours):[a-zA-Z0-9_-]{1,100}$/.test(key))throw new Error('Invalid related route.');
     relatedDecisions[key]={excluded:value.excluded===true,...(value.startPointIndex==null?{}:{startPointIndex:value.startPointIndex}),...(value.endPointIndex==null?{}:{endPointIndex:value.endPointIndex})};
   }
-  return {segments:normaliseSegments(data.segments), source:text(data.source || '',1000), attribution:text(data.attribution || '',1000),
+  return {...provenance(data),...(data.stageEdits===undefined?{}:{stageEdits:normaliseStageEdits(data.stageEdits)}),segments:normaliseSegments(data.segments), source:text(data.source || '',1000), attribution:text(data.attribution || '',1000),
     elevationSource:text(data.elevationSource || '',1000), stageDecisions, relatedDecisions,relatedRoutesReviewed:data.relatedRoutesReviewed===true, changesReviewed:data.changesReviewed===true};
-}
-export function assertIndependent(revision, uid) {
-  if (revision.contributors.includes(uid)) throw new Error('A contributor cannot verify or publish this revision.');
 }
 export function buildRelease(validation) {
   if (validation.errors.length) throw new Error('Resolve validation errors before publishing.');

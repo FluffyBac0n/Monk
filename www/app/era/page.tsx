@@ -52,7 +52,7 @@ function EraWorkspace({user}:{user:User}) {
         {tab==='Trail Data' && <EraRouteEditor key={trail.id} trail={trail} user={user} onPublished={refresh}/>}
         {tab==='Audit Log' && <AuditLog trailId={trail.id}/>}
       </div>}
-      {tab==='Access' && <EraAccessManager key={trailId} access={access} trailId={trailId} onChanged={refresh}/>}</>}
+      {tab==='Access' && <EraAccessManager key={`access:${trailId}`} access={access} trailId={trailId} onChanged={refresh}/>}</>}
   </div></main>;
 }
 function AuditLog({trailId}:{trailId:string}) {

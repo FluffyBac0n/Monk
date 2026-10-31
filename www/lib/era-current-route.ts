@@ -1,7 +1,7 @@
 'use client';
 import {collection,doc,getDoc,getDocs,orderBy,query} from 'firebase/firestore';
 import {auth,db} from './firebase';
-import {eraCall,type RevisionPayload} from './era';
+import {eraCall,type RevisionPayload,type StageEdit} from './era';
 import {decodeEditableRouteChunks} from './route-geometry';
 
 type CurrentRoute={payload:RevisionPayload;releaseId:string|null};
@@ -46,4 +46,13 @@ export function loadCurrentEraRoute(trailId:string):Promise<CurrentRoute> {
   pending.set(key,load);
   void load.finally(()=>{if(pending.get(key)===load)pending.delete(key);}).catch(()=>{});
   return load;
+}
+
+export async function loadEraStages(trailId:string,releaseId:string|null):Promise<StageEdit[]> {
+  const prefix=releaseId?`trails/${trailId}/releases/${releaseId}`:`trails/${trailId}`;
+  const [stages,markers]=await Promise.all([getDocs(collection(db,`${prefix}/stages`)),getDocs(collection(db,`${prefix}/routeMarkers`))]);
+  return stages.docs.sort((a,b)=>(a.data().sequence || 0)-(b.data().sequence || 0)).map(row=>{
+    const data=row.data(),marker=markers.docs.find(m=>m.data().stageId===row.id)?.data();
+    return {id:row.id,name:data.name || row.id,description:data.description || '',location:data.location || marker?.location || {latitude:0,longitude:0}};
+  });
 }

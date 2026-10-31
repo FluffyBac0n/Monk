@@ -38,4 +38,8 @@ test('official issue projection includes only approved public fields', () => {
  for (const status of ['new','resolved','dismissed','duplicate']) assert.equal(officialTrailIssue({...report,status}),null);
  assert.equal(officialTrailIssue({...report,uploadState:'uploading'}),null);
  assert.equal(officialTrailIssue({...report,status:'forwarded'}).description,'Broken sign');
+ for (const status of ['reviewed','forwarded']) {
+  assert.equal(officialTrailIssue({...report,status,publicWarning:false}),null);
+  assert.equal(officialTrailIssue({...report,status,publicWarning:true}).status,status);
+ }
 });

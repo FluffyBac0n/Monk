@@ -316,3 +316,100 @@ Site source: 6325a6ab32ac6667e50fdff9ca17a3e311965fa7.
 Production getEraRevision update succeeded. Firebase reported a non-blocking build-image
 cleanup warning after deployment. Owner-only website deployment succeeded:
 appgdep_6ae0bd1aad208191bd11ce2dbab0b39d.
+
+## Stage editing and role-based approval (28 October 2026)
+
+Trail Data now includes stage creation and editing (name, description, coordinates,
+map placement and connection checks) alongside GPX upload and point editing.
+Stage edits are stored with the revision payload, validated server-side, merged
+with existing stage metadata and published in the immutable release. Existing
+stage IDs and services are retained. Uploading GPX preserves the stage draft and
+requires connection checks against the new route.
+
+Approval now follows the assigned trail permission: editors without the verifier
+role submit for approval; verifiers can approve valid drafts or submissions,
+including their own changes. This replaces the previous independent-contributor
+restriction. Publishing remains a separate action with validation, stale-revision
+checks, trail-scoped permission checks and audit history.
+
+Validation completed: TypeScript, production build, eight model tests, editable
+route/cache regressions, emulator integration flow and Firestore rules tests.
+Browser QA added and edited a stage, saved it, approved it as its authorised
+author, published and reopened it, and imported a GPX while retaining all three
+stages. Only emulator records were used for functional tests.
+
+Production saveEraRevision, getEraRevision and transitionEraRevision updates
+succeeded. Firebase reported its existing non-blocking build-image cleanup
+warning. Site source: 9281c1134bef92d55c41e65f3c9ec4084a0527f3.
+Owner-private deployment succeeded: appgdep_6ae256bee9308191ba312ed5027b5bc8.
+
+## Responsible-member verification (29 October 2026)
+
+This replaces the earlier administrator-based approval model. ERA member
+organisations remain responsible for the route alignment and status in their
+country/section; importing data does not establish verification.
+
+- `setEraTrailAuthority` records the active responsible organisation, country and
+  scope on a trail record, with an audit event. Assignment is an explicit admin
+  action after responsibility has been established; existing organisations are
+  **not** automatically promoted. The scope describes the entire geometry in that
+  trail record. Different authorities require separate country/section records;
+  arbitrary sub-route authority boundaries are not implemented.
+- Assigned organisation administrators manage editors, verifiers and incident
+  managers. EuroTrex admin status alone cannot verify, publish or restore routes.
+  Verification requires an explicit verifier role in the currently responsible,
+  active, trail-assigned organisation.
+- Draft provenance stores `sourceType` (`member_organisation`, `community`, `other`,
+  or legacy `unknown`), source description/link and attribution. A GPX upload must
+  be classified by its editor; no OSM upload is required. Source links are references,
+  not an automatic connector or data import from the linked system.
+- Flow: save draft -> submit for verification -> organisation verifies -> publish.
+  Authorised verifiers may verify their own drafts. Automatic geometry checks are
+  separate from the organisation's attestation to all eight Article 7 criteria,
+  recorded under `era-e-path-article7-2024-09`. This is not LQT certification or
+  an ERA field inspection, and does not grant use of an ERA certification logo.
+- A verification records the organisation, country/scope, verifier identity,
+  server timestamp, exact revision/payload hash and criteria. Every new saved
+  draft starts with `verification: null`; the current published version remains
+  available while changes are reviewed. Publication rechecks permissions, scope,
+  payload and context. A changed authority/scope requires a new verified draft.
+- Releases retain provenance and the verification snapshot. Existing publications
+  remain usable but legacy `approveBy` / `verifyingOrganisationName` fields alone
+  do not establish organisation verification. Legacy approved drafts must be
+  saved again with provenance and verified before publication. Rollback restores
+  the historical verification attached to that exact release; it does not create
+  a new verification or reset its date.
+- Website and mobile trail information show source separately from organisation
+  verification. Mobile cached metadata is upgraded on the next successful sync;
+  offline legacy metadata is never displayed as verified by the updated app.
+- Incidents retain their existing trail-scoped workflow, report release ID,
+  assigned managers and hiker status feedback. Reports do not automatically revoke
+  a route's verification or imply that the whole route is currently safe.
+
+No live organisation is assigned, no live trail is attested and no live route is
+published as part of this code rollout. Real authority and verifier assignments
+must be recorded in Access before the next route publication. Mobile source changes
+require a subsequent app build/distribution to reach installed apps.
+
+Validation: 11 ERA model/flow/rules tests passed against local Firebase emulators,
+including generic-admin denial, wrong-organisation denial, missing/partial
+attestation denial, immutable community provenance, fresh verification after
+edits, changed-scope publication denial, legacy approval denial and revoked
+access. Three mobile release tests and focused Flutter analysis passed. Website
+TypeScript, production build, route editing/cache tests and public-guide regression
+checks passed. Browser QA exercised the criterion gate, verification and publication
+on an emulator-only fixture; screenshot: output/era/organisation-verification-preview.png.
+
+Production rollout completed 29 October 2026: Firestore rules and
+`getEraAccess`, `setEraTrailAuthority`, `saveEraRevision`,
+`transitionEraRevision`, `rollbackEraRelease` in codebase `trail-reports`.
+Firebase reported successful deployment with its existing non-blocking build-image
+cleanup warning. Website source commit `d27e184a9d771567849d0799cd84d49152a1a2c4`;
+Sites deployment `appgdep_6ae39d3873b08191a0f9313f2908ce57` succeeded with owner-only
+access preserved. Archive: output/era/era-organisation-verification-site.tar.gz.
+
+Final website follow-up completed 30 October 2026: corrected the duplicate React
+key when switching to Access. TypeScript and production build passed again.
+Source commit: ed7cb069b026ad134459f6d95df2e6160b5e7486.
+Sites deployment: appgdep_6ae4228d0b1c8191b7c2df1d7a042b4c (succeeded).
+Archive: output/era/era-organisation-verification-final-site.tar.gz.

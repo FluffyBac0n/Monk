@@ -261,8 +261,8 @@ service cloud.firestore {
 
     match /trails/{trailId} {
       allow read: if true;
-      allow create: if isAdmin() && !request.resource.data.keys().hasAny(['publishedReleaseId']);
-      allow update: if isAdmin() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['publishedReleaseId', 'totalDistanceKm', 'stageCount']);
+      allow create: if isAdmin() && !request.resource.data.keys().hasAny(['publishedReleaseId', 'verificationAuthority']);
+      allow update: if isAdmin() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['publishedReleaseId', 'totalDistanceKm', 'stageCount', 'verificationAuthority']);
       allow delete: if false;
     }
 

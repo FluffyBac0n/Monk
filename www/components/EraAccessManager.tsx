@@ -11,8 +11,8 @@ type Removal = {email:string;legacy:boolean};
 const responsibilities: Record<string,{label:string;description:string}> = {
   organisation_admin:{label:'Manage team',description:'Add members and manage their trail access.'},
   editor:{label:'Edit trail data',description:'Upload, edit and submit route revisions.'},
-  verifier:{label:'Verify & publish',description:'Approve and publish revisions by other editors.'},
-  incident_manager:{label:'Manage incidents',description:'Review incidents and publish warnings.'},
+  verifier:{label:'Verify & publish',description:'Verify routes on behalf of the responsible organisation.'},
+  incident_manager:{label:'Manage incidents',description:'Review reports and update their status.'},
   viewer:{label:'View trail & audit',description:'Read trail data and its audit history.'},
 };
 
@@ -24,11 +24,13 @@ export function EraAccessManager({access,trailId,onChanged}:{access:EraAccess;tr
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
   const organisation=organisations.find(o=>o.id===organisationId) || organisations[0] || null;
   const trailName=access.trails.find(t=>t.id===trailId)?.name || 'this trail';
+  const authority=access.trails.find(t=>t.id===trailId)?.verificationAuthority;
+  const [authorityForm,setAuthorityForm]=useState<{country:string;scope:string}|null>(null);
   const members=access.members.filter(m=>m.organisationId===organisation?.id && m.trailRoles[trailId]?.length)
     .sort((a,b)=>a.email.localeCompare(b.email));
   const legacyMembers=access.admin?access.legacyMembers.filter(m=>m.trailIds.includes(trailId)):[];
   const assigned=!!organisation?.trailIds.includes(trailId),canAdd=assigned && organisation?.active;
-  const dirty=!!(organisationForm?.dirty || memberForm?.dirty);
+  const dirty=!!(organisationForm?.dirty || memberForm?.dirty || authorityForm);
   useEffect(()=>{
     const warn=(event:BeforeUnloadEvent)=>{if(dirty){event.preventDefault();event.returnValue='';}};
     window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);
@@ -90,6 +92,10 @@ export function EraAccessManager({access,trailId,onChanged}:{access:EraAccess;tr
         <div className="era-actions"><button className="button button-primary" disabled={busy || (organisationForm.active && !organisationForm.trailIds.length)}>{busy?'Saving…':organisationForm.creating?'Add organisation':'Save organisation'}</button><button type="button" className="button button-secondary" disabled={busy} onClick={()=>{if(discard())setOrganisationForm(null);}}>Cancel</button></div>
       </form>}
     </section>
+    {organisation && <section className="form-panel">
+      <div className="era-section-heading"><div><h3>Responsible organisation</h3><p>{authority?`${authority.organisationName} · ${authority.country}`:'Not assigned'}{authority && <small className="era-verification-scope">{authority.scope}</small>}</p></div>{access.admin && !authorityForm && <button type="button" className="button button-secondary" disabled={busy || !canAdd} onClick={()=>{if(discard())setAuthorityForm({country:authority?.country || '',scope:authority?.scope || trailName});}}>Assign responsibility</button>}</div>
+      {authorityForm && <form onSubmit={event=>{event.preventDefault();void act(async()=>{await eraCall('setEraTrailAuthority',{trailId,organisationId:organisation.id,...authorityForm});setAuthorityForm(null);},'Responsible organisation updated.');}}><p>{organisation.name} will verify the full route stored in this trail record.</p><fieldset disabled={busy}><div className="form-grid"><label>Country<input required maxLength={100} value={authorityForm.country} onChange={e=>setAuthorityForm(f=>f && {...f,country:e.target.value})}/></label><label>Trail / section covered<input required maxLength={200} value={authorityForm.scope} onChange={e=>setAuthorityForm(f=>f && {...f,scope:e.target.value})}/></label></div></fieldset><div className="era-actions"><button className="button button-primary" disabled={busy || !canAdd}>Save responsibility</button><button type="button" className="button button-secondary" disabled={busy} onClick={()=>setAuthorityForm(null)}>Cancel</button></div></form>}
+    </section>}
     {organisation && <section className="form-panel">
       <div className="era-section-heading"><div><h2>Team members</h2><p>{trailName}</p></div><button type="button" className="button button-primary" disabled={busy || !canAdd} onClick={()=>beginMember()}>Add member</button></div>
       {!organisation.active && <p className="notice">This organisation is inactive. Existing trail access is suspended.</p>}

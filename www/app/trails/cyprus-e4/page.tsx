@@ -125,6 +125,7 @@ export default async function CyprusE4({
           {...publicHtmxNavigation}
         >
           <TrailFigures trail={trail} />
+          {trail.provenance && <div className="section-shell era-verification-summary"><span>{trail.provenance.verification?<>Verified by {trail.provenance.verification.organisationName} · {trail.provenance.verification.country}<small>{trail.provenance.verification.scope} · Last verified {new Date(trail.provenance.verification.verifiedAt).toLocaleDateString('en-GB')}</small></>:'No organisation verification recorded'}</span>{trail.provenance.source && <span>Source: {trail.provenance.source}<small>{trail.provenance.sourceType==='community'?'Community / open data':trail.provenance.sourceType==='member_organisation'?'Member organisation':'Other / unclassified source'}{trail.provenance.attribution && ` · ${trail.provenance.attribution}`}</small></span>}</div>}
           <TrailDivider />
           <section
             className="section-shell guide-journey explore-section"

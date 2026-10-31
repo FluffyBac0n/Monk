@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseGeoJSON,normaliseSegments,validateRevision,buildRelease,assertIndependent,hasEraRole,fingerprint} from '../src/era-model.js';
+import {parseGeoJSON,normaliseSegments,validateRevision,buildRelease,normaliseStageEdits,revisionPayload,hasEraRole,hasVerificationAuthority,verificationAttestation,verificationCriteria,verificationCriteriaVersion,fingerprint} from '../src/era-model.js';
 const context={stages:[{id:'start',name:'Start',location:{longitude:33,latitude:35},services:{water:true}},{id:'finish',name:'Finish',location:{longitude:33.02,latitude:35}}],markers:[],excursions:[],detours:[],totalDistanceKm:null};
 const body=()=>({segments:[{kind:'main',coordinates:[[33,35,100],[33.01,35,110],[33.02,35,90]]}],source:'Survey fixture',attribution:'Test licence',elevationSource:'Surveyed elevations',stageDecisions:{start:{confirmed:true},finish:{confirmed:true}},relatedRoutesReviewed:false,changesReviewed:false});
 test('GeoJSON preserves disconnected parts and rejects polygons, invalid coordinates and empty geometry',()=>{
@@ -27,9 +27,7 @@ test('stage locations are preserved and distant pins require explicit off-route 
   b.stageDecisions.finish.offRoute=true;assert.deepEqual(validateRevision(b,ctx).errors,[]);
   assert.equal(validateRevision(b,ctx).stages[1].location.latitude,35.02);
 });
-test('contributors cannot approve and roles require an active, assigned organisation',()=>{
-  assert.throws(()=>assertIndependent({contributors:['editor']},'editor'));
-  assert.doesNotThrow(()=>assertIndependent({contributors:['editor']},'verifier'));
+test('roles require an active, assigned organisation',()=>{
   const member={organisationId:'org',trailRoles:{cyprus:['editor']}};
   const org={id:'org',active:true,trailIds:['cyprus']};
   assert.equal(hasEraRole(member,org,'cyprus',['editor']),true);
@@ -48,4 +46,40 @@ test('related routes are reanchored, recalculated and can be explicitly excluded
   assert.equal(result.related.detours[0].replacedMainTrailDistanceKm,result.totalDistanceKm);
   assert.deepEqual(result.related.detours[0].affectedStageIds,['start','finish']);
   b.relatedDecisions={'detours:branch':{excluded:true}};assert.equal(validateRevision(b,ctx).related.detours.length,0);
+});
+
+test('draft stage edits and additions retain services and publish together without altering live context',()=>{
+  const input={...body(),stageEdits:[{id:'start',name:'New start name',description:'Updated stop',location:{longitude:33,latitude:35},services:{water:false}},{id:'middle',name:'New stage',description:'Water point',location:{longitude:33.01,latitude:35}}]};
+  input.stageDecisions.middle={confirmed:true};
+  const payload=revisionPayload(input),result=validateRevision(payload,context);
+  assert.deepEqual(result.errors,[]);
+  const release=buildRelease(result);
+  assert.deepEqual(release.stages.map(s=>s.id),['start','middle','finish']);
+  assert.equal(release.stages[0].services.water,true);
+  assert.equal(release.stages[0].name,'New start name');
+  assert.equal(release.stages[1].description,'Water point');
+  assert.equal(context.stages.length,2);
+  assert.equal(context.stages[0].name,'Start');
+  assert.equal(payload.stageEdits[0].services,undefined);
+  delete payload.stageDecisions.middle;
+  assert.ok(validateRevision(payload,context).errors.some(e=>e.includes('New stage')));
+});
+test('stage edits reject duplicates, invalid locations, blank names and excess entries',()=>{
+  const stage={id:'test',name:'Stage',description:'',location:{longitude:33,latitude:35}};
+  for(const input of [[stage,stage],[{...stage,location:{longitude:181,latitude:35}}],[{...stage,name:''}],Array(501).fill(stage)])assert.throws(()=>normaliseStageEdits(input));
+});
+
+test('source provenance cannot confer verification and only assigned organisation verifiers have authority',()=>{
+  const member={organisationId:'org',trailRoles:{cyprus:['verifier']}},org={id:'org',active:true,trailIds:['cyprus']};
+  assert.equal(hasVerificationAuthority(member,org,'cyprus',{organisationId:'org'}),true);
+  assert.equal(hasVerificationAuthority(member,org,'cyprus',{organisationId:'other'}),false);
+  assert.equal(hasVerificationAuthority(undefined,org,'cyprus',{organisationId:'org'}),false);
+  assert.equal(hasVerificationAuthority(member,org,'other',{organisationId:'org'}),false);
+  const value=revisionPayload({...body(),sourceType:'community',sourceUrl:'https://example.org/route',verification:{status:'verified'}});
+  assert.equal(value.sourceType,'community');assert.equal(value.verification,undefined);
+  assert.throws(()=>revisionPayload({...body(),sourceType:'community',sourceUrl:'javascript:alert(1)'}),/HTTP/);
+  assert.throws(()=>revisionPayload({...body(),sourceType:'verified'}),/source type/);
+  assert.equal('sourceType' in revisionPayload(body()),false,'Legacy payload hashes remain stable');
+  assert.throws(()=>verificationAttestation({criteriaVersion:verificationCriteriaVersion,criteria:{}}),/criterion/);
+  assert.equal(Object.keys(verificationAttestation({criteriaVersion:verificationCriteriaVersion,criteria:Object.fromEntries(verificationCriteria.map(key=>[key,true]))}).criteria).length,8);
 });

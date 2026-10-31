@@ -43,6 +43,7 @@ export type PublicIssue = {
   updatedAt: string;
 };
 export type PublicTrail = {
+  provenance?: {source:string;sourceType:string;attribution:string;verification:null|{organisationName:string;country:string;scope:string;verifiedAt:string}};
   id: string;
   name: string;
   country: string;
@@ -204,7 +205,7 @@ async function fetchTrail(id: string): Promise<PublicTrail> {
   const prefix = `trails/${id}`;
   const root = await read(prefix).then(value => fields(value as Document));
   const releasePrefix = root.publishedReleaseId ? `${prefix}/releases/${encodeURIComponent(text(root.publishedReleaseId))}` : prefix;
-  const [stageRows, metadata, lodgingRows, issueRows] = await Promise.all(
+  const [stageRows, metadata, lodgingRows, issueRows, release] = await Promise.all(
     [
       collection(`${releasePrefix}/stages`),
       read(`${releasePrefix}/routeMetadata/main`)
@@ -212,6 +213,7 @@ async function fetchTrail(id: string): Promise<PublicTrail> {
         .catch(() => null),
       collection(`${prefix}/lodgings`).catch(() => null),
       collection('trailIssues').catch(() => null),
+      root.publishedReleaseId ? read(releasePrefix).then(value=>fields(value as Document)).catch(()=>null) : Promise.resolve(null),
     ]
   );
   const stages: CyprusE4Stage[] = stageRows
@@ -314,8 +316,11 @@ async function fetchTrail(id: string): Promise<PublicTrail> {
       /* Explicit geometry-unavailable state in the guide. */
     }
   }
+  const verification=release?.verification as Fields | undefined;
+  const verified=verification?.status==='verified' && !!verification.organisationId && !!verification.organisationName && typeof verification.payloadHash==='string' && verification.payloadHash===release?.payloadHash && verification.revisionId===release?.revisionId && Number.isFinite(Date.parse(text(verification.verifiedAt)));
   return {
     id,
+    provenance:{source:text(release?.source || root.source),sourceType:text(release?.sourceType || root.sourceType) || 'unknown',attribution:text(release?.attribution || root.attribution),verification:verified?{organisationName:text(verification?.organisationName),country:text(verification?.country),scope:text(verification?.scope),verifiedAt:text(verification?.verifiedAt)}:null},
     name: text(root.name),
     country: text(root.country),
     distanceKm: number(root.totalDistanceKm),

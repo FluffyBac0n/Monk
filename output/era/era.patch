@@ -1,0 +1,2060 @@
+diff --git a/functions/src/index.js b/functions/src/index.js
+index d4610a4..826244f 100644
+--- a/functions/src/index.js
++++ b/functions/src/index.js
+@@ -6,7 +6,8 @@ import {onCall, HttpsError} from 'firebase-functions/v2/https';
+ import {onSchedule} from 'firebase-functions/v2/scheduler';
+ import {createHash} from 'node:crypto';
+ import sharp from 'sharp';
+-import {requireId, validateReport, validateReview, mayReview, validatePhotoChecksums, officialTrailIssue} from './report-model.js';
++import {requireId, validateReport, validateReview, validatePhotoChecksums, officialTrailIssue} from './report-model.js';
++import {createEraService} from './era-service.js';
+ 
+ initializeApp();
+ const db = getFirestore();
+@@ -28,6 +29,15 @@ const callable = (handler) => onCall(options, async (request) => {
+     throw new HttpsError('internal', 'The request could not be completed. Please retry.');
+   }
+ });
++const era = createEraService({db,bucket,authService:getAuth()});
++export const getEraAccess = callable(era.getEraAccess);
++export const configureEraOrganisation = callable(era.configureEraOrganisation);
++export const setEraMember = callable(era.setEraMember);
++export const saveEraRevision = callable(era.saveEraRevision);
++export const getEraRevision = callable(era.getEraRevision);
++export const transitionEraRevision = callable(era.transitionEraRevision);
++export const rollbackEraRelease = callable(era.rollbackEraRelease);
++export const createEraIncident = callable(era.createEraIncident);
+ function validate(fn) { try { return fn(); } catch (e) { throw new HttpsError('invalid-argument', e.message); } }
+ async function access(auth) {
+   const verified = auth.token.email_verified === true;
+@@ -41,7 +51,8 @@ async function assertAdmin(auth) {
+ async function readableReport(request) {
+   const reportId = validate(() => requireId(request.data.reportId));
+   const snapshot = await db.doc(`trailReports/${reportId}`).get();
+-  if (!snapshot.exists || !mayReview(await access(request.auth), snapshot.data().trailId)) throw new HttpsError('permission-denied', 'You cannot access this report.');
++  if (!snapshot.exists) throw new HttpsError('permission-denied', 'You cannot access this report.');
++  await db.runTransaction(tx=>era.permission(tx,request.auth,snapshot.data().trailId,['incident_manager']));
+   return snapshot;
+ }
+ 
+@@ -50,7 +61,9 @@ export const beginTrailReport = callable(async ({auth, data}) => {
+   const body = validate(() => validateReport(data));
+   const trail = await db.doc(`trails/${body.trailId}`).get();
+   if (!trail.exists) throw new HttpsError('invalid-argument', 'This trail is unavailable.');
+-  if (body.stageId && !(await db.doc(`trails/${body.trailId}/stages/${body.stageId}`).get()).exists) body.stageId = null;
++  if (body.routeReleaseId && !(await db.doc(`trails/${body.trailId}/releases/${body.routeReleaseId}`).get()).data()?.published) throw new HttpsError('invalid-argument','Unknown published trail release.');
++  const stagePrefix=body.routeReleaseId ? `trails/${body.trailId}/releases/${body.routeReleaseId}` : `trails/${body.trailId}`;
++  if (body.stageId && !(await db.doc(`${stagePrefix}/stages/${body.stageId}`).get()).exists) body.stageId = null;
+   const fingerprint = createHash('sha256').update(JSON.stringify(body)).digest('hex');
+   const report = db.doc(`trailReports/${reportId}`);
+   const day = new Date().toISOString().slice(0, 10);
+@@ -65,7 +78,7 @@ export const beginTrailReport = callable(async ({auth, data}) => {
+     if ((own.data()?.count || 0) >= 10 || (global.data()?.count || 0) >= 1000) throw new HttpsError('resource-exhausted', 'The daily report limit has been reached. Please try tomorrow.');
+     const expiresAt = Timestamp.fromMillis(Date.now() + 3 * 86400000);
+     for (const [ref, snap] of [[userQuota, own], [globalQuota, global]]) tx.set(ref, {count: (snap.data()?.count || 0) + 1, expiresAt});
+-    tx.create(report, {...body, location: new GeoPoint(body.latitude, body.longitude), reporterUid: auth.uid,
++    tx.create(report, {...body, location: new GeoPoint(body.latitude, body.longitude), reporterUid: auth.uid,origin:'hiker',routeReleaseId:body.routeReleaseId || trail.data().publishedReleaseId || null,
+       fingerprint, uploadState: 'uploading', status: 'new', priority: 'normal', photos: [],
+       createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), receivedAt: null,
+       authority: '', forwardingReference: '', duplicateOf: null});
+@@ -92,7 +105,8 @@ export const finalizeTrailReport = callable(async ({auth, data}) => {
+     const [bytes] = await bucket.file(source.name, {generation: meta.generation}).download();
+     const expected = checksums?.get(id);
+     if (expected && (bytes.length !== expected.byteLength
+-      || createHash('md5').update(bytes).digest('base64') !== expected.md5Hash)) {
++      || (expected.md5Hash && createHash('md5').update(bytes).digest('base64') !== expected.md5Hash)
++      || (expected.sha256Hash && createHash('sha256').update(bytes).digest('hex') !== expected.sha256Hash))) {
+       // Keep originals on the device and the report pending. Only the owning
+       // reporter's mismatched staging generation is removed for a clean retry.
+       // Storage rules still deny client overwrite/delete, including on retries.
+@@ -120,6 +134,7 @@ export const finalizeTrailReport = callable(async ({auth, data}) => {
+     if (latest.data()?.uploadState !== 'uploading') throw new HttpsError('failed-precondition', 'This draft expired.');
+     tx.update(ref, {photos, uploadState: 'complete', receivedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()});
+     tx.create(ref.collection('events').doc('submitted'), {action: 'submitted', actorId: auth.uid, createdAt: FieldValue.serverTimestamp()});
++    era.audit(tx,auth,report.trailId,'incident_received',reportId);
+   });
+   await bucket.deleteFiles({prefix: `trail-report-uploads/${auth.uid}/${reportId}/`}).catch(() => {});
+   return {reportId, received: true};
+@@ -139,6 +154,7 @@ export const trailReportPhoto = callable(async (request) => {
+   const photo = snap.data().photos.find((item) => item.id === photoId);
+   if (!photo || snap.data().uploadState !== 'complete') throw new HttpsError('not-found', 'Photo unavailable.');
+   const [bytes] = await bucket.file(request.data.thumbnail === true ? photo.thumbnailPath : photo.path).download();
++  await db.runTransaction(async tx=>{await era.permission(tx,request.auth,snap.data().trailId,['incident_manager']);era.audit(tx,request.auth,snap.data().trailId,'incident_photo_accessed',snap.id,{photoId});});
+   return {data: bytes.toString('base64'), contentType: 'image/jpeg'};
+ });
+ 
+@@ -148,8 +164,8 @@ export const reviewTrailReport = callable(async (request) => {
+   const event = snap.ref.collection('events').doc();
+   // Recheck membership in the transaction so revocation cannot race a review.
+   await db.runTransaction(async (tx) => {
+-    const [current, member, admin] = await tx.getAll(snap.ref, db.doc(`trailReportAccess/${request.auth.uid}`), db.doc(`admins/${request.auth.uid}`));
+-    if (!mayReview({verified: request.auth.token.email_verified === true, admin: request.auth.token.admin === true || admin.exists, trailIds: member.data()?.trailIds}, current.data()?.trailId)) throw new HttpsError('permission-denied', 'Trail access was removed.');
++    const current = await tx.get(snap.ref);
++    await era.permission(tx,request.auth,current.data()?.trailId,['incident_manager']);
+     if (current.data().uploadState !== 'complete') throw new HttpsError('failed-precondition', 'Report is not ready for review.');
+     if (change.duplicateOf) {
+       const other = await tx.get(db.doc(`trailReports/${change.duplicateOf}`));
+@@ -164,6 +180,7 @@ export const reviewTrailReport = callable(async (request) => {
+     else tx.delete(issueRef);
+     tx.create(event, {action: 'review', ...change, previousStatus: current.data().status,
+       actorId: request.auth.uid, actorEmail: request.auth.token.email, createdAt: FieldValue.serverTimestamp()});
++    era.audit(tx,request.auth,current.data().trailId,'incident_reviewed',snap.id,{previousStatus:current.data().status,...change});
+   });
+   return {saved: true};
+ });
+@@ -175,12 +192,13 @@ export const setTrailReportAccess = callable(async ({auth, data}) => {
+   if (!(await db.doc(`trails/${trailId}`).get()).exists) throw new HttpsError('invalid-argument', 'Unknown trail.');
+   let user;
+   try { user = await getAuth().getUserByEmail(data.email.trim()); }
+-  catch { throw new HttpsError('not-found', 'Ask this user to create an account at /trail-reports and verify their email first.'); }
++  catch { throw new HttpsError('not-found', 'Ask this user to create an account at /era and verify their email first.'); }
+   if (data.grant && (!user.emailVerified || user.disabled)) throw new HttpsError('failed-precondition', 'The user must verify their email first.');
+   const batch = db.batch();
+   batch.set(db.doc(`trailReportAccess/${user.uid}`), {email: user.email,
+     trailIds: data.grant ? FieldValue.arrayUnion(trailId) : FieldValue.arrayRemove(trailId), updatedAt: FieldValue.serverTimestamp()}, {merge: true});
+   batch.create(db.collection('trailReportAccessAudit').doc(), {trailId, userId: user.uid, action: data.grant ? 'granted' : 'revoked', actorId: auth.uid, createdAt: FieldValue.serverTimestamp()});
++  era.audit(batch,auth,trailId,data.grant?'incident_access_granted':'incident_access_revoked',user.uid);
+   await batch.commit();
+   return {saved: true};
+ });
+diff --git a/functions/src/report-model.js b/functions/src/report-model.js
+index ebb099e..609bd93 100644
+--- a/functions/src/report-model.js
++++ b/functions/src/report-model.js
+@@ -30,7 +30,8 @@ export function validateReport(data) {
+     latitude, longitude, locationSource: data.locationSource, accuracyM: accuracyM ?? null,
+     observedAtMs, photoIds: data.photoIds, contactEmail, appVersion: text(data.appVersion || '', 80),
+     // Context is a suggestion from the selected stage, never an authorization input.
+-    stageId: data.stageId ? requireId(data.stageId) : null};
++    stageId: data.stageId ? requireId(data.stageId) : null,
++    ...(data.routeReleaseId ? {routeReleaseId:requireId(data.routeReleaseId)} : {})};
+ }
+ export function mayReview({verified, admin, trailIds}, trailId) {
+   return verified === true && (admin === true || (Array.isArray(trailIds) && trailIds.includes(trailId)));
+@@ -45,7 +46,9 @@ export function validateReview(data, reportId) {
+   if (duplicateOf === reportId) throw new Error('A report cannot duplicate itself.');
+   if (data.status === 'forwarded' && !authority) throw new Error('Enter the authority before marking as forwarded.');
+   if (['resolved', 'dismissed'].includes(data.status) && !note) throw new Error('Add a resolution or dismissal note.');
+-  return {status: data.status, priority: data.priority, authority, forwardingReference, note, duplicateOf};
++  if (data.publicWarning !== undefined && typeof data.publicWarning !== 'boolean') throw new Error('Invalid warning publication choice.');
++  return {status: data.status, priority: data.priority, authority, forwardingReference, note, duplicateOf,
++    ...(data.publicWarning===undefined?{}:{publicWarning:data.publicWarning})};
+ }
+ 
+ // Older app builds omit this manifest. New builds must describe every original
+@@ -58,17 +61,18 @@ export function validatePhotoChecksums(value, photoIds) {
+     if (!item || typeof item !== 'object') throw new Error('Invalid photo checksum.');
+     const id = requireId(item.id);
+     if (!photoIds.includes(id) || checksums.has(id)) throw new Error('Invalid photo identifier.');
+-    if (typeof item.md5Hash !== 'string' || !/^[A-Za-z0-9+/]{22}==$/.test(item.md5Hash)
+-      || Buffer.from(item.md5Hash, 'base64').toString('base64') !== item.md5Hash) throw new Error('Invalid photo checksum.');
++    const md5=typeof item.md5Hash==='string' && /^[A-Za-z0-9+/]{22}==$/.test(item.md5Hash) && Buffer.from(item.md5Hash,'base64').toString('base64')===item.md5Hash;
++    const sha256=typeof item.sha256Hash==='string' && /^[a-f0-9]{64}$/.test(item.sha256Hash);
++    if (!md5 && !sha256) throw new Error('Invalid photo checksum.');
+     if (!Number.isSafeInteger(item.byteLength) || item.byteLength <= 0 || item.byteLength >= 2 * 1024 * 1024) throw new Error('Invalid photo size.');
+-    checksums.set(id, {md5Hash: item.md5Hash, byteLength: item.byteLength});
++    checksums.set(id, {...(md5?{md5Hash:item.md5Hash}:{}),...(sha256?{sha256Hash:item.sha256Hash}:{}),byteLength: item.byteLength});
+   }
+   return checksums;
+ }
+ 
+ // Public map projection. Never spread a private report into this document.
+ export function officialTrailIssue(report) {
+-  if (report.uploadState !== 'complete' || !['reviewed', 'forwarded'].includes(report.status)) return null;
++  if (report.publicWarning === false || report.uploadState !== 'complete' || !['reviewed', 'forwarded'].includes(report.status)) return null;
+   return {
+     trailId: report.trailId,
+     category: report.category,
+diff --git a/functions/test/rules.test.js b/functions/test/rules.test.js
+index 882a25c..86ae670 100644
+--- a/functions/test/rules.test.js
++++ b/functions/test/rules.test.js
+@@ -8,6 +8,7 @@ const enabled = !!process.env.FIRESTORE_EMULATOR_HOST;
+ test('Firestore report permissions enforce trail boundaries, including audit and membership', {skip:!enabled}, async () => {
+  const env = await initializeTestEnvironment({projectId, firestore:{rules:readFileSync('../www/firestore.rules','utf8')}, storage:{rules:readFileSync('../www/storage.rules','utf8')}});
+  try {
++  const pendingId = `pending-${Date.now()}`;
+   await env.withSecurityRulesDisabled(async context => {
+    const db=context.firestore();
+    for (const [path,value] of Object.entries({
+@@ -15,7 +16,7 @@ test('Firestore report permissions enforce trail boundaries, including audit and
+     'admins/admin':{}, 'trailReportAccess/cyprus':{trailIds:['cyprus-e4']}, 'trailReportAccess/crete':{trailIds:['crete-e4']},
+     'trailReports/one':{trailId:'cyprus-e4',reporterUid:'hiker',uploadState:'complete',photoIds:['photo_0']},
+     'trailReports/two':{trailId:'crete-e4',reporterUid:'other',uploadState:'complete'},
+-    'trailReports/pending':{trailId:'cyprus-e4',reporterUid:'hiker',uploadState:'uploading',photoIds:['photo_0']},
++    [`trailReports/${pendingId}`]:{trailId:'cyprus-e4',reporterUid:'hiker',uploadState:'uploading',photoIds:['photo_0']},
+     'trailReports/one/events/submitted':{action:'submitted'},
+    })) await setDoc(doc(db,path),value);
+   });
+@@ -35,12 +36,12 @@ test('Firestore report permissions enforce trail boundaries, including audit and
+   await assertFails(setDoc(doc(user('cyprus'),'trailReportAccess/cyprus'),{trailIds:['crete-e4']}));
+   await assertSucceeds(getDoc(doc(user('cyprus'),'trailReports/one/events/submitted')));
+   await assertFails(getDoc(doc(user('crete'),'trailReports/one/events/submitted')));
+-  await assertFails(getDoc(doc(user('cyprus'),'trailReports/pending')));
++  await assertFails(getDoc(doc(user('cyprus'),`trailReports/${pendingId}`)));
+   const storage=env.authenticatedContext('hiker').storage();
+-  await assertSucceeds(uploadBytes(ref(storage,'trail-report-uploads/hiker/pending/photo_0/photo.jpg'),new Uint8Array([1,2]),{contentType:'image/jpeg'}));
+-  await assertFails(uploadBytes(ref(storage,'trail-report-uploads/hiker/pending/photo_1/photo.jpg'),new Uint8Array([1,2]),{contentType:'image/jpeg'}));
+-  await assertFails(uploadBytes(ref(storage,'trail-report-uploads/other/pending/photo_0/photo.jpg'),new Uint8Array([1,2]),{contentType:'image/jpeg'}));
+-  await assertFails(uploadBytes(ref(storage,'trail-report-uploads/hiker/pending/photo_0/photo.jpg'),new Uint8Array([1,2]),{contentType:'image/jpeg'}));
++  await assertSucceeds(uploadBytes(ref(storage,`trail-report-uploads/hiker/${pendingId}/photo_0/photo.jpg`),new Uint8Array([1,2]),{contentType:'image/jpeg'}));
++  await assertFails(uploadBytes(ref(storage,`trail-report-uploads/hiker/${pendingId}/photo_1/photo.jpg`),new Uint8Array([1,2]),{contentType:'image/jpeg'}));
++  await assertFails(uploadBytes(ref(storage,`trail-report-uploads/other/${pendingId}/photo_0/photo.jpg`),new Uint8Array([1,2]),{contentType:'image/jpeg'}));
++  await assertFails(uploadBytes(ref(storage,`trail-report-uploads/hiker/${pendingId}/photo_0/photo.jpg`),new Uint8Array([1,2]),{contentType:'image/jpeg'}));
+   await env.withSecurityRulesDisabled(async c => uploadBytes(ref(c.storage(),'trail-report-media/one/photo_0.jpg'),new Uint8Array([1,2]),{contentType:'image/jpeg'}));
+   await assertSucceeds(getBytes(ref(env.authenticatedContext('cyprus',{email_verified:true,email:'cyprus@example.com'}).storage(),'trail-report-media/one/photo_0.jpg')));
+   await assertFails(getBytes(ref(env.authenticatedContext('crete',{email_verified:true,email:'crete@example.com'}).storage(),'trail-report-media/one/photo_0.jpg')));
+diff --git a/mobile/lib/core/database/app_database.dart b/mobile/lib/core/database/app_database.dart
+index 16ec550..2c77e8c 100644
+--- a/mobile/lib/core/database/app_database.dart
++++ b/mobile/lib/core/database/app_database.dart
+@@ -1,3 +1,4 @@
++import 'dart:convert';
+ import 'package:path/path.dart' as p;
+ import 'package:sqflite/sqflite.dart';
+ 
+@@ -6,7 +7,7 @@ import '../../features/stages/domain/stage.dart';
+ import 'stage_database_codec.dart';
+ 
+ class AppDatabase {
+-  static const schemaVersion = 5;
++  static const schemaVersion = 6;
+ 
+   Database? _database;
+ 
+@@ -17,7 +18,7 @@ class AppDatabase {
+       onCreate: (db, version) async {
+         await db.execute('''
+           CREATE TABLE stages (
+-            id TEXT PRIMARY KEY,
++            id TEXT NOT NULL,
+             trail_id TEXT NOT NULL,
+             sequence INTEGER NOT NULL,
+             name TEXT NOT NULL,
+@@ -27,7 +28,8 @@ class AppDatabase {
+             elevation_up_m REAL,
+             elevation_down_m REAL,
+             altitude_m REAL,
+-            services_json TEXT NOT NULL
++            services_json TEXT NOT NULL,
++            PRIMARY KEY (trail_id, id)
+           )
+         ''');
+         await db.execute(
+@@ -42,6 +44,20 @@ class AppDatabase {
+         if (oldVersion < 3) await _createSettingsTable(db);
+         if (oldVersion < 4) await _addStageElevationColumns(db);
+         if (oldVersion < 5) await _addStageDistanceFromPathColumn(db);
++        if (oldVersion < 6) {
++          await db.execute('ALTER TABLE stages RENAME TO stages_legacy');
++          await db.execute(
++            'CREATE TABLE stages AS SELECT * FROM stages_legacy WHERE 0',
++          );
++          await db.execute(
++            'CREATE UNIQUE INDEX stages_trail_id ON stages (trail_id, id)',
++          );
++          await db.execute('INSERT INTO stages SELECT * FROM stages_legacy');
++          await db.execute('DROP TABLE stages_legacy');
++          await db.execute(
++            'CREATE INDEX stages_trail_sequence ON stages (trail_id, sequence DESC)',
++          );
++        }
+       },
+     );
+   }
+@@ -177,6 +193,48 @@ class AppDatabase {
+     });
+   }
+ 
++  Future<void> replaceTrailRelease(
++    String trailId,
++    String releaseId,
++    List<RoutePoint> points,
++    List<TrailStage> stages, {
++    Map<String, Object?> metadata = const {},
++  }) async {
++    final db = await database;
++    await db.transaction((txn) async {
++      await txn.delete(
++        'route_points',
++        where: 'trail_id = ?',
++        whereArgs: [trailId],
++      );
++      await txn.delete('stages', where: 'trail_id = ?', whereArgs: [trailId]);
++      final batch = txn.batch();
++      for (final p in points) {
++        batch.insert('route_points', {
++          'trail_id': trailId,
++          'point_index': p.pointIndex,
++          'lat': p.lat,
++          'lng': p.lng,
++          'altitude_m': p.altitudeM,
++          'distance_km': p.distanceKm,
++          'reverse_distance_km': p.reverseDistanceKm,
++        });
++      }
++      for (final s in stages) {
++        batch.insert('stages', encodeTrailStageRow(trailId, s));
++      }
++      batch.insert('app_settings', {
++        'key': 'trailRelease:$trailId',
++        'value': releaseId,
++      }, conflictAlgorithm: ConflictAlgorithm.replace);
++      batch.insert('app_settings', {
++        'key': 'trailReleaseMeta:$trailId',
++        'value': jsonEncode(metadata),
++      }, conflictAlgorithm: ConflictAlgorithm.replace);
++      await batch.commit(noResult: true);
++    });
++  }
++
+   Future<void> deleteTrailData(String trailId) async {
+     final db = await database;
+     await db.transaction((txn) async {
+@@ -186,6 +244,16 @@ class AppDatabase {
+         where: 'trail_id = ?',
+         whereArgs: [trailId],
+       );
++      await txn.delete(
++        'app_settings',
++        where: 'key = ?',
++        whereArgs: ['trailRelease:$trailId'],
++      );
++      await txn.delete(
++        'app_settings',
++        where: 'key = ?',
++        whereArgs: ['trailReleaseMeta:$trailId'],
++      );
+     });
+   }
+ 
+diff --git a/mobile/lib/core/localization/translations_planner.dart b/mobile/lib/core/localization/translations_planner.dart
+index 8165bd8..845b35a 100644
+--- a/mobile/lib/core/localization/translations_planner.dart
++++ b/mobile/lib/core/localization/translations_planner.dart
+@@ -1,4 +1,11 @@
+ const dePlannerTranslations = <String, String>{
++  'Route source': 'Routenquelle',
++  'Verified by': 'Geprüft von',
++  'Published': 'Veröffentlicht',
++
++  'Route changed': 'Route geändert',
++  'This saved plan uses another trail release. Create a new plan with the current trail data.':
++      'Dieser gespeicherte Plan verwendet eine andere Routenversion. Erstelle einen neuen Plan mit den aktuellen Routendaten.',
+   'Your days are fixed. Daily effort may exceed your target to reach an overnight stop.':
+       'Die Anzahl der Tage ist festgelegt. Die tägliche Anstrengung kann Ihr Ziel überschreiten, um einen Übernachtungsort zu erreichen.',
+   'Some days exceed your preferred effort. Check the daily distances and walking times, or choose Limit effort.':
+@@ -6,6 +13,13 @@ const dePlannerTranslations = <String, String>{
+ };
+ 
+ const esPlannerTranslations = <String, String>{
++  'Route source': 'Fuente de la ruta',
++  'Verified by': 'Verificado por',
++  'Published': 'Publicado',
++
++  'Route changed': 'Ruta modificada',
++  'This saved plan uses another trail release. Create a new plan with the current trail data.':
++      'Este plan guardado usa otra versión de la ruta. Crea un plan nuevo con los datos actuales.',
+   'Your days are fixed. Daily effort may exceed your target to reach an overnight stop.':
+       'El número de días es fijo. El esfuerzo diario puede superar tu objetivo para llegar a un lugar donde pasar la noche.',
+   'Some days exceed your preferred effort. Check the daily distances and walking times, or choose Limit effort.':
+@@ -13,6 +27,13 @@ const esPlannerTranslations = <String, String>{
+ };
+ 
+ const itPlannerTranslations = <String, String>{
++  'Route source': 'Fonte del percorso',
++  'Verified by': 'Verificato da',
++  'Published': 'Pubblicato',
++
++  'Route changed': 'Percorso modificato',
++  'This saved plan uses another trail release. Create a new plan with the current trail data.':
++      'Questo piano salvato usa un’altra versione del percorso. Crea un nuovo piano con i dati attuali.',
+   'Your days are fixed. Daily effort may exceed your target to reach an overnight stop.':
+       'Il numero di giorni è fisso. Lo sforzo giornaliero può superare il tuo obiettivo per raggiungere una tappa di pernottamento.',
+   'Some days exceed your preferred effort. Check the daily distances and walking times, or choose Limit effort.':
+@@ -20,6 +41,13 @@ const itPlannerTranslations = <String, String>{
+ };
+ 
+ const frPlannerTranslations = <String, String>{
++  'Route source': 'Source de l’itinéraire',
++  'Verified by': 'Vérifié par',
++  'Published': 'Publié',
++
++  'Route changed': 'Itinéraire modifié',
++  'This saved plan uses another trail release. Create a new plan with the current trail data.':
++      'Ce parcours enregistré utilise une autre version de l’itinéraire. Créez un nouveau parcours avec les données actuelles.',
+   'Your days are fixed. Daily effort may exceed your target to reach an overnight stop.':
+       'Le nombre de jours est fixe. L’effort quotidien peut dépasser votre objectif pour rejoindre une étape de nuit.',
+   'Some days exceed your preferred effort. Check the daily distances and walking times, or choose Limit effort.':
+diff --git a/mobile/lib/features/accommodation/presentation/accommodation_controller.dart b/mobile/lib/features/accommodation/presentation/accommodation_controller.dart
+index 1e58e63..7d98aea 100644
+--- a/mobile/lib/features/accommodation/presentation/accommodation_controller.dart
++++ b/mobile/lib/features/accommodation/presentation/accommodation_controller.dart
+@@ -1,8 +1,8 @@
++import '../../trails/presentation/selected_trail.dart';
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+ import '../../../app.dart';
+-import '../../stages/presentation/stages_controller.dart';
+ import '../data/lodging_repository.dart';
+ import '../domain/lodging.dart';
+ 
+@@ -16,12 +16,15 @@ final lodgingRepositoryProvider = Provider<LodgingRepository>((ref) {
+ final lodgingsForTrailProvider = FutureProvider<List<Lodging>>((ref) {
+   return ref
+       .watch(lodgingRepositoryProvider)
+-      .loadForTrail(trailId: cyprusE4TrailId);
++      .loadForTrail(trailId: ref.watch(selectedTrailIdProvider));
+ });
+ 
+ final lodgingsForStageProvider = FutureProvider.autoDispose
+     .family<List<Lodging>, String>((ref, stageId) {
+       return ref
+           .watch(lodgingRepositoryProvider)
+-          .loadForStage(trailId: cyprusE4TrailId, stageId: stageId);
++          .loadForStage(
++            trailId: ref.watch(selectedTrailIdProvider),
++            stageId: stageId,
++          );
+     });
+diff --git a/mobile/lib/features/detours/data/detour_repository.dart b/mobile/lib/features/detours/data/detour_repository.dart
+index 2d4abea..2cf122f 100644
+--- a/mobile/lib/features/detours/data/detour_repository.dart
++++ b/mobile/lib/features/detours/data/detour_repository.dart
+@@ -1,3 +1,4 @@
++import '../../../core/database/app_database.dart';
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ 
+ import '../../elevation/data/elevation_repository.dart';
+@@ -13,10 +14,27 @@ abstract interface class DetourRepository {
+ }
+ 
+ class FirestoreDetourRepository implements DetourRepository {
+-  const FirestoreDetourRepository({FirebaseFirestore? firestore})
+-    : _firestore = firestore;
++  const FirestoreDetourRepository({
++    FirebaseFirestore? firestore,
++    AppDatabase? database,
++  }) : _firestore = firestore,
++       _database = database;
+ 
+   final FirebaseFirestore? _firestore;
++  final AppDatabase? _database;
++
++  Future<DocumentReference<Map<String, dynamic>>> _trailRoot(
++    String trailId,
++  ) async {
++    final firestore = _firestore;
++    if (firestore == null) {
++      throw StateError('Firebase is not configured for this build.');
++    }
++    final root = firestore.collection('trails').doc(trailId);
++    final settings = await _database?.readSettings();
++    final id = settings?['trailRelease:$trailId'];
++    return id == null ? root : root.collection('releases').doc(id);
++  }
+ 
+   @override
+   Future<List<TrailDetour>> loadForTrail({required String trailId}) async {
+@@ -24,11 +42,9 @@ class FirestoreDetourRepository implements DetourRepository {
+     if (firestore == null) {
+       throw StateError('Firebase is not configured for this build.');
+     }
+-    final snapshot = await firestore
+-        .collection('trails')
+-        .doc(trailId)
+-        .collection('detours')
+-        .get();
++    final snapshot = await (await _trailRoot(
++      trailId,
++    )).collection('detours').get();
+     final detours = snapshot.docs
+         .map(
+           (document) => TrailDetour.fromFirestore(document.id, document.data()),
+@@ -63,9 +79,7 @@ class FirestoreDetourRepository implements DetourRepository {
+     if (firestore == null) {
+       throw StateError('Firebase is not configured for this build.');
+     }
+-    final snapshot = await firestore
+-        .collection('trails')
+-        .doc(trailId)
++    final snapshot = await (await _trailRoot(trailId))
+         .collection('detours')
+         .doc(detour.id)
+         .collection('routeChunks')
+diff --git a/mobile/lib/features/detours/presentation/detour_controller.dart b/mobile/lib/features/detours/presentation/detour_controller.dart
+index 7af5b93..7ab814b 100644
+--- a/mobile/lib/features/detours/presentation/detour_controller.dart
++++ b/mobile/lib/features/detours/presentation/detour_controller.dart
+@@ -1,8 +1,10 @@
++import '../../../core/database/database_provider.dart';
++import '../../elevation/presentation/elevation_controller.dart';
++import '../../trails/presentation/selected_trail.dart';
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+ import '../../../app.dart';
+-import '../../stages/presentation/stages_controller.dart';
+ import '../data/detour_repository.dart';
+ import '../domain/trail_detour.dart';
+ 
+@@ -10,13 +12,17 @@ final detourRepositoryProvider = Provider<DetourRepository>((ref) {
+   final firebaseReady = ref.watch(firebaseReadyProvider);
+   return FirestoreDetourRepository(
+     firestore: firebaseReady ? FirebaseFirestore.instance : null,
++    database: ref.watch(appDatabaseProvider),
+   );
+ });
+ 
+-final detoursForTrailProvider = FutureProvider<List<TrailDetour>>((ref) {
++final detoursForTrailProvider = FutureProvider<List<TrailDetour>>((ref) async {
++  try {
++    await ref.watch(elevationProvider.future);
++  } catch (_) {}
+   return ref
+       .watch(detourRepositoryProvider)
+-      .loadForTrail(trailId: cyprusE4TrailId);
++      .loadForTrail(trailId: ref.watch(selectedTrailIdProvider));
+ });
+ 
+ final detourRoutesForTrailProvider = FutureProvider<List<TrailDetourRoute>>((
+@@ -25,5 +31,8 @@ final detourRoutesForTrailProvider = FutureProvider<List<TrailDetourRoute>>((
+   final detours = await ref.watch(detoursForTrailProvider.future);
+   return ref
+       .watch(detourRepositoryProvider)
+-      .loadRoutesForTrail(trailId: cyprusE4TrailId, detours: detours);
++      .loadRoutesForTrail(
++        trailId: ref.watch(selectedTrailIdProvider),
++        detours: detours,
++      );
+ });
+diff --git a/mobile/lib/features/elevation/data/elevation_repository.dart b/mobile/lib/features/elevation/data/elevation_repository.dart
+index 5cb8dc0..7d27d53 100644
+--- a/mobile/lib/features/elevation/data/elevation_repository.dart
++++ b/mobile/lib/features/elevation/data/elevation_repository.dart
+@@ -1,6 +1,7 @@
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ 
+ import '../../../core/database/app_database.dart';
++import '../../../core/database/trail_release_repository.dart';
+ import '../domain/route_point.dart';
+ 
+ class ElevationRepository {
+@@ -23,6 +24,11 @@ class ElevationRepository {
+       throw StateError('Firebase is not configured for this build.');
+     }
+ 
++    final release = await TrailReleaseRepository(
++      _database,
++      firestore,
++    ).sync(trailId);
++    if (release != null) return release.points;
+     final trail = firestore.collection('trails').doc(trailId);
+     final results = await Future.wait([
+       trail.collection('routeMetadata').doc('main').get(),
+diff --git a/mobile/lib/features/elevation/presentation/elevation_controller.dart b/mobile/lib/features/elevation/presentation/elevation_controller.dart
+index a7920d1..2da1070 100644
+--- a/mobile/lib/features/elevation/presentation/elevation_controller.dart
++++ b/mobile/lib/features/elevation/presentation/elevation_controller.dart
+@@ -1,9 +1,10 @@
++import '../../../core/database/trail_release_repository.dart';
++import '../../trails/presentation/selected_trail.dart';
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+ import '../../../app.dart';
+ import '../../../core/database/database_provider.dart';
+-import '../../stages/presentation/stages_controller.dart';
+ import '../data/elevation_repository.dart';
+ import '../domain/route_point.dart';
+ 
+@@ -24,15 +25,29 @@ class ElevationController extends AsyncNotifier<List<RoutePoint>> {
+   @override
+   Future<List<RoutePoint>> build() async {
+     final repository = ref.watch(elevationRepositoryProvider);
+-    final local = await repository.loadLocal(cyprusE4TrailId);
++    final release = await ref.watch(publishedTrailReleaseProvider.future);
++    if (release != null) return release.points;
++    final local = await repository.loadLocal(
++      ref.watch(selectedTrailIdProvider),
++    );
+     if (local.isNotEmpty) return local;
+-    return repository.sync(cyprusE4TrailId);
++    return repository.sync(ref.watch(selectedTrailIdProvider));
+   }
+ 
+   Future<void> refresh() async {
++    if (ref.read(firebaseReadyProvider)) {
++      ref.invalidate(publishedTrailReleaseProvider);
++      final release = await ref.read(publishedTrailReleaseProvider.future);
++      if (release != null) {
++        state = AsyncData(release.points);
++        return;
++      }
++    }
+     state = const AsyncLoading<List<RoutePoint>>();
+     state = await AsyncValue.guard(
+-      () => ref.read(elevationRepositoryProvider).sync(cyprusE4TrailId),
++      () => ref
++          .read(elevationRepositoryProvider)
++          .sync(ref.read(selectedTrailIdProvider)),
+     );
+   }
+ 
+diff --git a/mobile/lib/features/excursions/data/excursion_repository.dart b/mobile/lib/features/excursions/data/excursion_repository.dart
+index 6a7d423..d81d33b 100644
+--- a/mobile/lib/features/excursions/data/excursion_repository.dart
++++ b/mobile/lib/features/excursions/data/excursion_repository.dart
+@@ -1,3 +1,4 @@
++import '../../../core/database/app_database.dart';
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ 
+ import '../../elevation/data/elevation_repository.dart';
+@@ -13,14 +14,33 @@ abstract interface class ExcursionRepository {
+ }
+ 
+ class FirestoreExcursionRepository implements ExcursionRepository {
+-  const FirestoreExcursionRepository({FirebaseFirestore? firestore})
+-    : _firestore = firestore;
++  const FirestoreExcursionRepository({
++    FirebaseFirestore? firestore,
++    AppDatabase? database,
++  }) : _firestore = firestore,
++       _database = database;
+ 
+   final FirebaseFirestore? _firestore;
++  final AppDatabase? _database;
++
++  Future<DocumentReference<Map<String, dynamic>>> _trailRoot(
++    String trailId,
++  ) async {
++    final firestore = _firestore;
++    if (firestore == null) {
++      throw StateError('Firebase is not configured for this build.');
++    }
++    final root = firestore.collection('trails').doc(trailId);
++    final settings = await _database?.readSettings();
++    final id = settings?['trailRelease:$trailId'];
++    return id == null ? root : root.collection('releases').doc(id);
++  }
+ 
+   @override
+   Future<List<TrailExcursion>> loadForTrail({required String trailId}) async {
+-    final snapshot = await _excursionsCollection(trailId).get();
++    final snapshot = await (await _trailRoot(
++      trailId,
++    )).collection('excursions').get();
+     final excursions = snapshot.docs
+         .map(
+           (document) =>
+@@ -52,9 +72,12 @@ class FirestoreExcursionRepository implements ExcursionRepository {
+     required String trailId,
+     required TrailExcursion excursion,
+   }) async {
+-    final snapshot = await _excursionsCollection(
+-      trailId,
+-    ).doc(excursion.id).collection('routeChunks').orderBy('chunkIndex').get();
++    final snapshot = await (await _trailRoot(trailId))
++        .collection('excursions')
++        .doc(excursion.id)
++        .collection('routeChunks')
++        .orderBy('chunkIndex')
++        .get();
+     final points = expandRoutePointValues(
+       snapshot.docs.map(
+         (chunk) => (chunk.data()['points'] as List).cast<num>(),
+@@ -63,14 +86,4 @@ class FirestoreExcursionRepository implements ExcursionRepository {
+     );
+     return TrailExcursionRoute(excursion: excursion, points: points);
+   }
+-
+-  CollectionReference<Map<String, dynamic>> _excursionsCollection(
+-    String trailId,
+-  ) {
+-    final firestore = _firestore;
+-    if (firestore == null) {
+-      throw StateError('Firebase is not configured for this build.');
+-    }
+-    return firestore.collection('trails').doc(trailId).collection('excursions');
+-  }
+ }
+diff --git a/mobile/lib/features/excursions/presentation/excursion_controller.dart b/mobile/lib/features/excursions/presentation/excursion_controller.dart
+index a051018..f432c98 100644
+--- a/mobile/lib/features/excursions/presentation/excursion_controller.dart
++++ b/mobile/lib/features/excursions/presentation/excursion_controller.dart
+@@ -1,8 +1,10 @@
++import '../../../core/database/database_provider.dart';
++import '../../elevation/presentation/elevation_controller.dart';
++import '../../trails/presentation/selected_trail.dart';
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+ import '../../../app.dart';
+-import '../../stages/presentation/stages_controller.dart';
+ import '../data/excursion_repository.dart';
+ import '../domain/trail_excursion.dart';
+ 
+@@ -10,13 +12,19 @@ final excursionRepositoryProvider = Provider<ExcursionRepository>((ref) {
+   final firebaseReady = ref.watch(firebaseReadyProvider);
+   return FirestoreExcursionRepository(
+     firestore: firebaseReady ? FirebaseFirestore.instance : null,
++    database: ref.watch(appDatabaseProvider),
+   );
+ });
+ 
+-final excursionsForTrailProvider = FutureProvider<List<TrailExcursion>>((ref) {
++final excursionsForTrailProvider = FutureProvider<List<TrailExcursion>>((
++  ref,
++) async {
++  try {
++    await ref.watch(elevationProvider.future);
++  } catch (_) {}
+   return ref
+       .watch(excursionRepositoryProvider)
+-      .loadForTrail(trailId: cyprusE4TrailId);
++      .loadForTrail(trailId: ref.watch(selectedTrailIdProvider));
+ });
+ 
+ final excursionRoutesForTrailProvider =
+@@ -24,5 +32,8 @@ final excursionRoutesForTrailProvider =
+       final excursions = await ref.watch(excursionsForTrailProvider.future);
+       return ref
+           .watch(excursionRepositoryProvider)
+-          .loadRoutesForTrail(trailId: cyprusE4TrailId, excursions: excursions);
++          .loadRoutesForTrail(
++            trailId: ref.watch(selectedTrailIdProvider),
++            excursions: excursions,
++          );
+     });
+diff --git a/mobile/lib/features/map/data/offline_map_repository.dart b/mobile/lib/features/map/data/offline_map_repository.dart
+index b5cad64..885ac94 100644
+--- a/mobile/lib/features/map/data/offline_map_repository.dart
++++ b/mobile/lib/features/map/data/offline_map_repository.dart
+@@ -11,6 +11,10 @@ typedef OfflineProgressCallback =
+     void Function(double progress, int completedBytes);
+ 
+ class OfflineMapRepository {
++  OfflineMapRepository({this.trailId = 'cyprus-e4'});
++  final String trailId;
++  String get regionId =>
++      trailId == 'cyprus-e4' ? cyprusE4OfflineRegionId : '$trailId-outdoors-v1';
+   TileStore? _tileStore;
+   OfflineManager? _offlineManager;
+ 
+@@ -27,7 +31,7 @@ class OfflineMapRepository {
+ 
+     TileRegion? region;
+     for (final candidate in regions) {
+-      if (candidate.id == cyprusE4OfflineRegionId) {
++      if (candidate.id == regionId) {
+         region = candidate;
+         break;
+       }
+@@ -95,7 +99,7 @@ class OfflineMapRepository {
+       StylePackLoadOptions(
+         glyphsRasterizationMode:
+             GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY,
+-        metadata: const {'trailId': 'cyprus-e4', 'version': 1},
++        metadata: {'trailId': trailId, 'version': 1},
+         acceptExpired: true,
+       ),
+       (progress) {
+@@ -109,7 +113,7 @@ class OfflineMapRepository {
+     onProgress(0.12, styleBytes);
+ 
+     await _tileStore!.loadTileRegion(
+-      cyprusE4OfflineRegionId,
++      regionId,
+       TileRegionLoadOptions(
+         geometry: buildOfflineCorridorGeometry(points),
+         descriptorsOptions: [
+@@ -120,7 +124,7 @@ class OfflineMapRepository {
+           ),
+         ],
+         metadata: {
+-          'trailId': 'cyprus-e4',
++          'trailId': trailId,
+           'version': 1,
+           'coverage': 'route-corridor',
+           _downloadedAtMetadataKey: downloadedAt,
+@@ -145,11 +149,12 @@ class OfflineMapRepository {
+   Future<void> delete() async {
+     await _initialize();
+     final regions = await _tileStore!.allTileRegions();
+-    if (regions.any((region) => region.id == cyprusE4OfflineRegionId)) {
+-      await _tileStore!.removeRegion(cyprusE4OfflineRegionId);
++    if (regions.any((region) => region.id == regionId)) {
++      await _tileStore!.removeRegion(regionId);
+     }
+     final styles = await _offlineManager!.allStylePacks();
+-    if (styles.any((style) => style.styleURI == cyprusE4OfflineStyleUri)) {
++    if (regions.every((region) => region.id == regionId) &&
++        styles.any((style) => style.styleURI == cyprusE4OfflineStyleUri)) {
+       await _offlineManager!.removeStylePack(cyprusE4OfflineStyleUri);
+     }
+   }
+diff --git a/mobile/lib/features/map/presentation/map_screen.dart b/mobile/lib/features/map/presentation/map_screen.dart
+index f1f6235..49bb59f 100644
+--- a/mobile/lib/features/map/presentation/map_screen.dart
++++ b/mobile/lib/features/map/presentation/map_screen.dart
+@@ -1,3 +1,4 @@
++import '../../trails/presentation/selected_trail.dart';
+ import '../domain/stage_preview.dart';
+ import 'stage_preview_screen.dart';
+ import '../../reports/data/trail_issues.dart';
+@@ -310,7 +311,7 @@ class MapScreen extends ConsumerWidget {
+           ],
+         ),
+         actions: [
+-          const ReportMenu(trailId: cyprusE4TrailId),
++          ReportMenu(trailId: ref.watch(selectedTrailIdProvider)),
+           if (offlineMap != null)
+             _OfflineMapAppBarButton(
+               state: offlineMap,
+@@ -754,7 +755,7 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
+     _directions = PoiDirectionsController(
+       ref.read(poiDirectionsServiceProvider(widget.accessToken)),
+     )..addListener(_directionsChanged);
+-    _session = ref.read(mapSessionProvider(cyprusE4TrailId));
++    _session = ref.read(mapSessionProvider(ref.read(selectedTrailIdProvider)));
+     _background = _session.background;
+     _stagesVisible = _session.stagesVisible;
+     _stagesExplicitlyHidden = _session.stagesExplicitlyHidden;
+@@ -862,7 +863,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
+       );
+     });
+     await _issueLayer!.update(
+-      ref.read(trailIssuesProvider(cyprusE4TrailId)).value ?? const [],
++      ref.read(trailIssuesProvider(ref.read(selectedTrailIdProvider))).value ??
++          const [],
+     );
+     await _drawEndpoints(map);
+     await _drawStages(map, animate: true);
+@@ -2268,7 +2270,8 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
+ 
+   Future<void> _refreshStyleMarkers(MapboxMap map) async {
+     await _issueLayer?.update(
+-      ref.read(trailIssuesProvider(cyprusE4TrailId)).value ?? const [],
++      ref.read(trailIssuesProvider(ref.read(selectedTrailIdProvider))).value ??
++          const [],
+     );
+     await _drawStages(map);
+     if (!mounted) return;
+@@ -2642,10 +2645,13 @@ class _RouteMapState extends ConsumerState<_RouteMap> {
+ 
+   @override
+   Widget build(BuildContext context) {
+-    ref.listen(trailIssuesProvider(cyprusE4TrailId), (_, next) {
++    ref.listen(trailIssuesProvider(ref.read(selectedTrailIdProvider)), (
++      _,
++      next,
++    ) {
+       if (next.hasValue) unawaited(_issueLayer?.update(next.requireValue));
+     });
+-    ref.watch(trailIssuesProvider(cyprusE4TrailId));
++    ref.watch(trailIssuesProvider(ref.read(selectedTrailIdProvider)));
+ 
+     return LayoutBuilder(
+       builder: (context, constraints) {
+diff --git a/mobile/lib/features/map/presentation/offline_map_controller.dart b/mobile/lib/features/map/presentation/offline_map_controller.dart
+index a934e55..789c768 100644
+--- a/mobile/lib/features/map/presentation/offline_map_controller.dart
++++ b/mobile/lib/features/map/presentation/offline_map_controller.dart
+@@ -1,3 +1,4 @@
++import '../../trails/presentation/selected_trail.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+ import '../../elevation/domain/route_point.dart';
+@@ -5,7 +6,7 @@ import '../data/offline_map_repository.dart';
+ import '../domain/offline_map_state.dart';
+ 
+ final offlineMapRepositoryProvider = Provider<OfflineMapRepository>(
+-  (ref) => OfflineMapRepository(),
++  (ref) => OfflineMapRepository(trailId: ref.watch(selectedTrailIdProvider)),
+ );
+ 
+ final offlineMapProvider =
+diff --git a/mobile/lib/features/reports/data/report_store.dart b/mobile/lib/features/reports/data/report_store.dart
+index 1cbb855..61b4757 100644
+--- a/mobile/lib/features/reports/data/report_store.dart
++++ b/mobile/lib/features/reports/data/report_store.dart
+@@ -7,6 +7,7 @@ class ReportDraft {
+   ReportDraft({
+     required this.id,
+     required this.trailId,
++    this.routeReleaseId,
+     required this.createdAt,
+     this.stageId,
+     this.description = '',
+@@ -26,6 +27,7 @@ class ReportDraft {
+     this.locationConfirmed = false,
+   });
+   final String id, trailId;
++  String? routeReleaseId;
+   final DateTime createdAt;
+   String? stageId, ownerUid, remoteStatus;
+   String description, category, passability, locationSource, contactEmail;
+@@ -48,6 +50,7 @@ class ReportDraft {
+   Map<String, dynamic> toJson() => {
+     'id': id,
+     'trailId': trailId,
++    'routeReleaseId': routeReleaseId,
+     'stageId': stageId,
+     'createdAt': createdAt.toIso8601String(),
+     'description': description,
+@@ -69,6 +72,7 @@ class ReportDraft {
+   factory ReportDraft.fromJson(Map<String, dynamic> j) => ReportDraft(
+     id: j['id'],
+     trailId: j['trailId'],
++    routeReleaseId: j['routeReleaseId'],
+     stageId: j['stageId'],
+     createdAt: DateTime.parse(j['createdAt']),
+     description: j['description'],
+@@ -90,6 +94,7 @@ class ReportDraft {
+   Map<String, dynamic> submission() => {
+     'reportId': id,
+     'trailId': trailId,
++    'routeReleaseId': routeReleaseId,
+     'stageId': stageId,
+     'description': description.trim(),
+     'category': category,
+diff --git a/mobile/lib/features/reports/presentation/report_screen.dart b/mobile/lib/features/reports/presentation/report_screen.dart
+index 799f65e..e287f58 100644
+--- a/mobile/lib/features/reports/presentation/report_screen.dart
++++ b/mobile/lib/features/reports/presentation/report_screen.dart
+@@ -1,3 +1,5 @@
++import '../../../core/database/database_provider.dart';
++import '../../trails/presentation/selected_trail.dart';
+ import 'dart:async';
+ import 'dart:io';
+ import 'package:flutter/material.dart';
+@@ -225,6 +227,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
+     contact = TextEditingController(text: draft.contactEmail);
+     WidgetsBinding.instance.addPostFrameCallback((_) async {
+       if (widget.draft == null) {
++        draft.routeReleaseId = (await ref
++            .read(appDatabaseProvider)
++            .readSettings())['trailRelease:${widget.trailId}'];
+         await save();
+         if (mounted) await locate();
+       }
+@@ -288,7 +293,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
+   }
+ 
+   void matchStage() {
+-    if (draft.trailId != cyprusE4TrailId || draft.latitude == null) return;
++    if (draft.trailId != ref.read(selectedTrailIdProvider) ||
++        draft.latitude == null) {
++      return;
++    }
+     final points = ref.read(elevationProvider).value;
+     final stages = ref.read(stagesProvider).value;
+     if (points == null || stages == null) return;
+diff --git a/mobile/lib/features/route_planner/domain/saved_route.dart b/mobile/lib/features/route_planner/domain/saved_route.dart
+index d3c902f..3323831 100644
+--- a/mobile/lib/features/route_planner/domain/saved_route.dart
++++ b/mobile/lib/features/route_planner/domain/saved_route.dart
+@@ -67,6 +67,8 @@ class SavedRouteDay {
+ 
+ class SavedRoute {
+   const SavedRoute({
++    this.trailId = 'cyprus-e4',
++    this.routeReleaseId,
+     required this.id,
+     required this.createdAt,
+     required this.style,
+@@ -92,6 +94,8 @@ class SavedRoute {
+     required this.unknownPriceNights,
+   });
+ 
++  final String trailId;
++  final String? routeReleaseId;
+   final String id;
+   final DateTime createdAt;
+   final RoutePlanStyle style;
+@@ -127,6 +131,8 @@ class SavedRoute {
+   };
+ 
+   factory SavedRoute.fromPlan({
++    String trailId = 'cyprus-e4',
++    String? routeReleaseId,
+     required String id,
+     required DateTime createdAt,
+     required RoutePlanStyle style,
+@@ -134,6 +140,8 @@ class SavedRoute {
+     required RoutePlanRequest request,
+     required RoutePlan plan,
+   }) => SavedRoute(
++    trailId: trailId,
++    routeReleaseId: routeReleaseId,
+     id: id,
+     createdAt: createdAt,
+     style: style,
+@@ -180,6 +188,8 @@ class SavedRoute {
+   Map<String, Object?> toJson() => {
+     'id': id,
+     'createdAt': createdAt.toIso8601String(),
++    'trailId': trailId,
++    'routeReleaseId': routeReleaseId,
+     'style': style.name,
+     'direction': direction.name,
+     'startStageId': startStageId,
+@@ -204,6 +214,8 @@ class SavedRoute {
+   };
+ 
+   factory SavedRoute.fromJson(Map<String, Object?> json) => SavedRoute(
++    trailId: json['trailId'] as String? ?? 'cyprus-e4',
++    routeReleaseId: json['routeReleaseId'] as String?,
+     id: json['id']! as String,
+     createdAt: DateTime.parse(json['createdAt']! as String),
+     style: switch (json['style']! as String) {
+diff --git a/mobile/lib/features/route_planner/presentation/route_planner_screen.dart b/mobile/lib/features/route_planner/presentation/route_planner_screen.dart
+index 2a5b84d..7cc9d8b 100644
+--- a/mobile/lib/features/route_planner/presentation/route_planner_screen.dart
++++ b/mobile/lib/features/route_planner/presentation/route_planner_screen.dart
+@@ -1,3 +1,5 @@
++import '../../../core/database/database_provider.dart';
++import '../../trails/presentation/selected_trail.dart';
+ import 'dart:async';
+ import 'dart:math' as math;
+ 
+@@ -398,7 +400,11 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
+   }) async {
+     if (saving) return;
+     final id = draftRouteId ?? DateTime.now().microsecondsSinceEpoch.toString();
++    final trailId = ref.read(selectedTrailIdProvider);
++    final settings = await ref.read(appDatabaseProvider).readSettings();
+     final saved = SavedRoute.fromPlan(
++      trailId: trailId,
++      routeReleaseId: settings['trailRelease:$trailId'],
+       id: id,
+       createdAt: DateTime.now(),
+       style: style,
+@@ -639,6 +645,30 @@ class _RoutePlannerScreenState extends ConsumerState<RoutePlannerScreen> {
+     required List<TrailStage> stages,
+     required List<Lodging> lodgings,
+   }) async {
++    final currentTrail = ref.read(selectedTrailIdProvider);
++    final settings = await ref.read(appDatabaseProvider).readSettings();
++    if (!mounted) return;
++    if (route.trailId != currentTrail ||
++        route.routeReleaseId != settings['trailRelease:$currentTrail']) {
++      await showDialog<void>(
++        context: context,
++        builder: (context) => AlertDialog(
++          title: Text(context.l10n.t('Route changed')),
++          content: Text(
++            context.l10n.t(
++              'This saved plan uses another trail release. Create a new plan with the current trail data.',
++            ),
++          ),
++          actions: [
++            TextButton(
++              onPressed: () => Navigator.pop(context),
++              child: Text(context.l10n.t('Close')),
++            ),
++          ],
++        ),
++      );
++      return;
++    }
+     final request = RoutePlanRequest(
+       startStageId: route.startStageId,
+       finishStageId: route.finishStageId,
+diff --git a/mobile/lib/features/settings/presentation/settings_screen.dart b/mobile/lib/features/settings/presentation/settings_screen.dart
+index 3b03a9a..1b1e47f 100644
+--- a/mobile/lib/features/settings/presentation/settings_screen.dart
++++ b/mobile/lib/features/settings/presentation/settings_screen.dart
+@@ -1,3 +1,4 @@
++import '../../trails/presentation/selected_trail.dart';
+ import 'dart:convert';
+ 
+ import 'package:flutter/foundation.dart';
+@@ -811,7 +812,7 @@ Future<void> _confirmDeleteTrailData(
+   final metadataController = ref.read(trailDataLastUpdatedProvider.notifier);
+ 
+   try {
+-    await database.deleteTrailData(cyprusE4TrailId);
++    await database.deleteTrailData(ref.read(selectedTrailIdProvider));
+     stagesController.clearOfflineState();
+     elevationController.clearOfflineState();
+     await metadataController.clear();
+diff --git a/mobile/lib/features/stages/data/stage_repository.dart b/mobile/lib/features/stages/data/stage_repository.dart
+index a4dd2fe..c56ef1f 100644
+--- a/mobile/lib/features/stages/data/stage_repository.dart
++++ b/mobile/lib/features/stages/data/stage_repository.dart
+@@ -1,6 +1,7 @@
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ 
+ import '../../../core/database/app_database.dart';
++import '../../../core/database/trail_release_repository.dart';
+ import '../domain/stage.dart';
+ 
+ class FirebaseNotConfiguredException implements Exception {
+@@ -22,6 +23,11 @@ class StageRepository {
+     final firestore = _firestore;
+     if (firestore == null) throw const FirebaseNotConfiguredException();
+ 
++    final release = await TrailReleaseRepository(
++      _database,
++      firestore,
++    ).sync(trailId);
++    if (release != null) return release.stages;
+     final snapshot = await firestore
+         .collection('trails')
+         .doc(trailId)
+diff --git a/mobile/lib/features/stages/presentation/stages_controller.dart b/mobile/lib/features/stages/presentation/stages_controller.dart
+index d002f90..cebe25c 100644
+--- a/mobile/lib/features/stages/presentation/stages_controller.dart
++++ b/mobile/lib/features/stages/presentation/stages_controller.dart
+@@ -1,3 +1,5 @@
++import '../../../core/database/trail_release_repository.dart';
++import '../../trails/presentation/selected_trail.dart';
+ import 'package:cloud_firestore/cloud_firestore.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+@@ -25,14 +27,19 @@ class StagesController extends AsyncNotifier<List<TrailStage>> {
+   @override
+   Future<List<TrailStage>> build() async {
+     final repository = ref.watch(stageRepositoryProvider);
+-    final localStages = await repository.loadLocal(cyprusE4TrailId);
++    final release = await ref.watch(publishedTrailReleaseProvider.future);
++    if (release != null) return release.stages;
++    final localStages = await repository.loadLocal(
++      ref.watch(selectedTrailIdProvider),
++    );
+     final needsDistanceFromPathBackfill =
+         localStages.isNotEmpty &&
+         localStages.every((stage) => stage.distanceFromPathKm == null);
+     if (!needsDistanceFromPathBackfill) return localStages;
+ 
++    if (localStages.isEmpty) return localStages;
+     try {
+-      return await repository.sync(cyprusE4TrailId);
++      return await repository.sync(ref.watch(selectedTrailIdProvider));
+     } on FirebaseNotConfiguredException {
+       return localStages;
+     } on FirebaseException {
+@@ -41,9 +48,19 @@ class StagesController extends AsyncNotifier<List<TrailStage>> {
+   }
+ 
+   Future<void> sync() async {
++    if (ref.read(firebaseReadyProvider)) {
++      ref.invalidate(publishedTrailReleaseProvider);
++      final release = await ref.read(publishedTrailReleaseProvider.future);
++      if (release != null) {
++        state = AsyncData(release.stages);
++        return;
++      }
++    }
+     state = const AsyncLoading<List<TrailStage>>();
+     state = await AsyncValue.guard(
+-      () => ref.read(stageRepositoryProvider).sync(cyprusE4TrailId),
++      () => ref
++          .read(stageRepositoryProvider)
++          .sync(ref.read(selectedTrailIdProvider)),
+     );
+   }
+ 
+diff --git a/mobile/lib/features/stages/presentation/stages_screen.dart b/mobile/lib/features/stages/presentation/stages_screen.dart
+index f9dd847..8bd9412 100644
+--- a/mobile/lib/features/stages/presentation/stages_screen.dart
++++ b/mobile/lib/features/stages/presentation/stages_screen.dart
+@@ -1,3 +1,4 @@
++import '../../trails/presentation/selected_trail.dart';
+ import '../../map/domain/stage_preview.dart';
+ import '../../map/presentation/stage_preview_screen.dart';
+ import '../../reports/presentation/report_screen.dart';
+@@ -3887,7 +3888,12 @@ class _StageDetailScreenState extends ConsumerState<StageDetailScreen>
+         onElevation: _openElevation,
+       ),
+       appBar: EurotrexChromeTheme.appBar(
+-        actions: [ReportMenu(trailId: cyprusE4TrailId, stageId: stage.id)],
++        actions: [
++          ReportMenu(
++            trailId: ref.read(selectedTrailIdProvider),
++            stageId: stage.id,
++          ),
++        ],
+         title: Column(
+           crossAxisAlignment: CrossAxisAlignment.start,
+           children: [
+diff --git a/mobile/lib/features/stages/presentation/trail_data_metadata_controller.dart b/mobile/lib/features/stages/presentation/trail_data_metadata_controller.dart
+index 084c6e8..3d5208f 100644
+--- a/mobile/lib/features/stages/presentation/trail_data_metadata_controller.dart
++++ b/mobile/lib/features/stages/presentation/trail_data_metadata_controller.dart
+@@ -1,3 +1,4 @@
++import '../../trails/presentation/selected_trail.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+ import '../../../core/database/database_provider.dart';
+@@ -12,13 +13,19 @@ final trailDataLastUpdatedProvider =
+     );
+ 
+ class TrailDataMetadataController extends AsyncNotifier<DateTime?> {
++  String get _settingKey {
++    final id = ref.read(selectedTrailIdProvider);
++    return id == 'cyprus-e4'
++        ? cyprusE4TrailDataUpdatedAtSetting
++        : 'trailDataUpdated:$id';
++  }
++
+   @override
+   Future<DateTime?> build() async {
++    ref.watch(selectedTrailIdProvider);
+     try {
+       final settings = await ref.read(appDatabaseProvider).readSettings();
+-      return DateTime.tryParse(
+-        settings[cyprusE4TrailDataUpdatedAtSetting] ?? '',
+-      );
++      return DateTime.tryParse(settings[_settingKey] ?? '');
+     } catch (_) {
+       return null;
+     }
+@@ -30,10 +37,7 @@ class TrailDataMetadataController extends AsyncNotifier<DateTime?> {
+     try {
+       await ref
+           .read(appDatabaseProvider)
+-          .writeSetting(
+-            cyprusE4TrailDataUpdatedAtSetting,
+-            updatedAt.toIso8601String(),
+-          );
++          .writeSetting(_settingKey, updatedAt.toIso8601String());
+     } catch (_) {
+       // Keep the timestamp for this session if local metadata cannot be saved.
+     }
+@@ -71,9 +75,7 @@ class TrailDataMetadataController extends AsyncNotifier<DateTime?> {
+   Future<void> clear() async {
+     state = const AsyncData(null);
+     try {
+-      await ref
+-          .read(appDatabaseProvider)
+-          .writeSetting(cyprusE4TrailDataUpdatedAtSetting, '');
++      await ref.read(appDatabaseProvider).writeSetting(_settingKey, '');
+     } catch (_) {
+       // The cleared trail state remains authoritative for this session.
+     }
+diff --git a/mobile/lib/features/trail/presentation/trail_information_screen.dart b/mobile/lib/features/trail/presentation/trail_information_screen.dart
+index 2f56c0f..2f10ce7 100644
+--- a/mobile/lib/features/trail/presentation/trail_information_screen.dart
++++ b/mobile/lib/features/trail/presentation/trail_information_screen.dart
+@@ -1,3 +1,5 @@
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import '../../trails/presentation/selected_trail.dart';
+ import 'package:flutter/material.dart';
+ 
+ import '../../../core/localization/app_localizations.dart';
+@@ -9,14 +11,63 @@ const _green = Color(0xFF277653);
+ const _sand = Color(0xFFF4F2EC);
+ const _yellow = Color(0xFFF2C94C);
+ 
+-class TrailInformationScreen extends StatelessWidget {
++class TrailInformationScreen extends ConsumerWidget {
+   const TrailInformationScreen({super.key});
+ 
+   static const routeName = '/trails/cyprus-e4/information';
+ 
+   @override
+-  Widget build(BuildContext context) {
++  Widget build(BuildContext context, WidgetRef ref) {
+     final l10n = context.l10n;
++    final id = ref.watch(selectedTrailIdProvider);
++    final metadata =
++        ref.watch(activeReleaseMetadataProvider).value ?? <String, dynamic>{};
++    final sourceCard = metadata.isEmpty
++        ? const SizedBox.shrink()
++        : Card(
++            child: Padding(
++              padding: const EdgeInsets.all(16),
++              child: Column(
++                crossAxisAlignment: CrossAxisAlignment.start,
++                children: [
++                  Text(
++                    '${l10n.t('Route source')}: ${metadata['source'] ?? ''}',
++                  ),
++                  Text('${metadata['attribution'] ?? ''}'),
++                  Text(
++                    '${l10n.t('Verified by')}: ${metadata['verifiedBy'] ?? ''}',
++                  ),
++                  if (metadata['publishedAtMs'] is int)
++                    Text(
++                      '${l10n.t('Published')}: ${DateTime.fromMillisecondsSinceEpoch(metadata['publishedAtMs'] as int).toLocal()}',
++                    ),
++                ],
++              ),
++            ),
++          );
++    if (id != 'cyprus-e4') {
++      final trail = (ref.watch(publishedTrailsProvider).value ?? [])
++          .where((t) => t.id == id)
++          .firstOrNull;
++      return Scaffold(
++        backgroundColor: _sand,
++        appBar: EurotrexChromeTheme.appBar(
++          title: Text(l10n.t('Trail information')),
++        ),
++        body: ListView(
++          padding: const EdgeInsets.all(20),
++          children: [
++            Text(
++              trail?.name ?? id,
++              style: Theme.of(context).textTheme.headlineMedium,
++            ),
++            if (trail?.description.isNotEmpty ?? false)
++              Text(trail!.description),
++            sourceCard,
++          ],
++        ),
++      );
++    }
+     return Scaffold(
+       backgroundColor: _sand,
+       appBar: EurotrexChromeTheme.appBar(
+@@ -41,6 +92,7 @@ class TrailInformationScreen extends StatelessWidget {
+       body: ListView(
+         padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+         children: [
++          sourceCard,
+           ClipRRect(
+             borderRadius: BorderRadius.circular(20),
+             child: SizedBox(
+diff --git a/mobile/lib/features/trails/presentation/trails_screen.dart b/mobile/lib/features/trails/presentation/trails_screen.dart
+index 588c01f..a0da705 100644
+--- a/mobile/lib/features/trails/presentation/trails_screen.dart
++++ b/mobile/lib/features/trails/presentation/trails_screen.dart
+@@ -1,3 +1,4 @@
++import 'selected_trail.dart';
+ import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+@@ -141,16 +142,27 @@ class TrailsScreen extends ConsumerWidget {
+                   _LegalAcceptanceRequiredBanner(onReview: openTerms),
+                   const SizedBox(height: 14),
+                 ],
+-                for (final trail in availableTrails)
++                for (final trail
++                    in (ref.watch(publishedTrailsProvider).value ??
++                        availableTrails))
+                   _TrailCard(
+                     trail: trail,
+                     formatter: formatter,
+-                    elevationUpM: stageElevationUp ?? elevationTotals?.ascentM,
++                    elevationUpM: trail.id == ref.watch(selectedTrailIdProvider)
++                        ? stageElevationUp ?? elevationTotals?.ascentM
++                        : null,
+                     elevationDownM:
+-                        stageElevationDown ?? elevationTotals?.descentM,
+-                    isOffline: trailDataReady,
++                        trail.id == ref.watch(selectedTrailIdProvider)
++                        ? stageElevationDown ?? elevationTotals?.descentM
++                        : null,
++                    isOffline:
++                        trail.id == ref.watch(selectedTrailIdProvider) &&
++                        trailDataReady,
+                     isEnabled: canExploreTrails,
+                     onExplore: () {
++                      ref
++                          .read(selectedTrailIdProvider.notifier)
++                          .select(trail.id);
+                       Navigator.of(context).push(
+                         MaterialPageRoute<void>(
+                           settings: const RouteSettings(
+@@ -167,15 +179,21 @@ class TrailsScreen extends ConsumerWidget {
+                     },
+                   ),
+                 const SizedBox(height: 16),
+-                const _ComingSoonTrailCard(
+-                  trailId: 'crete-e4',
+-                  trailName: 'Crete-E4',
+-                ),
++                if (!(ref.watch(publishedTrailsProvider).value ?? []).any(
++                  (t) => t.id == 'crete-e4',
++                ))
++                  const _ComingSoonTrailCard(
++                    trailId: 'crete-e4',
++                    trailName: 'Crete-E4',
++                  ),
+                 const SizedBox(height: 10),
+-                const _ComingSoonTrailCard(
+-                  trailId: 'peloponnese-e4',
+-                  trailName: 'Peloponnese-E4',
+-                ),
++                if (!(ref.watch(publishedTrailsProvider).value ?? []).any(
++                  (t) => t.id == 'peloponnese-e4',
++                ))
++                  const _ComingSoonTrailCard(
++                    trailId: 'peloponnese-e4',
++                    trailName: 'Peloponnese-E4',
++                  ),
+               ],
+             ),
+           ),
+diff --git a/www/app/admin/page.tsx b/www/app/admin/page.tsx
+index 12ba565..75da265 100644
+--- a/www/app/admin/page.tsx
++++ b/www/app/admin/page.tsx
+@@ -207,8 +207,8 @@ function AdminSession({ user }: { user: User }) {
+           <div>
+             <p className="eyebrow">EUROTREX OPERATIONS</p>
+             <h1>Accommodation review.</h1>
+-            <a className="button button-secondary" href="/trail-reports">
+-              Trail reports &amp; trail access →
++            <a className="button button-secondary" href="/era">
++              ERA workspace →
+             </a>
+             <p>
+               Verify ownership, protect trail quality and control every listing
+diff --git a/www/app/globals.css b/www/app/globals.css
+index 9c08642..1349eb1 100644
+--- a/www/app/globals.css
++++ b/www/app/globals.css
+@@ -1743,3 +1743,31 @@ td small { color: var(--muted); margin-top: 5px; }
+   .footer-nav { gap: 22px 24px; grid-template-columns: repeat(2,minmax(0,1fr)); }
+   .footer-nav div:last-child { grid-column: auto; }
+ }
++
++/* ERA workspace uses the portal's existing canvas, typography and controls. */
++.era-tabs, .era-actions { display:flex; gap:12px; flex-wrap:wrap; margin:20px 0; }
++.era-trail-choice { display:flex; align-items:center; gap:24px; justify-content:space-between; }
++.era-trail-choice > label, .era-trail-choice > div { min-width:240px; }
++.era-route-editor { display:grid; gap:24px; }
++.era-page fieldset { border:0; padding:0; margin:0; min-width:0; }
++.era-page fieldset:disabled { opacity:.65; }
++.era-page .form-panel > h2::after, .era-page .form-panel > h3::after { content:''; display:block; width:48px; height:4px; background:var(--gold); margin:12px 0 20px; }
++.era-page input[type=checkbox] { width:18px; height:18px; flex:none; }
++.era-page .checkbox-row { display:flex; align-items:center; gap:10px; margin:12px 0; }
++.era-table-scroll { overflow:auto; }
++.era-table { width:100%; border-collapse:collapse; text-align:left; }
++.era-table th, .era-table td { padding:16px 12px; border-bottom:1px solid #d9d5c9; vertical-align:top; }
++.era-table small { display:block; max-width:300px; }
++.era-table td:last-child { min-width:220px; }
++.era-incidents .portal-page { min-height:0; background:transparent; }
++.era-incidents .dashboard-shell { width:100%; max-width:none; padding:0; margin:0; }
++.era-page .report-members li > div { min-width:0; overflow-wrap:anywhere; }
++.era-page details { margin-bottom:24px; }
++.era-page summary { cursor:pointer; font-weight:700; margin:16px 0; }
++@media(max-width:700px) { .era-trail-choice { display:block; } .era-tabs { gap:8px; } .era-tabs .button { font-size:.85rem; padding:10px 12px; } .era-page .report-members li { flex-wrap:wrap; } }
++
++.era-page label:not(.checkbox-row) { color:var(--navy); display:flex; flex-direction:column; font-size:13px; font-weight:800; gap:8px; }
++.era-page .form-panel > label { margin:16px 0; }
++.era-page input:not([type=checkbox]), .era-page textarea { background:#fbfcfa; border:1px solid #cbd2ce; border-radius:var(--radius-control); color:var(--ink); font:inherit; min-height:var(--control-height); padding:13px 14px; width:100%; }
++.era-page input:focus, .era-page textarea:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(45,93,211,.13); outline:none; }
++.era-page input[type=file] { font-weight:400; }
+diff --git a/www/app/layout.tsx b/www/app/layout.tsx
+index c50b96f..e32b100 100644
+--- a/www/app/layout.tsx
++++ b/www/app/layout.tsx
+@@ -4,7 +4,7 @@ import { deploymentRecovery } from '@/lib/deployment-recovery';
+ import './globals.css';
+ 
+ const publicRuntimeBootstrap = `(() => {
+-  if (/^\\/(?:portal|admin|trail-reports)(?:\\/|$)/.test(window.location.pathname)) return;
++  if (/^\\/(?:portal|admin|era|trail-reports)(?:\\/|$)/.test(window.location.pathname)) return;
+ 
+   window.addEventListener('popstate', (event) => {
+     if (!event.state || event.state.htmx !== true) return;
+diff --git a/www/app/mobile-menu.tsx b/www/app/mobile-menu.tsx
+index 83c79b0..9aad4c1 100644
+--- a/www/app/mobile-menu.tsx
++++ b/www/app/mobile-menu.tsx
+@@ -19,10 +19,10 @@ export default function MobileMenu() {
+         </a>
+         <a
+           className="header-portal-button"
+-          href="/trail-reports"
++          href="/era"
+           {...disableHtmxNavigation}
+         >
+-          Trail Reports
++          ERA Login
+         </a>
+       </nav>
+     </details>
+diff --git a/www/app/robots.ts b/www/app/robots.ts
+index 075ddb3..fbb36bd 100644
+--- a/www/app/robots.ts
++++ b/www/app/robots.ts
+@@ -3,7 +3,7 @@ import { SITE_URL } from '@/lib/site';
+ 
+ export default function robots(): MetadataRoute.Robots {
+   return {
+-    rules: [{ userAgent: '*', allow: '/', disallow: ['/admin', '/admin/', '/portal', '/portal/', '/trail-reports', '/trail-reports/'] }],
++    rules: [{ userAgent: '*', allow: '/', disallow: ['/era', '/era/', '/admin', '/admin/', '/portal', '/portal/', '/trail-reports', '/trail-reports/'] }],
+     sitemap: `${SITE_URL}/sitemap.xml`,
+   };
+ }
+diff --git a/www/app/trail-reports/page.tsx b/www/app/trail-reports/page.tsx
+index 592e324..b4e6600 100644
+--- a/www/app/trail-reports/page.tsx
++++ b/www/app/trail-reports/page.tsx
+@@ -1,151 +1,2 @@
+-'use client';
+-import {useCallback, useEffect, useState} from 'react';
+-import type {User} from 'firebase/auth';
+-import {collection, onSnapshot} from 'firebase/firestore';
+-import {AccountVerificationGate} from '@/components/AccountVerificationGate';
+-import {AuthPanel} from '@/components/AuthPanel';
+-import {PortalHeader} from '@/components/PortalHeader';
+-import {ReportSelect} from '@/components/ReportSelect';
+-import {ReportDatePicker} from '@/components/ReportDatePicker';
+-import {TrailReportMap} from '@/components/TrailReportMap';
+-import {ReportProgress, ReportReview, reportStatusLabels} from '@/components/ReportReview';
+-import {preloadTrailRoutes} from '@/lib/trail-route';
+-import {preloadReportMap} from '@/lib/report-map-runtime';
+-import {watchReportAccess, reportLoadError, type AccessState} from '@/lib/report-access';
+-import {useAuthState} from '@/lib/use-auth';
+-import {db} from '@/lib/firebase';
+-import {watchTrailReports, watchReportEvents, reportCategories, reportStatuses, reportPhoto,
+-  setReportAccess, reportMapUrl, reportMapyUrl, reportPrintHtml, downloadFile,
+-  type TrailReport, type ReportEvent, type Trail} from '@/lib/trail-reports';
+-
+-export default function TrailReportsPage() {
+-  const {user, loading} = useAuthState();
+-  if (loading) return <div className="loading-screen">Opening trail reports…</div>;
+-  if (!user) return <main className="portal-page trail-reports-page"><PortalHeader /><AuthPanel trailReports /></main>;
+-  if (!user.emailVerified) return <AccountVerificationGate user={user} />;
+-  return <ReportWorkspace key={user.uid} user={user} />;
+-}
+-function ReportWorkspace({user}: {user: User}) {
+-  const [accessState, setAccessState] = useState<AccessState>({status: 'loading'});
+-  const [attempt, setAttempt] = useState(0);
+-  const access = accessState.status === 'ready' ? accessState.access : null;
+-  const [mapPrepared, setMapPrepared] = useState(false);
+-  const [trailId, setTrailId] = useState('');
+-  const [reviewMessage, setReviewMessage] = useState('');
+-  const [status, setStatus] = useState(''), [category, setCategory] = useState(''), [fromDate, setFromDate] = useState('');
+-  const [count, setCount] = useState(50), [rows, setRows] = useState<TrailReport[]>([]);
+-  const [selected, setSelected] = useState(''), [mapView, setMapView] = useState(false);
+-  const [error, setError] = useState(''), [loading, setLoading] = useState(true);
+-  useEffect(() => watchReportAccess(user, state => {
+-    setAccessState(state);
+-    if (state.status === 'ready') {
+-      setTrailId(current => state.access.trails.some(t => t.id === current) ? current : state.access.trails[0]?.id || '');
+-    } else {setRows([]); setSelected(''); setError('');}
+-  }), [user, attempt]);
+-  // Let access checks and the first report list finish before warming map geometry.
+-  useEffect(() => {
+-    if (!access || !trailId || loading || error) return;
+-    const timer = window.setTimeout(() => {
+-      void preloadReportMap().catch(() => {});
+-      setMapPrepared(true);
+-      preloadTrailRoutes([trailId, ...access.trails.map(t => t.id).filter(id => id !== trailId)]);
+-    }, 300);
+-    return () => window.clearTimeout(timer);
+-  }, [access, loading, error, trailId]);
+-  useEffect(() => {
+-    setRows([]); setSelected(''); setCount(50);
+-  }, [trailId, status, category, fromDate]);
+-  useEffect(() => {
+-    if (!access || !trailId || !access.trails.some(t => t.id === trailId)) {setRows([]); setLoading(false); return;}
+-    setLoading(true); setError('');
+-    const timer = window.setTimeout(() => {
+-      setLoading(false); setError('Connecting to reports is taking too long. Check your connection and try again.');
+-    }, 12000);
+-    const stop = watchTrailReports(trailId, status, category, count, fromDate, reports => {
+-      window.clearTimeout(timer); setError(''); setRows(reports); setLoading(false);
+-      setSelected(current => reports.some(r => r.id === current) ? current : '');
+-    }, cause => {
+-      window.clearTimeout(timer); setRows([]); setSelected(''); setLoading(false);
+-      setError(reportLoadError(cause, 'reports'));
+-    });
+-    return () => {window.clearTimeout(timer); stop();};
+-  }, [access, trailId, status, category, count, fromDate]);
+-
+-  const choose = useCallback((id: string) => setSelected(id), []);
+-  const current = rows.find(row => row.id === selected);
+-  const trailName = access?.trails.find(t => t.id === trailId)?.name || trailId;
+-  return <main className="portal-page trail-reports-page"><PortalHeader user={user} canAccessAdmin={access?.admin} /><div className="dashboard-shell wide">
+-    <section className="dashboard-title"><div><p className="eyebrow">TRAIL CARE</p><h1>Trail reports.</h1><p>Review problems, coordinate repairs and keep a record of what happens next.</p></div>{access && <span className="admin-badge">{access.admin ? 'Admin' : 'Trail team'}</span>}</section>
+-    {(error || accessState.status === 'error') && <section className="notice error" role="alert"><p>{accessState.status === 'error' ? accessState.message : error}</p><button className="button button-secondary" onClick={() => setAttempt(n => n + 1)}>Try again</button></section>}
+-    {!access ? (accessState.status === 'loading' ? <p role="status">Checking your assigned trails…</p> : null) : !access.trails.length ? <section className="access-card"><h2>No trails assigned yet.</h2><p>Your email is verified. Ask a EuroTrex administrator to grant trail access to {user.email}.</p></section> : <>
+-      <section className="form-panel form-grid report-filters" aria-label="Filter reports">
+-        <ReportSelect label="Trail" value={trailId} onChange={setTrailId} options={access.trails.map(t => ({value: t.id, label: t.name}))} />
+-        <ReportSelect label="Status" value={status} onChange={setStatus} options={[{value: '', label: 'All statuses'}, ...reportStatuses.map(s => ({value: s, label: reportStatusLabels[s]}))]} />
+-        <ReportSelect label="Problem" value={category} onChange={setCategory} options={[{value: '', label: 'All problems'}, ...Object.entries(reportCategories).map(([value, label]) => ({value, label}))]} />
+-        <ReportDatePicker value={fromDate} onChange={setFromDate} />
+-        <button className="button button-secondary" aria-pressed={mapView} onClick={() => setMapView(v => !v)}>{mapView ? 'Hide map' : 'Show map'}</button>
+-      </section>
+-      {trailId && (mapPrepared || mapView) && <TrailReportMap visible={mapView} key={trailId} trailId={trailId} trailName={trailName} reports={rows} selectedId={selected} onSelect={choose} />}
+-      {reviewMessage && <p className="notice" role="status">{reviewMessage}</p>}
+-      <p className="report-list-caption" role="status">{loading ? 'Loading reports…' : error ? 'Reports are unavailable.' : `${rows.length} reports loaded · newest first`}</p>
+-      <div className="report-workspace"><section className="report-inbox" aria-label="Reports">
+-        {!loading && !error && !rows.length && <div className="empty-state report-empty-state"><h3>No reports to review.</h3><p>Submitted trail problems will appear here. Try another filter or trail.</p></div>}
+-        {rows.map(report => <button key={report.id} className={`report-list-card ${selected === report.id ? 'selected' : ''}`} aria-pressed={selected === report.id} onClick={() => choose(report.id)}>
+-          <span className="report-card-meta"><span className={`report-status status-${report.status}`}>{reportStatusLabels[report.status] || report.status}</span><span>{report.receivedAt?.toDate().toLocaleDateString()}</span></span>
+-          <strong>{reportCategories[report.category] || report.category}</strong><p>{report.description}</p><span className="report-card-meta"><span>{report.passability} · {report.priority}</span><span>{report.photos.length} photos</span></span>
+-        </button>)}
+-        {rows.length >= count && <button className="button button-secondary" onClick={() => setCount(n => n + 50)}>Load older reports</button>}
+-      </section><section id="selected-trail-report" className="report-detail-slot" aria-label="Selected report">
+-        {current ? <ReportDetail key={current.id} report={current} trailName={trailName} onReviewSaved={setReviewMessage} /> : <div className="empty-state report-placeholder"><span aria-hidden="true">↗</span><h3>Select a report</h3><p>Open a problem to see its location, photos and review history.</p></div>}
+-      </section></div>
+-    </>}
+-    {access?.admin && <AccessManager trails={access.trails} />}
+-  </div></main>;
+-}
+-function ReportDetail({report, trailName, onReviewSaved}: {report: TrailReport; trailName: string; onReviewSaved: (message: string) => void}) {
+-  const [photos, setPhotos] = useState<Record<string, string>>({}), [events, setEvents] = useState<ReportEvent[]>([]);
+-  const [error, setError] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+-  const [photoView, setPhotoView] = useState<string | null>(null);
+-  useEffect(() => {
+-    let alive = true;
+-    void Promise.all(report.photos.map(async p => [p.id, await reportPhoto(report.id, p.id, true)] as const))
+-      .then(items => {if (alive) setPhotos(Object.fromEntries(items));}).catch(() => {if (alive) setError('Photos could not be loaded.');});
+-    const stop = watchReportEvents(report.id, items => {if (alive) setEvents(items);}, () => {if (alive) {setEvents([]); setPhotos({}); setPhotoView(null); setError('Report access is no longer available.');}});
+-    return () => {alive = false; stop();};
+-  }, [report.id, report.photos]);
+-  async function act(task: () => Promise<void>) {
+-    setBusy(true); setError(''); setMessage('');
+-    try {await task();} catch (e) {setError(e instanceof Error ? e.message : 'The action failed. Please retry.');} finally {setBusy(false);}
+-  }
+-  async function exportReport() {
+-    const images = await Promise.all(report.photos.map(p => reportPhoto(report.id, p.id, false)));
+-    downloadFile(`EuroTrex-${report.id}.html`, reportPrintHtml(report, trailName, images), 'text/html');
+-    setMessage('Open the downloaded report and select Print / Save as PDF.');
+-  }
+-  return <article className="report-detail">
+-    <p className="eyebrow">{trailName}</p><h2>{reportCategories[report.category] || report.category}</h2><p className="report-description">{report.description}</p>
+-    <ReportProgress report={report} events={events} />
+-    <dl className="report-facts"><div><dt>Reference</dt><dd>{report.id}</dd></div><div><dt>Coordinates</dt><dd>{report.latitude.toFixed(6)}, {report.longitude.toFixed(6)}</dd></div><div><dt>Location source</dt><dd>{report.locationSource}{report.accuracyM != null ? ` · ±${Math.round(report.accuracyM)} m` : ''}</dd></div><div><dt>Stage context</dt><dd>{report.stageId || 'Not assigned'}</dd></div><div><dt>Observed</dt><dd>{new Date(report.observedAtMs).toLocaleString()}</dd></div><div><dt>Trail access</dt><dd>{report.passability}</dd></div><div><dt>Contact (private)</dt><dd>{report.contactEmail || 'Not provided'}</dd></div></dl>
+-    <div className="report-location-actions" aria-label="Report actions"><a href={reportMapUrl(report)} target="_blank" rel="noreferrer" className="button button-secondary"><img src="/icons/google-maps.ico" width="20" height="20" alt="" />Google Maps</a><a href={reportMapyUrl(report)} target="_blank" rel="noreferrer" className="button button-secondary"><img src="/icons/mapy.png" width="20" height="20" alt="" />Mapy</a><button className="button button-secondary" disabled={busy} onClick={() => void act(exportReport)}>Download printable report</button></div>
+-    <div className="report-photos">{report.photos.map(p => <button key={p.id} disabled={busy} onClick={() => void act(async () => setPhotoView(await reportPhoto(report.id, p.id, false)))} aria-label="Open full report photo">{photos[p.id] ? <img src={photos[p.id]} alt="Trail problem reported by a hiker" /> : <span>Loading photo…</span>}</button>)}</div>
+-    {photoView && <dialog open className="report-photo-view"><button className="button button-secondary" onClick={() => setPhotoView(null)}>Close photo</button><img src={photoView} alt="Full report photo" /></dialog>}
+-    <p className="report-helper">The printable report includes photos and excludes the reporter’s email and internal notes.</p>
+-    <ReportReview report={report} onSaved={onReviewSaved} />
+-    {error && <p className="notice error" role="alert">{error}</p>}{message && <p className="notice" role="status">{message}</p>}
+-    <h3>Activity</h3><ol className="report-history">{events.map(event => <li key={event.id}><strong>{event.previousStatus && event.status && event.previousStatus !== event.status ? `${reportStatusLabels[event.previousStatus] || event.previousStatus} → ${reportStatusLabels[event.status] || event.status}` : event.action === 'review' ? `Details updated · ${reportStatusLabels[event.status || ''] || event.status}` : 'Report received'}</strong><span>{event.createdAt?.toDate().toLocaleString()} · {event.actorEmail || 'Reporter'}</span>{event.note && <p>{event.note}</p>}{event.authority && <p>Authority: {event.authority} {event.forwardingReference}</p>}</li>)}</ol>
+-  </article>;
+-}
+-function AccessManager({trails}: {trails: Trail[]}) {
+-  const [members, setMembers] = useState<{id: string; email: string; trailIds: string[]}[]>([]);
+-  const [email, setEmail] = useState(''), [trailId, setTrailId] = useState(trails[0]?.id || '');
+-  const [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+-  useEffect(() => onSnapshot(collection(db, 'trailReportAccess'), snapshot => setMembers(snapshot.docs.map(d => ({id: d.id, ...d.data()}) as {id: string; email: string; trailIds: string[]})), () => {setMembers([]); setMessage('Could not load trail assignments.');}), []);
+-  async function change(mail: string, trail: string, grant: boolean) {
+-    setBusy(true); setMessage(''); try {await setReportAccess(mail, trail, grant); setMessage(grant ? 'Trail access granted.' : 'Trail access removed.');} catch (e) {setMessage(e instanceof Error ? e.message : 'Could not update access.');} finally {setBusy(false);}
+-  }
+-  return <section className="form-panel report-access"><p className="eyebrow">ADMIN ONLY</p><h2>Trail team access</h2><p>Ask the user to create an account on this page and verify their email first. Assign only the trails they should review. Removing access also removes access to report photos. While this website is private, users also need an invitation through the website sharing settings.</p>
+-    <form className="form-grid report-access-form" onSubmit={e => {e.preventDefault(); void change(email, trailId, true);}}><label>Verified account email<input type="email" required value={email} onChange={e => setEmail(e.target.value)} /></label><ReportSelect label="Trail" value={trailId} onChange={setTrailId} options={trails.map(t => ({value: t.id, label: t.name}))} /><button disabled={busy || !trailId} className="button button-primary">Grant access</button></form>
+-    {message && <p role="status">{message}</p>}
+-    <ul className="report-members">{members.flatMap(member => member.trailIds.map(id => <li key={`${member.id}:${id}`}><span><strong>{member.email}</strong><br />{trails.find(t => t.id === id)?.name || id}</span><button className="button button-secondary" disabled={busy} onClick={() => {if (window.confirm(`Remove ${member.email} from this trail?`)) void change(member.email, id, false);}}>Remove access</button></li>))}</ul>
+-  </section>;
+-}
++import {redirect} from 'next/navigation';
++export default function LegacyTrailReports() {redirect('/era');}
+diff --git a/www/components/AuthPanel.tsx b/www/components/AuthPanel.tsx
+index 1f946dc..3a75de3 100644
+--- a/www/components/AuthPanel.tsx
++++ b/www/components/AuthPanel.tsx
+@@ -188,10 +188,10 @@ export function AuthPanel({
+ 
+   const heading = trailReports
+     ? mode === 'register'
+-      ? 'Create your trail team account.'
++      ? 'Create your ERA account.'
+       : mode === 'reset'
+         ? 'Reset your password.'
+-        : 'Trail team sign in.'
++        : 'ERA Login.'
+     : admin
+       ? 'Administrator sign in.'
+       : mode === 'register'
+@@ -200,7 +200,7 @@ export function AuthPanel({
+           ? 'Reset your password.'
+           : 'Welcome back.';
+   const introduction = trailReports
+-    ? 'Verify your email, then ask a EuroTrex administrator to assign your trails. Only assigned trail teams and administrators can open reports.'
++    ? 'Verify your email, then ask your administrator to assign your trails.'
+     : admin
+       ? 'Sign in with your authorised EuroTrex administrator account.'
+       : mode === 'register'
+@@ -213,7 +213,7 @@ export function AuthPanel({
+     <section className="auth-card">
+       <p className="eyebrow">
+         {trailReports
+-          ? 'TRAIL REPORTS'
++          ? 'ERA WORKSPACE'
+           : admin
+             ? 'EUROTREX OPERATIONS'
+             : 'ACCOMMODATION PARTNERS'}
+diff --git a/www/components/PortalHeader.tsx b/www/components/PortalHeader.tsx
+index b55ce64..1a4b5bc 100644
+--- a/www/components/PortalHeader.tsx
++++ b/www/components/PortalHeader.tsx
+@@ -13,7 +13,7 @@ export function PortalHeader({ user, admin = false, canAccessAdmin = false }: {
+       <div className="portal-nav">
+         {user && <span className="account-email">{user.email}</span>}
+         {admin ? <a href="/portal">Owner portal</a> : canAccessAdmin ? <a href="/admin">Admin</a> : null}
+-        <a href="/trail-reports">Trail reports</a>
++        <a href="/era">ERA Login</a>
+         <a href="/">Website</a>
+         <a href="/help#hosts">Help</a>
+         {user && <button className="text-button" onClick={() => signOut(auth)}>Sign out</button>}
+diff --git a/www/components/PublicHeader.tsx b/www/components/PublicHeader.tsx
+index d939c93..ff28085 100644
+--- a/www/components/PublicHeader.tsx
++++ b/www/components/PublicHeader.tsx
+@@ -90,10 +90,10 @@ export function PublicHeader({ activeTrail }: { activeTrail?: string }) {
+             </a>
+             <a
+               className="header-portal-button desktop-header-action"
+-              href="/trail-reports"
++              href="/era"
+               {...disableHtmxNavigation}
+             >
+-              Trail Reports
++              ERA Login
+             </a>
+             <LanguageControl />
+             <MobileMenu />
+diff --git a/www/components/ReportReview.tsx b/www/components/ReportReview.tsx
+index 144d450..a86d794 100644
+--- a/www/components/ReportReview.tsx
++++ b/www/components/ReportReview.tsx
+@@ -27,13 +27,13 @@ export function ReportProgress({report, events}: {report: TrailReport; events: R
+ 
+ type Action = 'review' | 'forward' | 'resolve' | 'note' | 'dismiss' | 'duplicate' | 'reopen';
+ const actions: Record<Action, {label: string; button: string; status?: string; explanation: string}> = {
+-  review: {label: 'Review', button: 'Approve issue', status: 'reviewed', explanation: 'Confirm the issue and its priority. Approval publishes its location, problem type and description on the mobile trail map.'},
+-  forward: {label: 'Record sending', button: 'Mark as sent', status: 'forwarded', explanation: 'Send the printable report through your usual email or channel, then record the recipient here. Mark as sent records your action; it does not send an email. The issue remains visible on the mobile trail map.'},
++  review: {label: 'Review', button: 'Approve issue', status: 'reviewed', explanation: 'Confirm the issue and its priority. Choose whether to publish a public warning.'},
++  forward: {label: 'Record sending', button: 'Mark as sent', status: 'forwarded', explanation: 'Send the printable report through your usual email or channel, then record the recipient here. Mark as sent records your action; it does not send an email. The public warning follows your publication choice.'},
+   resolve: {label: 'Resolve', button: 'Mark resolved', status: 'resolved', explanation: 'Describe the work completed or how you confirmed the problem has been fixed. Resolving removes the warning from the mobile trail map.'},
+   note: {label: 'Update details', button: 'Save changes', explanation: 'Add a progress note or update the priority. The current status is kept.'},
+   dismiss: {label: 'Dismiss', button: 'Dismiss report', status: 'dismissed', explanation: 'Explain why this report needs no further action.'},
+   duplicate: {label: 'Link duplicate', button: 'Link duplicate', status: 'duplicate', explanation: 'Enter the reference of the original report for the same trail.'},
+-  reopen: {label: 'Reopen review', button: 'Reopen review', status: 'reviewed', explanation: 'Explain why the issue is active again. Reopening restores its warning on the mobile trail map.'},
++  reopen: {label: 'Reopen review', button: 'Reopen review', status: 'reviewed', explanation: 'Explain why the issue is active again. Choose whether to restore its public warning.'},
+ };
+ const nextAction = (status: string): Action => status === 'new' ? 'review' : status === 'reviewed' ? 'forward' : 'note';
+ export function ReportReview({report, onSaved}: {report: TrailReport; onSaved: (message: string) => void}) {
+@@ -41,8 +41,9 @@ export function ReportReview({report, onSaved}: {report: TrailReport; onSaved: (
+   const [action, setAction] = useState<Action>(() => nextAction(report.status));
+   const [priority, setPriority] = useState(report.priority), [authority, setAuthority] = useState(report.authority);
+   const [reference, setReference] = useState(report.forwardingReference), [duplicate, setDuplicate] = useState(report.duplicateOf || '');
++  const [publicWarning, setPublicWarning] = useState(report.publicWarning !== false && ['reviewed', 'forwarded'].includes(report.status));
+   const [note, setNote] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+-  function reset(next: TrailReport) {setBase(next); setPriority(next.priority); setAuthority(next.authority); setReference(next.forwardingReference); setDuplicate(next.duplicateOf || ''); setNote(''); setAction(nextAction(next.status)); setDirty(false);}
++  function reset(next: TrailReport) {setBase(next); setPublicWarning(next.publicWarning !== false && ['reviewed', 'forwarded'].includes(next.status)); setPriority(next.priority); setAuthority(next.authority); setReference(next.forwardingReference); setDuplicate(next.duplicateOf || ''); setNote(''); setAction(nextAction(next.status)); setDirty(false);}
+   useEffect(() => {if (!dirty) reset(report);}, [report, dirty]);
+   const stale = dirty && base.updatedAt.toMillis() !== report.updatedAt.toMillis();
+   const closed = ['resolved', 'dismissed', 'duplicate'].includes(base.status);
+@@ -58,13 +59,14 @@ export function ReportReview({report, onSaved}: {report: TrailReport; onSaved: (
+       event.preventDefault(); if (busy || stale) return;
+       setBusy(true); setError(''); setMessage('');
+       try {
+-        await reviewReport(base, {status: targetStatus, priority, authority, forwardingReference: reference, duplicateOf: duplicate, note});
++        await reviewReport(base, {status: targetStatus, priority, authority, forwardingReference: reference, duplicateOf: duplicate, note, publicWarning});
+         const saved = targetStatus === base.status ? 'Report details saved.' : `Report updated: ${reportStatusLabels[base.status]} → ${reportStatusLabels[targetStatus]}.`;
+         setDirty(false); setNote(''); setMessage(saved); onSaved(saved);
+       } catch (error) {setError(error instanceof Error ? error.message : 'Could not save the review. Please retry.');}
+       finally {setBusy(false);}
+     }}>
+       <p className="report-action-explanation">{actions[action].explanation}</p>
++      {['reviewed', 'forwarded'].includes(targetStatus) && <label className="checkbox-row"><input type="checkbox" checked={publicWarning} onChange={e => setPublicWarning(e.target.checked)} />Publish public warning</label>}
+       <ReportSelect label="Priority" value={priority} disabled={busy} onChange={value => {setPriority(value); setDirty(true);}} options={['normal', 'high', 'urgent'].map(value => ({value, label: value.charAt(0).toUpperCase() + value.slice(1)}))} />
+       {action === 'forward' && <div className="report-forward-fields"><label>Sent to / responsible authority<input value={authority} disabled={busy} maxLength={200} required onChange={e => setAuthority(e.target.value)} placeholder="Authority, team or recipient" /></label><label>Sending reference (optional)<input value={reference} disabled={busy} maxLength={300} onChange={e => setReference(e.target.value)} placeholder="Email address, case reference or date sent" /></label><p className="report-helper">The time you record this and your account are saved in the activity history.</p></div>}
+       {action === 'duplicate' && <label>Original report reference<input value={duplicate} disabled={busy} required onChange={e => setDuplicate(e.target.value)} /></label>}
+diff --git a/www/firestore.indexes.json b/www/firestore.indexes.json
+index 33f7835..b56e2ab 100644
+--- a/www/firestore.indexes.json
++++ b/www/firestore.indexes.json
+@@ -115,6 +115,34 @@
+           "order": "DESCENDING"
+         }
+       ]
++    },
++    {
++      "collectionGroup": "eraAudit",
++      "queryScope": "COLLECTION",
++      "fields": [
++        {
++          "fieldPath": "trailId",
++          "order": "ASCENDING"
++        },
++        {
++          "fieldPath": "createdAt",
++          "order": "DESCENDING"
++        }
++      ]
++    },
++    {
++      "collectionGroup": "releases",
++      "queryScope": "COLLECTION",
++      "fields": [
++        {
++          "fieldPath": "published",
++          "order": "ASCENDING"
++        },
++        {
++          "fieldPath": "publishedAt",
++          "order": "DESCENDING"
++        }
++      ]
+     }
+   ],
+   "fieldOverrides": []
+diff --git a/www/firestore.rules b/www/firestore.rules
+index ba8794f..46ec07c 100644
+--- a/www/firestore.rules
++++ b/www/firestore.rules
+@@ -31,7 +31,42 @@ service cloud.firestore {
+     function canReviewTrailReports(trailId) {
+       return isAdmin() || (hasVerifiedEmail()
+         && exists(/databases/$(database)/documents/trailReportAccess/$(request.auth.uid))
+-        && trailId in get(/databases/$(database)/documents/trailReportAccess/$(request.auth.uid)).data.trailIds);
++        && trailId in get(/databases/$(database)/documents/trailReportAccess/$(request.auth.uid)).data.trailIds)
++        || hasEraRole(trailId, ['incident_manager']);
++    }
++
++    function hasEraRole(trailId, roles) {
++      let member = get(/databases/$(database)/documents/eraMembers/$(request.auth.uid));
++      let organisation = get(/databases/$(database)/documents/eraOrganisations/$(member.data.organisationId));
++      return hasVerifiedEmail() && organisation.data.active == true
++        && trailId in organisation.data.trailIds
++        && member.data.trailRoles[trailId].hasAny(roles);
++    }
++    function canReadEra(trailId) {
++      return isAdmin() || hasEraRole(trailId, ['organisation_admin', 'editor', 'verifier', 'incident_manager', 'viewer'])
++        || canReviewTrailReports(trailId);
++    }
++    match /eraMembers/{uid} {
++      allow get: if isAdmin() || (hasVerifiedEmail() && request.auth.uid == uid);
++      allow list: if isAdmin();
++      allow write: if false;
++    }
++    match /eraOrganisations/{organisationId} {
++      allow read: if isAdmin() || (hasVerifiedEmail()
++        && get(/databases/$(database)/documents/eraMembers/$(request.auth.uid)).data.organisationId == organisationId);
++      allow write: if false;
++    }
++    match /eraWorkspaces/{trailId} {
++      allow read: if canReadEra(trailId);
++      allow write: if false;
++      match /revisions/{revisionId} {
++        allow read: if canReadEra(trailId);
++        allow write: if false;
++      }
++    }
++    match /eraAudit/{eventId} {
++      allow read: if isAdmin() || canReadEra(resource.data.trailId);
++      allow write: if false;
+     }
+ 
+     match /trailReportAccess/{uid} {
+@@ -226,12 +261,22 @@ service cloud.firestore {
+ 
+     match /trails/{trailId} {
+       allow read: if true;
+-      allow write: if isAdmin();
++      allow create: if isAdmin() && !request.resource.data.keys().hasAny(['publishedReleaseId']);
++      allow update: if isAdmin() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['publishedReleaseId', 'totalDistanceKm', 'stageCount']);
++      allow delete: if false;
+     }
+ 
+-    match /trails/{trailId}/{document=**} {
+-      allow read: if true;
+-      allow write: if isAdmin();
++    match /trails/{trailId}/{collectionId}/{document=**} {
++      allow read: if collectionId != 'releases';
++      allow write: if isAdmin() && !(collectionId in ['releases', 'stages', 'routeMetadata', 'routeChunks']);
++    }
++    match /trails/{trailId}/releases/{releaseId} {
++      allow read: if resource.data.published == true;
++      allow write: if false;
++      match /{document=**} {
++        allow read: if get(/databases/$(database)/documents/trails/$(trailId)/releases/$(releaseId)).data.published == true;
++        allow write: if false;
++      }
+     }
+ 
+     // Administrators query published lodgings across all trails.
+diff --git a/www/lib/firebase.ts b/www/lib/firebase.ts
+index e544fc7..9a6ab50 100644
+--- a/www/lib/firebase.ts
++++ b/www/lib/firebase.ts
+@@ -4,6 +4,7 @@ import { getApp, getApps, initializeApp } from 'firebase/app';
+ import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
+ import { connectAuthEmulator, getAuth } from 'firebase/auth';
+ import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
++import {connectStorageEmulator,getStorage} from 'firebase/storage';
+ import {
+   initializeAppCheck,
+   ReCaptchaEnterpriseProvider,
+@@ -49,6 +50,7 @@ if (
+ 
+ export const auth = getAuth(app);
+ export const db = getFirestore(app);
++export const reportStorage = getStorage(app);
+ 
+ export const reportFunctions = getFunctions(app, 'europe-west1');
+ if (
+@@ -61,5 +63,6 @@ if (
+   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+   connectFirestoreEmulator(db, '127.0.0.1', 8080);
+   connectFunctionsEmulator(reportFunctions, '127.0.0.1', 5001);
++  connectStorageEmulator(reportStorage, '127.0.0.1', 9199);
+   appCheckScope.eurotrexEmulators = true;
+ }
+diff --git a/www/lib/public-trail-data.ts b/www/lib/public-trail-data.ts
+index aa3b171..2f101e6 100644
+--- a/www/lib/public-trail-data.ts
++++ b/www/lib/public-trail-data.ts
+@@ -202,11 +202,12 @@ export function decodeTrailPoints(
+ 
+ async function fetchTrail(id: string): Promise<PublicTrail> {
+   const prefix = `trails/${id}`;
+-  const [root, stageRows, metadata, lodgingRows, issueRows] = await Promise.all(
++  const root = await read(prefix).then(value => fields(value as Document));
++  const releasePrefix = root.publishedReleaseId ? `${prefix}/releases/${encodeURIComponent(text(root.publishedReleaseId))}` : prefix;
++  const [stageRows, metadata, lodgingRows, issueRows] = await Promise.all(
+     [
+-      read(prefix).then((value) => fields(value as Document)),
+-      collection(`${prefix}/stages`),
+-      read(`${prefix}/routeMetadata/main`)
++      collection(`${releasePrefix}/stages`),
++      read(`${releasePrefix}/routeMetadata/main`)
+         .then((value) => fields(value as Document))
+         .catch(() => null),
+       collection(`${prefix}/lodgings`).catch(() => null),
+@@ -295,13 +296,14 @@ async function fetchTrail(id: string): Promise<PublicTrail> {
+       const revision = JSON.stringify([
+         project,
+         id,
++        root.publishedReleaseId,
+         metadata.version,
+         metadata.updatedAt,
+         metadata.pointCount,
+         metadata.chunkCount,
+       ]);
+       if (geometryCache?.revision !== revision) {
+-        const request = collection(`${prefix}/routeChunks`).then((chunks) =>
++        const request = collection(`${releasePrefix}/routeChunks`).then((chunks) =>
+           decodeTrailPoints(metadata, chunks)
+         );
+         geometryCache = { revision, request };
+@@ -388,17 +390,12 @@ let overviewCache: {
+ export async function getPublicTrailOverview(): Promise<PublicTrailOverview> {
+   if (overviewCache && overviewCache.expires > Date.now())
+     return overviewCache.request;
+-  const request = Promise.all([
+-    read('trails/cyprus-e4', 2500).then((value) => fields(value as Document)),
+-    read('trails/cyprus-e4/routeMetadata/main', 2500)
+-      .then((value) => fields(value as Document))
+-      .catch(() => null),
+-  ])
+-    .then(([root, metadata]) => ({
+-      distanceKm: number(root.totalDistanceKm),
+-      referencePoints: number(root.stageCount),
+-      highPointM: number(metadata?.maxAltitudeM),
+-    }))
++  const request = read('trails/cyprus-e4', 2500).then(value => fields(value as Document))
++    .then(async root => {
++      const prefix = root.publishedReleaseId ? `trails/cyprus-e4/releases/${encodeURIComponent(text(root.publishedReleaseId))}` : 'trails/cyprus-e4';
++      const metadata = await read(`${prefix}/routeMetadata/main`, 2500).then(value => fields(value as Document)).catch(() => null);
++      return {distanceKm: number(root.totalDistanceKm), referencePoints: number(root.stageCount), highPointM: number(metadata?.maxAltitudeM)};
++    })
+     .catch((error) => {
+       overviewCache = null;
+       throw error;
+diff --git a/www/lib/trail-reports.ts b/www/lib/trail-reports.ts
+index d76c3a5..40492d7 100644
+--- a/www/lib/trail-reports.ts
++++ b/www/lib/trail-reports.ts
+@@ -6,7 +6,7 @@ export const reportCategories: Record<string, string> = {signpost: 'Signpost', v
+ export const reportStatuses = ['new', 'reviewed', 'forwarded', 'resolved', 'duplicate', 'dismissed'];
+ export type ReportPhoto = {id: string; path: string; thumbnailPath: string};
+ export type TrailReport = {
+-  id: string; trailId: string; stageId?: string; category: string; description: string;
++  id: string; trailId: string; origin?: string; routeReleaseId?: string; publicWarning?: boolean; stageId?: string; category: string; description: string;
+   passability: string; latitude: number; longitude: number; accuracyM?: number;
+   locationSource: string; contactEmail?: string; observedAtMs: number;
+   receivedAt: Timestamp; updatedAt: Timestamp; status: string; priority: string;
+@@ -31,7 +31,7 @@ export async function reportPhoto(reportId: string, photoId: string, thumbnail:
+   const result = await httpsCallable<{reportId: string; photoId: string; thumbnail: boolean}, {data: string; contentType: string}>(reportFunctions, 'trailReportPhoto')({reportId, photoId, thumbnail});
+   return `data:image/jpeg;base64,${result.data.data}`;
+ }
+-export async function reviewReport(report: TrailReport, changes: Record<string, string>) {
++export async function reviewReport(report: TrailReport, changes: Record<string, string | boolean>) {
+   await httpsCallable(reportFunctions, 'reviewTrailReport')({reportId: report.id, updatedAtMs: report.updatedAt.toMillis(), ...changes});
+ }
+ export async function setReportAccess(email: string, trailId: string, grant: boolean) {
+diff --git a/www/lib/trail-route.ts b/www/lib/trail-route.ts
+index ff37dc0..8e9515c 100644
+--- a/www/lib/trail-route.ts
++++ b/www/lib/trail-route.ts
+@@ -33,15 +33,18 @@ async function routeCache(key: string, value?: CachedRoute): Promise<CachedRoute
+ }
+ 
+ async function fetchTrailRoute(trailId: string): Promise<Coordinates> {
+-  const metadata = await getDoc(doc(db, 'trails', trailId, 'routeMetadata', 'main'));
++  const trail = await getDoc(doc(db, 'trails', trailId));
++  const releaseId = trail.data()?.publishedReleaseId as string | undefined;
++  const prefix = releaseId ? `trails/${trailId}/releases/${releaseId}` : `trails/${trailId}`;
++  const metadata = await getDoc(doc(db, `${prefix}/routeMetadata/main`));
+   if (!metadata.exists()) throw new Error('Trail geometry unavailable');
+   const data = metadata.data();
+-  const revision = JSON.stringify([data.version, data.updatedAt?.toMillis?.(), data.pointCount, data.chunkCount]);
++  const revision = JSON.stringify([releaseId, data.version, data.updatedAt?.toMillis?.(), data.pointCount, data.chunkCount]);
+   const key = `${db.app.options.projectId}:${trailId}`;
+   const cached = await routeCache(key);
+   if (cached?.revision === revision && Array.isArray(cached.coordinates) && cached.coordinates.length === data.pointCount
+     && cached.coordinates.every(p => Array.isArray(p) && p.length === 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]) && Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90)) return cached.coordinates;
+-  const chunks = await getDocs(query(collection(db, 'trails', trailId, 'routeChunks'), orderBy('chunkIndex')));
++  const chunks = await getDocs(query(collection(db, `${prefix}/routeChunks`), orderBy('chunkIndex')));
+   if (data.chunkCount != null && chunks.size !== Number(data.chunkCount)) throw new Error('Incomplete trail geometry');
+   const coordinates = decodeRouteChunks(data, chunks.docs.map(chunk => chunk.data()));
+   void routeCache(key, {revision, coordinates});
+@@ -53,6 +56,7 @@ export function loadTrailRoute(trailId: string): Promise<Coordinates> {
+   if (!route) {
+     route = fetchTrailRoute(trailId).catch(error => {routes.delete(trailId); throw error;});
+     routes.set(trailId, route);
++    void route.finally(() => {if (routes.get(trailId) === route) routes.delete(trailId);}).catch(() => {});
+   }
+   return route;
+ }
+diff --git a/www/scripts/trail-route-cache-test.mjs b/www/scripts/trail-route-cache-test.mjs
+index 7159cce..609acbf 100644
+--- a/www/scripts/trail-route-cache-test.mjs
++++ b/www/scripts/trail-route-cache-test.mjs
+@@ -5,7 +5,7 @@ import ts from 'typescript';
+ 
+ const files = Object.fromEntries(['trail-route', 'route-geometry'].map(name => [name, ts.transpileModule(readFileSync(new URL(`../lib/${name}.ts`, import.meta.url), 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022}}).outputText]));
+ const cache = new Map();
+-let reads = 0, chunkReads = 0, revision = 1, failNext = false;
++let reads = 0, chunkReads = 0, revision = 1, releaseId = null, failNext = false;
+ const later = callback => queueMicrotask(callback);
+ const indexedDB = {open() {
+   const request = {};
+@@ -23,7 +23,7 @@ const indexedDB = {open() {
+ }};
+ const firestore = {
+   doc: (...args) => args, collection: (...args) => args, orderBy: value => value, query: (...args) => args,
+-  async getDoc() {reads++; if (failNext) {failNext = false; throw new Error('Temporary failure');} return {exists: () => true, data: () => ({version: revision, updatedAt: {toMillis: () => revision}, pointFormat: ['lat','lng'], pointStride: 2, pointCount: 2, chunkCount: 1})};},
++  async getDoc(path) {reads++; if (failNext) {failNext = false; throw new Error('Temporary failure');} if (/^trails\/[^/]+$/.test(path.slice(1).join('/'))) return {data: () => ({publishedReleaseId: releaseId})}; return {exists: () => true, data: () => ({version: revision, updatedAt: {toMillis: () => revision}, pointFormat: ['lat','lng'], pointStride: 2, pointCount: 2, chunkCount: 1})};},
+   async getDocs() {chunkReads++; return {size: 1, docs: [{data: () => ({points: [34, 32, 35, 33]})}]};},
+ };
+ function loadModule(name, diskCache = indexedDB) {
+@@ -38,10 +38,10 @@ function loadModule(name, diskCache = indexedDB) {
+ }
+ let loader = loadModule('trail-route');
+ const [one, two] = await Promise.all([loader.loadTrailRoute('trail'), loader.loadTrailRoute('trail')]);
+-assert.equal(one, two); assert.equal(reads, 1); assert.equal(chunkReads, 1);
++assert.equal(one, two); assert.equal(reads, 2); assert.equal(chunkReads, 1);
+ await new Promise(resolve => setImmediate(resolve));
+ loader = loadModule('trail-route');
+-await loader.loadTrailRoute('trail'); assert.equal(reads, 2); assert.equal(chunkReads, 1, 'A page reload reuses unchanged public geometry');
++await loader.loadTrailRoute('trail'); assert.equal(reads, 4); assert.equal(chunkReads, 1, 'A page reload reuses unchanged public geometry');
+ revision++;
+ await loadModule('trail-route').loadTrailRoute('trail'); assert.equal(chunkReads, 2, 'A changed route version downloads fresh geometry');
+ loader = loadModule('trail-route'); failNext = true;
+@@ -49,5 +49,8 @@ await assert.rejects(loader.loadTrailRoute('retry'), /Temporary/);
+ await loader.loadTrailRoute('retry'); assert.equal(chunkReads, 3, 'Failed preloads can be retried');
+ await loadModule('trail-route', null).loadTrailRoute('uncached');
+ assert.equal(chunkReads, 4);
++releaseId = 'new-release';
++await loadModule('trail-route').loadTrailRoute('trail');
++assert.equal(chunkReads, 5, 'A new published release invalidates geometry even if metadata counts match');
+ assert.deepEqual(Object.keys(cache.get('test-project:trail')).sort(), ['coordinates', 'revision']);
+ console.log('Passed: concurrent preload deduplication, reload cache reuse, version invalidation, failed-load retry, cache fallback and public-geometry-only storage.');

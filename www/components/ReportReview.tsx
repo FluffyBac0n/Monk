@@ -19,6 +19,7 @@ export function ReportProgress({report, events}: {report: TrailReport; events: R
     <div className="report-progress-title"><strong>Report progress</strong><span className={`report-status status-${report.status}`}>{reportStatusLabels[report.status] || report.status}</span></div>
     <ol className="report-progress-steps">{steps.map((step, index) => <li key={step} className={`${reached.has(step) ? 'reached' : ''} ${report.status === step ? 'current' : ''}`} aria-current={report.status === step ? 'step' : undefined}><span aria-hidden="true">{reached.has(step) && report.status !== step ? '✓' : index + 1}</span><strong>{reportStatusLabels[step]}</strong>{step === 'forwarded' && <small>When needed</small>}</li>)}</ol>
     <p>{guidance[report.status]}</p>
+    <p className="report-helper">Public trail map: <strong>{report.publicWarning !== false && ['reviewed', 'forwarded'].includes(report.status) ? 'Warning displayed' : 'Not displayed'}</strong></p>
     <button type="button" className="button button-secondary report-next-step-link" onClick={() => {const review = document.getElementById(`review-${report.id}`); review?.scrollIntoView({behavior: 'smooth', block: 'start'}); review?.focus({preventScroll: true});}}>Review & next step ↓</button>
     {report.status === 'duplicate' && report.duplicateOf && <p>Original report: <strong>{report.duplicateOf}</strong></p>}
     {report.authority && <p className="report-forwarded-to"><strong>Authority:</strong> {report.authority}{report.forwardingReference && ` · ${report.forwardingReference}`}</p>}
@@ -40,13 +41,15 @@ export function ReportReview({report, onSaved}: {report: TrailReport; onSaved: (
   const [base, setBase] = useState(report), [dirty, setDirty] = useState(false);
   const [action, setAction] = useState<Action>(() => nextAction(report.status));
   const [priority, setPriority] = useState(report.priority), [authority, setAuthority] = useState(report.authority);
+  const [publicWarning, setPublicWarning] = useState(report.publicWarning ?? ['reviewed', 'forwarded'].includes(report.status));
   const [reference, setReference] = useState(report.forwardingReference), [duplicate, setDuplicate] = useState(report.duplicateOf || '');
   const [note, setNote] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
-  function reset(next: TrailReport) {setBase(next); setPriority(next.priority); setAuthority(next.authority); setReference(next.forwardingReference); setDuplicate(next.duplicateOf || ''); setNote(''); setAction(nextAction(next.status)); setDirty(false);}
+  function reset(next: TrailReport) {setBase(next); setPriority(next.priority); setAuthority(next.authority); setPublicWarning(next.publicWarning ?? ['reviewed', 'forwarded'].includes(next.status)); setReference(next.forwardingReference); setDuplicate(next.duplicateOf || ''); setNote(''); setAction(nextAction(next.status)); setDirty(false);}
   useEffect(() => {if (!dirty) reset(report);}, [report, dirty]);
   const stale = dirty && base.updatedAt.toMillis() !== report.updatedAt.toMillis();
   const closed = ['resolved', 'dismissed', 'duplicate'].includes(base.status);
   const targetStatus = actions[action].status || base.status;
+  const canDisplayWarning = ['reviewed', 'forwarded'].includes(targetStatus);
   const noteRequired = ['resolved', 'dismissed'].includes(targetStatus) || action === 'reopen';
   const choices: Action[] = closed ? ['reopen', 'note'] : [...(base.status === 'new' ? ['review' as Action] : []), 'forward', 'resolve', 'note'];
   function choose(next: Action) {setAction(next); setDirty(true); setError(''); setMessage('');}
@@ -58,14 +61,19 @@ export function ReportReview({report, onSaved}: {report: TrailReport; onSaved: (
       event.preventDefault(); if (busy || stale) return;
       setBusy(true); setError(''); setMessage('');
       try {
-        await reviewReport(base, {status: targetStatus, priority, authority, forwardingReference: reference, duplicateOf: duplicate, note, publicWarning: base.publicWarning !== false && ['reviewed', 'forwarded'].includes(base.status)});
-        const saved = targetStatus === base.status ? 'Report details saved.' : `Report updated: ${reportStatusLabels[base.status]} → ${reportStatusLabels[targetStatus]}.`;
+        const publishWarning = canDisplayWarning && publicWarning;
+        await reviewReport(base, {status: targetStatus, priority, authority, forwardingReference: reference, duplicateOf: duplicate, note, publicWarning: publishWarning});
+        const saved = `${targetStatus === base.status ? 'Report details saved.' : `Report updated: ${reportStatusLabels[base.status]} → ${reportStatusLabels[targetStatus]}.`} ${publishWarning ? 'Warning displayed on the mobile trail map.' : 'Not displayed on the mobile trail map.'}`;
         setDirty(false); setNote(''); setMessage(saved); onSaved(saved);
       } catch (error) {setError(error instanceof Error ? error.message : 'Could not save the review. Please retry.');}
       finally {setBusy(false);}
     }}>
       <p className="report-action-explanation">{actions[action].explanation}</p>
       <ReportSelect label="Priority" value={priority} disabled={busy} onChange={value => {setPriority(value); setDirty(true);}} options={['normal', 'high', 'urgent'].map(value => ({value, label: value.charAt(0).toUpperCase() + value.slice(1)}))} />
+      <div className="report-public-warning">
+        <label className="checkbox-row"><input type="checkbox" checked={canDisplayWarning && publicWarning} disabled={busy || !canDisplayWarning} aria-describedby={`public-warning-help-${report.id}`} onChange={event => {setPublicWarning(event.target.checked); setDirty(true);}} />Approved for public display</label>
+        <p id={`public-warning-help-${report.id}`} className="report-helper">{canDisplayWarning ? 'Show the incident’s location and description on the mobile trail map when saved.' : 'Closed incidents are not displayed on the mobile trail map.'}</p>
+      </div>
       {action === 'forward' && <div className="report-forward-fields"><label>Sent to / responsible authority<input value={authority} disabled={busy} maxLength={200} required onChange={e => setAuthority(e.target.value)} placeholder="Authority, team or recipient" /></label><label>Sending reference (optional)<input value={reference} disabled={busy} maxLength={300} onChange={e => setReference(e.target.value)} placeholder="Email address, case reference or date sent" /></label><p className="report-helper">The time you record this and your account are saved in the activity history.</p></div>}
       {action === 'duplicate' && <label>Original report reference<input value={duplicate} disabled={busy} required onChange={e => setDuplicate(e.target.value)} /></label>}
       <label>{action === 'resolve' ? 'Resolution note' : action === 'dismiss' ? 'Reason for dismissal' : action === 'reopen' ? 'Reason for reopening' : 'Internal note'}{!noteRequired && ' (optional)'}<textarea value={note} disabled={busy} maxLength={1500} required={noteRequired} rows={3} onChange={e => setNote(e.target.value)} /></label>

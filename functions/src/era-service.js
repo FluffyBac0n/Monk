@@ -2,7 +2,7 @@ import {createHash} from 'node:crypto';
 import {FieldValue} from 'firebase-admin/firestore';
 import {HttpsError} from 'firebase-functions/v2/https';
 import {requireId, text, validateReport} from './report-model.js';
-import {eraRoles, hasEraRole, parseGeoJSON, revisionPayload, validateRevision, fingerprint, assertIndependent, buildRelease} from './era-model.js';
+import {eraRoles, hasEraRole, hasVerificationAuthority, verificationAttestation, parseGeoJSON, revisionPayload, validateRevision, fingerprint, buildRelease} from './era-model.js';
 
 const allRoles = [...eraRoles];
 const time = () => FieldValue.serverTimestamp();
@@ -18,7 +18,10 @@ export function createEraService({db,bucket,authService}) {
     const organisation = org?.exists ? {id:org.id,...org.data()} : null;
     const legacyAllowed = roles.includes('incident_manager') && legacy.data()?.trailIds?.includes(trailId);
     if (!isAdmin && !legacyAllowed && !hasEraRole(m,organisation,trailId,roles)) throw new HttpsError('permission-denied','You do not have this trail permission.');
-    return {admin:isAdmin,organisationId:organisation?.id || null,organisationName:organisation?.name || null,member:m};
+    const trail=roles.length===1 && roles[0]==='verifier' ? await tx.get(db.doc(`trails/${trailId}`)) : null;
+    const authority=trail?.data()?.verificationAuthority || null;
+    if(trail && !hasVerificationAuthority(m,organisation,trailId,authority))throw new HttpsError('permission-denied','Verification requires a verifier assigned by the responsible organisation for this trail.');
+    return {admin:isAdmin,organisationId:organisation?.id || null,organisationName:organisation?.name || null,member:m,authority};
   }
   function audit(tx,auth,trailId,action,recordId,extra={}) {
     tx.create(db.collection('eraAudit').doc(),{trailId,action,recordId,actorId:auth.uid,actorEmail:auth.token.email || '',outcome:'success',createdAt:time(),...extra});
@@ -50,8 +53,10 @@ export function createEraService({db,bucket,authService}) {
       const organisation=org?.exists ? {id:org.id,...org.data()} : null;
       const isAdmin=admin.exists || auth.token.admin===true;
       const trails=rows(catalog).flatMap(t=>{
-        const roles=isAdmin ? allRoles : [...new Set([...(organisation?.active && organisation.trailIds?.includes(t.id) ? m?.trailRoles?.[t.id] || [] : []),...(legacy.data()?.trailIds?.includes(t.id)?['incident_manager']:[])])];
-        return roles.length ? [{id:t.id,name:t.name || t.id,roles,publishedReleaseId:t.publishedReleaseId || null}] : [];
+        const assigned=isAdmin ? allRoles : [...new Set([...(organisation?.active && organisation.trailIds?.includes(t.id) ? m?.trailRoles?.[t.id] || [] : []),...(legacy.data()?.trailIds?.includes(t.id)?['incident_manager']:[])])];
+        const canVerify=hasVerificationAuthority(m,organisation,t.id,t.verificationAuthority);
+        const roles=assigned.filter(role=>role!=='verifier' || canVerify);
+        return roles.length ? [{id:t.id,name:t.name || t.id,roles,verificationAuthority:t.verificationAuthority || null,publishedReleaseId:t.publishedReleaseId || null}] : [];
       });
       const canManage=isAdmin || (organisation?.active && Object.entries(m?.trailRoles || {}).some(([id,v])=>organisation.trailIds?.includes(id) && v.includes('organisation_admin')));
       return {admin:isAdmin,organisation:organisation && {id:organisation.id,name:organisation.name,trailIds:organisation.trailIds,active:organisation.active},trails,
@@ -73,6 +78,20 @@ export function createEraService({db,bucket,authService}) {
         tx.set(db.doc(`eraOrganisations/${id}`),{name,trailIds,active:data.active,confirmedBy:auth.uid,updatedAt:time()});
         audit(tx,auth,'_organisations','organisation_configured',id,{trailIds});
         for(const trailId of new Set([...trailIds,...(previous.data()?.trailIds || [])]))audit(tx,auth,trailId,'organisation_configured',id,{active:data.active,trailIds});
+      });
+      return {saved:true};
+    },
+    setEraTrailAuthority:async ({auth,data}) => {
+      const trailId=check(()=>requireId(data.trailId)),organisationId=check(()=>requireId(data.organisationId));
+      const country=check(()=>text(data.country,100,true)),scope=check(()=>text(data.scope,200,true));
+      await db.runTransaction(async tx=>{
+        const p=await permission(tx,auth,trailId,['organisation_admin']);
+        if(!p.admin)throw new HttpsError('permission-denied','A EuroTrex administrator must record the responsible organisation.');
+        const [org,trail]=await tx.getAll(db.doc(`eraOrganisations/${organisationId}`),db.doc(`trails/${trailId}`));
+        if(!trail.exists || !org.data()?.active || !org.data().trailIds?.includes(trailId))throw new HttpsError('failed-precondition','Assign this trail to an active organisation first.');
+        const authority={organisationId,organisationName:org.data().name,country,scope};
+        tx.update(trail.ref,{verificationAuthority:authority});
+        audit(tx,auth,trailId,'verification_authority_assigned',organisationId,{previousAuthority:trail.data().verificationAuthority || null,authority});
       });
       return {saved:true};
     },
@@ -118,10 +137,10 @@ export function createEraService({db,bucket,authService}) {
           const prior=head.data()?.latestRevisionId ? await tx.get(revisionRef(trailId,head.data().latestRevisionId)) : null;
           if(fingerprint(await context(trailId,tx))!==validation.contextHash) throw new HttpsError('aborted','Trail data changed. Reload before saving.');
           const contributors=[...new Set([...(prior?.data()?.contributors || []),auth.uid])];
-          tx.create(ref,{trailId,state:'draft',payloadPath,originalPath:originalPath || prior?.data()?.originalPath || null,
+          tx.create(ref,{trailId,state:'draft',verification:null,payloadPath,originalPath:originalPath || prior?.data()?.originalPath || null,
             sourceHash:raw ? createHash('sha256').update(raw).digest('hex') : prior?.data()?.sourceHash || null, payloadHash:validation.payloadHash,contextHash:validation.contextHash,
             baseReleaseId:trail.data()?.publishedReleaseId || null,contributors,organisationId:p.organisationId,
-            source:body.source,attribution:body.attribution,elevationSource:body.elevationSource,pointCount:validation.pointCount,totalDistanceKm:validation.totalDistanceKm,
+            source:body.source,sourceType:body.sourceType || 'unknown',sourceUrl:body.sourceUrl || '',attribution:body.attribution,elevationSource:body.elevationSource,pointCount:validation.pointCount,totalDistanceKm:validation.totalDistanceKm,
             errors:validation.errors,warnings:validation.warnings,createdBy:auth.uid,createdAt:time(),updatedAt:time()});
           tx.set(workspace(trailId),{latestRevisionId:ref.id,updatedAt:time()},{merge:true});
           audit(tx,auth,trailId,raw?'geojson_uploaded':'revision_saved',ref.id,{organisationId:p.organisationId,payloadHash:validation.payloadHash});
@@ -151,6 +170,8 @@ export function createEraService({db,bucket,authService}) {
       const snap=await revisionRef(trailId,id).get();
       if(!snap.exists) throw new HttpsError('not-found','Revision unavailable.');
       const payload=await payloadFor(snap.data()),ctx=await context(trailId);
+      const attestation=action==='approve' ? check(()=>verificationAttestation(data.attestation)) : null;
+      if(['submit','approve'].includes(action) && (!payload.sourceType || payload.sourceType==='unknown'))throw new HttpsError('failed-precondition','Choose the route source type and save a new draft first.');
       const validation=check(()=>validateRevision(payload,ctx));
       if(action!=='request_changes' && validation.errors.length) throw new HttpsError('failed-precondition','Resolve validation errors before continuing.');
       if(action!=='request_changes' && (validation.contextHash!==snap.data().contextHash || validation.payloadHash!==snap.data().payloadHash)) throw new HttpsError('failed-precondition','Trail data changed. Save and submit a new revision.');
@@ -158,7 +179,7 @@ export function createEraService({db,bucket,authService}) {
       const releaseRef=db.collection(`trails/${trailId}/releases`).doc();
       if(action==='publish') {
         if(snap.data().state!=='approved') throw new HttpsError('failed-precondition','Approve the revision first.');
-        check(()=>assertIndependent(snap.data(),auth.uid));
+        if(!snap.data().verification)throw new HttpsError('failed-precondition','This earlier approval has no organisation verification. Save a new draft for verification.');
         release=check(()=>buildRelease(validation));
         // Invisible until the final transaction marks the manifest published.
         const writer=db.bulkWriter();
@@ -180,17 +201,19 @@ export function createEraService({db,bucket,authService}) {
         if(head.data()?.latestRevisionId!==id) throw new HttpsError('aborted','A newer revision exists.');
         if((trail.data().publishedReleaseId || null)!==r.baseReleaseId) throw new HttpsError('aborted','The published trail changed. Save a new revision.');
         if(action!=='request_changes' && fingerprint(await context(trailId,tx))!==r.contextHash) throw new HttpsError('aborted','Trail records changed. Save and submit a new revision.');
-        const states={submit:['draft'],request_changes:['submitted'],approve:['submitted'],publish:['approved']};
+        const states={submit:['draft'],request_changes:['submitted'],approve:['draft','submitted'],publish:['approved']};
         if(!states[action].includes(r.state)) throw new HttpsError('failed-precondition','This revision is not ready for that action.');
-        if(action!=='submit') check(()=>assertIndependent(r,auth.uid));
         const state={submit:'submitted',request_changes:'changes_requested',approve:'approved',publish:'published'}[action];
-        tx.update(snap.ref,{state,updatedAt:time(),[`${action}By`]:auth.uid,[`${action}At`]:time(),[`${action}OrganisationName`]:p.organisationName,note});
+        if(action==='publish' && (!r.verification || r.verification.payloadHash!==r.payloadHash || r.verification.authorityHash!==fingerprint(p.authority)))throw new HttpsError('failed-precondition','This revision needs verification by the currently responsible organisation. Save a new draft for verification.');
+        const verification=action==='approve' ? {...attestation,status:'verified',...p.authority,authorityHash:fingerprint(p.authority),verifiedBy:auth.uid,verifierName:auth.token.name || 'Authorised verifier',verifiedAt:time(),revisionId:id,payloadHash:r.payloadHash} : null;
+        tx.update(snap.ref,{state,...(verification?{verification}:{}),updatedAt:time(),[`${action}By`]:auth.uid,[`${action}At`]:time(),[`${action}OrganisationName`]:p.organisationName,note});
         if(action==='publish') {
           tx.create(releaseRef,{published:true,revisionId:id,source:payload.source,attribution:payload.attribution,elevationSource:payload.elevationSource,
-            approvedBy:r.approveBy,approvedAt:r.approveAt,verifyingOrganisationName:r.approveOrganisationName || 'EuroTrex',publishedBy:auth.uid,publishedAt:time(),payloadHash:r.payloadHash,stageCount:release.stages.length,...release.metadata});
+            sourceType:payload.sourceType || 'unknown',sourceUrl:payload.sourceUrl || '',verification:r.verification,
+            approvedBy:r.approveBy,approvedAt:r.approveAt,verifyingOrganisationName:r.verification.organisationName,publishedBy:auth.uid,publishedAt:time(),payloadHash:r.payloadHash,stageCount:release.stages.length,...release.metadata});
           tx.update(trail.ref,{publishedReleaseId:releaseRef.id,totalDistanceKm:validation.totalDistanceKm,maxAltitudeM:release.metadata.maxAltitudeM,stageCount:release.stages.length,updatedAt:time()});
         }
-        audit(tx,auth,trailId,`revision_${state}`,id,{organisationId:p.organisationId,note,payloadHash:r.payloadHash});
+        audit(tx,auth,trailId,`revision_${action==='approve'?'verified':state}`,id,{organisationId:p.organisationId,note,payloadHash:r.payloadHash,...(verification?{verificationAuthority:p.authority,criteriaVersion:verification.criteriaVersion}:{})});
       });
       return {saved:true};
     },

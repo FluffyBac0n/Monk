@@ -19,8 +19,12 @@ await db.doc(`trails/${trailId}/routeChunks/0`).set({chunkIndex:0,points:route.f
 
 for(const [id,sequence,longitude] of [['start',1,32.87],['finish',2,32.89]])await db.doc(`trails/${trailId}/stages/${id}`).set({sequence,name:id==='start'?'Forest junction':'Village stop',location:{latitude:34.89,longitude},services:{water:true}});
 const era=createEraService({db,bucket:getStorage().bucket(),authService:auth});
+const actor={uid:user.uid,token:{email:user.email,email_verified:true,name:'Preview verifier'}};
+await era.configureEraOrganisation({auth:actor,data:{organisationId:'preview-member',name:'Demo member organisation',active:true,trailIds:[trailId]}});
+await era.setEraTrailAuthority({auth:actor,data:{trailId,organisationId:'preview-member',country:'Cyprus',scope:'Full demonstration trail'}});
+await era.setEraMember({auth:actor,data:{trailId,organisationId:'preview-member',email:user.email,roles:['organisation_admin','editor','verifier','incident_manager']}});
 const workspace=await db.doc(`eraWorkspaces/${trailId}`).get();
-if(!workspace.exists)await era.saveEraRevision({auth:{uid:user.uid,token:{email:user.email,email_verified:true}},data:{trailId,expectedRevisionId:null,segments:[{kind:'main',coordinates:[[32.87,34.89,800],[32.88,34.89,850],[32.89,34.89,820]]}],source:'Isolated browser fixture',attribution:'QA fixture',elevationSource:'Synthetic test elevation',stageDecisions:{start:{confirmed:true},finish:{confirmed:true}}}});
+if(!workspace.exists)await era.saveEraRevision({auth:{uid:user.uid,token:{email:user.email,email_verified:true}},data:{trailId,expectedRevisionId:null,segments:[{kind:'main',coordinates:[[32.87,34.89,800],[32.88,34.89,850],[32.89,34.89,820]]}],sourceType:'community',sourceUrl:'https://hiking.waymarkedtrails.org/',source:'Isolated browser fixture',attribution:'QA fixture',elevationSource:'Synthetic test elevation',stageDecisions:{start:{confirmed:true},finish:{confirmed:true}}}});
 // One isolated marker for every review status, for map/filter browser QA.
 for(const [index,status] of ['new','reviewed','forwarded','resolved','duplicate','dismissed'].entries())await db.doc(`trailReports/preview-status-${status}`).set({
   trailId,origin:'organisation',category:'signpost',description:`Synthetic ${status} signpost report`,
