@@ -1,0 +1,12 @@
+import {initializeApp} from 'firebase-admin/app';
+import {getAuth} from 'firebase-admin/auth';
+import {getFirestore} from 'firebase-admin/firestore';
+import {getStorage} from 'firebase-admin/storage';
+import {createEraService} from '../src/era-service.js';
+if(process.env.FIRESTORE_EMULATOR_HOST!=='127.0.0.1:8080')throw Error('Emulator only');
+initializeApp({projectId:'demo-eurotrex',storageBucket:'demo-eurotrex.appspot.com'});
+const db=getFirestore(),auth=getAuth(),user=await auth.getUserByEmail('era-preview@example.test');
+const trailId='era-preview',head=(await db.doc(`eraWorkspaces/${trailId}`).get()).data();
+const service=createEraService({db,bucket:getStorage().bucket(),authService:auth});
+await service.saveEraRevision({auth:{uid:user.uid,token:{email:user.email,email_verified:true}},data:{trailId,expectedRevisionId:head.latestRevisionId,sectionSchema:1,sections:['Forest path','Village approach'].map((name,i)=>({id:`section-${i}`,name,sourceType:'community',source:'Synthetic route fixture',attribution:'QA fixture'})),segments:[{sectionId:'section-0',kind:'main',coordinates:[[32.87,34.89],[32.875,34.891],[32.88,34.89]]},{sectionId:'section-1',kind:'main',coordinates:[[32.88,34.89],[32.885,34.892],[32.89,34.89]]}],sourceType:'community',source:'Synthetic route fixture',attribution:'QA fixture',elevationSource:'',stageDecisions:{}}});
+console.log('Two-section preview ready');

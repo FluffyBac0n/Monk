@@ -4,11 +4,12 @@ import type {Map as MapboxMap, Marker} from 'mapbox-gl';
 import {reportCategories, reportStatuses, type TrailReport} from '@/lib/trail-reports';
 import {reportStatusLabels} from '@/components/ReportReview';
 import {FitTrailButton} from '@/components/FitTrailButton';
+import {ReportStatusIcon} from '@/components/ReportStatusIcon';
+import {reportStatusMarker} from '@/lib/report-status-symbols';
 import {loadTrailRoute} from '@/lib/trail-route';
 import {preloadReportMap} from '@/lib/report-map-runtime';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-const warningIcon = '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M21 6a3.5 3.5 0 0 1 6 0l18 31a3.5 3.5 0 0 1-3 5H6a3.5 3.5 0 0 1-3-5Z"/><text x="24" y="34" text-anchor="middle">!</text></svg>';
 type Props = {visible: boolean; trailId: string; trailName: string; reports: TrailReport[]; selectedId: string; onSelect: (id: string) => void};
 export function TrailReportMap({visible, trailId, trailName, reports, selectedId, onSelect}: Props) {
   const element = useRef<HTMLDivElement>(null), map = useRef<MapboxMap | null>(null);
@@ -86,7 +87,7 @@ export function TrailReportMap({visible, trailId, trailName, reports, selectedId
         let marker = markers.current.get(report.id);
         if (!marker) {
           const button = document.createElement('button');
-          button.type = 'button'; button.className = 'report-map-marker'; button.innerHTML = warningIcon;
+          button.type = 'button'; button.className = 'report-map-marker';
           button.setAttribute('aria-controls', 'selected-trail-report');
           button.addEventListener('click', event => {event.stopPropagation(); latest.current.onSelect(report.id);});
           marker = new gl.Marker({element: button, anchor: 'center'}).setLngLat([report.longitude, report.latitude]).addTo(instance);
@@ -95,6 +96,10 @@ export function TrailReportMap({visible, trailId, trailName, reports, selectedId
         }
         marker.setLngLat([report.longitude, report.latitude]);
         const button = marker.getElement();
+        if (button.dataset.status !== report.status) {
+          button.innerHTML = reportStatusMarker(report.status);
+          button.dataset.status = report.status;
+        }
         button.setAttribute('aria-label', `Open report: ${reportStatusLabels[report.status] || report.status} · ${reportCategories[report.category] || report.category} — ${report.description}`);
         button.title = `${reportStatusLabels[report.status] || report.status} · ${reportCategories[report.category] || report.category}: ${report.description}`;
         reportStatuses.forEach(value => button.classList.toggle(`status-${value}`, report.status === value));
@@ -126,7 +131,7 @@ export function TrailReportMap({visible, trailId, trailName, reports, selectedId
 
   return <section className={`report-map-panel ${visible ? '' : 'is-preloading'}`} aria-hidden={!visible} inert={!visible} aria-label={`${trailName} report map`}>
     <div className="report-map-canvas"><div className="trail-report-map" ref={element} aria-label="Map of reported trail problems" /><FitTrailButton disabled={!ready || !!error} onClick={() => fit.current()}/></div>
-    <div className="report-map-legend report-map-legend-bottom" aria-label="Map legend"><span><i className="report-map-line" aria-hidden="true" />{trailName}</span></div>
+    <div className="report-map-legend report-map-legend-bottom" aria-label="Map legend"><span><i className="report-map-line" aria-hidden="true" />{trailName}</span>{reportStatuses.filter(status=>reports.some(report=>report.status===status)).map(status=><span key={status}><ReportStatusIcon status={status}/>{reportStatusLabels[status]}</span>)}</div>
     {!ready && !error && <p className="report-map-message" role="status">Loading trail map…</p>}
     {error && <div className="report-map-message" role="alert"><p>{error}</p><button className="button button-secondary" onClick={() => setAttempt(n => n + 1)}>Retry map</button></div>}
     {ready && routeLoading && <p className="report-map-caption" role="status">Loading the trail line… You can already explore report locations.</p>}

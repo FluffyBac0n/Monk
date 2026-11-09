@@ -1,4 +1,90 @@
-# ERA trail management
+# ERA Trail Dashboard
+
+## Resizable workbench — 6 November 2026
+
+Sites version 107 publishes the tested bottom workbench in place of task dialogs.
+The map remains interactive while section details and incident review are open.
+The workbench supports collapsed, standard and expanded sizes, pointer/keyboard
+resizing, and remembered height. History has a dedicated workspace with Back to
+map. Section fields use three columns; incident review uses two columns.
+
+TypeScript and production build passed. Browser checks covered section switching,
+collapse, drag resizing and incident-marker review using synthetic emulator data.
+The site's custom audience and backend/mobile publication safeguards are unchanged.
+
+## Map workspace — 6 November 2026
+
+Sites version 106 replaces the permanent form pane with the main map, floating
+upload/edit/layer controls, selection previews and spacious task dialogs.
+Section metadata, verification, incident review and history open on demand.
+The published alignment is an optional comparison layer. Mobile preparation
+remains absent from the menu; backend publication gates are unchanged.
+
+Dragging a line inserts a via point on its hit edge and reroutes between the
+adjacent E4 anchors. It retains the same segment kind and section identity.
+Moving a shared main-route endpoint also updates its adjoining main-route
+junction. Alternatives stay independent. Tests cover sparse routes, untouched
+geometry and shared junctions. Browser QA covered Mapbox dragging, undo, draft
+save, section dialogs, incident review and a 390px viewport. TypeScript and
+production builds passed. All test data remained in local emulators.
+
+## Workspace layout update — 4 November 2026
+
+Sites version 105 places section, incident and verification panels beside the
+shared map. Section selection highlights and frames its geometry; section details
+scroll independently while the desktop section list stays visible. Phones use a
+section selector and Details / Map switch. History and Access fill the workspace
+without the map. Mobile preparation is removed from the dashboard menu; backend
+publication safeguards remain in place.
+
+TypeScript, production build and browser checks passed. Checks covered section
+switching, incident-marker selection, map-free History/Access and a 390px phone
+viewport without horizontal overflow. Test data was confined to local emulators.
+
+## Dashboard release — 2 November 2026
+
+The section-based dashboard is deployed as Sites version 104. The ERA Firebase
+functions are deployed in `europe-west1`. Site access settings were preserved;
+no production route or mobile release pointer was changed during testing.
+
+The left menu contains Overview, Sections, Incidents, Verification, History and
+role-gated Access and Mobile preparation. Route editing and existing incident
+review share one map. Uploads accept multiple GPX, GeoJSON or coordinate-JSON
+files, retain their originals and provenance, and create separately verifiable
+sections. Map dragging uses Mapbox walking directions; numeric editing and
+undo/redo remain available.
+
+Section-schema-1 revisions separate route verification from mobile preparation:
+
+- ERA verifies individual sections or the selected country's complete route.
+  Route geometry and source changes invalidate affected attestations; authority
+  and section-order changes invalidate whole-route verification. Unchanged
+  section attestations survive a new draft.
+- Missing elevation and gaps between sections do not block ERA verification.
+  EuroTrex administrators prepare stages, elevation and linked-route decisions.
+  The existing mobile format requires continuous main-route geometry, so gaps
+  still block mobile publication. No line is fabricated across a section gap.
+- Mobile publication requires an approved route and saved EuroTrex preparation,
+  rechecks the full release validation, and atomically updates the release
+  pointer. Existing immutable release and mobile-reader contracts are preserved.
+- A verified route can be downloaded as GPX with section boundaries, source
+  attribution and route-verification metadata. Open the file as a JOSM reference
+  layer and review existing OSM ways/relations before manually uploading. Direct
+  OSM OAuth upload is not included.
+- History searches authorized server-side audit records and offers older pages.
+  Access distinguishes trail responsibilities from EuroTrex publication rights.
+
+Validation: TypeScript and production builds passed; backend model, permissions,
+rules and publication-flow checks passed; all 246 Flutter tests passed. Browser
+checks covered multi-file import, section/country verification, GPX download,
+Mapbox dragging, manual edits and undo, incident selection, mobile-preparation
+blocking and 390px navigation. Testing used synthetic emulator data. Native
+device/simulator tests and mobile-store releases were not performed.
+
+The only mobile source change adds missing verification translations found by
+the regression suite. Existing installed mobile builds remain unchanged.
+
+## Earlier implementation reference
 
 Implemented on `codex/era-trail-management` in the workspace and nested website repository.
 Production rollout was explicitly approved on 25 October 2026 and is deployed. All eight Firestore indexes are confirmed READY.
@@ -38,7 +124,7 @@ main-route readers consume the validated main alignment.
 
 Validation rejects unsupported geometry, invalid coordinates, duplicates, long missing
 legs and disconnected main segments. It flags major distance/geographic changes.
-Missing main-route elevation blocks submission: supply elevation-enriched GeoJSON and
+For legacy revisions, missing main-route elevation blocks submission: supply elevation-enriched GeoJSON and
 record its source. Automatic third-party terrain enrichment is not implemented.
 
 Stage IDs, services and accommodation links are retained. Existing stage/route-marker
@@ -48,7 +134,7 @@ confirmations. Distances/elevation metrics are recalculated. Excursion/detour an
 route-dependent comparisons are recalculated; unresolved branches must be corrected or
 explicitly excluded from the release. Exclusion preserves source records.
 
-Workflow: draft → submitted → changes requested or approved → published.
+Legacy workflow: draft → submitted → changes requested or approved → published.
 Contributors cannot approve or publish their revision, including EuroTrex administrators.
 Content is frozen at submission. Publication rechecks content/trail-record hashes, current
 permissions, organisation state, latest revision, approval and the base release. The active

@@ -41,7 +41,7 @@ function EraWorkspace({user}:{user:User}) {
   const incidentAccess=useMemo(()=>({admin:access?.admin || false,trails:trail?[{id:trail.id,name:trail.name}]:[]}),[access?.admin,trail]);
   const tabs=['Incidents','Trail Data','Audit Log',...((access?.admin || roles.includes('organisation_admin'))?['Access']:[])];
   return <main className="portal-page era-page"><PortalHeader user={user} canAccessAdmin={access?.admin}/><div className="dashboard-shell wide">
-    <section className="dashboard-title"><div><h1 className="section-title">Trail Management</h1></div></section>
+    <h1 className="sr-only">Trail Management</h1>
     {error && <div className="notice error" role="alert"><p>{error}</p><button className="button button-secondary" onClick={()=>void refresh()}>Try again</button></div>}
     {!access && !error && <p role="status">Checking your assigned trails…</p>}
     {access && !access.trails.length && <section className="access-card"><h2>No trails assigned yet.</h2><p>Ask your administrator to assign trail access to {user.email}.</p></section>}

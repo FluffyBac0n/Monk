@@ -10,7 +10,7 @@ import {ReportStatusIcon} from '@/components/ReportStatusIcon';
 import {ReportDatePicker} from '@/components/ReportDatePicker';
 import {TrailReportMap} from '@/components/TrailReportMap';
 import {EraIncidentForm} from '@/components/EraIncidentForm';
-import {ReportProgress, ReportReview, reportStatusLabels} from '@/components/ReportReview';
+import {ReportReview, reportStatusLabels} from '@/components/ReportReview';
 import {preloadTrailRoutes} from '@/lib/trail-route';
 import {watchReportAccess, reportLoadError, type AccessState, type ReportAccess} from '@/lib/report-access';
 import {useAuthState} from '@/lib/use-auth';
@@ -80,9 +80,9 @@ export function ReportWorkspace({user, embeddedAccess, initialTrailId}: {user: U
     {!access ? (accessState.status === 'loading' ? <p role="status">Checking your assigned trails…</p> : null) : !access.trails.length ? <section className="access-card"><h2>No trails assigned yet.</h2><p>Your email is verified. Ask a EuroTrex administrator to grant trail access to {user.email}.</p></section> : <>
       <section className="form-panel form-grid report-filters" aria-label="Filter reports">
         {!embeddedAccess && <ReportSelect label="Trail" value={trailId} onChange={setTrailId} options={access.trails.map(t => ({value: t.id, label: t.name}))} />}
-        <ReportSelect className={`report-status-select${status?` status-${status}`:''}`} label="Status" value={status} onChange={setStatus} options={[{value: '', label: 'All statuses', indicator: <ReportStatusIcon status=""/>}, ...reportStatuses.map(s => ({value: s, label: reportStatusLabels[s], indicator: <ReportStatusIcon status={s}/>}))]} />
-        <ReportSelect label="Problem" value={category} onChange={setCategory} options={[{value: '', label: 'All problems'}, ...Object.entries(reportCategories).map(([value, label]) => ({value, label}))]} />
-        <ReportDatePicker value={fromDate} onChange={setFromDate} />
+        <ReportSelect hideLabel={!!embeddedAccess} className={`report-status-select${status?` status-${status}`:''}`} label="Status" value={status} onChange={setStatus} options={[{value: '', label: 'All', indicator: <ReportStatusIcon status=""/>}, ...reportStatuses.map(s => ({value: s, label: reportStatusLabels[s], indicator: <ReportStatusIcon status={s}/>}))]} />
+        <ReportSelect hideLabel={!!embeddedAccess} label="Problem" value={category} onChange={setCategory} options={[{value: '', label: 'All problems'}, ...Object.entries(reportCategories).map(([value, label]) => ({value, label}))]} />
+        <ReportDatePicker hideLabel={!!embeddedAccess} value={fromDate} onChange={setFromDate} />
         {embeddedAccess && <div className="era-filter-action"><button type="button" className="era-icon-button" aria-label={creatingIncident ? 'Close incident form' : 'Create incident'} title={creatingIncident ? 'Close incident form' : 'Create incident'} aria-expanded={creatingIncident} aria-controls="era-incident-form" onClick={() => setCreatingIncident(open => !open)}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d={creatingIncident ? 'm6 6 12 12M6 18 18 6' : 'M12 5v14M5 12h14'}/></svg></button></div>}
       </section>
       {embeddedAccess && <EraIncidentForm trailId={trailId} open={creatingIncident} onClose={() => setCreatingIncident(false)} />}
@@ -93,17 +93,17 @@ export function ReportWorkspace({user, embeddedAccess, initialTrailId}: {user: U
         {!loading && !error && !rows.length && <div className="empty-state report-empty-state"><h3>No reports to review.</h3><p>Submitted trail problems will appear here. Try another filter or trail.</p></div>}
         {rows.map(report => <button key={report.id} className={`report-list-card ${selected === report.id ? 'selected' : ''}`} aria-pressed={selected === report.id} onClick={() => choose(report.id)}>
           <span className="report-card-meta"><span className={`report-status status-${report.status}`}>{reportStatusLabels[report.status] || report.status}</span><span>{report.receivedAt?.toDate().toLocaleDateString()}</span></span>
-          <strong>{reportCategories[report.category] || report.category}</strong><small>{report.origin === 'organisation' ? 'Organisation-created' : 'Hiker report'}</small><p>{report.description}</p><span className="report-card-meta"><span>{report.passability} · {report.priority}</span><span>{report.photos.length} photos</span></span>
+          <div className="report-card-heading"><strong>{reportCategories[report.category] || report.category}</strong><small>{report.origin === 'organisation' ? 'Organisation-created' : 'Hiker report'}</small></div><p>{report.description}</p><span className="report-card-meta"><span>{report.passability} · {report.priority}</span><span>{report.photos.length} photos</span></span>
         </button>)}
         {rows.length >= count && <button className="button button-secondary" onClick={() => setCount(n => n + 50)}>Load older reports</button>}
       </section><section id="selected-trail-report" className="report-detail-slot" aria-label="Selected report">
-        {current ? <ReportDetail key={current.id} report={current} trailName={trailName} onReviewSaved={setReviewMessage} /> : <div className="empty-state report-placeholder"><span aria-hidden="true">↗</span><h3>Select a report</h3><p>Open a problem to see its location, photos and review history.</p></div>}
+        {current ? <ReportDetail compact={!!embeddedAccess} key={current.id} report={current} trailName={trailName} onReviewSaved={setReviewMessage} /> : <div className="empty-state report-placeholder"><span aria-hidden="true">↗</span><h3>Select a report</h3><p>Open a problem to see its location, photos and review history.</p></div>}
       </section></div>
     </>}
     {!embeddedAccess && access?.admin && <AccessManager trails={access.trails} />}
   </div></main>;
 }
-function ReportDetail({report, trailName, onReviewSaved}: {report: TrailReport; trailName: string; onReviewSaved: (message: string) => void}) {
+function ReportDetail({report, trailName, onReviewSaved, compact = false}: {compact?: boolean; report: TrailReport; trailName: string; onReviewSaved: (message: string) => void}) {
   const [photos, setPhotos] = useState<Record<string, string>>({}), [events, setEvents] = useState<ReportEvent[]>([]);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   const [photoView, setPhotoView] = useState<string | null>(null);
@@ -124,8 +124,9 @@ function ReportDetail({report, trailName, onReviewSaved}: {report: TrailReport; 
     setMessage('Open the downloaded report and select Print / Save as PDF.');
   }
   return <article className="report-detail">
-    <p className="eyebrow">{trailName}</p><h2>{reportCategories[report.category] || report.category}</h2><p className="report-description">{report.description}</p>
-    <p className="report-helper">{report.origin === 'organisation' ? 'Organisation-created incident' : 'Hiker report'} · Route release: {report.routeReleaseId || 'Legacy route'}</p><ReportProgress report={report} events={events} />
+    {!compact && <><p className="eyebrow">{trailName}</p><h2>{reportCategories[report.category] || report.category}</h2><p className="report-description">{report.description}</p>
+    <p className="report-helper">{report.origin === 'organisation' ? 'Organisation-created incident' : 'Hiker report'} · Route release: {report.routeReleaseId || 'Legacy route'}</p></>}
+    {compact && <h3 className="report-ticket-heading">Ticket information</h3>}
     <dl className="report-facts"><div><dt>Reference</dt><dd>{report.id}</dd></div><div><dt>Coordinates</dt><dd>{report.latitude.toFixed(6)}, {report.longitude.toFixed(6)}</dd></div><div><dt>Location source</dt><dd>{report.locationSource}{report.accuracyM != null ? ` · ±${Math.round(report.accuracyM)} m` : ''}</dd></div><div><dt>Stage context</dt><dd>{report.stageId || 'Not assigned'}</dd></div><div><dt>Observed</dt><dd>{new Date(report.observedAtMs).toLocaleString()}</dd></div><div><dt>Trail access</dt><dd>{report.passability}</dd></div><div><dt>Contact (private)</dt><dd>{report.contactEmail || 'Not provided'}</dd></div></dl>
     <div className="report-location-actions" aria-label="Report actions"><a href={reportMapUrl(report)} target="_blank" rel="noreferrer" className="button button-secondary"><img src="/icons/google-maps.ico" width="20" height="20" alt="" />Google Maps</a><a href={reportMapyUrl(report)} target="_blank" rel="noreferrer" className="button button-secondary"><img src="/icons/mapy.png" width="20" height="20" alt="" />Mapy</a><button className="button button-secondary" disabled={busy} onClick={() => void act(exportReport)}>Download printable report</button></div>
     <div className="report-photos">{report.photos.map(p => <button key={p.id} disabled={busy} onClick={() => void act(async () => setPhotoView(await reportPhoto(report.id, p.id, false)))} aria-label="Open full report photo">{photos[p.id] ? <img src={photos[p.id]} alt="Trail problem reported by a hiker" /> : <span>Loading photo…</span>}</button>)}</div>

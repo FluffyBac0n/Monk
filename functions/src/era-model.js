@@ -63,7 +63,7 @@ export function normaliseSegments(value) {
       count++;
       return [...point];
     });
-    return {kind: segment.kind, coordinates};
+    return {kind: segment.kind, coordinates, ...(segment.sectionId ? {sectionId:requireId(segment.sectionId)} : {})};
   });
   if (count > 100000) throw new Error('Use at most 100,000 route points.');
   return segments;
@@ -211,7 +211,7 @@ export function revisionPayload(data) {
     if(!/^(excursions|detours):[a-zA-Z0-9_-]{1,100}$/.test(key))throw new Error('Invalid related route.');
     relatedDecisions[key]={excluded:value.excluded===true,...(value.startPointIndex==null?{}:{startPointIndex:value.startPointIndex}),...(value.endPointIndex==null?{}:{endPointIndex:value.endPointIndex})};
   }
-  return {...provenance(data),...(data.stageEdits===undefined?{}:{stageEdits:normaliseStageEdits(data.stageEdits)}),segments:normaliseSegments(data.segments), source:text(data.source || '',1000), attribution:text(data.attribution || '',1000),
+  return {...provenance(data),...(data.sectionSchema===1?{sectionSchema:1,sections:normaliseSections(data.sections)}:{}),...(data.stageEdits===undefined?{}:{stageEdits:normaliseStageEdits(data.stageEdits)}),segments:normaliseSegments(data.segments), source:text(data.source || '',1000), attribution:text(data.attribution || '',1000),
     elevationSource:text(data.elevationSource || '',1000), stageDecisions, relatedDecisions,relatedRoutesReviewed:data.relatedRoutesReviewed===true, changesReviewed:data.changesReviewed===true};
 }
 export function buildRelease(validation) {
@@ -224,4 +224,44 @@ export function buildRelease(validation) {
   }
   return {chunks, stages:validation.stages, metadata:{version:1, pointStride:5, pointFormat:['lat','lng','altitudeM','distanceKm','reverseDistanceKm'],
     pointCount:route.length,chunkCount:chunks.length,totalDistanceKm,maxAltitudeM:Math.max(...route.map(p=>p[2]))}};
+}
+
+
+// ERA verifies planimetric route data. Elevation and stage preparation are separate.
+export function normaliseSections(value) {
+  if (!Array.isArray(value) || !value.length || value.length>100) throw new Error('Use between 1 and 100 sections.');
+  const ids=new Set();
+  return value.map(s=>{
+    const id=requireId(s.id);if(ids.has(id))throw new Error('Section IDs must be unique.');ids.add(id);
+    return {id,name:text(s.name,160,true),source:text(s.source || '',1000),attribution:text(s.attribution || '',1000),...provenance({sourceType:s.sourceType || 'unknown',sourceUrl:s.sourceUrl || ''}),originalFilename:text(s.originalFilename || '',200),originalHash:text(s.originalHash || '',64)};
+  });
+}
+export function routeSectionSummary(payload) {
+  const sections=normaliseSections(payload.sections),segments=normaliseSegments(payload.segments);
+  if(segments.some(s=>!sections.some(row=>row.id===s.sectionId)))throw new Error('Every line must belong to a section.');
+  return sections.map(section=>{
+    const lines=segments.filter(s=>s.sectionId===section.id),errors=[],warnings=[];
+    if(!lines.length)errors.push('Add route geometry.');
+    if(!section.source || !section.attribution || section.sourceType==='unknown')errors.push('Record the source type, source and attribution.');
+    let distance=0,pointCount=0;
+    for(const line of lines){pointCount+=line.coordinates.length;for(let i=1;i<line.coordinates.length;i++){
+      const d=distanceKm(line.coordinates[i-1],line.coordinates[i]);distance+=d;
+      if(d<0.00001)errors.push('Remove consecutive duplicate points.');
+      if(d>5)errors.push('A line has a missing leg longer than 5 km.');
+    }}
+    // Elevation is deliberately excluded; importing/sampling heights must not revoke route verification.
+    const hash=fingerprint({section,lines:lines.map(l=>({kind:l.kind,coordinates:l.coordinates.map(p=>p.slice(0,2))}))});
+    return {...section,hash,pointCount,totalDistanceKm:distance,errors:[...new Set(errors)],warnings};
+  });
+}
+export function validateEraRoute(payload) {
+  const sections=routeSectionSummary(payload);
+  const errors=sections.flatMap(s=>s.errors.map(e=>`${s.name}: ${e}`));
+  if(!payload.segments.some(s=>s.kind==='main'))errors.push('Choose at least one main-route line.');
+  return {sections,routeHash:fingerprint({sections:sections.map(s=>({id:s.id,hash:s.hash})),lineOrder:payload.segments.map(s=>({sectionId:s.sectionId,kind:s.kind,coordinates:s.coordinates.map(p=>p.slice(0,2))}))}),payloadHash:fingerprint(payload),errors,warnings:[],stageLinks:[],pointCount:sections.reduce((n,s)=>n+s.pointCount,0),totalDistanceKm:sections.reduce((n,s)=>n+s.totalDistanceKm,0)};
+}
+export function retainSectionVerification(previous,summary,authority) {
+  const result={};
+  for(const section of summary.sections){const old=previous?.sectionVerifications?.[section.id];if(old?.sectionHash===section.hash && old.authorityHash===fingerprint(authority))result[section.id]=old;}
+  return result;
 }

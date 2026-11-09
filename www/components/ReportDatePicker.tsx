@@ -3,7 +3,7 @@ import {useEffect, useId, useRef, useState} from 'react';
 function dateKey(date: Date) {return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;}
 function parse(value: string) {return value ? new Date(`${value}T12:00:00`) : new Date();}
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-export function ReportDatePicker({value, onChange}: {value: string; onChange: (value: string) => void}) {
+export function ReportDatePicker({value, onChange, hideLabel = false}: {value: string; onChange: (value: string) => void; hideLabel?: boolean}) {
   const id = useId(), root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false), [month, setMonth] = useState(() => parse(value)), [focused, setFocused] = useState(() => dateKey(parse(value)));
   const focusDay = useRef(false);
@@ -29,7 +29,7 @@ export function ReportDatePicker({value, onChange}: {value: string; onChange: (v
     if (open && focusDay.current) {root.current?.querySelector<HTMLButtonElement>(`[data-day="${focused}"]`)?.focus(); focusDay.current = false;}
   }, [open, month, focused]);
   return <div className="report-date-field" ref={root} onKeyDown={event => {if (open && event.key === 'Escape') {event.preventDefault(); close();}}}>
-    <span className="report-date-label" id={`${id}-label`}>Received since</span>
+    <span className={hideLabel ? 'sr-only' : 'report-date-label'} id={`${id}-label`}>Received since</span>
     <button ref={trigger} type="button" className="report-date-trigger" aria-labelledby={`${id}-label ${id}-value`} aria-haspopup="dialog" aria-expanded={open} aria-controls={`${id}-calendar`} onClick={() => {
       if (open) {setOpen(false); return;}
       move(parse(value)); setOpen(true);

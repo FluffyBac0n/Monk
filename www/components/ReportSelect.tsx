@@ -4,8 +4,8 @@ import {useEffect, useId, useRef, useState, type ReactNode} from 'react';
 type Option = {value: string; label: string; indicator?: ReactNode};
 
 /** A select-only combobox with the same surface and controls as the report calendar. */
-export function ReportSelect({label, value, options, onChange, disabled = false, appearance = 'control', className = ''}: {
-  label: string; value: string; options: Option[]; onChange: (value: string) => void; disabled?: boolean; appearance?: 'control' | 'tab'; className?: string;
+export function ReportSelect({label, value, options, onChange, disabled = false, appearance = 'control', className = '', hideLabel = false}: {
+  label: string; value: string; options: Option[]; onChange: (value: string) => void; disabled?: boolean; appearance?: 'control' | 'tab'; className?: string; hideLabel?: boolean;
 }) {
   const id = useId(), root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false), [active, setActive] = useState(0), [above, setAbove] = useState(false);
@@ -32,7 +32,7 @@ export function ReportSelect({label, value, options, onChange, disabled = false,
   return <div className={`report-select-field${appearance === 'tab' ? ' report-select-tab' : ''} ${className}`} ref={root} onBlur={event => {
     if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
   }}>
-    <span className={appearance === 'tab' ? 'sr-only' : 'report-date-label'} id={`${id}-label`}>{label}</span>
+    <span className={hideLabel || appearance === 'tab' ? 'sr-only' : 'report-date-label'} id={`${id}-label`}>{label}</span>
     <button type="button" ref={trigger} className="report-date-trigger report-select-trigger" role="combobox"
       aria-labelledby={`${id}-label`} aria-expanded={open} aria-controls={`${id}-list`}
       aria-haspopup="listbox" aria-activedescendant={open ? `${id}-option-${active}` : undefined}

@@ -30,6 +30,8 @@ const callable = (handler) => onCall(options, async (request) => {
   }
 });
 const era = createEraService({db,bucket,authService:getAuth()});
+export const searchEraAudit = callable(era.searchEraAudit);
+export const exportEraVerifiedRoute = callable(era.exportEraVerifiedRoute);
 export const getEraAccess = callable(era.getEraAccess);
 export const configureEraOrganisation = callable(era.configureEraOrganisation);
 export const setEraTrailAuthority = callable(era.setEraTrailAuthority);

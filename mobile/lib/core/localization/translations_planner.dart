@@ -1,4 +1,6 @@
 const dePlannerTranslations = <String, String>{
+  'Last verified': 'Zuletzt geprüft',
+  'No organisation verification recorded': 'Keine Überprüfung durch eine Organisation vermerkt',
   'Route source': 'Routenquelle',
   'Verified by': 'Geprüft von',
   'Published': 'Veröffentlicht',
@@ -13,6 +15,8 @@ const dePlannerTranslations = <String, String>{
 };
 
 const esPlannerTranslations = <String, String>{
+  'Last verified': 'Última verificación',
+  'No organisation verification recorded': 'No consta verificación de una organización',
   'Route source': 'Fuente de la ruta',
   'Verified by': 'Verificado por',
   'Published': 'Publicado',
@@ -27,6 +31,8 @@ const esPlannerTranslations = <String, String>{
 };
 
 const itPlannerTranslations = <String, String>{
+  'Last verified': 'Ultima verifica',
+  'No organisation verification recorded': 'Nessuna verifica da parte di un’organizzazione registrata',
   'Route source': 'Fonte del percorso',
   'Verified by': 'Verificato da',
   'Published': 'Pubblicato',
@@ -41,6 +47,8 @@ const itPlannerTranslations = <String, String>{
 };
 
 const frPlannerTranslations = <String, String>{
+  'Last verified': 'Dernière vérification',
+  'No organisation verification recorded': 'Aucune vérification par une organisation enregistrée',
   'Route source': 'Source de l’itinéraire',
   'Verified by': 'Vérifié par',
   'Published': 'Publié',

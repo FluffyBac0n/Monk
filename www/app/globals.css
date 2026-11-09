@@ -1170,8 +1170,8 @@ td small { color: var(--muted); margin-top: 5px; }
 .report-map-fit:disabled { opacity: .5; cursor: default; }
 .report-map-fit:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
 .report-status-icon { flex-shrink: 0; }
-.report-status-icon path { fill: var(--report-fill, #edf1f5); stroke: var(--report-color, #4e5a60); stroke-width: 2; }
-.report-status-icon text { fill: var(--report-color, #4e5a60); font: 900 29px system-ui, sans-serif; }
+.report-status-disc { fill:var(--report-fill, #edf1f5); stroke:var(--report-color, #4e5a60); stroke-width:1; }
+.report-status-glyph { fill:none; stroke:var(--report-color, #4e5a60); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .report-select-value { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
 .report-select-trigger .report-select-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .report-status-select .report-select-trigger { border-color: var(--report-color, var(--line)); }
@@ -1191,14 +1191,12 @@ td small { color: var(--muted); margin-top: 5px; }
 .report-map-caption { margin: 0; padding: 14px 20px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); overflow-wrap: anywhere; }
 .report-map-message { position: absolute; top: 100px; left: 20px; right: 70px; background: #fff; padding: 20px; border-radius: 14px; box-shadow: 0 4px 18px #26354420; color: var(--navy); }
 .report-map-message p { margin: 0 0 14px; }
-.report-map-marker { width: 46px; height: 46px; padding: 0; border: 0; background: transparent; cursor: pointer; z-index: 1; }
-.report-map-marker svg { display: block; width: 46px; height: 46px; overflow: visible; filter: drop-shadow(0 2px 2px #26354455); transition: scale .15s; }
-.report-map-marker path { fill: var(--report-fill, var(--gold)); stroke: var(--report-color, var(--navy)); stroke-width: 2; }
-.report-map-marker text { fill: var(--report-color, var(--navy)); font: 900 29px system-ui, sans-serif; }
-.report-map-marker.is-selected { z-index: 3; }
-.report-map-marker.is-selected path { stroke: var(--report-color, var(--navy)); stroke-width: 3; }
-.report-map-marker.is-selected svg { scale: 1.2; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 4px #263544aa); }
-.report-map-marker:focus-visible { outline: 3px solid var(--blue); outline-offset: 5px; border-radius: 10px; }
+.report-map-marker { display:grid; place-items:center; width:40px; height:40px; padding:0; border:0; background:transparent; cursor:pointer; z-index:1; }
+.report-map-marker svg { display:block; width:30px; height:30px; overflow:visible; filter:drop-shadow(0 1px 2px #26354455); transition:scale .15s; }
+.report-map-marker.is-selected { z-index:3; }
+.report-map-marker.is-selected .report-status-disc { stroke-width:1.8; }
+.report-map-marker.is-selected svg { scale:1.12; filter:drop-shadow(0 0 2px #fff) drop-shadow(0 0 3px #263544aa); }
+.report-map-marker:focus-visible { outline:2px solid var(--blue); outline-offset:1px; border-radius:50%; }
 .report-date-field { position: relative; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .report-date-label { font-size: 13px; font-weight: 800; color: var(--navy); }
 .report-date-trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 48px; background: #fbfcfa; border: 1px solid #cbd2ce; border-radius: var(--radius-control); padding: 12px 14px; color: var(--navy); font: inherit; font-size: 14px; text-transform: none; cursor: pointer; }
@@ -1232,6 +1230,11 @@ td small { color: var(--muted); margin-top: 5px; }
 .report-progress { margin: 24px 0; padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: #f8faf8; }
 .report-progress-title, .report-review-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .report-progress-title > strong { color: var(--navy); font-size: 15px; }
+.report-progress > summary.report-progress-title { cursor:pointer; list-style:none; margin:0; }
+.report-progress > summary::-webkit-details-marker { display:none; }
+.report-progress > summary:focus-visible { outline:2px solid var(--blue); outline-offset:6px; border-radius:4px; }
+.report-progress-toggle { display:inline-flex; align-items:center; gap:12px; }
+.report-progress[open] .report-progress-toggle svg { transform:rotate(180deg); }
 .report-progress-steps { --step-gap: 8px; list-style: none; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: var(--step-gap); padding: 0; margin: 24px 0 18px; }
 .report-progress-steps li { position: relative; display: grid; align-content: start; justify-items: center; gap: 8px; text-align: center; color: var(--muted); font-size: 12px; }
 .report-progress-steps li::before { content: ''; position: absolute; height: 2px; background: var(--line); top: 17px; left: calc(-50% - var(--step-gap) + 23px); width: calc(100% + var(--step-gap) - 46px); }
@@ -1770,7 +1773,8 @@ td small { color: var(--muted); margin-top: 5px; }
 .era-actions { display:flex; gap:12px; flex-wrap:wrap; margin:20px 0; }
 .era-tabs { background:transparent; border:0; margin:0; flex:1; min-width:0; }
 .era-tabs button { background:transparent; border:0; border-radius:0; font:inherit; }
-.era-navigation { align-items:stretch; background:rgba(244,242,236,.96); border-bottom:1px solid rgba(48,62,78,.14); display:flex; gap:0; margin:24px 0; min-width:0; }
+.era-page > .dashboard-shell { padding-top:24px; }
+.era-navigation { align-items:stretch; background:rgba(244,242,236,.96); border-bottom:1px solid rgba(48,62,78,.14); display:flex; gap:0; margin:0 0 24px; min-width:0; }
 .era-trail-choice { border-right:1px solid rgba(48,62,78,.1); flex:0 1 220px; min-width:140px; position:relative; z-index:15; }
 .era-trail-choice .report-select-field { gap:0; height:100%; }
 .era-trail-choice .report-date-trigger { background:transparent; border:0; border-radius:0; color:var(--navy); font-size:12px; font-weight:800; height:54px; min-height:54px; padding:0 18px; text-transform:uppercase; width:100%; }
@@ -1810,6 +1814,36 @@ td small { color: var(--muted); margin-top: 5px; }
 .era-table td:last-child { min-width:220px; }
 .era-incidents .portal-page { min-height:0; background:transparent; }
 .era-incidents .dashboard-shell { width:100%; max-width:none; padding:0; margin:0; }
+.era-incidents .report-list-card { padding:16px 18px; }
+.era-incidents .report-card-heading { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 12px; margin-top:10px; }
+.era-incidents .report-card-heading strong { font-size:17px; margin:0; }
+.era-incidents .report-card-heading small { color:var(--muted); font-size:11px; }
+.era-incidents .report-list-card p { margin:6px 0 10px; font-size:13px; line-height:1.5; -webkit-line-clamp:2; }
+.era-incidents .report-list-card.selected p { display:block; white-space:pre-wrap; }
+.era-incidents .report-list-card .report-status { font-size:10px; padding:5px 8px; }
+.era-incidents .report-detail > .report-progress { margin-top:0; }
+.era-incidents .report-review-workflow { padding-top:0; border-top:0; margin-top:24px; }
+.era-incidents .report-review-heading { margin-bottom:14px; }
+.era-incidents .report-review-heading h3 { font-size:20px; }
+.era-incidents .report-review-toolbar { background:white; padding:12px 0; }
+.era-incidents .report-review-toolbar .report-action-choices { gap:8px; }
+.era-incidents .report-review-toolbar .button { min-height:40px; padding:10px 14px; }
+.era-incidents .report-other-outcomes { margin:8px 0 0; }
+.era-incidents .report-other-outcomes summary { margin:0; padding:4px 0; }
+.era-incidents .report-action-form { margin-top:8px; }
+/* The active incident forms an address-book tab into its detail page. */
+@media (min-width:801px) {
+  .era-incidents .report-review-toolbar { position:sticky; top:0; z-index:4; border-bottom:1px solid var(--line); }
+  .era-incidents .report-transition-confirm { position:sticky; bottom:0; z-index:3; background:#f8faf8; padding:16px 0; }
+  .era-incidents .report-workspace { isolation:isolate; }
+  .era-incidents .report-inbox { align-content:start; }
+  .era-incidents .report-detail-slot { align-self:stretch; background:white; border:1px solid var(--line); border-radius:0 20px 20px 0; }
+  .era-incidents .report-detail, .era-incidents .report-placeholder { background:transparent; border:0; border-radius:inherit; }
+  .era-incidents .report-list-card { background:var(--sand); position:relative; }
+  .era-incidents .report-list-card.selected { background:white; border-color:var(--line); border-right-color:white; border-radius:16px 0 0 16px; box-shadow:inset 4px 0 0 var(--gold); z-index:1; }
+  .era-incidents .report-list-card.selected::after { background:white; border-block:1px solid var(--line); bottom:-1px; content:''; pointer-events:none; position:absolute; right:-26px; top:-1px; width:26px; }
+  .era-incidents .report-list-card:focus-visible { outline:2px solid var(--blue); outline-offset:-6px; }
+}
 .era-page .report-members li > div { min-width:0; overflow-wrap:anywhere; }
 .era-page details { margin-bottom:24px; }
 .era-page summary { cursor:pointer; font-weight:700; margin:16px 0; }
