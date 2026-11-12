@@ -7,7 +7,7 @@ function load(name,dependencies={}) {
   vm.runInNewContext(ts.transpileModule(readFileSync(new URL(`../lib/${name}.ts`,import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,require:id=>{if(id in dependencies)return dependencies[id];throw new Error(id);}});
   return exports;
 }
-const {auditSearchText,matchesAuditSearch}=load('audit-search');
+const {auditSearchText,matchesAuditSearch}=load('audit-search',{'./fuzzy-search':load('fuzzy-search')});
 const stamp=new Date(2026,9,27,14,32,9);
 const index=auditSearchText({actorName:'Andréas Michaelides',actorEmail:'andreas@example.test',action:'revision_saved',recordId:'route-123',note:'Forest junction checked',createdAt:{toDate:()=>stamp}});
 for(const query of ['Andreas','Michaeldies','Andres saved','27/10/2026','October 2026','14:32:09','2026-10-27','junction',String(stamp.getTime()),''])assert.equal(matchesAuditSearch(index,query),true,query);

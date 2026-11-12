@@ -22,7 +22,7 @@ export default function MobileMenu() {
           href="/era"
           {...disableHtmxNavigation}
         >
-          ERA Login
+          Admin Login
         </a>
       </nav>
     </details>

@@ -1,5 +1,5 @@
 'use client';
-import {useCallback,useEffect,useMemo,useState} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import type {User} from 'firebase/auth';
 import {doc,onSnapshot} from 'firebase/firestore';
 import {db} from '@/lib/firebase';
@@ -12,25 +12,36 @@ import {ReportWorkspace} from '@/components/IncidentWorkspace';
 import {EraRouteEditor} from '@/components/EraRouteEditor';
 import {EraAccessManager} from '@/components/EraAccessManager';
 import {auditSearchText,matchesAuditSearch} from '@/lib/audit-search';
-import {loadCurrentEraRoute,clearCurrentEraRoutes} from '@/lib/era-current-route';
+import {loadCurrentEraRoute} from '@/lib/era-current-route';
+import {watchEraAccess} from '@/lib/era-access-watch';
 import {eraCall,watchEraAudit,type EraAccess,type EraEvent} from '@/lib/era';
+import {preloadReportMap} from '@/lib/report-map-runtime';
+import {loadTrailRoute} from '@/lib/trail-route';
+import {OpeningTrailManagement} from '@/components/OpeningTrailManagement';
+
+function preloadIncidentTrail(access:EraAccess,preferredId:string) {
+  const trail=access.trails.find(t=>t.id===preferredId) || access.trails[0];
+  if(trail?.roles.includes('incident_manager'))void loadTrailRoute(trail.id).catch(()=>{});
+}
 
 export default function EraPage() {
   const {user,loading}=useAuthState();
-  if(loading) return <div className="loading-screen">Opening Trail Management…</div>;
+  useEffect(()=>{void preloadReportMap().catch(()=>{});},[]);
+  if(loading) return <OpeningTrailManagement fullScreen/>;
   if(!user) return <main className="portal-page"><PortalHeader/><AuthPanel trailReports/></main>;
   if(!user.emailVerified) return <AccountVerificationGate user={user}/>;
   return <EraWorkspace key={user.uid} user={user}/>;
 }
 function EraWorkspace({user}:{user:User}) {
   const [access,setAccess]=useState<EraAccess|null>(null),[error,setError]=useState(''),[trailId,setTrailId]=useState(''),[tab,setTab]=useState('Incidents');
-  const refresh=useCallback(async()=>{try {const next=await eraCall<EraAccess>('getEraAccess');setAccess(next);setTrailId(id=>next.trails.some(t=>t.id===id)?id:next.trails[0]?.id || '');setError('');}catch(e){setAccess(null);setError(e instanceof Error?e.message:'Could not load trail access.');}},[]);
-  useEffect(()=>{
-    let alive=true,version=0;
-    const update=()=>{clearCurrentEraRoutes();const current=++version;setAccess(null);void eraCall<EraAccess>('getEraAccess').then(next=>{if(!alive || version!==current)return;setAccess(next);setTrailId(id=>next.trails.some(t=>t.id===id)?id:next.trails[0]?.id || '');setError('');},e=>{if(alive && version===current)setError(e.message || 'Could not load trail access.');});};
-    const stops=['eraMembers','trailReportAccess','admins'].map(c=>onSnapshot(doc(db,c,user.uid),{includeMetadataChanges:true},s=>{if(!s.metadata.fromCache)update();},()=>{if(alive){setAccess(null);setError('Could not verify trail access.');}}));
-    update();return ()=>{alive=false;stops.forEach(s=>s());};
-  },[user.uid]);
+  const [accessAttempt,setAccessAttempt]=useState(0);
+  const preferredTrail=useRef(trailId);preferredTrail.current=trailId;
+  const refresh=useCallback(async()=>{try {const next=await eraCall<EraAccess>('getEraAccess');preloadIncidentTrail(next,preferredTrail.current);setAccess(next);setTrailId(id=>next.trails.some(t=>t.id===id)?id:next.trails[0]?.id || '');setError('');}catch(e){setAccess(null);setError(e instanceof Error?e.message:'Could not load trail access.');}},[]);
+  useEffect(()=>watchEraAccess(user.uid,{
+    pending:()=>{setAccess(null);setError('');},
+    receive:next=>{preloadIncidentTrail(next,preferredTrail.current);setAccess(next);setTrailId(id=>next.trails.some(t=>t.id===id)?id:next.trails[0]?.id || '');setError('');},
+    fail:e=>{setAccess(null);setError(e.message || 'Could not verify trail access.');},
+  }),[user.uid,accessAttempt]);
   useEffect(()=>{
     if(!access?.organisation?.id)return;
     return onSnapshot(doc(db,'eraOrganisations',access.organisation.id),s=>{if(s.exists() && (s.data().active!==access.organisation?.active || JSON.stringify(s.data().trailIds)!==JSON.stringify(access.organisation?.trailIds)))void refresh();},()=>{setAccess(null);setError('Organisation access is unavailable.');});
@@ -42,8 +53,8 @@ function EraWorkspace({user}:{user:User}) {
   const tabs=['Incidents','Trail Data','Audit Log',...((access?.admin || roles.includes('organisation_admin'))?['Access']:[])];
   return <main className="portal-page era-page"><PortalHeader user={user} canAccessAdmin={access?.admin}/><div className="dashboard-shell wide">
     <h1 className="sr-only">Trail Management</h1>
-    {error && <div className="notice error" role="alert"><p>{error}</p><button className="button button-secondary" onClick={()=>void refresh()}>Try again</button></div>}
-    {!access && !error && <p role="status">Checking your assigned trails…</p>}
+    {error && <div className="notice error" role="alert"><p>{error}</p><button className="button button-secondary" onClick={()=>setAccessAttempt(n=>n+1)}>Try again</button></div>}
+    {!access && !error && <OpeningTrailManagement/>}
     {access && !access.trails.length && <section className="access-card"><h2>No trails assigned yet.</h2><p>Ask your administrator to assign trail access to {user.email}.</p></section>}
     {access && <><div className="era-navigation">{access.trails.length>0 && <div className="era-trail-choice"><ReportSelect appearance="tab" label="Trail" value={trailId} onChange={id=>{if(document.querySelector('[data-era-dirty=true]') && !window.confirm('Discard unsaved changes?'))return;setTrailId(id);setTab('Incidents');}} options={access.trails.map(t=>({value:t.id,label:t.name}))}/></div>}
       <nav className="trail-switcher era-tabs" aria-label="Trail management"><ul className="trail-switcher-list" role="list">{tabs.map(t=><li key={t}><button type="button" className={`trail-switcher-item${tab===t?' active':''}`} aria-current={tab===t?'true':undefined} onClick={event=>{if(t!==tab && document.querySelector('[data-era-dirty=true]') && !window.confirm('Discard unsaved changes?'))return;setTab(t);event.currentTarget.scrollIntoView({block:'nearest',inline:'nearest'});}}><strong>{t}</strong></button></li>)}</ul></nav></div>

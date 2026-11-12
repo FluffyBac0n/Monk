@@ -34,9 +34,9 @@ export function ReportReview({report, onSaved}: {report: TrailReport; onSaved: (
   const choices: Action[] = closed ? ['reopen', 'note'] : [...(base.status === 'new' ? ['review' as Action] : []), 'forward', 'resolve', 'duplicate', 'dismiss', 'note'];
   function choose(next: Action) {setAction(next); setDirty(true); setError(''); setMessage('');}
   return <section id={`review-${report.id}`} tabIndex={-1} className="report-review-workflow" aria-label="Next Steps">
-    <div className="report-review-toolbar"><div className="report-review-heading"><h3>Next Steps</h3></div>
+    <div className="report-review-toolbar">
       <div className="report-transition-controls">
-        <ReportSelect hideLabel label="Transition" value={action} disabled={busy} onChange={value => choose(value as Action)} options={choices.map(key => ({value:key, label: key === 'note' ? 'Update details' : actions[key].status === base.status ? 'Update sending details' : `${reportStatusLabels[base.status]} → ${reportStatusLabels[actions[key].status!]}`}))}/>
+        <ReportSelect inlineLabel label="Next Steps" value={action} disabled={busy} onChange={value => choose(value as Action)} options={choices.map(key => ({value:key, label: key === 'note' ? 'Update details' : actions[key].status === base.status ? 'Update sending details' : `${reportStatusLabels[base.status]} → ${reportStatusLabels[actions[key].status!]}`}))}/>
         <button type="button" className="text-button report-workflow-link" aria-haspopup="dialog" onClick={() => setWorkflowOpen(true)}>View workflow</button>
       </div>
     </div>
@@ -54,10 +54,10 @@ export function ReportReview({report, onSaved}: {report: TrailReport; onSaved: (
     }}>
       <p className="report-action-explanation">{actions[action].explanation}</p>
       <ReportSelect label="Priority" value={priority} disabled={busy} onChange={value => {setPriority(value); setDirty(true);}} options={['normal', 'high', 'urgent'].map(value => ({value, label: value.charAt(0).toUpperCase() + value.slice(1)}))} />
-      <div className="report-public-warning">
-        <label className="checkbox-row"><input type="checkbox" checked={canDisplayWarning && publicWarning} disabled={busy || !canDisplayWarning} aria-describedby={`public-warning-help-${report.id}`} onChange={event => {setPublicWarning(event.target.checked); setDirty(true);}} />Approved for public display</label>
-        <p id={`public-warning-help-${report.id}`} className="report-helper">{canDisplayWarning ? 'Show the incident’s location and description on the mobile trail map when saved.' : 'Closed incidents are not displayed on the mobile trail map.'}</p>
-      </div>
+      {canDisplayWarning && <div className="report-public-warning">
+        <label className="checkbox-row"><input type="checkbox" checked={publicWarning} disabled={busy} aria-describedby={`public-warning-help-${report.id}`} onChange={event => {setPublicWarning(event.target.checked); setDirty(true);}} />Approved for public display</label>
+        <p id={`public-warning-help-${report.id}`} className="report-helper">Show the incident’s location and description on the mobile trail map when saved.</p>
+      </div>}
       {action === 'forward' && <div className="report-forward-fields"><label>Sent to / responsible authority<input value={authority} disabled={busy} maxLength={200} required onChange={e => setAuthority(e.target.value)} placeholder="Authority, team or recipient" /></label><label>Sending reference (optional)<input value={reference} disabled={busy} maxLength={300} onChange={e => setReference(e.target.value)} placeholder="Email address, case reference or date sent" /></label><p className="report-helper">The time you record this and your account are saved in the activity history.</p></div>}
       {action === 'duplicate' && <label>Original report reference<input value={duplicate} disabled={busy} required onChange={e => setDuplicate(e.target.value)} /></label>}
       <label>{action === 'resolve' ? 'Resolution note' : action === 'dismiss' ? 'Reason for dismissal' : action === 'reopen' ? 'Reason for reopening' : 'Internal note'}{!noteRequired && ' (optional)'}<textarea value={note} disabled={busy} maxLength={1500} required={noteRequired} rows={3} onChange={e => setNote(e.target.value)} /></label>

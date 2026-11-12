@@ -4,8 +4,8 @@ import {useEffect, useId, useRef, useState, type ReactNode} from 'react';
 type Option = {value: string; label: string; indicator?: ReactNode};
 
 /** A select-only combobox with the same surface and controls as the report calendar. */
-export function ReportSelect({label, value, options, onChange, disabled = false, appearance = 'control', className = '', hideLabel = false}: {
-  label: string; value: string; options: Option[]; onChange: (value: string) => void; disabled?: boolean; appearance?: 'control' | 'tab'; className?: string; hideLabel?: boolean;
+export function ReportSelect({label, value, options, onChange, disabled = false, appearance = 'control', className = '', hideLabel = false, inlineLabel = false}: {
+  label: string; value: string; options: Option[]; onChange: (value: string) => void; disabled?: boolean; appearance?: 'control' | 'tab'; className?: string; hideLabel?: boolean; inlineLabel?: boolean;
 }) {
   const id = useId(), root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false), [active, setActive] = useState(0), [above, setAbove] = useState(false);
@@ -32,7 +32,7 @@ export function ReportSelect({label, value, options, onChange, disabled = false,
   return <div className={`report-select-field${appearance === 'tab' ? ' report-select-tab' : ''} ${className}`} ref={root} onBlur={event => {
     if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
   }}>
-    <span className={hideLabel || appearance === 'tab' ? 'sr-only' : 'report-date-label'} id={`${id}-label`}>{label}</span>
+    <span className={hideLabel || inlineLabel || appearance === 'tab' ? 'sr-only' : 'report-date-label'} id={`${id}-label`}>{label}</span>
     <button type="button" ref={trigger} className="report-date-trigger report-select-trigger" role="combobox"
       aria-labelledby={`${id}-label`} aria-expanded={open} aria-controls={`${id}-list`}
       aria-haspopup="listbox" aria-activedescendant={open ? `${id}-option-${active}` : undefined}
@@ -57,7 +57,7 @@ export function ReportSelect({label, value, options, onChange, disabled = false,
           if (match >= 0) {if (open) setActive(match); else show(match);}
         }
       }}>
-      <span className={options[selected]?.indicator?'report-select-value':undefined}>{options[selected]?.indicator}<span className="report-select-text">{options[selected]?.label ?? 'Choose an option'}</span></span>
+      <span className={inlineLabel || options[selected]?.indicator?'report-select-value':undefined}>{inlineLabel && <span className="report-select-inline-label" aria-hidden="true">{label}:</span>}{options[selected]?.indicator}<span className="report-select-text">{options[selected]?.label ?? 'Choose an option'}</span></span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
     </button>
     {open && <div id={`${id}-list`} className={`report-select-menu ${above ? 'opens-above' : ''}`} role="listbox" aria-labelledby={`${id}-label`}>
