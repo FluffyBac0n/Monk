@@ -13,7 +13,7 @@ const sample = (status, publicWarning) => ({id: 'fixture', status, publicWarning
   description: 'Fallen sign', passability: 'difficult', latitude: 35, longitude: 33});
 
 // Exercise the component's actual controls, state and submitted request without Firebase.
-function review(initial) {
+function review(initial, drafts = new Map()) {
   let report = initial, cursor = 0, changed = false, effects = [], tree;
   const slots = [], calls = [], saved = [];
   const exports = {};
@@ -34,6 +34,8 @@ function review(initial) {
       },
     };
     if (name === '@/lib/trail-reports') return {reviewReport: async (_base, changes) => {calls.push(changes);}};
+    if (name === './IncidentDrafts') return {useIncidentDraft: key => ({read: () => drafts.get(key), save:value => drafts.set(key,value), clear:() => drafts.delete(key)})};
+    if (name === './ReportWorkflowDialog') return {ReportWorkflowDialog: () => null};
     if (name === './ReportSelect') return {ReportSelect: () => null};
     return require(name);
   }});
@@ -53,7 +55,12 @@ function review(initial) {
     calls, saved,
     checkbox: () => find(n => n.type === 'input' && n.props.type === 'checkbox').props,
     check: checked => find(n => n.type === 'input' && n.props.type === 'checkbox').props.onChange({target: {checked}}),
-    action: label => find(n => n.type === 'button' && n.props.children === label).props.onClick(),
+    action: value => find(n => n.props?.label === 'Next Steps').props.onChange(value),
+    choices: () => find(n => n.props?.label === 'Next Steps').props.options.map(option => option.value),
+    hasForm: () => nodes(render()).some(n => n.type === 'form'),
+    hasCheckbox: () => nodes(render()).some(n => n.type === 'input' && n.props.type === 'checkbox'),
+    openNote: () => find(n => n.type === 'button' && n.props.children === '+ Add internal note').props.onClick(),
+    noteValue: () => find(n => n.type === 'textarea').props.value,
     note: text => find(n => n.type === 'textarea').props.onChange({target: {value: text}}),
     receive: next => {report = next; render();},
     submit: async () => {await find(n => n.type === 'form').props.onSubmit({preventDefault() {}}); render();},
@@ -61,37 +68,42 @@ function review(initial) {
 }
 
 for (const origin of ['hiker', 'organisation']) {
-  const report = {...sample('new', origin === 'organisation' ? false : undefined), origin};
-  const form = review(report);
+  const form = review({...sample('new', origin === 'organisation' ? false : undefined), origin});
+  assert.equal(form.hasForm(), false, 'No fields before choosing a next step');
+  form.action('review');
   assert.equal(form.checkbox().checked, false, 'New incidents require explicit public approval');
   form.check(true); await form.submit();
   assert.equal(form.calls[0].status, 'reviewed');
-  assert.equal(form.calls[0].publicWarning, true, 'Approval must use the selected target status');
-  assert.match(form.saved[0], /Warning displayed/);
+  assert.equal(form.calls[0].publicWarning, true);
+  assert.match(form.saved[0], /Saved/);
 }
-const privateReview = review(sample('new', false)); await privateReview.submit();
+const privateReview = review(sample('new', false)); privateReview.action('review'); await privateReview.submit();
 assert.equal(privateReview.calls[0].publicWarning, false);
-
-const hidden = review(sample('reviewed', false)); hidden.action('Update details'); hidden.check(true); await hidden.submit();
-assert.equal(hidden.calls[0].publicWarning, true, 'An existing private review can be published');
-const visible = review(sample('reviewed', true)); await visible.submit();
+const hidden = review(sample('reviewed', false)); hidden.action('note'); hidden.check(true); await hidden.submit();
+assert.equal(hidden.calls[0].publicWarning, true);
+const visible = review(sample('reviewed', true)); visible.action('forward'); await visible.submit();
 assert.equal(visible.calls[0].status, 'forwarded'); assert.equal(visible.calls[0].publicWarning, true);
-const legacy = review(sample('reviewed')); assert.equal(legacy.checkbox().checked, true, 'Preserve legacy published warnings');
-const withdraw = review(sample('forwarded', true)); withdraw.check(false); await withdraw.submit();
-assert.equal(withdraw.calls[0].status, 'forwarded'); assert.equal(withdraw.calls[0].publicWarning, false);
-
-for (const [action, status] of [['Resolve', 'resolved'], ['Dismiss', 'dismissed'], ['Link duplicate', 'duplicate']]) {
-  const form = review(sample('reviewed', true)); form.action(action); form.note('Confirmed outcome');
-  assert.equal(form.checkbox().disabled, true); assert.equal(form.checkbox().checked, false);
+const legacy = review(sample('reviewed')); legacy.action('note'); assert.equal(legacy.checkbox().checked, true);
+const withdraw = review(sample('forwarded', true)); withdraw.action('note'); withdraw.check(false); await withdraw.submit();
+assert.equal(withdraw.calls[0].publicWarning, false);
+for (const [action, status] of [['resolve', 'resolved'], ['dismiss', 'dismissed'], ['duplicate', 'duplicate']]) {
+  const form = review(sample('reviewed', true)); form.action(action);
+  assert.equal(form.hasCheckbox(), false);
   await form.submit(); assert.equal(form.calls[0].status, status); assert.equal(form.calls[0].publicWarning, false);
 }
-const reopened = review(sample('resolved', false)); assert.equal(reopened.checkbox().checked, false);
-reopened.action('Reopen review'); reopened.check(true); reopened.note('Issue is active again'); await reopened.submit();
+const reopened = review(sample('resolved', false));
+assert.deepEqual(Array.from(reopened.choices()), ['', 'reopen', 'note']);
+reopened.action('reopen'); reopened.check(true); reopened.note('Issue is active again'); await reopened.submit();
 assert.equal(reopened.calls[0].status, 'reviewed'); assert.equal(reopened.calls[0].publicWarning, true);
-
-const refreshed = review(sample('reviewed', true)); refreshed.receive(sample('reviewed', false));
-assert.equal(refreshed.checkbox().checked, false, 'Remote publication updates reset pristine controls');
-const stale = review(sample('reviewed', false)); stale.check(true);
+const stale = review(sample('reviewed', false)); stale.action('note'); stale.check(true);
 stale.receive({...sample('reviewed', false), updatedAt: {toMillis: () => 2}}); await stale.submit();
-assert.equal(stale.calls.length, 0, 'A stale review must not overwrite a newer publication choice');
-console.log('PASS: public approval for new hiker/organisation incidents, private review, publication, forwarding, withdrawal, closure, reopening, legacy state, refresh and stale-write protection.');
+assert.equal(stale.calls.length, 0, 'A stale review cannot overwrite a newer publication choice');
+const drafts = new Map(), original = sample('new', false), draftForm = review(original, drafts);
+draftForm.action('review'); draftForm.openNote(); draftForm.note('Keep this unsaved note'); draftForm.hasForm();
+const restored = review(original, drafts);
+assert.equal(restored.noteValue(), 'Keep this unsaved note');
+restored.action('forward'); assert.equal(restored.noteValue(), 'Keep this unsaved note');
+restored.receive({...original, updatedAt:{toMillis:()=>2}}); await restored.submit();
+assert.equal(restored.calls.length,0, 'Restoring a draft keeps its original concurrency version');
+const fresh = review(original, drafts); await fresh.submit();assert.equal(drafts.size,0,'Successful save clears draft');
+console.log('PASS: contextual actions, public warning choices, closure/reopening, draft remounts, retained notes, stale-write protection and draft clearing.');

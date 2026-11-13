@@ -7,6 +7,7 @@ import {onSchedule} from 'firebase-functions/v2/scheduler';
 import {createHash} from 'node:crypto';
 import sharp from 'sharp';
 import {requireId, validateReport, validateReview, validatePhotoChecksums, officialTrailIssue} from './report-model.js';
+import {createIncidentReferences} from './incident-references.js';
 import {createEraService} from './era-service.js';
 
 initializeApp();
@@ -30,6 +31,7 @@ const callable = (handler) => onCall(options, async (request) => {
   }
 });
 const era = createEraService({db,bucket,authService:getAuth()});
+export const ensureIncidentReferences = callable(createIncidentReferences({db, permission:era.permission}));
 export const searchEraAudit = callable(era.searchEraAudit);
 export const exportEraVerifiedRoute = callable(era.exportEraVerifiedRoute);
 export const getEraAccess = callable(era.getEraAccess);
@@ -163,7 +165,13 @@ export const trailReportPhoto = callable(async (request) => {
 
 export const reviewTrailReport = callable(async (request) => {
   const snap = await readableReport(request);
-  const change = validate(() => validateReview(request.data, snap.id));
+  let reviewData = request.data;
+  if (reviewData.status === 'duplicate' && /^E\d+-[A-Z]{2}-\d+$/.test(String(reviewData.duplicateOf || '').trim())) {
+    const matches = await db.collection('trailReports').where('ticketReference', '==', reviewData.duplicateOf.trim()).limit(2).get();
+    if (matches.size !== 1 || matches.docs[0].data().trailId !== snap.data().trailId) throw new HttpsError('invalid-argument', 'Choose a report reference for the same trail.');
+    reviewData = {...reviewData, duplicateOf: matches.docs[0].id};
+  }
+  const change = validate(() => validateReview(reviewData, snap.id));
   const event = snap.ref.collection('events').doc();
   // Recheck membership in the transaction so revocation cannot race a review.
   await db.runTransaction(async (tx) => {

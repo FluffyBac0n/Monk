@@ -1,7 +1,8 @@
 'use client';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {User} from 'firebase/auth';
-import {collection, onSnapshot} from 'firebase/firestore';
+import {collection, doc, onSnapshot} from 'firebase/firestore';
+import {IncidentDrafts} from '@/components/IncidentDrafts';
 import {AccountVerificationGate} from '@/components/AccountVerificationGate';
 import {AuthPanel} from '@/components/AuthPanel';
 import {PortalHeader} from '@/components/PortalHeader';
@@ -19,6 +20,7 @@ import {preloadTrailRoutes} from '@/lib/trail-route';
 import {watchReportAccess, reportLoadError, type AccessState, type ReportAccess} from '@/lib/report-access';
 import {useAuthState} from '@/lib/use-auth';
 import {db} from '@/lib/firebase';
+import {eraCall} from '@/lib/era';
 import {watchTrailReports, watchReportEvents, reportCategories, reportStatuses, reportPhoto,
   setReportAccess, reportMapUrl, reportMapyUrl, reportPrintHtml, downloadFile,
   type TrailReport, type ReportEvent, type Trail} from '@/lib/trail-reports';
@@ -28,7 +30,7 @@ export default function TrailReportsPage() {
   if (loading) return <div className="loading-screen">Opening trail reports…</div>;
   if (!user) return <main className="portal-page trail-reports-page"><PortalHeader /><AuthPanel trailReports /></main>;
   if (!user.emailVerified) return <AccountVerificationGate user={user} />;
-  return <ReportWorkspace key={user.uid} user={user} />;
+  return <IncidentDrafts key={user.uid}><ReportWorkspace user={user} /></IncidentDrafts>;
 }
 export function ReportWorkspace({user, embeddedAccess, initialTrailId}: {user: User; embeddedAccess?: ReportAccess; initialTrailId?: string}) {
   const [accessState, setAccessState] = useState<AccessState>({status: 'loading'});
@@ -36,8 +38,24 @@ export function ReportWorkspace({user, embeddedAccess, initialTrailId}: {user: U
   const access = accessState.status === 'ready' ? accessState.access : null;
   const [trailId, setTrailId] = useState(initialTrailId || '');
   const [reviewMessage, setReviewMessage] = useState('');
+  useEffect(() => {if (!reviewMessage) return; const timer = window.setTimeout(() => setReviewMessage(''), 4500); return () => window.clearTimeout(timer);}, [reviewMessage]);
   const [status, setStatus] = useState(''), [category, setCategory] = useState(''), [fromDate, setFromDate] = useState('');
-  const [count, setCount] = useState(50), [rows, setRows] = useState<TrailReport[]>([]);
+  const [count, setCount] = useState(50), [listedRows, setRows] = useState<TrailReport[]>([]);
+  const [linkId, setLinkId] = useState(''), [linkedReport, setLinkedReport] = useState<TrailReport | null>(null), [linkError, setLinkError] = useState('');
+  const linkSelected = useRef(false);
+  const rows = useMemo(() => linkedReport && !listedRows.some(row => row.id === linkedReport.id) && (!status || status === linkedReport.status) && (!category || category === linkedReport.category) && (!fromDate || linkedReport.receivedAt.toMillis() >= new Date(fromDate).getTime()) ? [linkedReport, ...listedRows].sort((a,b) => b.receivedAt.toMillis() - a.receivedAt.toMillis()) : listedRows, [listedRows, linkedReport, status, category, fromDate]);
+  const [referenceError, setReferenceError] = useState(''), [referenceAttempt, setReferenceAttempt] = useState(0);
+  const missingReferences = rows.filter(row => !row.ticketReference).map(row => row.id).sort().join(',');
+  useEffect(() => {
+    if (!access || !missingReferences) return;
+    let active = true;
+    const ids = missingReferences.split(',');
+    void (async () => {
+      try {for(let start=0;start<ids.length;start+=50)await eraCall('ensureIncidentReferences', {trailId, reportIds:ids.slice(start,start+50)});if(active)setReferenceError('');}
+      catch {if(active)setReferenceError('Ticket numbers could not be loaded.');}
+    })();
+    return () => {active = false;};
+  }, [access, trailId, missingReferences, referenceAttempt]);
   const [selected, setSelected] = useState(''), [creatingIncident, setCreatingIncident] = useState(false);
   const [error, setError] = useState(''), [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -95,15 +113,40 @@ export function ReportWorkspace({user, embeddedAccess, initialTrailId}: {user: U
     }, 12000);
     const stop = watchTrailReports(trailId, status, category, count, fromDate, reports => {
       window.clearTimeout(timer); setError(''); setRows(reports); setLoading(false);
-      setSelected(current => reports.some(r => r.id === current) ? current : '');
+      setSelected(current => current === linkId || reports.some(r => r.id === current) ? current : '');
     }, cause => {
       window.clearTimeout(timer); setRows([]); setSelected(''); setLoading(false);
       setError(reportLoadError(cause, 'reports'));
     });
     return () => {window.clearTimeout(timer); stop();};
-  }, [access, trailId, status, category, count, fromDate]);
+  }, [access, trailId, status, category, count, fromDate, linkId]);
 
   const choose = useCallback((id: string) => setSelected(id), []);
+  const [reveal, setReveal] = useState(0);
+  const chooseFromMap = useCallback((id: string) => {setSelected(id); setReveal(value => value + 1);}, []);
+  useEffect(() => {
+    if (!reveal || opening) return;
+    const frame = requestAnimationFrame(() => {
+      const card = workspace.current?.querySelector<HTMLElement>('.report-list-card.selected');
+      card?.scrollIntoView({block:'nearest', behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+      card?.focus({preventScroll:true});
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [reveal, opening]);
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search), id = query.get('incident'), requestedTrail = query.get('trail');
+    if (!embeddedAccess && requestedTrail) setTrailId(requestedTrail);
+    if (id && /^[a-zA-Z0-9_-]{1,100}$/.test(id) && (!requestedTrail || requestedTrail === trailId)) setLinkId(id);
+  }, [trailId, embeddedAccess]);
+  useEffect(() => {
+    if (!linkId || !access || !access.trails.some(trail => trail.id === trailId)) return;
+    return onSnapshot(doc(db, 'trailReports', linkId), snapshot => {
+      const report = snapshot.exists() ? {...snapshot.data(), id:snapshot.id} as TrailReport : null;
+      if (!report || report.trailId !== trailId) {setLinkedReport(null);setLinkError('This incident is unavailable for this trail.');return;}
+      setLinkedReport(report);setLinkError('');
+      if (!linkSelected.current) {linkSelected.current = true;chooseFromMap(report.id);}
+    }, () => {setLinkedReport(null);setLinkError('This incident is unavailable or you do not have access.');});
+  }, [access, linkId, trailId, chooseFromMap]);
   const current = filteredRows.find(row => row.id === selected);
   const trailName = access?.trails.find(t => t.id === trailId)?.name || trailId;
   return <main className="portal-page trail-reports-page">{!embeddedAccess && <PortalHeader user={user} canAccessAdmin={access?.admin} />}<div className="dashboard-shell wide">
@@ -119,9 +162,11 @@ export function ReportWorkspace({user, embeddedAccess, initialTrailId}: {user: U
         <ReportDatePicker hideLabel={!!embeddedAccess} value={fromDate} onChange={setFromDate} />
         {embeddedAccess && <div className="era-filter-action"><button type="button" className="era-icon-button" aria-label={creatingIncident ? 'Close incident form' : 'Create incident'} title={creatingIncident ? 'Close incident form' : 'Create incident'} aria-expanded={creatingIncident} aria-controls="era-incident-form" onClick={() => setCreatingIncident(open => !open)}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d={creatingIncident ? 'm6 6 12 12M6 18 18 6' : 'M12 5v14M5 12h14'}/></svg></button></div>}
       </section>
-      {embeddedAccess && <EraIncidentForm trailId={trailId} open={creatingIncident} onClose={() => setCreatingIncident(false)} />}
-      {trailId && <TrailReportMap visible key={trailId} trailId={trailId} trailName={trailName} reports={filteredRows} selectedId={current?.id || ''} onSelect={choose} onSettled={mapSettled} />}
-      {reviewMessage && <p className="notice" role="status">{reviewMessage}</p>}
+      {embeddedAccess && <EraIncidentForm key={trailId} trailId={trailId} open={creatingIncident} onClose={() => setCreatingIncident(false)} />}
+      {trailId && <TrailReportMap visible key={trailId} trailId={trailId} trailName={trailName} reports={filteredRows} selectedId={current?.id || ''} onSelect={chooseFromMap} onSettled={mapSettled} />}
+      {linkError && <p className="notice" role="alert">{linkError}</p>}
+      {referenceError && <div className="notice" role="alert">{referenceError} <button type="button" className="text-button" onClick={() => setReferenceAttempt(value => value + 1)}>Retry</button></div>}
+      {reviewMessage && <p className="report-save-toast" role="status">✓ {reviewMessage}</p>}
       <div className="report-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input ref={searchInput} type="search" aria-label="Search reports" placeholder="Search reports…" value={search} onChange={event => setSearch(event.target.value)}/>
         <span className="report-search-count" role="status" title="Loaded reports · newest first">{loading ? 'Loading…' : error ? 'Unavailable' : search.trim() ? `${filteredRows.length} / ${rows.length} reports` : `${rows.length} reports loaded`}</span>
         {search && <button type="button" aria-label="Clear report search" onClick={() => {setSearch(''); searchInput.current?.focus();}}>×</button>}
@@ -133,7 +178,7 @@ export function ReportWorkspace({user, embeddedAccess, initialTrailId}: {user: U
           <span className="report-card-meta"><span className={`report-status status-${report.status}`}>{reportStatusLabels[report.status] || report.status}</span><span>{report.receivedAt?.toDate().toLocaleDateString()}</span></span>
           <div className="report-card-heading"><strong>{reportCategories[report.category] || report.category}</strong><small>{report.origin === 'organisation' ? 'Organisation-created' : 'Hiker report'}</small></div><p>{report.description}</p><span className="report-card-meta"><span>{report.passability} · {report.priority}</span><span>{report.photos.length} photos</span></span>
         </button>)}
-        {rows.length >= count && <button className="button button-secondary" onClick={() => setCount(n => n + 50)}>Load older reports</button>}
+        {listedRows.length >= count && <button className="button button-secondary" onClick={() => setCount(n => n + 50)}>Load older reports</button>}
       </section><section id="selected-trail-report" className="report-detail-slot" aria-label="Selected report">
         {current ? <ReportDetail compact={!!embeddedAccess} key={current.id} report={current} trailName={trailName} onReviewSaved={setReviewMessage} /> : <div className="empty-state report-placeholder"><span aria-hidden="true">↗</span><h3>Select a report</h3><p>Open a problem to see its location, photos and review history.</p></div>}
       </section></div>
@@ -144,6 +189,12 @@ export function ReportWorkspace({user, embeddedAccess, initialTrailId}: {user: U
 function ReportDetail({report, trailName, onReviewSaved, compact = false}: {compact?: boolean; report: TrailReport; trailName: string; onReviewSaved: (message: string) => void}) {
   const [photos, setPhotos] = useState<Record<string, string>>({}), [events, setEvents] = useState<ReportEvent[]>([]);
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {if (!copied) return; const timer = window.setTimeout(() => setCopied(false), 2000); return () => window.clearTimeout(timer);}, [copied]);
+  async function copyLink() {
+    try {const url = new URL('/era', window.location.origin);url.searchParams.set('trail', report.trailId);url.searchParams.set('incident', report.id);await navigator.clipboard.writeText(url.href);setCopied(true);}
+    catch {setError('Could not copy the incident link. Please try again.');}
+  }
   const [photoView, setPhotoView] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
@@ -158,13 +209,13 @@ function ReportDetail({report, trailName, onReviewSaved, compact = false}: {comp
   }
   async function exportReport() {
     const images = await Promise.all(report.photos.map(p => reportPhoto(report.id, p.id, false)));
-    downloadFile(`EuroTrex-${report.id}.html`, reportPrintHtml(report, trailName, images), 'text/html');
+    downloadFile(`${report.ticketReference || report.id}.html`, reportPrintHtml(report, trailName, images), 'text/html');
     setMessage('Open the downloaded report and select Print / Save as PDF.');
   }
   return <article className="report-detail">
     {!compact && <><p className="eyebrow">{trailName}</p><h2>{reportCategories[report.category] || report.category}</h2><p className="report-description">{report.description}</p>
     <p className="report-helper">{report.origin === 'organisation' ? 'Organisation-created incident' : 'Hiker report'} · Route release: {report.routeReleaseId || 'Legacy route'}</p></>}
-    <dl className="report-facts"><div><dt>Reference</dt><dd>{report.id}</dd></div><div><dt>Coordinates</dt><dd className="report-coordinates"><span>{report.latitude.toFixed(6)}, {report.longitude.toFixed(6)}</span><span className="report-coordinate-links"><a href={reportMapUrl(report)} target="_blank" rel="noreferrer" aria-label="Open coordinates in Google Maps" title="Open in Google Maps"><img src="/icons/google-maps.ico" width="20" height="20" alt="" /></a><a href={reportMapyUrl(report)} target="_blank" rel="noreferrer" aria-label="Open coordinates in Mapy" title="Open in Mapy"><img src="/icons/mapy.png" width="20" height="20" alt="" /></a></span></dd></div><div><dt>Location source</dt><dd>{report.locationSource}{report.accuracyM != null ? ` · ±${Math.round(report.accuracyM)} m` : ''}</dd></div><div><dt>Stage context</dt><dd>{report.stageId || 'Not assigned'}</dd></div><div><dt>Observed</dt><dd>{new Date(report.observedAtMs).toLocaleString()}</dd></div><div><dt>Trail access</dt><dd>{report.passability}</dd></div><div><dt>Contact (private)</dt><dd>{report.contactEmail || 'Not provided'}</dd></div></dl>
+    <dl className="report-facts"><div><dt>Reference</dt><dd className="report-reference"><span title={report.id}>{report.ticketReference || 'Assigning reference…'}</span><button type="button" className="report-copy-link" onClick={() => void copyLink()} aria-label={copied ? 'Link copied' : 'Copy incident link'} title={copied ? 'Link copied' : 'Copy incident link'}>{copied ? '✓' : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2"/></svg>}</button></dd></div><div><dt>Coordinates</dt><dd className="report-coordinates"><span>{report.latitude.toFixed(6)}, {report.longitude.toFixed(6)}</span><span className="report-coordinate-links"><a href={reportMapUrl(report)} target="_blank" rel="noreferrer" aria-label="Open coordinates in Google Maps" title="Open in Google Maps"><img src="/icons/google-maps.ico" width="20" height="20" alt="" /></a><a href={reportMapyUrl(report)} target="_blank" rel="noreferrer" aria-label="Open coordinates in Mapy" title="Open in Mapy"><img src="/icons/mapy.png" width="20" height="20" alt="" /></a></span></dd></div><div><dt>Location source</dt><dd>{report.locationSource}{report.accuracyM != null ? ` · ±${Math.round(report.accuracyM)} m` : ''}</dd></div><div><dt>Stage context</dt><dd>{report.stageId || 'Not assigned'}</dd></div><div><dt>Observed</dt><dd>{new Date(report.observedAtMs).toLocaleString()}</dd></div><div><dt>Trail access</dt><dd>{report.passability}</dd></div><div><dt>Contact (private)</dt><dd>{report.contactEmail || 'Not provided'}</dd></div></dl>
     <div className="report-photos">{report.photos.map(p => <button key={p.id} disabled={busy} onClick={() => void act(async () => setPhotoView(await reportPhoto(report.id, p.id, false)))} aria-label="Open full report photo">{photos[p.id] ? <img src={photos[p.id]} alt="Trail problem reported by a hiker" /> : <span>Loading photo…</span>}</button>)}</div>
     {photoView && <dialog open className="report-photo-view"><button type="button" className="notify-dialog-close" aria-label="Close photo" onClick={() => setPhotoView(null)}>×</button><img src={photoView} alt="Full report photo" /></dialog>}
     <div className="report-print-action"><button className="button button-secondary" disabled={busy} onClick={() => void act(exportReport)}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg>Report</button><p className="report-helper">The report includes photos and excludes the reporter’s email and internal notes.</p></div>

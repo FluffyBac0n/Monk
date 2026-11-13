@@ -6,7 +6,7 @@ export const reportCategories: Record<string, string> = {signpost: 'Signpost', v
 export const reportStatuses = ['new', 'reviewed', 'forwarded', 'resolved', 'duplicate', 'dismissed'];
 export type ReportPhoto = {id: string; path: string; thumbnailPath: string};
 export type TrailReport = {
-  id: string; trailId: string; origin?: string; routeReleaseId?: string; publicWarning?: boolean; stageId?: string; category: string; description: string;
+  id: string; trailId: string; ticketReference?: string; ticketNumber?: number; origin?: string; routeReleaseId?: string; publicWarning?: boolean; stageId?: string; category: string; description: string;
   passability: string; latitude: number; longitude: number; accuracyM?: number;
   locationSource: string; contactEmail?: string; observedAtMs: number;
   receivedAt: Timestamp; updatedAt: Timestamp; status: string; priority: string;
@@ -40,11 +40,11 @@ export async function setReportAccess(email: string, trailId: string, grant: boo
 export const reportMapUrl = (report: TrailReport) => `https://www.google.com/maps/search/?api=1&query=${report.latitude},${report.longitude}`;
 export const reportMapyUrl = (report: TrailReport) => `https://mapy.com/fnc/v1/showmap?mapset=outdoor&center=${report.longitude},${report.latitude}&zoom=16&marker=true`;
 export function forwardingText(report: TrailReport, trailName: string) {
-  return `EuroTrex trail problem report\nReference: ${report.id}\nTrail: ${trailName}\nStage: ${report.stageId || 'Not assigned'}\nProblem: ${reportCategories[report.category] || report.category}\nTrail access: ${report.passability}\nPriority: ${report.priority}\nObserved: ${new Date(report.observedAtMs).toISOString()}\nLocation: ${report.latitude}, ${report.longitude}\n${reportMapUrl(report)}\n\n${report.description}\n\nPlease quote the report reference in your reply to EuroTrex.`;
+  return `EuroTrex trail problem report\nReference: ${report.ticketReference || report.id}\nTrail: ${trailName}\nStage: ${report.stageId || 'Not assigned'}\nProblem: ${reportCategories[report.category] || report.category}\nTrail access: ${report.passability}\nPriority: ${report.priority}\nObserved: ${new Date(report.observedAtMs).toISOString()}\nLocation: ${report.latitude}, ${report.longitude}\n${reportMapUrl(report)}\n\n${report.description}\n\nPlease quote the report reference in your reply to EuroTrex.`;
 }
 const escape = (s: string) => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 export function reportPrintHtml(report: TrailReport, trailName: string, photos: string[]) {
-  return `<!doctype html><html><head><meta charset="utf-8"><title>EuroTrex report ${escape(report.id)}</title><style>body{font:15px system-ui;max-width:850px;margin:35px auto;color:#173651}pre{white-space:pre-wrap;font:inherit;line-height:1.6}img{max-width:100%;max-height:420px;display:block;margin:20px 0;break-inside:avoid}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print / Save as PDF</button><h1>Trail problem report</h1><pre>${escape(forwardingText(report, trailName))}</pre>${photos.map(src => `<img src="${src}" alt="Report photo">`).join('')}</body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>EuroTrex report ${escape(report.ticketReference || report.id)}</title><style>body{font:15px system-ui;max-width:850px;margin:35px auto;color:#173651}pre{white-space:pre-wrap;font:inherit;line-height:1.6}img{max-width:100%;max-height:420px;display:block;margin:20px 0;break-inside:avoid}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Print / Save as PDF</button><h1>Trail problem report</h1><pre>${escape(forwardingText(report, trailName))}</pre>${photos.map(src => `<img src="${src}" alt="Report photo">`).join('')}</body></html>`;
 }
 export function downloadFile(filename: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], {type}));

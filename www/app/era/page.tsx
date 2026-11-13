@@ -8,6 +8,7 @@ import {AuthPanel} from '@/components/AuthPanel';
 import {AccountVerificationGate} from '@/components/AccountVerificationGate';
 import {PortalHeader} from '@/components/PortalHeader';
 import {ReportSelect} from '@/components/ReportSelect';
+import {IncidentDrafts} from '@/components/IncidentDrafts';
 import {ReportWorkspace} from '@/components/IncidentWorkspace';
 import {EraRouteEditor} from '@/components/EraRouteEditor';
 import {EraAccessManager} from '@/components/EraAccessManager';
@@ -30,12 +31,13 @@ export default function EraPage() {
   if(loading) return <OpeningTrailManagement fullScreen/>;
   if(!user) return <main className="portal-page"><PortalHeader/><AuthPanel trailReports/></main>;
   if(!user.emailVerified) return <AccountVerificationGate user={user}/>;
-  return <EraWorkspace key={user.uid} user={user}/>;
+  return <IncidentDrafts key={user.uid}><EraWorkspace user={user}/></IncidentDrafts>;
 }
 function EraWorkspace({user}:{user:User}) {
   const [access,setAccess]=useState<EraAccess|null>(null),[error,setError]=useState(''),[trailId,setTrailId]=useState(''),[tab,setTab]=useState('Incidents');
   const [accessAttempt,setAccessAttempt]=useState(0);
   const preferredTrail=useRef(trailId);preferredTrail.current=trailId;
+  useEffect(()=>{const requested=new URLSearchParams(window.location.search).get('trail');if(requested)setTrailId(requested);},[]);
   const refresh=useCallback(async()=>{try {const next=await eraCall<EraAccess>('getEraAccess');preloadIncidentTrail(next,preferredTrail.current);setAccess(next);setTrailId(id=>next.trails.some(t=>t.id===id)?id:next.trails[0]?.id || '');setError('');}catch(e){setAccess(null);setError(e instanceof Error?e.message:'Could not load trail access.');}},[]);
   useEffect(()=>watchEraAccess(user.uid,{
     pending:()=>{setAccess(null);setError('');},
