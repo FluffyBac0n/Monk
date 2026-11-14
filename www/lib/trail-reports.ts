@@ -14,11 +14,11 @@ export type TrailReport = {
 };
 export type Trail = {id: string; name: string};
 export type ReportEvent = {id: string; action: string; status?: string; previousStatus?: string; note?: string; actorEmail?: string; authority?: string; forwardingReference?: string; createdAt?: Timestamp};
-export function watchTrailReports(trailId: string, status: string, category: string, count: number, fromDate: string,
+export function watchTrailReports(trailId: string, status: string, category: string, fromDate: string,
   receive: (rows: TrailReport[]) => void, fail: (error: Error) => void) {
   return onSnapshot(query(collection(db, 'trailReports'), where('trailId', '==', trailId), where('uploadState', '==', 'complete'),
     ...(status ? [where('status', '==', status)] : []), ...(category ? [where('category', '==', category)] : []),
-    ...(fromDate ? [where('receivedAt', '>=', new Date(fromDate))] : []), orderBy('receivedAt', 'desc'), limit(count)),
+    ...(fromDate ? [where('receivedAt', '>=', new Date(fromDate))] : []), orderBy('receivedAt', 'desc')),
     {includeMetadataChanges: true}, snapshot => {
       if (!snapshot.metadata.fromCache) receive(snapshot.docs.map(d => ({...d.data(), id: d.id}) as TrailReport));
     }, fail);

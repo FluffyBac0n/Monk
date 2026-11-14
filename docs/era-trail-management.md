@@ -499,3 +499,15 @@ key when switching to Access. TypeScript and production build passed again.
 Source commit: ed7cb069b026ad134459f6d95df2e6160b5e7486.
 Sites deployment: appgdep_6ae4228d0b1c8191b7c2df1d7a042b4c (succeeded).
 Archive: output/era/era-organisation-verification-final-site.tar.gz.
+
+## Incident publication recovery — 13 November 2026
+
+The compact inline incident redesign in `Plan trail dashboard redesign` was left
+unpublished when that run hit its usage limit. Live version 125 was still source
+4281d7d2ca4d0f4c01c6b5dfa9c735ed37c17c6e. Rechecked TypeScript, report review,
+incident search, map-readiness regressions and the production build, then published
+source 0dc0019a6bc5afd12fe7ddf2b026e0c07bc829a2 with owner-only access preserved.
+Deployment appgdep_6af755219c1881919579eca6c80e242a succeeded.
+Archive: output/era/inline-incidents-site.tar.gz.
+The browser reached ChatGPT's account chooser, but further UI control failed with
+`browser.user is unavailable`; a signed-in live screenshot was not obtained.

@@ -1,11 +1,11 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
-import type {Map as MapboxMap, Marker} from 'mapbox-gl';
-import {reportCategories, reportStatuses, type TrailReport} from '@/lib/trail-reports';
+import type {Map as MapboxMap} from 'mapbox-gl';
+import {reportStatuses, type TrailReport} from '@/lib/trail-reports';
 import {reportStatusLabels} from '@/components/ReportReview';
 import {FitTrailButton} from '@/components/FitTrailButton';
 import {ReportStatusIcon} from '@/components/ReportStatusIcon';
-import {reportStatusMarker} from '@/lib/report-status-symbols';
+import {createIncidentMarkers} from '@/lib/incident-map-markers';
 import {loadTrailRoute} from '@/lib/trail-route';
 import {preloadReportMap} from '@/lib/report-map-runtime';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -13,7 +13,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 type Props = {visible: boolean; trailId: string; trailName: string; reports: TrailReport[]; selectedId: string; onSelect: (id: string) => void; onSettled?: () => void};
 export function TrailReportMap({visible, trailId, trailName, reports, selectedId, onSelect, onSettled}: Props) {
   const element = useRef<HTMLDivElement>(null), map = useRef<MapboxMap | null>(null);
-  const markers = useRef(new Map<string, Marker>());
+  const markers = useRef<ReturnType<typeof createIncidentMarkers> | null>(null);
   const latest = useRef({reports, selectedId, onSelect, onSettled});
   latest.current = {reports, selectedId, onSelect, onSettled};
   const route = useRef<[number, number][]>([]), fitted = useRef(false);
@@ -78,7 +78,7 @@ export function TrailReportMap({visible, trailId, trailName, reports, selectedId
     })();
     return () => {
       cancelled = true; window.clearTimeout(timeout);
-      markers.current.forEach(marker => marker.remove()); markers.current.clear();
+      markers.current?.destroy(); markers.current = null;
       map.current?.remove(); map.current = null; fit.current = () => {};
     };
   }, [trailId, attempt]);
@@ -87,51 +87,24 @@ export function TrailReportMap({visible, trailId, trailName, reports, selectedId
     if (!ready || !map.current) return;
     const instance = map.current;
     let cancelled = false;
+    let controller: ReturnType<typeof createIncidentMarkers> | null = null;
     void import('mapbox-gl').then(({default: gl}) => {
       if (cancelled) return;
-      const ids = new Set(reports.map(report => report.id));
-      markers.current.forEach((marker, id) => {if (!ids.has(id)) {marker.remove(); markers.current.delete(id);}});
-      for (const report of reports) {
-        let marker = markers.current.get(report.id);
-        if (!marker) {
-          const button = document.createElement('button');
-          button.type = 'button'; button.className = 'report-map-marker';
-          button.setAttribute('aria-controls', 'selected-trail-report');
-          button.addEventListener('click', event => {event.stopPropagation(); latest.current.onSelect(report.id);});
-          marker = new gl.Marker({element: button, anchor: 'center'}).setLngLat([report.longitude, report.latitude]).addTo(instance);
-          button.setAttribute('role', 'button');
-          markers.current.set(report.id, marker);
-        }
-        marker.setLngLat([report.longitude, report.latitude]);
-        const button = marker.getElement();
-        if (button.dataset.status !== report.status) {
-          button.innerHTML = reportStatusMarker(report.status);
-          button.dataset.status = report.status;
-        }
-        button.setAttribute('aria-label', `Open report: ${reportStatusLabels[report.status] || report.status} · ${reportCategories[report.category] || report.category} — ${report.description}`);
-        button.title = `${reportStatusLabels[report.status] || report.status} · ${reportCategories[report.category] || report.category}: ${report.description}`;
-        button.dataset.selectedLabel = `${reportCategories[report.category] || report.category}: ${report.description}`;
-        reportStatuses.forEach(value => button.classList.toggle(`status-${value}`, report.status === value));
-        button.classList.toggle('is-selected', report.id === selectedId);
-        button.setAttribute('aria-pressed', String(report.id === selectedId));
-      }
-      if (!fitted.current && reports.length) fit.current();
+      controller = createIncidentMarkers(instance, gl, id => latest.current.onSelect(id));
+      markers.current = controller;
+      controller.update(latest.current.reports);
+      if (!fitted.current && latest.current.reports.length) fit.current();
+      controller.select(latest.current.selectedId);
     });
-    return () => {cancelled = true;};
-  }, [ready, reports, selectedId]);
+    return () => {cancelled = true; controller?.destroy(); if (markers.current === controller) markers.current = null;};
+  }, [ready]);
 
   useEffect(() => {
-    if (!ready || !map.current || !selectedId) return;
-    const report = latest.current.reports.find(r => r.id === selectedId);
-    if (!report) return;
-    // Preserve the user's zoom; move only when the selected issue is near/outside the map edge.
-    const point = map.current.project([report.longitude, report.latitude]);
-    const {width, height} = map.current.getContainer().getBoundingClientRect();
-    const sideMargin = Math.min(140, width / 2);
-    if (point.x < sideMargin || point.y < 55 || point.x > width - sideMargin || point.y > height - 95) {
-      map.current.easeTo({center: [report.longitude, report.latitude], duration: 400});
-    }
-  }, [ready, selectedId]);
+    markers.current?.update(reports);
+    if (ready && !fitted.current && reports.length) fit.current();
+  }, [ready, reports]);
+
+  useEffect(() => {markers.current?.select(selectedId);}, [ready, selectedId]);
 
   useEffect(() => {
     if (!visible || !map.current) return;
